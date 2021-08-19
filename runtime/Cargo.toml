@@ -1,10 +1,10 @@
 [package]
-authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
+authors = ['InvArch Team <https://github.com/InvArch/>']
 edition = '2018'
-homepage = 'https://substrate.dev'
-license = 'Unlicense'
-name = 'node-template-runtime'
-repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
+homepage = 'https://invarch.io/'
+license = 'GPL v3.0'
+name = 'invarch-node-runtime'
+repository = 'https://github.com/InvArch/InvArch'
 version = '3.0.0'
 
 [package.metadata.docs.rs]

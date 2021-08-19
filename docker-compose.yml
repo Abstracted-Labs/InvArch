@@ -2,16 +2,16 @@ version: "3.2"
 
 services:
   dev:
-    container_name: node-template
+    container_name: invarch-node
     image: paritytech/ci-linux:974ba3ac-20201006
-    working_dir: /var/www/node-template
+    working_dir: /var/www/invarch-node
     ports:
       - "9944:9944"
     environment:
-      - CARGO_HOME=/var/www/node-template/.cargo
+      - CARGO_HOME=/var/www/invarch-node/.cargo
     volumes:
-      - .:/var/www/node-template
+      - .:/var/www/invarch-node
       - type: bind
         source: ./.local
         target: /root/.local
-    command: bash -c "cargo build --release && ./target/release/node-template --dev --ws-external"
+    command: bash -c "cargo build --release && ./target/release/invarch-node --dev --ws-external"

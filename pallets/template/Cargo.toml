@@ -1,12 +1,12 @@
 [package]
-authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
-description = 'FRAME pallet template for defining custom runtime logic.'
+authors = ['InvArch Team <https://github.com/InvArch/>']
+description = 'FRAME pallet template for defining custom InvArch runtime logic.'
 edition = '2018'
-homepage = 'https://substrate.dev'
-license = 'Unlicense'
+homepage = 'https://invarch.io'
+license = 'GPL v3.0'
 name = 'pallet-template'
 readme = 'README.md'
-repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
+repository = 'https://github.com/InvArch/InvArch/'
 version = '3.0.0'
 
 [package.metadata.docs.rs]
