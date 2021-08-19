@@ -1,6 +1,23 @@
-# InvArch
-Official Repository for the InvArch platform.💡
+<div align="center">
+<img src="https://github.com/InvArch/brand/blob/main/Logo.png">
+</div>
 
+<div align="Center">
+<h1>InvArch</h1>
+<h2> The Future of Innovation </h2>
+The world’s first intellectual property tokenization & networking platform  .
+<br>
+Official Repository for the InvArch platform 💡
+Built on Substrate 
+
+<br>  
+<br>
+
+[![Substrate version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://substrate.dev/)
+[![Publish0x](https://img.shields.io/badge/Publish0x-InvArch-brightgreen)](https://www.publish0x.com/blockchain-economy)
+</div>
+
+---
 ## Overview
 
 InvArch is short for the "Invention, Involvement, & Investment Arch" platform.

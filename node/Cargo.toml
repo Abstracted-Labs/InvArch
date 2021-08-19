@@ -1,16 +1,16 @@
 [package]
-authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
+authors = ['InvArch Team <https://github.com/InvArch/>']
 build = 'build.rs'
 description = 'A fresh FRAME-based Substrate node, ready for hacking.'
 edition = '2018'
-homepage = 'https://substrate.dev'
-license = 'Unlicense'
-name = 'node-template'
-repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
+homepage = 'https://invarch.io'
+license = 'GPL v3.0'
+name = 'invarch-node'
+repository = 'https://github.com/InvArch/InvArch/'
 version = '3.0.0'
 
 [[bin]]
-name = 'node-template'
+name = 'invarch-node'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
@@ -52,8 +52,8 @@ sp-transaction-pool = '3.0.0'
 substrate-frame-rpc-system = '3.0.0'
 
 # local dependencies
-node-template-runtime = { path = '../runtime', version = '3.0.0' }
+invarch-node-runtime = { path = '../runtime', version = '3.0.0' }
 
 [features]
 default = []
-runtime-benchmarks = ['node-template-runtime/runtime-benchmarks']
+runtime-benchmarks = ['invarch-node-runtime/runtime-benchmarks']
