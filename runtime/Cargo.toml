@@ -2,7 +2,7 @@
 authors = ['InvArch Team <https://github.com/InvArch/>']
 edition = '2018'
 homepage = 'https://invarch.io/'
-license = 'Unlicense'
+license = 'GPL v3.0'
 name = 'invarch-node-runtime'
 repository = 'https://github.com/InvArch/InvArch'
 version = '3.0.0'
