@@ -15,8 +15,26 @@ Built on Substrate
 
 [![Substrate version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://substrate.dev/)
 [![Publish0x](https://img.shields.io/badge/Publish0x-InvArch-brightgreen)](https://www.publish0x.com/blockchain-economy)
+[![License](https://img.shields.io/github/license/InvArch/InvArch?color=green)](https://github.com/InvArch/InvArch/blob/main/LICENSE)
+ <br />
+[![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArch_Tech)
+[![Discord](https://img.shields.io/badge/Discord-gray?logo=discord)](https://discord.gg/J3hapvrpZJ)
+[![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)]()
 </div>
 
+<!-- TOC -->
+
+- [Introduction](##-Overview)
+- [Features](##-Features)
+  - [Intellectual Property Tokens (IPTs)](###-intellectual-property-tokens-ipts)
+  - [Decentralized Entrepreneurial Ventures (DEVs)](###-decentralized-entrepreneurial-ventures-devs))
+  - [IPT Ownership (IPTO)](###-ipt-ownership-ipto)
+- [How to Contribute](#-how-to-contribute)
+  - [Submitting changes](##-submitting-changes)
+  - [License](##-license)
+  - [Substrate Node](##-substrate-node)
+
+<!-- /TOC -->
 ---
 ## Overview
 
@@ -64,7 +82,7 @@ If you haven't already, come find us on the [#InvArch Discord](https://discord.g
 
 ## Submitting changes
 
-Please send a [GitHub Pull Request to InvArch](https://github.com/Invarchitect/InvArch/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please make sure all of your commits are atomic (one feature per commit).
+Please send a [GitHub Pull Request to InvArch](https://github.com/InvArch/InvArch/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please make sure all of your commits are atomic (one feature per commit).
 
 Always write a clear log message for your commits. One-line messages are fine for small changes, but bigger changes should look like this:
 
@@ -81,7 +99,7 @@ Dakota Barnett, Founder
 
 
 ## License
-[GPL](https://github.com/Invarchitect/InvArch/blob/main/LICENSE)
+[GPL](https://github.com/InvArch/InvArch/blob/main/LICENSE)
 
 ## Substrate Node
 Substrate Node Template [README.md](https://github.com/substrate-developer-hub/substrate-node-template/blob/tutorials/solutions/build-a-dapp-v3%2B1/README.md)
