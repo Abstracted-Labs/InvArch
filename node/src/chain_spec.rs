@@ -43,6 +43,7 @@ pub fn chain_properties() -> Properties {
 	properties.insert("tokenDecimals".into(), 12.into());
 	properties.insert("tokenSymbol".into(), "VArch".into());
 	properties.insert("ss58Format".into(), 64.into());
+	properties
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
