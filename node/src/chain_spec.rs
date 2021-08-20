@@ -6,7 +6,7 @@ use invarch_node_runtime::{
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
-use sc_service::ChainType;
+use sc_service::{ChainType, Properties};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -38,14 +38,21 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 	)
 }
 
+pub fn chain_properties() -> Properties {
+	let mut properties = Properties::new();
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenSymbol".into(), "VArch".into());
+	properties.insert("ss58Format".into(), 64.into());
+}
+
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
 	Ok(ChainSpec::from_genesis(
 		// Name
-		"Development",
+		"InvArch DevNet",
 		// ID
-		"dev",
+		"invarch_dev",
 		ChainType::Development,
 		move || testnet_genesis(
 			wasm_binary,
@@ -71,7 +78,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		None,
+		Some(chain_properties()),
 		// Extensions
 		None,
 	))
@@ -119,7 +126,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Protocol ID
 		None,
 		// Properties
-		None,
+		Some(chain_properties()),
 		// Extensions
 		None,
 	))
