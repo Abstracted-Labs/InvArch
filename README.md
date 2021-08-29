@@ -25,15 +25,19 @@ Built on Substrate
 <!-- TOC -->
 
 - [Introduction](##-Overview)
+  - [Philosophy](###-InvArch-approaches-ideas-(IP)-as-a-set-of-non-fungible-components)
 - [Features](##-Features)
-  - [Intellectual Property Set (IPS)](###-intellectual-property-tokens-ips)
-  - [Intellectual Property Token (IPT)](###-intellectual-property-tokens-ipt)
-  - [Decentralized Entrepreneurial Ventures (DEVs)](###-decentralized-entrepreneurial-ventures-devs)
-  - [IP Ownership (IPO)](###-ip-ownership-ipo)
-- [How to Contribute](#-how-to-contribute)
-  - [Submitting changes](##-submitting-changes)
-  - [License](##-license)
-  - [Substrate Node](##-substrate-node)
+  - [Intellectual Property Set (IPS)](###-Intellectual-Property-Set-IPS)
+  - [Intellectual Property Token (IPT)](###-Intellectual-Property-Token-IPT)
+  - [Decentralized Entrepreneurial Ventures (DEVs)](###-Decentralized-Entrepreneurial-Ventures-DEVs)
+  - [IP Ownership (IPO)](###-IP-Ownership-IPO)
+- [Components](##-Components)
+  - [IP Protocol & Pallets](###-IP-Protocol-&-Pallets)
+  - [DEV Protocol & Pallets](###-DEV-Protocol-&-Pallets)
+- [How to Contribute](##-How-to-contribute)
+  - [Submitting changes](###-Submitting-changes)
+  - [License](###-License)
+  - [Substrate Node](###-Substrate-Node)
 
 <!-- /TOC -->
 ---
@@ -57,7 +61,7 @@ ratio to either cryptocurrency tokens or company shares. 🚀
 <img src="https://i.ibb.co/cxTZQqK/Screen-Shot-2021-08-28-at-5-42-07-PM.png" style="align-center">
 </div>
 
-### InvArch approaches ideas (IP) as a set of non-fungible components: 
+### InvArch approaches ideas (IP) as a set of non-fungible components 
 * IP Set = Idea
 * IP Tokens  = components of their idea. 
 * An IP Set can have built-in IP Ownership tokens. 
@@ -96,27 +100,27 @@ ratio to either cryptocurrency tokens or company shares. 🚀
 <img src="https://i.ibb.co/7NKWDM6/Screen-Shot-2021-08-28-at-5-41-35-PM.png" style="align-center">
 </div>
 
-### Components
+## Components
 
-### 1. IP Protocol & Pallets
+### IP Protocol & Pallets
 * `Pallet_ips` - Provides basic functionality for creating and managing an `IPSet`. You can think of an `IPSet` as an idea, which is basically a collection of components (intellectual property tokens) that define and describe that idea.
 * `Pallet_ipt` - Provides basic functionality for creating and managing an `IPToken`. You can think of an `IPToken` as a component of an idea. For example, a business summary PDF file, or even a 3D rendering of a prototype mold. When combined and stored in an `IPSet`, that collection forms the foundtion for an idea. The more detailed and/or comprehensive an `IPSet` is, the stronger the idea.
 * `Pallet_ipo` - Provides basic functionality for creating and managing a `IPOwnership` tokens. You can think of `IPOwnership` tokens as a form of fungible and fractionalized ownership that are built-in to every `IPSet`. 
 
-### 2. DEV Protocol & Pallets
+### DEV Protocol & Pallets
 * `Pallet_dev` - Provides basic functionality for creating and managing a `DEV`(Decentralized Entrepreneurial Venture). You can think of a `DEV` as an agreement between multiple parties to come together as cofounders over a project in order to contribute towards an `IPSet`'s actualization.
 * `Pallet_dao` - Provides basic functionality for creating and managing a `DAO` that helps govern a `DEV`. You can think of a `DAO` as a `DEV`'s governance mechanism. It helps regulate the and ensure the integrity and prudence of participants within a `DEV`.
 * `Pallet_worklog` - Provides basic functionality for creating and managing a `WorkLog` within a `DEV`. You can think of a `Worklog` as a `DEV`'s method of recording and storing milestone/deliverables progressions and completions.
 * `Pallet_deliverables` - Provides basic functionality for creating and managing a `Deliverables` distribution mechainism for `IPOwnership` throughout a `DEV`. You can think of `Deliverables` as a mechanism for automatically distributing `IPOwnership` tokens to participants in a `DEV` as milestones/deliverables are met and confirmed by its `Worklog`.
 * `Pallet_listings` - Provides basic functionality for creating and managing a `Listing` for a `DEV`'s `IPOwnership` tokens. `Listings` allows for public listings of `IPOwnership` to be purchased by outside participants/investors.
 
-# How to contribute
+## How to contribute
 
 I'm really glad you're reading this, because we need volunteer developers to help this idea become a reality!
 
 If you haven't already, come find us on the [#InvArch Discord](https://discord.gg/J3hapvrpZJ). We want you working on things you're excited about!
 
-## Submitting changes
+### Submitting changes
 
 Please send a [GitHub Pull Request to InvArch](https://github.com/InvArch/InvArch/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please make sure all of your commits are atomic (one feature per commit).
 
@@ -134,8 +138,8 @@ Dakota Barnett, Founder
 
 
 
-## License
+### License
 [GPL](https://github.com/InvArch/InvArch/blob/main/LICENSE)
 
-## Substrate Node
+### Substrate Node
 Substrate Node Template [README.md](https://github.com/substrate-developer-hub/substrate-node-template/blob/tutorials/solutions/build-a-dapp-v3%2B1/README.md)
