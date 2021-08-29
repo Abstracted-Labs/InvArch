@@ -5,7 +5,7 @@
 <div align="Center">
 <h1>InvArch</h1>
 <h2> The Future of Innovation </h2>
-The world’s first intellectual property tokenization & networking platform  .
+The world’s first intellectual property tokenization & networking platform.
 <br>
 Official Repository for the InvArch platform 💡
 Built on Substrate 
@@ -26,9 +26,10 @@ Built on Substrate
 
 - [Introduction](##-Overview)
 - [Features](##-Features)
-  - [Intellectual Property Tokens (IPTs)](###-intellectual-property-tokens-ipts)
-  - [Decentralized Entrepreneurial Ventures (DEVs)](###-decentralized-entrepreneurial-ventures-devs))
-  - [IPT Ownership (IPTO)](###-ipt-ownership-ipto)
+  - [Intellectual Property Set (IPS)](###-intellectual-property-tokens-ips)
+  - [Intellectual Property Token (IPT)](###-intellectual-property-tokens-ipt)
+  - [Decentralized Entrepreneurial Ventures (DEVs)](###-decentralized-entrepreneurial-ventures-devs)
+  - [IP Ownership (IPO)](###-ip-ownership-ipo)
 - [How to Contribute](#-how-to-contribute)
   - [Submitting changes](##-submitting-changes)
   - [License](##-license)
@@ -52,27 +53,62 @@ in exchange for startup capital, and provides governance participation in a DEV.
 When a DEV is complete, which is determined through the consensus of a DEV's governing community, its related IPTO is liquidated at a proportionate
 ratio to either cryptocurrency tokens or company shares. 🚀
 
+<div align="center">
+<img src="https://i.ibb.co/cxTZQqK/Screen-Shot-2021-08-28-at-5-42-07-PM.png" style="align-center">
+</div>
+
+### InvArch approaches ideas (IP) as a set of non-fungible components: 
+* IP Set = Idea
+* IP Tokens  = components of their idea. 
+* An IP Set can have built-in IP Ownership tokens. 
+* You can,`list`,`sell`,`buy`,`transfer`, and `destroy` an IP Set, but not individual IP Tokens, since they're only components. 
+* A new IP set can be created (`create`) and new IPT can be minted (`mint`) and added to a Set.
+* Existing IPT can be burned (`burn`) or amended (`amend`). 
+* Subsequently, an entire IP Set could be destroyed (`destroy`) as well, burning all of its contents.
 
 ## Features
 
-### Intellectual Property Tokens (IPTs)
+### Intellectual Property Set (IPS)
 
-⚙️  Multi-layer IPTs: an IPT can own and inherit the metadata of another IPT.
+⚙️   Think of an IPS as an idea/innovation that consists of one or more components that help define that idea/innovation.
 
-⚙️  Multi-attribute IPTs: code, diagrams, 3D models, images, and other docs can be stored within the metadate of an IPT.
+⚙️   Multi-layer IPS: an IPS can own and inherit the metadata of another IPS. (Future Release)
+
+### Intellectual Property Token (IPT)
+
+⚙️   Think of an IPT as a component of an idea/innovation.
+
+⚙️   Multi-attribute IPTs: code, diagrams, 3D models, images, and other docs can be stored within the metadate of an IPT.
 
 ### Decentralized Entrepreneurial Ventures (DEVs)
 
-⚙️  IPTs Governed as DAOs: Pegged & fungible IPT Ownership (IPTO) allow decentralized governance of the development of an IPT.
+⚙️   IPS Governed as DAOs: Pegged & fungible IP Ownership (IPO) allow decentralized governance of the development of an IPS.
 
-⚙️  Professional Networking: IPTO is leveraged to form partnerships with individuals with the skills and/or resources to actualize.
+⚙️   Professional Networking: IPO is leveraged to form partnerships with individuals with the skills and/or resources to actualize.
 
-### IPT Ownership (IPTO)
+### IP Ownership (IPO)
 
-⚙️  IPT Ownership: Fractional ownership tokens are minted in quantities of 10k, each representing a 0.01% stake over a DEV.
+⚙️   IP Ownership: Fractional ownership tokens are minted in quantities of 10k, each representing a 0.01% stake over a IPS.
 
-⚙️  Leveraging IPTO: IPTO can be leveraged in exchange for not just skills (i.e. partnerships), but also in exchange for capital.
+⚙️   Leveraging IPO: IPO can be leveraged in exchange for not just skills (i.e. partnerships), but also in exchange for capital.
 
+<div align="center">
+<img src="https://i.ibb.co/7NKWDM6/Screen-Shot-2021-08-28-at-5-41-35-PM.png" style="align-center">
+</div>
+
+### Components
+
+### 1. IP Protocol & Pallets
+* `Pallet_ips` - Provides basic functionality for creating and managing an `IPSet`. You can think of an `IPSet` as an idea, which is basically a collection of components (intellectual property tokens) that define and describe that idea.
+* `Pallet_ipt` - Provides basic functionality for creating and managing an `IPToken`. You can think of an `IPToken` as a component of an idea. For example, a business summary PDF file, or even a 3D rendering of a prototype mold. When combined and stored in an `IPSet`, that collection forms the foundtion for an idea. The more detailed and/or comprehensive an `IPSet` is, the stronger the idea.
+* `Pallet_ipo` - Provides basic functionality for creating and managing a `IPOwnership` tokens. You can think of `IPOwnership` tokens as a form of fungible and fractionalized ownership that are built-in to every `IPSet`. 
+
+### 2. DEV Protocol & Pallets
+* `Pallet_dev` - Provides basic functionality for creating and managing a `DEV`(Decentralized Entrepreneurial Venture). You can think of a `DEV` as an agreement between multiple parties to come together as cofounders over a project in order to contribute towards an `IPSet`'s actualization.
+* `Pallet_dao` - Provides basic functionality for creating and managing a `DAO` that helps govern a `DEV`. You can think of a `DAO` as a `DEV`'s governance mechanism. It helps regulate the and ensure the integrity and prudence of participants within a `DEV`.
+* `Pallet_worklog` - Provides basic functionality for creating and managing a `WorkLog` within a `DEV`. You can think of a `Worklog` as a `DEV`'s method of recording and storing milestone/deliverables progressions and completions.
+* `Pallet_deliverables` - Provides basic functionality for creating and managing a `Deliverables` distribution mechainism for `IPOwnership` throughout a `DEV`. You can think of `Deliverables` as a mechanism for automatically distributing `IPOwnership` tokens to participants in a `DEV` as milestones/deliverables are met and confirmed by its `Worklog`.
+* `Pallet_listings` - Provides basic functionality for creating and managing a `Listing` for a `DEV`'s `IPOwnership` tokens. `Listings` allows for public listings of `IPOwnership` to be purchased by outside participants/investors.
 
 # How to contribute
 
