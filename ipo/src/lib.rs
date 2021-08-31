@@ -22,6 +22,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use pallet::*;
+
+#[cfg(test)]
+mod tests;
+
 use frame_support::{
 	codec::{Decode, Encode},
 	decl_event, decl_module, decl_storage,
@@ -30,19 +35,89 @@ use frame_support::{
 use frame_system::ensure_signed;
 use sp_runtime::RuntimeDebug;
 
-#[cfg(test)]
-mod tests;
+#[frame_support::pallet]
+pub mode pallet {
+	use frame_support::{dispatch::DispatchResult, prelude::*};
+	use frame_system::pallet_prelude::*;
 
-decl_storage! {
-	
-}
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	}
 
-decl_event! (
-	
-);
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-		fn deposit_event() = default;
+	#[pallet::storage]
+	#[pallet::getter(fn something)]
+	pub type IpoStorage<T> = StorageMap<_, Blake2_128Concat, T::IpoId, ipo, ValueQuery>;
+
+	#[pallet::event]
+	#[pallet::metadata(T::AccountId = "AccountId")]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// param. [Ipo, who]
+		IpoStored(u32, T::AccountId),
+	}
+
+	// Errors inform users that something went wrong.
+	#[pallet::error]
+	pub enum Error<T> {
+		/// No value error
+		NoIpoFound,
+		/// Storage overflow error
+		StorageOverflow,
+	}
+
+	// Dispatch functions
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+
+		#[pallet::weight(100_000 + T::DbWeight::get().writes(1))]
+		pub fn issue(
+			origin: OriginFor<T>, 
+			ipo: u32
+			#[pallet::compact] id: T::AssetId,
+			admin: <T::Lookup as StaticLookup>::Source,
+			min_balance: T::Balance,
+		) -> DispatchResult {
+			// The code goes here
+		}
+
+		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
+		pub fn transfer(
+			origin: OriginFor<T>,
+			ipo: u32,
+			#[pallet::compact] id: T::AssetId,
+			target: <T::Lookup as StaticLookup>::Source,
+			#[pallet::compact] amount: T::Balance,
+		) -> DispatchResult {
+			// The code goes here
+		}
+
+		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
+		pub fn bind(
+			origin: OriginFor<T>,
+			ipo: u32,
+			#[pallet::compact] id: T::AssetId,
+			target: <T::Lookup as StaticLookup>::Source<IPSet>,
+			#[pallet::compact] amount: T::Balance,
+		) -> DispatchResult {
+			// The code goes here
+		}
+
+		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
+		pub fn unbind(
+			origin: OriginFor<T>,
+			ipo: u32,
+			#[pallet::compact] id: <T::Lookup as StaticLookup>::Source<IPSet>,
+			target: T::AssetId,
+			#[pallet::compact] amount: T::Balance,
+		) -> DispatchResult {
+			// The code goes here
+		}
+
 	}
 }
