@@ -35,7 +35,7 @@ use frame_system::ensure_signed;
 use sp_runtime::RuntimeDebug;
 
 #[frame_support::pallet]
-pub mode pallet {
+pub mod pallet {
 	use frame_support::{dispatch::DispatchResult, prelude::*};
 	use frame_system::pallet_prelude::*;
 
