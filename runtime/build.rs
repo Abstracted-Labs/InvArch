@@ -1,4 +1,4 @@
- // This file is part of InvArch.
+// This file is part of InvArch.
 
 // Copyright (C) 2021 InvArch.io
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0

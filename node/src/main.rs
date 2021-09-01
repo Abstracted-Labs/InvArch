@@ -1,4 +1,4 @@
-//! Substrate InvArch Node CLI library.
+//! Substrate Node Template CLI library.
 #![warn(missing_docs)]
 
 mod chain_spec;

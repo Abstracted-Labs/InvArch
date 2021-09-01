@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# This script meant to be run on Unix/Linux based systems
+# This script is meant to be run on Unix/Linux based systems
 set -e
 
-echo "*** Start Substrate InvArch node ***"
+echo "*** Start InvArch Node ***"
 
 cd $(dirname ${BASH_SOURCE[0]})/..
 
