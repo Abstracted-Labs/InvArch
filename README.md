@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://github.com/InvArch/brand/blob/main/Logo.png">
+<img src="https://github.com/InvArch/brand/blob/main/Article_Thumbnail.png">
 </div>
 
 <div align="Center">
