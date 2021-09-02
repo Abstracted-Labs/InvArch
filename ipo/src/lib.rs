@@ -15,109 +15,53 @@
 //! `set_balance` - Set the balances to a given account. The origin of this call mus be root
 //! `get_balance` - Get the asset `id` balance of `who`
 //! `total_supply` - Get the total supply of an asset `id`
-//! `bind` - Bind some `amount` of unit of fungible asset `id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` 
+//! `bind` - Bind some `amount` of unit of fungible asset `id` from the ballance of the function caller's account (`origin`) to a specific `IPSet`
 //! account to claim some portion of fractionalized ownership of that particular `IPset`
-//! `unbind` - Unbind some `amount` of unit of fungible asset `id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership 
+//! `unbind` - Unbind some `amount` of unit of fungible asset `id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership
 //! to the ballance of the function caller's account.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
-
-#[cfg(test)]
-mod tests;
-
-use frame_support::{
-	codec::{Decode, Encode},
-	decl_event, decl_module, decl_storage,
-	dispatch::DispatchResult,
-};
-use frame_system::ensure_signed;
-use sp_runtime::RuntimeDebug;
-
 #[frame_support::pallet]
-pub mode pallet {
-	use frame_support::{dispatch::DispatchResult, prelude::*};
-	use frame_system::pallet_prelude::*;
+pub mod pallet {
+    pub type IpoId = u32;
+    use frame_support::pallet_prelude::*;
 
-	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-	}
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
 
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    pub struct Pallet<T>(_);
 
-	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type IpoStorage<T> = StorageMap<_, Blake2_128Concat, T::IpoId, ipo, ValueQuery>;
+    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId")]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// param. [Ipo, who]
-		IpoStored(u32, T::AccountId),
-	}
+    #[pallet::storage]
+    #[pallet::getter(fn something)]
+    pub type IpoStorage<T> = StorageMap<_, Blake2_128Concat, IpoId, u32>;
 
-	// Errors inform users that something went wrong.
-	#[pallet::error]
-	pub enum Error<T> {
-		/// No value error
-		NoIpoFound,
-		/// Storage overflow error
-		StorageOverflow,
-	}
+    #[pallet::event]
+    #[pallet::metadata(T::AccountId = "AccountId")]
+    pub enum Event<T: Config> {
+        /// param. [Ipo, who]
+        IpoStored(u32, T::AccountId),
+    }
 
-	// Dispatch functions
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+    // Errors inform users that something went wrong.
+    #[pallet::error]
+    pub enum Error<T> {
+        /// No value error
+        NoIpoFound,
+        /// Storage overflow error
+        StorageOverflow,
+    }
 
-		#[pallet::weight(100_000 + T::DbWeight::get().writes(1))]
-		pub fn issue(
-			origin: OriginFor<T>, 
-			ipo: u32
-			#[pallet::compact] id: T::AssetId,
-			admin: <T::Lookup as StaticLookup>::Source,
-			min_balance: T::Balance,
-		) -> DispatchResult {
-			// The code goes here
-		}
-
-		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
-		pub fn transfer(
-			origin: OriginFor<T>,
-			ipo: u32,
-			#[pallet::compact] id: T::AssetId,
-			target: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance,
-		) -> DispatchResult {
-			// The code goes here
-		}
-
-		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
-		pub fn bind(
-			origin: OriginFor<T>,
-			ipo: u32,
-			#[pallet::compact] id: T::AssetId,
-			target: <T::Lookup as StaticLookup>::Source<IPSet>,
-			#[pallet::compact] amount: T::Balance,
-		) -> DispatchResult {
-			// The code goes here
-		}
-
-		#[pallet::weight(50_000 + T::DbWeight::get().writes(1))]
-		pub fn unbind(
-			origin: OriginFor<T>,
-			ipo: u32,
-			#[pallet::compact] id: <T::Lookup as StaticLookup>::Source<IPSet>,
-			target: T::AssetId,
-			#[pallet::compact] amount: T::Balance,
-		) -> DispatchResult {
-			// The code goes here
-		}
-
-	}
+    // Dispatch functions
+    #[pallet::call]
+    impl<T: Config> Pallet<T> {
+        // TODO: WIP
+    }
 }
