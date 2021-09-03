@@ -13,7 +13,7 @@ The following **components** are defined:
 The following **functions** are possible:
 * `mint` - Create a new IP Token and add to an IP Set
 * `burn` - Burn an IP Token from an IP Set
-* `ammend` - Ammend the data stored inside an IP Token
+* `amend` - Amend the data stored inside an IP Token
 
 
 # IP Token

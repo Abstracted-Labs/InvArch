@@ -12,7 +12,7 @@
 //!
 //! `mint` - Create a new IP Token and add to an IP Set
 //! `burn` - Burn an IP Token from an IP Set
-//! `ammend` - Ammend the data stored inside an IP Token
+//! `amend` - Amend the data stored inside an IP Token
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
