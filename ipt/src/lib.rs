@@ -20,7 +20,9 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One},
+    traits::{
+        AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One,
+    },
     ArithmeticError, DispatchError, DispatchResult,
 };
 use sp_std::{convert::TryInto, vec::Vec};
