@@ -20,7 +20,7 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use sp_runtime::{
-    traits::{CheckedAdd, MaybeSerializeDeserialize, Member, One},
+    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
     ArithmeticError, DispatchError, DispatchResult,
 };
 use sp_std::{convert::TryInto, vec::Vec};
@@ -55,8 +55,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-
-    use sp_runtime::traits::AtLeast32BitUnsigned;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
