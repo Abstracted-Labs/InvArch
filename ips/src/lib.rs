@@ -21,6 +21,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+/*
+// Import IPT Pallet
+// use ipt::Pallet as IPT;
+*/
+
 /// IpsId
 pub type IpsId = u32;
 
