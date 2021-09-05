@@ -18,9 +18,11 @@
 #![allow(clippy::unused_unit)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{pallet_prelude::*, traits::Get, BoundedVec, Parameter};
+use frame_support::{ensure, pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
+    traits::{
+        AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One,
+    },
     ArithmeticError, DispatchError, DispatchResult,
 };
 use sp_std::{convert::TryInto, vec::Vec};
@@ -127,7 +129,7 @@ pub mod pallet {
     /// IPT existence check by owner and IPS ID
     #[pallet::storage]
     #[pallet::getter(fn ipt_by_owner)]
-    pub type IpsByOwner<T: Config> = StorageNMap<
+    pub type IptByOwner<T: Config> = StorageNMap<
         _,
         (
             NMapKey<Blake2_128Concat, T::AccountId>, // owner
@@ -201,7 +203,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-    /// Create IP (Intellectua Property) Set (IPS)
+    /// Create IP (Intellectual Property) Set (IPS)
     pub fn create_ips(
         // TODO: WIP
         owner: &T::AccountId,
@@ -263,13 +265,33 @@ impl<T: Config> Pallet<T> {
                 data,
             };
             IptStorage::<T>::insert(ips_id, ipt_id, ipt_info);
-            IpsByOwner::<T>::insert((owner, ips_id, ipt_id), ());
+            IptByOwner::<T>::insert((owner, ips_id, ipt_id), ());
 
             Ok(ipt_id)
         })
     }
 
+    /// Burn IPT(Intellectual Property Token) from `owner`
+    pub fn burn(owner: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> DispatchResult {
+        IptStorage::<T>::try_mutate(ipt.0, ipt.1, |ipt_info| -> DispatchResult {
+            let t = ipt_info.take().ok_or(Error::<T>::IptNotFound)?;
+            ensure!(t.owner == *owner, Error::<T>::NoPermission);
+
+            IpsStorage::<T>::try_mutate(ipt.0, |ips_info| -> DispatchResult {
+                let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                info.total_issuance = info
+                    .total_issuance
+                    .checked_sub(&One::one())
+                    .ok_or(ArithmeticError::Overflow)?;
+                Ok(())
+            })?;
+
+            IptByOwner::<T>::remove((owner, ipt.0, ipt.1));
+
+            Ok(())
+        })
+    }
+
     // TODO : WIP
-    // - Add `burn` function
     // - Add `amend` function
 }
