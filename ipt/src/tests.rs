@@ -1,7 +1,5 @@
 //! Unit tests for the IPT pallet.
 
-#![cfg(test)]
-
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
