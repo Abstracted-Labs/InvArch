@@ -27,6 +27,11 @@ use sp_runtime::{
 };
 use sp_std::{convert::TryInto, vec::Vec};
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
 pub struct IpsInfo<IptId, AccountId, Data, IpsMetadataOf> {
@@ -60,7 +65,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
         type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
         /// The IPS properties type
@@ -168,13 +172,6 @@ pub mod pallet {
                 }
             })
         }
-    }
-
-    #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
-    pub enum Event<T: Config> {
-        /// param. [Ipt, who]
-        IptStored(u32, T::AccountId),
     }
 
     /// Errors for IPT pallet
