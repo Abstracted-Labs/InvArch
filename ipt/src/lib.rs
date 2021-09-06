@@ -289,6 +289,38 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    // TODO : WIP
-    // - Add `amend` function
+    // Amend the data stored inside an IP Token
+    pub fn amend(
+        owner: &T::AccountId,
+        ips_id: T::IpsId,
+        new_metadata: Vec<u8>,
+        data: T::IptData,
+    ) -> Result<T::IptId, DispatchError> {
+        NextIptId::<T>::try_mutate(ips_id, |id| -> Result<T::IptId, DispatchError> {
+            let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> = new_metadata
+                .try_into()
+                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+
+            let ipt_id = *id;
+            *id = id
+                .checked_add(&One::one())
+                .ok_or(Error::<T>::NoAvailableIptId)?;
+
+            IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+                let _info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                // TODO: WIP
+                Ok(())
+            })?;
+
+            let ipt_info = IptInfo {
+                metadata: bounded_metadata,
+                owner: owner.clone(),
+                data,
+            };
+
+            IptStorage::<T>::insert(ips_id, ipt_id, ipt_info);
+
+            Ok(ipt_id)
+        })
+    }
 }
