@@ -24,9 +24,7 @@
 
 use frame_support::{pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use sp_runtime::{
-    traits::{
-        AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One,
-    },
+    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
     DispatchError,
 };
 use sp_std::{convert::TryInto, vec::Vec};
@@ -183,7 +181,11 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Change the owner of an IP (Intellectual Property) Set (IPS)
-    pub fn change_owner(from: &T::AccountId, to: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> DispatchResult {
+    pub fn change_owner(
+        from: &T::AccountId,
+        to: &T::AccountId,
+        ipt: (T::IpsId, T::IptId),
+    ) -> DispatchResult {
         IptStorage::<T>::try_mutate(ipt.0, ipt.1, |ipt_info| -> DispatchResult {
             let mut info = ipt_info.as_mut().ok_or(Error::<T>::IptNotFound)?;
             ensure!(info.owner == *from, Error::<T>::NoPermission);
@@ -199,6 +201,4 @@ impl<T: Config> Pallet<T> {
             Ok(())
         })
     }
-
-
 }
