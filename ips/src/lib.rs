@@ -137,6 +137,8 @@ pub mod pallet {
         IpsNotFound,
         /// The operator is not the owner of the IPT and has no permission
         NoPermission,
+        /// The IPS is already owned
+        AlreadyOwned,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
     }
@@ -180,8 +182,8 @@ impl<T: Config> Pallet<T> {
         Ok(ips_id)
     }
 
-    /// Change the owner of an IP (Intellectual Property) Set (IPS)
-    pub fn change_owner(
+    /// Transfer IP Set owner account address
+    pub fn send(
         from: &T::AccountId,
         to: &T::AccountId,
         ipt: (T::IpsId, T::IptId),
@@ -189,9 +191,7 @@ impl<T: Config> Pallet<T> {
         IptStorage::<T>::try_mutate(ipt.0, ipt.1, |ipt_info| -> DispatchResult {
             let mut info = ipt_info.as_mut().ok_or(Error::<T>::IptNotFound)?;
             ensure!(info.owner == *from, Error::<T>::NoPermission);
-            if from == to {
-                return Ok(());
-            }
+            ensure!(*from != *to, Error::<T>::AlreadyOwned);
 
             info.owner = to.clone();
 
