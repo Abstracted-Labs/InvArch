@@ -59,6 +59,8 @@ pub mod pallet {
         type MaxIptMetadata: Get<u32>;
     }
 
+    pub type BalanceOf = Vec<u8>;
+    pub type IpsIndexOf<T> = <T as Config>::IpsId;
     pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
     pub type IptMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIptMetadata>;
     pub type IpsInfoOf<T> = IpsInfo<
@@ -123,6 +125,12 @@ pub mod pallet {
         (),
         ValueQuery,
     >;
+
+    /// Get IPS price. None means not for sale.
+    #[pallet::storage]
+    #[pallet::getter(fn ips_prices)]
+    pub type IpsPrices<T: Config> =
+        StorageMap<_, Blake2_128Concat, IpsInfoOf<T>, BalanceOf, OptionQuery>;
 
     /// Errors for IPT pallet
     #[pallet::error]
@@ -200,5 +208,32 @@ impl<T: Config> Pallet<T> {
 
             Ok(())
         })
+    }
+
+    /// List a IPS for sale
+    /// None to delist the IPS
+    pub fn list(
+        owner: T::AccountId,
+        ips_id: T::IpsId,
+        ips_index: IpsInfoOf<T>,
+        new_price: Option<BalanceOf>,
+    ) -> DispatchResult {
+        IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+            let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+            ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+            IpsPrices::<T>::mutate_exists(ips_index, |price| *price = new_price);
+
+            Ok(())
+        })
+    }
+
+    // TODO: WIP
+    // - Buy function
+    // - Send function
+    // - Destroy function
+
+    pub fn is_owner(account: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> bool {
+        IptByOwner::<T>::contains_key((account, ipt.0, ipt.1))
     }
 }
