@@ -29,7 +29,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
+    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One, Zero},
     DispatchError,
 };
 use sp_std::{convert::TryInto, vec::Vec};
@@ -163,6 +163,8 @@ pub mod pallet {
         NotForSale,
         /// Buy price is too low
         PriceTooLow,
+        /// Can not destroy IPS
+        CannotDestroyIps,
     }
 
     /// Dispatch functions
@@ -267,8 +269,21 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    // TODO: WIP
-    // - Destroy function
+    // Delete an IP Set and all of its contents
+    pub fn destroy(owner: &T::AccountId, ips_id: T::IpsId) -> DispatchResult {
+        IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+            let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+            ensure!(info.owner == *owner, Error::<T>::NoPermission);
+            ensure!(
+                info.total_issuance == Zero::zero(),
+                Error::<T>::CannotDestroyIps
+            );
+
+            NextIptId::<T>::remove(ips_id);
+
+            Ok(())
+        })
+    }
 
     pub fn is_owner(account: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> bool {
         IptByOwner::<T>::contains_key((account, ipt.0, ipt.1))
