@@ -22,7 +22,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use frame_support::{pallet_prelude::*, traits::Get, BoundedVec, Parameter};
+use frame_support::{
+    pallet_prelude::*,
+    traits::{Currency, ExistenceRequirement, Get},
+    BoundedVec, Parameter,
+};
+use frame_system::pallet_prelude::*;
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
     DispatchError,
@@ -57,9 +62,12 @@ pub mod pallet {
         type MaxIpsMetadata: Get<u32>; // TODO: WIP
         /// The maximum size of an IPT's metadata
         type MaxIptMetadata: Get<u32>;
+        /// Currency
+        type Currency: Currency<Self::AccountId>;
     }
 
-    pub type BalanceOf = Vec<u8>;
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub type IpsIndexOf<T> = <T as Config>::IpsId;
     pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
     pub type IptMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIptMetadata>;
@@ -130,7 +138,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn ips_prices)]
     pub type IpsPrices<T: Config> =
-        StorageMap<_, Blake2_128Concat, IpsInfoOf<T>, BalanceOf, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, IpsInfoOf<T>, BalanceOf<T>, OptionQuery>;
 
     /// Errors for IPT pallet
     #[pallet::error]
@@ -149,6 +157,12 @@ pub mod pallet {
         AlreadyOwned,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
+        /// Buy IPS from their self
+        BuyFromSelf,
+        /// IPS is not for sale
+        NotForSale,
+        /// Buy price is too low
+        PriceTooLow,
     }
 
     /// Dispatch functions
@@ -216,7 +230,7 @@ impl<T: Config> Pallet<T> {
         owner: T::AccountId,
         ips_id: T::IpsId,
         ips_index: IpsInfoOf<T>,
-        new_price: Option<BalanceOf>,
+        new_price: Option<BalanceOf<T>>,
     ) -> DispatchResult {
         IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
             let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
@@ -228,9 +242,32 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Allow a user to buy an IPS
+    pub fn buy(
+        origin: OriginFor<T>,
+        owner: T::AccountId,
+        ips_id: T::IpsId,
+        ipt_id: T::IptId,
+        ips_index: IpsInfoOf<T>,
+        max_price: BalanceOf<T>,
+    ) -> DispatchResult {
+        let sender = ensure_signed(origin)?;
+
+        ensure!(sender != owner, Error::<T>::BuyFromSelf);
+
+        IpsPrices::<T>::try_mutate_exists(ips_index, |price| -> DispatchResult {
+            let price = price.take().ok_or(Error::<T>::NotForSale)?;
+
+            ensure!(max_price >= price, Error::<T>::PriceTooLow);
+
+            Pallet::<T>::send(&owner, &sender, (ips_id, ipt_id))?;
+            T::Currency::transfer(&sender, &owner, price, ExistenceRequirement::KeepAlive)?;
+
+            Ok(())
+        })
+    }
+
     // TODO: WIP
-    // - Buy function
-    // - Send function
     // - Destroy function
 
     pub fn is_owner(account: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> bool {
