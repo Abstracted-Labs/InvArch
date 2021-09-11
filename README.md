@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://github.com/InvArch/brand/blob/main/Article_Thumbnail.png">
+<img src="https://github.com/InvArch/brand/blob/main/InvArch-logo-dark/cover.png">
 </div>
 
 <div align="Center">
@@ -58,7 +58,7 @@ When a DEV is complete, which is determined through the consensus of a DEV's gov
 ratio to either cryptocurrency tokens or company shares. 🚀
 
 <div align="center">
-<img src="https://i.ibb.co/cxTZQqK/Screen-Shot-2021-08-28-at-5-42-07-PM.png" style="align-center">
+<img src="https://i.ibb.co/hFM47Qh/Screen-Shot-2021-09-11-at-4-39-30-PM.png" style="align-center">
 </div>
 
 ### InvArch approaches ideas (IP) as a set of non-fungible components 
