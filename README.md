@@ -11,7 +11,7 @@
 ### Project Details
 
 <div align=center>
-  <img src="https://i.ibb.co/cxTZQqK/Screen-Shot-2021-08-28-at-5-42-07-PM.png">
+  <img src="https://i.ibb.co/hFM47Qh/Screen-Shot-2021-09-11-at-4-39-30-PM.png">
 </div>
 
 ### InvArch approaches ideas (IP) as a set of non-fungible components: 
