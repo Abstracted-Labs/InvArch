@@ -40,7 +40,7 @@ use sp_std::{convert::TryInto, vec::Vec};
 // mod tests;
 
 /// Import from IPT pallet
-use ipt::{IpsInfo, IptInfo};
+use primitives::{IpsInfo, IptInfo};
 
 pub use pallet::*;
 

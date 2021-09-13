@@ -17,7 +17,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
-use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{ensure, pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use sp_runtime::{
     traits::{
@@ -32,30 +31,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// IPS info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
-pub struct IpsInfo<IptId, AccountId, Data, IpsMetadataOf> {
-    // TODO: WIP
-    /// IPS metadata
-    pub metadata: IpsMetadataOf,
-    /// Total issuance for the IPS
-    pub total_issuance: IptId,
-    /// IPS owner
-    pub owner: AccountId,
-    /// IPS Properties
-    pub data: Data,
-}
-
-/// IPT Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
-pub struct IptInfo<AccountId, Data, IptMetadataOf> {
-    /// IPT owner
-    pub owner: AccountId,
-    /// IPT metadata
-    pub metadata: IptMetadataOf,
-    /// IPT data
-    pub data: Data,
-}
+use primitives::{IpsInfo, IptInfo};
 
 pub use pallet::*;
 
