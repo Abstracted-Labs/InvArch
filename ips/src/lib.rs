@@ -11,12 +11,9 @@
 //! ### Pallet Functions
 //!
 //! - `create` - Create a new IP Set
-//! - `change_owner` - Change the owner of an IP Set
-//! - `mint` - Mint a new IPT inside ab IP Set
-//! - `burn` - Burn IPT(intellectual property token)
+//! - `send` - Transfer IP Set owner account address
 //! - `list` - List an IP Set for sale
 //! - `buy` - Buy an IP Set
-//! - `send` - Transfer IP Set owner account address
 //! - `destroy` - Delete an IP Set and all of its contents
 
 #![cfg_attr(not(feature = "std"), no_std)]
