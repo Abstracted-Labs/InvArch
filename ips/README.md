@@ -12,10 +12,9 @@ The following **components** are defined:
 
 The following **functions** are possible:
 * `create` - Create a new IP Set
-* `change_owner` - Change the owner of a Set
+* `send` - Transfer IP Set owner account address
 * `list` - List an IP Set for sale
 * `buy` - Buy an IP Set
-* `send` - Transfer IP Set owner account address
 * `destroy` - Delete an IP Set and all of its contents
 
 # IP Set
