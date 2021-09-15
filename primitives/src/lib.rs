@@ -6,6 +6,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 pub type IpsId = u64;
 /// IPT Id type
 pub type IptId = u64;
+/// IPO id type
+pub type IpoId = u64;
 
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
@@ -29,5 +31,19 @@ pub struct IptInfo<AccountId, Data, IptMetadataOf> {
     /// IPT metadata
     pub metadata: IptMetadataOf,
     /// IPT data
+    pub data: Data,
+}
+
+/// IPO Info
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
+pub struct IpoInfo<IpsId, AccountId, Data, IpoMetadataOf> {
+    // TODO: WIP
+    /// IPO metadata
+    pub metadata: IpoMetadataOf,
+    /// Total issuance for the IPO
+    pub total_issuance: IpsId,
+    /// IPO owner
+    pub owner: AccountId,
+    /// IPO Properties
     pub data: Data,
 }

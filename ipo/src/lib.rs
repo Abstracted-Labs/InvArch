@@ -21,47 +21,201 @@
 //! to the ballance of the function caller's account.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::unused_unit)]
+
+use frame_support::{
+    pallet_prelude::*,
+    traits::{Currency, Get},
+    BoundedVec, Parameter,
+};
+
+use sp_runtime::{
+    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
+    DispatchError,
+};
+use sp_std::{convert::TryInto, vec::Vec};
+
+// #[cfg(test)]
+// mod mock;
+// #[cfg(test)]
+// mod tests;
+
+/// Import from primitives pallet
+use primitives::{IpoInfo, IpsInfo};
 
 pub use pallet::*;
+
 #[frame_support::pallet]
 pub mod pallet {
-    pub type IpoId = u32;
-    use frame_support::pallet_prelude::*;
+    use super::*;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        /// The IPO ID type
+        type IpoId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
+        /// The IPO properties type
+        type IpoData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
+        /// The IPS ID type
+        type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        /// IPT properties type
+        type IpsData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
+        /// The maximum size of an IPS's metadata
+        type MaxIpoMetadata: Get<u32>; // TODO: WIP
+        /// The maximum size of an IPT's metadata
+        type MaxIpsMetadata: Get<u32>;
+        /// Currency
+        type Currency: Currency<Self::AccountId>;
     }
+
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub type IpoIndexOf<T> = <T as Config>::IpoId;
+    pub type IpoMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpoMetadata>;
+    pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
+    pub type IpoInfoOf<T> = IpoInfo<
+        <T as Config>::IpsId,
+        <T as frame_system::Config>::AccountId,
+        <T as Config>::IpoData,
+        IpoMetadataOf<T>,
+    >;
+    pub type IpsInfoOf<T> = IpsInfo<
+        <T as frame_system::Config>::AccountId,
+        <T as Config>::IpsData,
+        IpoMetadataOf<T>,
+        IpsMetadataOf<T>,
+    >;
+
+    pub type GenesisIpsData<T> = (
+        <T as frame_system::Config>::AccountId, // IPS owner
+        Vec<u8>,                                // IPS metadata
+        <T as Config>::IpsData,                 // IPS data
+    );
+    pub type GenesisIpo<T> = (
+        <T as frame_system::Config>::AccountId, // IPO owner
+        Vec<u8>,                                // IPO metadata
+        <T as Config>::IpoData,                 // IPO data
+        Vec<GenesisIpsData<T>>,                 // Vector of IPSs belong to this IPO
+    );
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
+    /// Next available IPO ID.
     #[pallet::storage]
-    #[pallet::getter(fn something)]
-    pub type IpoStorage<T> = StorageMap<_, Blake2_128Concat, IpoId, u32>;
+    #[pallet::getter(fn next_ipo_id)]
+    pub type NextIpoId<T: Config> = StorageValue<_, T::IpoId, ValueQuery>;
 
-    #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
-    pub enum Event<T: Config> {
-        /// param. [Ipo, who]
-        IpoStored(u32, T::AccountId),
-    }
+    /// Next available IPS ID
+    #[pallet::storage]
+    #[pallet::getter(fn next_ips_id)]
+    pub type NextIpsId<T: Config> = StorageMap<_, Blake2_128Concat, T::IpoId, T::IpsId, ValueQuery>;
 
-    // Errors inform users that something went wrong.
+    /// Store IPO info
+    ///
+    /// Return `None` if IPO info not set of removed
+    #[pallet::storage]
+    #[pallet::getter(fn ipo_storage)]
+    pub type IpoStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpoId, IpoInfoOf<T>>;
+
+    /// Store IPS info
+    ///
+    /// Returns `None` if IPS info not set of removed
+    #[pallet::storage]
+    #[pallet::getter(fn ips_storage)]
+    pub type IpsStorage<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::IpoId, Blake2_128Concat, T::IpsId, IpsInfoOf<T>>;
+
+    /// IPS existence check by owner and IPO ID
+    #[pallet::storage]
+    #[pallet::getter(fn ips_by_owner)]
+    pub type IpsByOwner<T: Config> = StorageNMap<
+        _,
+        (
+            NMapKey<Blake2_128Concat, T::AccountId>, // owner
+            NMapKey<Blake2_128Concat, T::IpoId>,
+            NMapKey<Blake2_128Concat, T::IpsId>,
+        ),
+        (),
+        ValueQuery,
+    >;
+
+    /// Get IPO price. None means not for sale.
+    #[pallet::storage]
+    #[pallet::getter(fn ipo_prices)]
+    pub type IpoPrices<T: Config> =
+        StorageMap<_, Blake2_128Concat, IpoInfoOf<T>, BalanceOf<T>, OptionQuery>;
+
+    /// Errors for IPO pallet
     #[pallet::error]
     pub enum Error<T> {
-        /// No value error
-        NoIpoFound,
-        /// Storage overflow error
-        StorageOverflow,
+        /// No available IPO ID
+        NoAvailableIpoId,
+        /// No available IPS ID
+        NoAvailableIpsId,
+        /// IPS (IpoId, IpsId) not found
+        IpsNotFound,
+        /// IPO not found
+        IpONotFound,
+        /// The operator is not the owner of the IPS and has no permission
+        NoPermission,
+        /// The IPO is already owned
+        AlreadyOwned,
+        /// Failed because the Maximum amount of metadata was exceeded
+        MaxMetadataExceeded,
+        /// Buy IPO from their self
+        BuyFromSelf,
+        /// IPO is not for sale
+        NotForSale,
+        /// Buy price is too low
+        PriceTooLow,
+        /// Can not destroy IPO
+        CannotDestroyIpo,
     }
 
-    // Dispatch functions
+    /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T> {}
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+}
+
+impl<T: Config> Pallet<T> {
+    /// Create IP (Intellectual Property) Ownership (IPO)
+    pub fn issue_ipo(
         // TODO: WIP
+        owner: &T::AccountId,
+        metadata: Vec<u8>,
+        data: T::IpoData,
+    ) -> Result<T::IpoId, DispatchError> {
+        let bounded_metadata: BoundedVec<u8, T::MaxIpoMetadata> = metadata
+            .try_into()
+            .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+
+        let ipo_id = NextIpoId::<T>::try_mutate(|id| -> Result<T::IpoId, DispatchError> {
+            let current_id = *id;
+            *id = id
+                .checked_add(&One::one())
+                .ok_or(Error::<T>::NoAvailableIpoId)?;
+            Ok(current_id)
+        })?;
+
+        let info = IpoInfo {
+            metadata: bounded_metadata,
+            total_issuance: Default::default(),
+            owner: owner.clone(),
+            data,
+        };
+        IpoStorage::<T>::insert(ipo_id, info);
+
+        Ok(ipo_id)
     }
+
+    // TODO: WIP
+    // - Add transfer function
+    // - Add set_balance function
+    // - Add get_balance function
+    // - Add total_supply function
+    // - Add bind function
+    // - Add unbind function
 }
