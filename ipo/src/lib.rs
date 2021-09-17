@@ -29,16 +29,24 @@ use frame_support::{
     BoundedVec, Parameter,
 };
 
+use frame_system::{ensure_signed, pallet_prelude::*};
+
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
+    traits::{
+        AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One, Saturating, Zero,
+    },
     DispatchError,
 };
+
 use sp_std::{convert::TryInto, vec::Vec};
 
 // #[cfg(test)]
 // mod mock;
 // #[cfg(test)]
 // mod tests;
+
+use codec::{Codec, MaxEncodedLen};
+use sp_std::{fmt::Debug, prelude::*};
 
 /// Import from primitives pallet
 use primitives::{IpoInfo, IpsInfo};
@@ -65,6 +73,16 @@ pub mod pallet {
         type MaxIpsMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
+        /// The balance of an account
+        type Balance: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Codec
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Debug
+            + MaxEncodedLen;
     }
 
     pub type BalanceOf<T> =
@@ -127,17 +145,9 @@ pub mod pallet {
 
     /// IPS existence check by owner and IPO ID
     #[pallet::storage]
-    #[pallet::getter(fn ips_by_owner)]
-    pub type IpsByOwner<T: Config> = StorageNMap<
-        _,
-        (
-            NMapKey<Blake2_128Concat, T::AccountId>, // owner
-            NMapKey<Blake2_128Concat, T::IpoId>,
-            NMapKey<Blake2_128Concat, T::IpsId>,
-        ),
-        (),
-        ValueQuery,
-    >;
+    #[pallet::getter(fn get_balance)]
+    pub type BalanceToAccount<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
     /// Get IPO price. None means not for sale.
     #[pallet::storage]
@@ -155,7 +165,7 @@ pub mod pallet {
         /// IPS (IpoId, IpsId) not found
         IpsNotFound,
         /// IPO not found
-        IpONotFound,
+        IpoNotFound,
         /// The operator is not the owner of the IPS and has no permission
         NoPermission,
         /// The IPO is already owned
@@ -170,6 +180,8 @@ pub mod pallet {
         PriceTooLow,
         /// Can not destroy IPO
         CannotDestroyIpo,
+        /// The balance is insufficient
+        InsufficientBalance,
     }
 
     /// Dispatch functions
@@ -211,8 +223,29 @@ impl<T: Config> Pallet<T> {
         Ok(ipo_id)
     }
 
+    /// Transfer some liquid free IPO balance to another account
+    /// Is a no-op if value to be transferred is zero or the `from` is the same as `to`.
+    pub fn transfer(
+        origin: OriginFor<T>,
+        to: T::AccountId,
+        amount: T::Balance,
+    ) -> DispatchResultWithPostInfo {
+        let sender = ensure_signed(origin)?;
+
+        if amount.is_zero() || sender == to {
+            return Ok(().into());
+        }
+
+        BalanceToAccount::<T>::mutate(&sender, |bal| {
+            *bal = bal.saturating_sub(amount);
+        });
+        BalanceToAccount::<T>::mutate(&to, |bal| {
+            *bal = bal.saturating_add(amount);
+        });
+        Ok(().into())
+    }
+
     // TODO: WIP
-    // - Add transfer function
     // - Add set_balance function
     // - Add get_balance function
     // - Add total_supply function
