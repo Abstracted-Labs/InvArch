@@ -47,8 +47,6 @@ pub mod pallet {
         type IpsData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
         /// The IPT ID type
         type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        /// IPT properties type
-        type IptData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>; // TODO: WIP
         /// The maximum size of an IPT's metadata
@@ -63,13 +61,16 @@ pub mod pallet {
         <T as Config>::IpsData,
         IpsMetadataOf<T>,
     >;
-    pub type IptInfoOf<T> =
-        IptInfo<<T as frame_system::Config>::AccountId, <T as Config>::IptData, IptMetadataOf<T>>;
+    pub type IptInfoOf<T> = IptInfo<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::Hash, // CID stored as just the hash
+        IptMetadataOf<T>,
+    >;
 
     pub type GenesisIptData<T> = (
         <T as frame_system::Config>::AccountId, // IPT owner
         Vec<u8>,                                // IPT metadata
-        <T as Config>::IptData,                 // IPT data
+        <T as frame_system::Config>::Hash,      // CID stored as just the hash
     );
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
@@ -211,7 +212,7 @@ impl<T: Config> Pallet<T> {
         owner: &T::AccountId,
         ips_id: T::IpsId,
         metadata: Vec<u8>,
-        data: T::IptData,
+        data: T::Hash,
     ) -> Result<T::IptId, DispatchError> {
         NextIptId::<T>::try_mutate(ips_id, |id| -> Result<T::IptId, DispatchError> {
             let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> = metadata
@@ -270,7 +271,7 @@ impl<T: Config> Pallet<T> {
         owner: &T::AccountId,
         ips_id: T::IpsId,
         new_metadata: Vec<u8>,
-        data: T::IptData,
+        data: T::Hash,
     ) -> Result<T::IptId, DispatchError> {
         NextIptId::<T>::try_mutate(ips_id, |id| -> Result<T::IptId, DispatchError> {
             let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> = new_metadata
