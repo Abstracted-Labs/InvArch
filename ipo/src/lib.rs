@@ -25,18 +25,17 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{
-        Currency,
-        Get
-    },
+    traits::{Currency, Get},
     BoundedVec, Parameter,
 };
 
 use frame_system::{ensure_signed, pallet_prelude::*};
 
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Saturating, Member, One, Zero},
-    DispatchError, 
+    traits::{
+        AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One, Saturating, Zero,
+    },
+    DispatchError,
 };
 
 use sp_std::{convert::TryInto, vec::Vec};
@@ -75,7 +74,15 @@ pub mod pallet {
         /// Currency
         type Currency: Currency<Self::AccountId>;
         /// The balance of an account
-        type Balance: Parameter + Member + AtLeast32BitUnsigned + Codec + Default + Copy + MaybeSerializeDeserialize + Debug + MaxEncodedLen;
+        type Balance: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Codec
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Debug
+            + MaxEncodedLen;
     }
 
     pub type BalanceOf<T> =
@@ -139,13 +146,8 @@ pub mod pallet {
     /// IPS existence check by owner and IPO ID
     #[pallet::storage]
     #[pallet::getter(fn get_balance)]
-    pub type BalanceToAccount<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat, 
-        T::AccountId,
-        T::Balance,
-        ValueQuery,
-    >;
+    pub type BalanceToAccount<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
     /// Get IPO price. None means not for sale.
     #[pallet::storage]
@@ -231,9 +233,9 @@ impl<T: Config> Pallet<T> {
         let sender = ensure_signed(origin)?;
 
         if amount.is_zero() || sender == to {
-			return Ok(().into())
-		}
-    
+            return Ok(().into());
+        }
+
         BalanceToAccount::<T>::mutate(&sender, |bal| {
             *bal = bal.saturating_sub(amount);
         });
