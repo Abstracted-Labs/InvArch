@@ -144,7 +144,7 @@ pub mod pallet {
                 )
                 .expect("Create IPS cannot fail while building genesis");
                 for (account_id, ipt_metadata, ipt_data) in &ipt_class.3 {
-                    Pallet::<T>::mint(account_id, ips_id, ipt_metadata.to_vec(), ipt_data.clone())
+                    Pallet::<T>::mint(account_id, ips_id, ipt_metadata.to_vec(), *ipt_data)
                         .expect("IPT mint cannot fail during genesis");
                 }
             })
