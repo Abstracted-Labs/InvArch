@@ -50,7 +50,6 @@ impl Config for Runtime {
     type IpsId = u64;
     type IptId = u64;
     type IpsData = ();
-    type IptData = ();
     type MaxIpsMetadata = MaxIpsMetadata;
     type MaxIptMetadata = MaxIptMetadata;
 }

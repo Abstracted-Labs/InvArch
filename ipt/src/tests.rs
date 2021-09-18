@@ -3,6 +3,12 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
+use sp_core::H256;
+
+const MOCK_DATA: [u8; 32] = [
+    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
+    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
+];
 
 #[test]
 fn create_ips_should_work() {
@@ -29,15 +35,15 @@ fn mint_should_work() {
         assert_eq!(next_ips_id, IPS_ID);
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
         assert_eq!(Ipt::next_ipt_id(IPS_ID), 0);
-        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)));
         assert_eq!(Ipt::next_ipt_id(IPS_ID), 1);
-        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)));
         assert_eq!(Ipt::next_ipt_id(IPS_ID), 2);
 
         let next_ips_id = Ipt::next_ips_id();
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
         assert_eq!(Ipt::next_ipt_id(next_ips_id), 0);
-        assert_ok!(Ipt::mint(&BOB, next_ips_id, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, next_ips_id, vec![1], H256::from(MOCK_DATA)));
         assert_eq!(Ipt::next_ipt_id(next_ips_id), 1);
 
         assert_eq!(Ipt::next_ipt_id(IPS_ID), 2);
@@ -52,13 +58,13 @@ fn mint_should_fail() {
             ips_info.as_mut().unwrap().total_issuance = <Runtime as Config>::IptId::max_value();
         });
         assert_noop!(
-            Ipt::mint(&BOB, IPS_ID, vec![1], ()),
+            Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)),
             ArithmeticError::Overflow,
         );
 
         NextIptId::<Runtime>::mutate(IPS_ID, |id| *id = <Runtime as Config>::IptId::max_value());
         assert_noop!(
-            Ipt::mint(&BOB, IPS_ID, vec![1], ()),
+            Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)),
             Error::<Runtime>::NoAvailableIptId
         );
     });
@@ -68,7 +74,7 @@ fn mint_should_fail() {
 fn burn_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
-        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)));
         assert_ok!(Ipt::burn(&BOB, (IPS_ID, IPT_ID)));
     });
 }
@@ -77,7 +83,7 @@ fn burn_should_work() {
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
-        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)));
         assert_noop!(
             Ipt::burn(&BOB, (IPS_ID, IPT_ID_NOT_EXIST)),
             Error::<Runtime>::IptNotFound
@@ -91,7 +97,7 @@ fn burn_should_fail() {
 
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
-        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], ()));
+        assert_ok!(Ipt::mint(&BOB, IPS_ID, vec![1], H256::from(MOCK_DATA)));
 
         IpsStorage::<Runtime>::mutate(IPS_ID, |ips_info| {
             ips_info.as_mut().unwrap().total_issuance = 0;
@@ -109,7 +115,7 @@ fn exceeding_max_metadata_should_fail() {
         );
         assert_ok!(Ipt::create_ips(&ALICE, vec![1], ()));
         assert_noop!(
-            Ipt::mint(&BOB, IPS_ID, vec![1, 2], ()),
+            Ipt::mint(&BOB, IPS_ID, vec![1, 2], H256::from(MOCK_DATA)),
             Error::<Runtime>::MaxMetadataExceeded
         );
     });
