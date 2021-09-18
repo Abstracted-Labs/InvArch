@@ -83,6 +83,9 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + Debug
             + MaxEncodedLen;
+        /// The minimum amount required to keep an account open.
+        #[pallet::constant]
+        type ExistentialDeposit: Get<Self::Balance>;
     }
 
     pub type BalanceOf<T> =
@@ -245,10 +248,31 @@ impl<T: Config> Pallet<T> {
         Ok(().into())
     }
 
-    // TODO: WIP
-    // - Add set_balance function
-    // - Add get_balance function
-    // - Add total_supply function
-    // - Add bind function
-    // - Add unbind function
+    pub fn set_balance(
+        origin: OriginFor<T>,
+        new_free: T::Balance,
+        new_reserved: T::Balance,
+    ) -> DispatchResultWithPostInfo {
+        ensure_root(origin)?;
+
+        let existential_deposit = T::ExistentialDeposit::get();
+
+        let wipeout = new_free + new_reserved < existential_deposit;
+        let new_free = if wipeout { Zero::zero() } else { new_free };
+        let new_reserved = if wipeout { Zero::zero() } else { new_reserved };
+
+        // TODO : WIP [need help]
+        // - Add more logic for free and reserved balance
+
+        (new_free, new_reserved);
+
+        Ok(().into())
+    }
 }
+
+// TODO: WIP
+
+// - Add get_balance function
+// - Add total_supply function
+// - Add bind function
+// - Add unbind function
