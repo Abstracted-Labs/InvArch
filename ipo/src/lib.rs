@@ -348,6 +348,10 @@ impl<T: Config> Pallet<T> {
     fn account(who: &T::AccountId) -> AccountData<T::Balance> {
         T::AccountStore::get(who)
     }
+
+    // TODO: WIP
+    // Redundancy with get_balance from storage in line #156
+    // Should we remove get free and reserved balance and just use get_balance from storage above?
 }
 
 // TODO: WIP
