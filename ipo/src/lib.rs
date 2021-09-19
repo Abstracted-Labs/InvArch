@@ -26,7 +26,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, Get},
+    traits::{Currency, Get, StoredMap, WithdrawReasons},
     BoundedVec, Parameter,
 };
 
@@ -39,7 +39,8 @@ use sp_runtime::{
     DispatchError,
 };
 
-use sp_std::{convert::TryInto, vec::Vec};
+use scale_info::TypeInfo;
+use sp_std::{convert::TryInto, ops::BitOr, vec::Vec};
 
 // #[cfg(test)]
 // mod mock;
@@ -83,10 +84,13 @@ pub mod pallet {
             + Copy
             + MaybeSerializeDeserialize
             + Debug
-            + MaxEncodedLen;
+            + MaxEncodedLen
+            + TypeInfo;
         /// The minimum amount required to keep an account open.
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
+        /// The means of storing the balances of an account.
+        type AccountStore: StoredMap<Self::AccountId, AccountData<Self::Balance>>;
     }
 
     pub type BalanceOf<T> =
@@ -158,6 +162,66 @@ pub mod pallet {
     #[pallet::getter(fn ipo_prices)]
     pub type IpoPrices<T: Config> =
         StorageMap<_, Blake2_128Concat, IpoInfoOf<T>, BalanceOf<T>, OptionQuery>;
+
+    /// Simplified reasons for withdrawing balance.
+    #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+    pub enum Reasons {
+        /// Paying system transaction fees.
+        Fee = 0_isize,
+        /// Any reason other than paying system transaction fees.
+        Misc = 1_isize,
+        /// Any reason at all.
+        All = 2_isize,
+    }
+
+    impl From<WithdrawReasons> for Reasons {
+        fn from(r: WithdrawReasons) -> Reasons {
+            if r == WithdrawReasons::TRANSACTION_PAYMENT {
+                Reasons::Fee
+            } else if r.contains(WithdrawReasons::TRANSACTION_PAYMENT) {
+                Reasons::All
+            } else {
+                Reasons::Misc
+            }
+        }
+    }
+
+    impl BitOr for Reasons {
+        type Output = Reasons;
+        fn bitor(self, other: Reasons) -> Reasons {
+            if self == other {
+                return self;
+            }
+            Reasons::All
+        }
+    }
+
+    /// All balance information for an account.
+    #[derive(
+        Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo,
+    )]
+    pub struct AccountData<Balance> {
+        /// Non-reserved part of the balance. There may still be restrictions on this, but it is the
+        /// total pool what may in principle be transferred, reserved and used for tipping.
+        ///
+        /// This is the only balance that matters in terms of most operations on tokens. It
+        /// alone is used to determine the balance when in the contract execution environment.
+        pub free: Balance,
+        /// Balance which is reserved and may not be used at all.
+        ///
+        /// This can still get slashed, but gets slashed last of all.
+        ///
+        /// This balance is a 'reserve' balance that other subsystems use in order to set aside tokens
+        /// that are still 'owned' by the account holder, but which are suspendable.
+        /// This includes named reserve and unnamed reserve.
+        pub reserved: Balance,
+        /// The amount that `free` may not drop below when withdrawing for *anything except transaction
+        /// fee payment*.
+        pub misc_frozen: Balance,
+        /// The amount that `free` may not drop below when withdrawing specifically for transaction
+        /// fee payment.
+        pub fee_frozen: Balance,
+    }
 
     /// Errors for IPO pallet
     #[pallet::error]
@@ -269,11 +333,25 @@ impl<T: Config> Pallet<T> {
 
         Ok(().into())
     }
+
+    /// Get the free balance of an account.
+    pub fn free_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
+        Self::account(who.borrow()).free
+    }
+
+    /// Get the reserved balance of an account.
+    pub fn reserved_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
+        Self::account(who.borrow()).reserved
+    }
+
+    /// Get both the free and reserved balances of an account.
+    fn account(who: &T::AccountId) -> AccountData<T::Balance> {
+        T::AccountStore::get(who)
+    }
 }
 
 // TODO: WIP
 
-// - Add get_balance function
 // - Add total_supply function
 // - Add bind function
 // - Add unbind function
