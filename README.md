@@ -13,9 +13,9 @@ Built on Substrate
 <br>  
 <br>
 
-[![Substrate version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://substrate.dev/)
-[![Publish0x](https://img.shields.io/badge/Publish0x-InvArch-brightgreen)](https://www.publish0x.com/blockchain-economy)
-[![License](https://img.shields.io/github/license/InvArch/InvArch?color=green)](https://github.com/InvArch/InvArch/blob/main/LICENSE)
+[![Substrate version](https://img.shields.io/badge/Substrate-v3.0.0-E6007A?logo=Parity%20Substrate)](https://github.com/paritytech/substrate/releases/tag/v3.0.0)
+[![Medium](https://img.shields.io/badge/Medium-InvArch-E6007A?logo=medium)](https://invarch.medium.com/)
+[![License](https://img.shields.io/github/license/InvArch/InvArch?color=E6007A)](https://github.com/InvArch/InvArch/blob/main/LICENSE)
  <br />
 [![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArchNetwork)
 [![Discord](https://img.shields.io/badge/Discord-gray?logo=discord)](https://discord.gg/J3hapvrpZJ)
