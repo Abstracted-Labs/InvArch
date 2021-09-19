@@ -17,7 +17,7 @@ Built on Substrate
 [![Publish0x](https://img.shields.io/badge/Publish0x-InvArch-brightgreen)](https://www.publish0x.com/blockchain-economy)
 [![License](https://img.shields.io/github/license/InvArch/InvArch?color=green)](https://github.com/InvArch/InvArch/blob/main/LICENSE)
  <br />
-[![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArch_Tech)
+[![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArchNetwork)
 [![Discord](https://img.shields.io/badge/Discord-gray?logo=discord)](https://discord.gg/J3hapvrpZJ)
 [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)]()
 </div>
