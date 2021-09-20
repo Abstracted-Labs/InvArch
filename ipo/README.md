@@ -10,13 +10,17 @@ The following **components** are defined:
 * `IPOwnership` + Metadata
 
 The following **functions** are possible following the [balances pallet](https://github.com/paritytech/substrate/tree/master/frame/balances) and [asset pallet](https://github.com/paritytech/substrate/tree/master/frame/assets):
+
+### Dispatchable Functions
 * `issue` - Issues the total supply of a new fungible asset to the account of the caller of the function
 * `transfer` - Transfer some liquid free balance to another account
 * `set_balance` - Set the balances to a given account. The origin of this call mus be root
-* `get_balance` - Get the asset `id` balance of `who`
-* `total_supply` - Get the total supply of an asset `id`
 * `bind` - Bind some `amount` of unit of fungible asset `id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
 * `unbind` - Unbind some `amount` of unit of fungible asset `id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
+
+### Public Functions
+* `get_balance` - Get the IPO `id` balance of `who`
+* `total_supply` - Get the total supply of an IPO `id`
 
 ### Key Info Regarding `IPOwnership`
 To ensure that no single actor can have a 51% hold over a project, IPO can be distributed within the following ranges:

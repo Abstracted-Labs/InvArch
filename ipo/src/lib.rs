@@ -61,6 +61,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// Overarching event type.
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPO ID type
         type IpoId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
         /// The IPO properties type
@@ -163,6 +165,13 @@ pub mod pallet {
     pub type IpoPrices<T: Config> =
         StorageMap<_, Blake2_128Concat, IpoInfoOf<T>, BalanceOf<T>, OptionQuery>;
 
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// Some IPO were issued. \[ipo_id, owner, total_supply]
+        Issued(T::IpoId, T::AccountId, T::Balance),
+    }
+
     /// Simplified reasons for withdrawing balance.
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
     pub enum Reasons {
@@ -264,9 +273,10 @@ impl<T: Config> Pallet<T> {
     /// Create IP (Intellectual Property) Ownership (IPO)
     pub fn issue_ipo(
         // TODO: WIP
-        owner: &T::AccountId,
+        owner: T::AccountId,
         metadata: Vec<u8>,
         data: T::IpoData,
+        total_issuance: T::Balance,
     ) -> Result<T::IpoId, DispatchError> {
         let bounded_metadata: BoundedVec<u8, T::MaxIpoMetadata> = metadata
             .try_into()
@@ -287,7 +297,7 @@ impl<T: Config> Pallet<T> {
             data,
         };
         IpoStorage::<T>::insert(ipo_id, info);
-
+        Self::deposit_event(Event::Issued(ipo_id, owner, total_issuance));
         Ok(ipo_id)
     }
 
@@ -356,6 +366,5 @@ impl<T: Config> Pallet<T> {
 
 // TODO: WIP
 
-// - Add total_supply function
 // - Add bind function
 // - Add unbind function
