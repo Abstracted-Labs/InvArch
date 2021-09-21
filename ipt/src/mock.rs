@@ -1,6 +1,6 @@
 //! Mocks for the gradually-update module.
 
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, traits::Contains};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
@@ -35,7 +35,7 @@ impl frame_system::Config for Runtime {
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type DbWeight = ();
-    type BaseCallFilter = ();
+    type BaseCallFilter = BaseFilter;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -56,6 +56,18 @@ impl Config for Runtime {
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
+
+use frame_system::Call as SystemCall;
+pub struct BaseFilter;
+impl Contains<Call> for BaseFilter {
+    fn contains(c: &Call) -> bool {
+        match *c {
+            // Remark is used as a no-op call in the benchmarking
+            Call::System(SystemCall::remark(_)) => true,
+            Call::System(_) => false,
+        }
+    }
+}
 
 construct_runtime!(
     pub enum Runtime where

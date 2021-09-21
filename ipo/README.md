@@ -16,7 +16,7 @@ The following **functions** are possible following the [balances pallet](https:/
 * `transfer` - Transfer some liquid free balance to another account
 * `set_balance` - Set the balances to a given account. The origin of this call mus be root
 * `bind` - Bind some `amount` of unit of fungible `ipo_id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
-* `unbind` - Unbind some `amount` of unit of fungible asset `id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
+* `unbind` - Unbind some `amount` of unit of fungible `ipo_id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
 
 ### Public Functions
 * `get_balance` - Get the IPO `id` balance of `who`
