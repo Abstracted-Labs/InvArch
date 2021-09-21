@@ -172,6 +172,8 @@ pub mod pallet {
         Issued(T::IpoId, T::AccountId, T::Balance),
         /// Some IPO was bond. \[ipo_id\]
         IpoBond(T::IpoId),
+        /// Some IPO was unbind. \[ipo_id\]
+        IpoUnbind(T::IpoId),
     }
 
     /// Simplified reasons for withdrawing balance.
@@ -378,8 +380,19 @@ impl<T: Config> Pallet<T> {
             Ok(())
         })
     }
+
+    /// Unbind some `amount` of unit of fungible `ipo_id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
+    pub fn unbind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
+        let origin = ensure_signed(origin)?;
+
+        IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
+            let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+            ensure!(origin == d.owner, Error::<T>::NoPermission);
+
+            d.is_bond = false;
+
+            Self::deposit_event(Event::<T>::IpoUnbind(ipo_id));
+            Ok(())
+        })
+    }
 }
-
-// TODO: WIP
-
-// - Add unbind function
