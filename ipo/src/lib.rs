@@ -168,8 +168,10 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Some IPO were issued. \[ipo_id, owner, total_supply]
+        /// Some IPO were issued. \[ipo_id, owner, total_supply\]
         Issued(T::IpoId, T::AccountId, T::Balance),
+        /// Some IPO was bond. \[ipo_id\]
+        IpoBond(T::IpoId),
     }
 
     /// Simplified reasons for withdrawing balance.
@@ -259,6 +261,8 @@ pub mod pallet {
         CannotDestroyIpo,
         /// The balance is insufficient
         InsufficientBalance,
+        /// The given IPO ID is unknown
+        Unknown,
     }
 
     /// Dispatch functions
@@ -295,6 +299,7 @@ impl<T: Config> Pallet<T> {
             total_issuance: Default::default(),
             owner: owner.clone(),
             data,
+            is_bond: false,
         };
         IpoStorage::<T>::insert(ipo_id, info);
         Self::deposit_event(Event::Issued(ipo_id, owner, total_issuance));
@@ -359,12 +364,22 @@ impl<T: Config> Pallet<T> {
         T::AccountStore::get(who)
     }
 
-    // TODO: WIP
-    // Redundancy with get_balance from storage in line #156
-    // Should we remove get free and reserved balance and just use get_balance from storage above?
+    /// Bind some `amount` of unit of fungible `ipo_id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
+    pub fn bind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
+        let origin = ensure_signed(origin)?;
+
+        IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
+            let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+            ensure!(origin == d.owner, Error::<T>::NoPermission);
+
+            d.is_bond = true;
+
+            Self::deposit_event(Event::<T>::IpoBond(ipo_id));
+            Ok(())
+        })
+    }
 }
 
 // TODO: WIP
 
-// - Add bind function
 // - Add unbind function

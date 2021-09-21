@@ -46,4 +46,6 @@ pub struct IpoInfo<IpsId, AccountId, Data, IpoMetadataOf> {
     pub owner: AccountId,
     /// IPO Properties
     pub data: Data,
+    /// Binding Properties
+    pub is_bond: bool,
 }
