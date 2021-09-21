@@ -16,6 +16,8 @@ sp-std = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-
 frame-support = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1", default-features = false }
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1", default-features = false }
 
 [features]
 default = ["std"]
