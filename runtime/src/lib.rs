@@ -254,23 +254,17 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    // The maximum size of an IPS's metadata
-    pub const MaxIpsMetadata: u32 = 10000;
     // The maximum size of an IPT's metadata
     pub const MaxIptMetadata: u32 = 10000;
 }
 
 impl ipt::Config for Runtime {
-    // The maximum size of an IPS's metadata
-    type MaxIpsMetadata = MaxIpsMetadata;
     // The maximum size of an IPT's metadata
     type MaxIptMetadata = MaxIptMetadata;
-    // The IPS ID type
-    type IpsId = u32;
-    // The IPS properties type
-    type IpsData = Vec<u8>;
     // The IPT ID type
-    type IptId = u32;
+    type IptId = u64;
+
+    type Event = Event;
 }
 
 parameter_types! {
@@ -304,7 +298,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        Ipt: ipt::{Pallet, Call, Storage, Config<T>},
+        Ipt: ipt::{Pallet, Call, Storage, Event<T>},
     }
 );
 
