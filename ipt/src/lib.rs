@@ -17,6 +17,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
+use frame_support::{ensure, traits::Get, BoundedVec, Parameter};
+use frame_system::ensure_signed;
+use frame_system::pallet_prelude::OriginFor;
+use primitives::IptInfo;
+use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
+use sp_std::{convert::TryInto, vec::Vec};
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -26,26 +33,17 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use codec::EncodeLike;
-    use frame_support::dispatch::PostDispatchInfo;
-    use frame_system::ensure_signed;
-    use frame_system::pallet_prelude::OriginFor;
-
+    use super::*;
     use frame_support::pallet_prelude::*;
-
-    use frame_support::{ensure, traits::Get, BoundedVec, Parameter};
-    use primitives::IptInfo;
-    use sp_runtime::{
-        traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One},
-        DispatchResult,
-    };
-    use sp_std::{convert::TryInto, vec::Vec};
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The IPT Pallet Events
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
         /// The IPT ID type
         type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
         /// The maximum size of an IPT's metadata
@@ -102,24 +100,18 @@ pub mod pallet {
         MaxMetadataExceeded,
     }
 
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", T::IptId = "IptId", T::Hash = "Hash")]
+    pub enum Event<T: Config> {
+        Minted(T::AccountId, T::IptId, T::Hash),
+        Amended(T::AccountId, T::IptId, T::Hash),
+        Burned(T::AccountId, T::IptId),
+    }
+
     /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T>
-    where
-        IptInfo<
-            <T as frame_system::Config>::Origin,
-            <T as frame_system::Config>::Hash,
-            BoundedVec<u8, <T as Config>::MaxIptMetadata>,
-        >: EncodeLike<
-            IptInfo<
-                <T as frame_system::Config>::AccountId,
-                <T as frame_system::Config>::Hash,
-                BoundedVec<u8, <T as Config>::MaxIptMetadata>,
-            >,
-        >,
-        <T as frame_system::Config>::Origin: EncodeLike<<T as frame_system::Config>::AccountId>,
-        PostDispatchInfo: From<<T as Config>::IptId>,
-    {
+    impl<T: Config> Pallet<T> {
         /// Mint IPT(Intellectual Property Token) to `owner`
         #[pallet::weight(10000000)]
         pub fn mint(
@@ -144,21 +136,25 @@ pub mod pallet {
                     data,
                 };
                 IptStorage::<T>::insert(ipt_id, ipt_info);
-                IptByOwner::<T>::insert(owner, ipt_id, ());
+                IptByOwner::<T>::insert(owner.clone(), ipt_id, ());
 
-                Ok(ipt_id.into())
+                Self::deposit_event(Event::Minted(owner, ipt_id, data));
+
+                Ok(().into())
             })
         }
 
         /// Burn IPT(Intellectual Property Token) from `owner`
         #[pallet::weight(10000000)]
-        pub fn burn(owner: OriginFor<T>, ipt: T::IptId) -> DispatchResult {
-            IptStorage::<T>::try_mutate(ipt, |ipt_info| -> DispatchResult {
+        pub fn burn(owner: OriginFor<T>, ipt_id: T::IptId) -> DispatchResult {
+            IptStorage::<T>::try_mutate(ipt_id, |ipt_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
                 let t = ipt_info.take().ok_or(Error::<T>::IptNotFound)?;
                 ensure!(t.owner == owner, Error::<T>::NoPermission);
 
-                IptByOwner::<T>::remove(owner, ipt);
+                IptByOwner::<T>::remove(owner.clone(), ipt_id);
+
+                Self::deposit_event(Event::Burned(owner, ipt_id));
 
                 Ok(())
             })
@@ -172,6 +168,7 @@ pub mod pallet {
             data: T::Hash,
         ) -> DispatchResultWithPostInfo {
             NextIptId::<T>::try_mutate(|id| -> DispatchResultWithPostInfo {
+                let owner = ensure_signed(owner)?;
                 let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> =
                     new_metadata
                         .try_into()
@@ -190,7 +187,9 @@ pub mod pallet {
 
                 IptStorage::<T>::insert(ipt_id, ipt_info);
 
-                Ok(ipt_id.into())
+                Self::deposit_event(Event::Amended(owner, ipt_id, data));
+
+                Ok(().into())
             })
         }
     }
