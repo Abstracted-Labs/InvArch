@@ -41,7 +41,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 /// Import the template pallet.
-pub use pallet_template;
+pub use ipt;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -147,7 +147,7 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = frame_support::traits::AllowAll;
+    type BaseCallFilter = frame_support::traits::Everything;
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     /// The maximum length of a block (in bytes).
@@ -200,6 +200,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
+    type DisabledValidators = ();
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -253,6 +254,20 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
+    // The maximum size of an IPT's metadata
+    pub const MaxIptMetadata: u32 = 10000;
+}
+
+impl ipt::Config for Runtime {
+    // The maximum size of an IPT's metadata
+    type MaxIptMetadata = MaxIptMetadata;
+    // The IPT ID type
+    type IptId = u64;
+
+    type Event = Event;
+}
+
+parameter_types! {
     pub const TransactionByteFee: Balance = 1;
 }
 
@@ -266,11 +281,6 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
-}
-
-/// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
-    type Event = Event;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -288,8 +298,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        // Include the custom logic from the pallet-template in the runtime.
-        TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
+        Ipt: ipt::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -405,6 +414,10 @@ impl_runtime_apis! {
             Grandpa::grandpa_authorities()
         }
 
+        fn current_set_id() -> fg_primitives::SetId {
+            Grandpa::current_set_id()
+        }
+
         fn submit_report_equivocation_unsigned_extrinsic(
             _equivocation_proof: fg_primitives::EquivocationProof<
                 <Block as BlockT>::Hash,
@@ -449,14 +462,30 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+            use frame_system_benchmarking::Pallet as SystemBench;
+
+            let mut list = Vec::<BenchmarkList>::new();
+
+            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_balances, Balances);
+            list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+            list_benchmark!(list, extra, pallet_template, TemplateModule);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            return (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<
-            (Vec<frame_benchmarking::BenchmarkBatch>, Vec<StorageInfo>),
-            sp_runtime::RuntimeString,
-        > {
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
             use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
-            use frame_support::traits::StorageInfoTrait;
 
             use frame_system_benchmarking::Pallet as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
@@ -474,18 +503,15 @@ impl_runtime_apis! {
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
             ];
 
-            let storage_info = AllPalletsWithSystem::storage_info();
-
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_template, TemplateModule);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-            Ok((batches, storage_info))
+            Ok(batches)
         }
     }
 }

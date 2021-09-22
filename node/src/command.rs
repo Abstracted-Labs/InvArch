@@ -20,7 +20,7 @@ use crate::{
     cli::{Cli, Subcommand},
     service,
 };
-use node_template_runtime::Block;
+use invarch_node_runtime::Block;
 use sc_cli::{ChainSpec, Role, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 
@@ -60,7 +60,7 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &node_template_runtime::VERSION
+        &invarch_node_runtime::VERSION
     }
 }
 
@@ -140,7 +140,7 @@ pub fn run() -> sc_cli::Result<()> {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
 
-                runner.sync_run(|config| cmd.run::<Block, service::Executor>(config))
+                runner.sync_run(|config| cmd.run::<Block, service::ExecutorDispatch>(config))
             } else {
                 Err(
                     "Benchmarking wasn't enabled when building the node. You can enable it with \
