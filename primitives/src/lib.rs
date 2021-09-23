@@ -10,15 +10,14 @@ pub type IptId = u64;
 pub type IpoId = u64;
 
 /// IPS info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
-pub struct IpsInfo<IptId, AccountId, Data, IpsMetadataOf> {
-    // TODO: WIP
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
+pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
+    /// IPS owner
+    pub owner: AccountId,
     /// IPS metadata
     pub metadata: IpsMetadataOf,
     /// Total issuance for the IPS
-    pub total_issuance: IptId,
-    /// IPS owner
-    pub owner: AccountId,
+    pub total_issuance: u64,
     /// IPS Properties
     pub data: Data,
 }

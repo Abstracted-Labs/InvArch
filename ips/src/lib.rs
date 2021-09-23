@@ -26,7 +26,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One, Zero},
+    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
     DispatchError,
 };
 use sp_std::{convert::TryInto, vec::Vec};
@@ -37,7 +37,7 @@ use sp_std::{convert::TryInto, vec::Vec};
 // mod tests;
 
 /// Import from IPT pallet
-use primitives::{IpsInfo, IptInfo};
+use primitives::IpsInfo;
 
 pub use pallet::*;
 
@@ -46,47 +46,34 @@ pub mod pallet {
     use super::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + ipt::Config {
+        /// The IPS Pallet Events
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
         type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
         /// The IPS properties type
         type IpsData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
-        /// The IPT ID type
-        type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        /// IPT properties type
-        type IptData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>; // TODO: WIP
-        /// The maximum size of an IPT's metadata
-        type MaxIptMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
     }
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub type IpsIndexOf<T> = <T as Config>::IpsId;
-    pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
-    pub type IptMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIptMetadata>;
-    pub type IpsInfoOf<T> = IpsInfo<
-        <T as Config>::IptId,
-        <T as frame_system::Config>::AccountId,
-        <T as Config>::IpsData,
-        IpsMetadataOf<T>,
-    >;
-    pub type IptInfoOf<T> =
-        IptInfo<<T as frame_system::Config>::AccountId, <T as Config>::IptData, IptMetadataOf<T>>;
 
-    pub type GenesisIptData<T> = (
-        <T as frame_system::Config>::AccountId, // IPT owner
-        Vec<u8>,                                // IPT metadata
-        <T as Config>::IptData,                 // IPT data
-    );
+    pub type IpsIndexOf<T> = <T as Config>::IpsId;
+
+    pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
+
+    pub type IpsInfoOf<T> =
+        IpsInfo<<T as frame_system::Config>::AccountId, <T as Config>::IpsData, IpsMetadataOf<T>>;
+
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
         <T as Config>::IpsData,                 // IPS data
-        Vec<GenesisIptData<T>>,                 // Vector of IPTs belong to this IPS
+        Vec<ipt::GenesisIptData<T>>,            // Vector of IPTs belong to this IPS
     );
 
     #[pallet::pallet]
@@ -97,11 +84,6 @@ pub mod pallet {
     #[pallet::getter(fn next_ips_id)]
     pub type NextIpsId<T: Config> = StorageValue<_, T::IpsId, ValueQuery>;
 
-    /// Next available IPT ID
-    #[pallet::storage]
-    #[pallet::getter(fn next_ipt_id)]
-    pub type NextIptId<T: Config> = StorageMap<_, Blake2_128Concat, T::IpsId, T::IptId, ValueQuery>;
-
     /// Store IPS info
     ///
     /// Return `None` if IPS info not set of removed
@@ -109,26 +91,16 @@ pub mod pallet {
     #[pallet::getter(fn ips_storage)]
     pub type IpsStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpsId, IpsInfoOf<T>>;
 
-    /// Store IPT info
-    ///
-    /// Returns `None` if IPT info not set of removed
+    /// IPS existence check by owner and IPS ID
     #[pallet::storage]
-    #[pallet::getter(fn ipt_storage)]
-    pub type IptStorage<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::IpsId, Blake2_128Concat, T::IptId, IptInfoOf<T>>;
-
-    /// IPT existence check by owner and IPS ID
-    #[pallet::storage]
-    #[pallet::getter(fn ipt_by_owner)]
-    pub type IptByOwner<T: Config> = StorageNMap<
+    #[pallet::getter(fn ips_by_owner)]
+    pub type IpsByOwner<T: Config> = StorageDoubleMap<
         _,
-        (
-            NMapKey<Blake2_128Concat, T::AccountId>, // owner
-            NMapKey<Blake2_128Concat, T::IpsId>,
-            NMapKey<Blake2_128Concat, T::IptId>,
-        ),
+        Blake2_128Concat,
+        T::AccountId, // owner
+        Blake2_128Concat,
+        T::IpsId,
         (),
-        ValueQuery,
     >;
 
     /// Get IPS price. None means not for sale.
@@ -136,6 +108,17 @@ pub mod pallet {
     #[pallet::getter(fn ips_prices)]
     pub type IpsPrices<T: Config> =
         StorageMap<_, Blake2_128Concat, IpsInfoOf<T>, BalanceOf<T>, OptionQuery>;
+
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", T::IpsId = "IpsId")]
+    pub enum Event<T: Config> {
+        Created(T::AccountId, T::IpsId),
+        Sent(T::AccountId, T::AccountId, T::IpsId),
+        Listed(T::AccountId, T::IpsId, Option<BalanceOf<T>>),
+        Bought(T::AccountId, T::AccountId, T::IpsId, BalanceOf<T>),
+        Destroyed(T::AccountId, T::IpsId),
+    }
 
     /// Errors for IPT pallet
     #[pallet::error]
@@ -166,123 +149,144 @@ pub mod pallet {
 
     /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        /// Create IP (Intellectual Property) Set (IPS)
+        #[pallet::weight(10000000)]
+        pub fn create_ips(
+            owner: OriginFor<T>,
+            metadata: Vec<u8>,
+            data: T::IpsData,
+        ) -> DispatchResultWithPostInfo {
+            let creator = ensure_signed(owner)?;
+
+            let bounded_metadata: BoundedVec<u8, T::MaxIpsMetadata> = metadata
+                .try_into()
+                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+
+            let ips_id = NextIpsId::<T>::try_mutate(|id| -> Result<T::IpsId, DispatchError> {
+                let current_id = *id;
+                *id = id
+                    .checked_add(&One::one())
+                    .ok_or(Error::<T>::NoAvailableIpsId)?;
+                Ok(current_id)
+            })?;
+
+            let info = IpsInfo {
+                owner: creator.clone(),
+                metadata: bounded_metadata,
+                total_issuance: Default::default(),
+                data,
+            };
+            IpsStorage::<T>::insert(ips_id, info);
+
+            Self::deposit_event(Event::Created(creator, ips_id));
+
+            Ok(().into())
+        }
+
+        /// Transfer IP Set owner account address
+        #[pallet::weight(10000000)]
+        pub fn send(from: OriginFor<T>, to: T::AccountId, ips_id: T::IpsId) -> DispatchResult {
+            IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(from)?;
+                let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+                ensure!(owner != to, Error::<T>::AlreadyOwned);
+
+                info.owner = to.clone();
+
+                IpsByOwner::<T>::remove(owner.clone(), ips_id);
+                IpsByOwner::<T>::insert(to.clone(), ips_id, ());
+
+                Self::deposit_event(Event::Sent(owner, to, ips_id));
+
+                Ok(())
+            })
+        }
+
+        /// List a IPS for sale
+        /// None to delist the IPS
+        #[pallet::weight(10000000)]
+        pub fn list(
+            owner: OriginFor<T>,
+            ips_id: T::IpsId,
+            ips_index: IpsInfoOf<T>,
+            new_price: Option<BalanceOf<T>>,
+        ) -> DispatchResult {
+            IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+                let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+                IpsPrices::<T>::mutate_exists(ips_index, |price| *price = new_price);
+
+                Self::deposit_event(Event::Listed(owner, ips_id, new_price));
+
+                Ok(())
+            })
+        }
+
+        /// Allow a user to buy an IPS
+        #[pallet::weight(10000000)]
+        pub fn buy(
+            buyer: OriginFor<T>,
+            owner: T::AccountId,
+            ips_id: T::IpsId,
+            ips_info: IpsInfoOf<T>,
+            max_price: BalanceOf<T>,
+        ) -> DispatchResult {
+            IpsPrices::<T>::try_mutate_exists(ips_info, |price| -> DispatchResult {
+                let buyer_signed = ensure_signed(buyer)?;
+
+                let ips = IpsStorage::<T>::get(ips_id)
+                    .take()
+                    .ok_or(Error::<T>::IpsNotFound)?;
+
+                ensure!(buyer_signed != ips.owner, Error::<T>::BuyFromSelf);
+
+                let price = price.take().ok_or(Error::<T>::NotForSale)?;
+
+                ensure!(max_price >= price, Error::<T>::PriceTooLow);
+
+                IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+                    let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                    info.owner = buyer_signed.clone();
+
+                    IpsByOwner::<T>::remove(owner.clone(), ips_id);
+                    IpsByOwner::<T>::insert(buyer_signed.clone(), ips_id, ());
+
+                    Ok(())
+                })?;
+                T::Currency::transfer(
+                    &buyer_signed,
+                    &ips.owner,
+                    price,
+                    ExistenceRequirement::KeepAlive,
+                )?;
+
+                Self::deposit_event(Event::Bought(owner, buyer_signed, ips_id, price));
+
+                Ok(())
+            })
+        }
+
+        /// Delete an IP Set and all of its contents
+        #[pallet::weight(10000000)]
+        pub fn destroy(owner: OriginFor<T>, ips_id: T::IpsId) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+                let total_issuance: u64 = info.total_issuance;
+                ensure!(total_issuance == 0u64, Error::<T>::CannotDestroyIps);
+
+                Self::deposit_event(Event::Destroyed(owner, ips_id));
+
+                Ok(())
+            })
+        }
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-}
-
-impl<T: Config> Pallet<T> {
-    /// Create IP (Intellectual Property) Set (IPS)
-    pub fn create_ips(
-        // TODO: WIP
-        owner: &T::AccountId,
-        metadata: Vec<u8>,
-        data: T::IpsData,
-    ) -> Result<T::IpsId, DispatchError> {
-        let bounded_metadata: BoundedVec<u8, T::MaxIpsMetadata> = metadata
-            .try_into()
-            .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
-
-        let ips_id = NextIpsId::<T>::try_mutate(|id| -> Result<T::IpsId, DispatchError> {
-            let current_id = *id;
-            *id = id
-                .checked_add(&One::one())
-                .ok_or(Error::<T>::NoAvailableIpsId)?;
-            Ok(current_id)
-        })?;
-
-        let info = IpsInfo {
-            metadata: bounded_metadata,
-            total_issuance: Default::default(),
-            owner: owner.clone(),
-            data,
-        };
-        IpsStorage::<T>::insert(ips_id, info);
-
-        Ok(ips_id)
-    }
-
-    /// Transfer IP Set owner account address
-    pub fn send(
-        from: &T::AccountId,
-        to: &T::AccountId,
-        ipt: (T::IpsId, T::IptId),
-    ) -> DispatchResult {
-        IptStorage::<T>::try_mutate(ipt.0, ipt.1, |ipt_info| -> DispatchResult {
-            let mut info = ipt_info.as_mut().ok_or(Error::<T>::IptNotFound)?;
-            ensure!(info.owner == *from, Error::<T>::NoPermission);
-            ensure!(*from != *to, Error::<T>::AlreadyOwned);
-
-            info.owner = to.clone();
-
-            IptByOwner::<T>::remove((from, ipt.0, ipt.1));
-            IptByOwner::<T>::insert((to, ipt.0, ipt.1), ());
-
-            Ok(())
-        })
-    }
-
-    /// List a IPS for sale
-    /// None to delist the IPS
-    pub fn list(
-        owner: T::AccountId,
-        ips_id: T::IpsId,
-        ips_index: IpsInfoOf<T>,
-        new_price: Option<BalanceOf<T>>,
-    ) -> DispatchResult {
-        IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
-            let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
-            ensure!(info.owner == owner, Error::<T>::NoPermission);
-
-            IpsPrices::<T>::mutate_exists(ips_index, |price| *price = new_price);
-
-            Ok(())
-        })
-    }
-
-    /// Allow a user to buy an IPS
-    pub fn buy(
-        origin: OriginFor<T>,
-        owner: T::AccountId,
-        ips_id: T::IpsId,
-        ipt_id: T::IptId,
-        ips_index: IpsInfoOf<T>,
-        max_price: BalanceOf<T>,
-    ) -> DispatchResult {
-        let sender = ensure_signed(origin)?;
-
-        ensure!(sender != owner, Error::<T>::BuyFromSelf);
-
-        IpsPrices::<T>::try_mutate_exists(ips_index, |price| -> DispatchResult {
-            let price = price.take().ok_or(Error::<T>::NotForSale)?;
-
-            ensure!(max_price >= price, Error::<T>::PriceTooLow);
-
-            Pallet::<T>::send(&owner, &sender, (ips_id, ipt_id))?;
-            T::Currency::transfer(&sender, &owner, price, ExistenceRequirement::KeepAlive)?;
-
-            Ok(())
-        })
-    }
-
-    // Delete an IP Set and all of its contents
-    pub fn destroy(owner: &T::AccountId, ips_id: T::IpsId) -> DispatchResult {
-        IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
-            let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
-            ensure!(info.owner == *owner, Error::<T>::NoPermission);
-            ensure!(
-                info.total_issuance == Zero::zero(),
-                Error::<T>::CannotDestroyIps
-            );
-
-            NextIptId::<T>::remove(ips_id);
-
-            Ok(())
-        })
-    }
-
-    pub fn is_owner(account: &T::AccountId, ipt: (T::IpsId, T::IptId)) -> bool {
-        IptByOwner::<T>::contains_key((account, ipt.0, ipt.1))
-    }
 }
