@@ -41,9 +41,9 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
     Ok(ChainSpec::from_genesis(
         // Name
-        "Development",
+        "InvArch Dev Net",
         // ID
-        "dev",
+        "invarch_dev_net",
         ChainType::Development,
         move || {
             testnet_genesis(
@@ -80,9 +80,9 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
     Ok(ChainSpec::from_genesis(
         // Name
-        "Local Testnet",
+        "InvArch Local Testnet",
         // ID
-        "local_testnet",
+        "invarch_local_testnet",
         ChainType::Local,
         move || {
             testnet_genesis(
