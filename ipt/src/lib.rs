@@ -75,7 +75,7 @@ pub mod pallet {
     #[pallet::getter(fn ipt_storage)]
     pub type IptStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IptId, IptInfoOf<T>>;
 
-    /// IPT existence check by owner and IPS ID
+    /// IPT existence check by owner and IPT ID
     #[pallet::storage]
     #[pallet::getter(fn ipt_by_owner)]
     pub type IptByOwner<T: Config> = StorageDoubleMap<
