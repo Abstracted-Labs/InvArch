@@ -26,7 +26,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{KeyOwnerProofSystem, Randomness, StorageInfo},
+    traits::{KeyOwnerProofSystem, Randomness, StorageInfo, Currency},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
@@ -42,6 +42,9 @@ pub use sp_runtime::{Perbill, Permill};
 
 /// Import the ipt pallet.
 pub use ipt;
+
+/// Import the ips pallet.
+pub use ips;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -263,8 +266,26 @@ impl ipt::Config for Runtime {
     type MaxIptMetadata = MaxIptMetadata;
     // The IPT ID type
     type IptId = u64;
-
+    // Th IPT pallet events
     type Event = Event;
+}
+
+parameter_types! {
+    // The maximum size of an IPS's metadata
+    pub const MaxIpsMetadata: u32 = 10000;
+}
+
+impl ips::Config for Runtime {
+    // The maximum size of an IPS's metadata
+    type MaxIpsMetadata = MaxIpsMetadata;
+    // The IPS ID type
+    type IpsId = u64;
+    // The IPS properties type
+    type IpsData = u64;
+    // The IPS Pallet Events
+    type Event = Event;
+    // Currency
+    type Currency = Balances;
 }
 
 parameter_types! {
@@ -299,6 +320,7 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
+        Ips: ips::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -476,6 +498,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_ipt, Ipt);
+            list_benchmark!(list, extra, pallet_ips, Ips);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
