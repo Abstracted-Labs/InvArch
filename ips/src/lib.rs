@@ -25,10 +25,7 @@ use frame_support::{
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
-use sp_runtime::{
-    traits::{AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One},
-    DispatchError,
-};
+use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
 // #[cfg(test)]
@@ -43,6 +40,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+
     use super::*;
 
     #[pallet::config]
@@ -50,14 +48,18 @@ pub mod pallet {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
-        type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
-        /// The IPS properties type
-        type IpsData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
+        type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        // /// The IPT ID type
+        //type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        // /// The IPS properties type
+        //type IpsData: Parameter + Member + MaybeSerializeDeserialize + Iterator;
         /// The maximum size of an IPS's metadata
-        type MaxIpsMetadata: Get<u32>; // TODO: WIP
+        type MaxIpsMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
     }
+
+    pub type IpsData<T> = Vec<<T as ipt::Config>::IptId>;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -67,12 +69,12 @@ pub mod pallet {
     pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
 
     pub type IpsInfoOf<T> =
-        IpsInfo<<T as frame_system::Config>::AccountId, <T as Config>::IpsData, IpsMetadataOf<T>>;
+        IpsInfo<<T as frame_system::Config>::AccountId, IpsData<T>, IpsMetadataOf<T>>;
 
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        <T as Config>::IpsData,                 // IPS data
+        IpsData<T>,                             // IPS data
         Vec<ipt::GenesisIptData<T>>,            // Vector of IPTs belong to this IPS
     );
 
@@ -155,33 +157,45 @@ pub mod pallet {
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            data: T::IpsData,
+            data: IpsData<T>,
         ) -> DispatchResultWithPostInfo {
-            let creator = ensure_signed(owner)?;
+            NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
+                let creator = ensure_signed(owner)?;
 
-            let bounded_metadata: BoundedVec<u8, T::MaxIpsMetadata> = metadata
-                .try_into()
-                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+                let bounded_metadata: BoundedVec<u8, T::MaxIpsMetadata> = metadata
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
-            let ips_id = NextIpsId::<T>::try_mutate(|id| -> Result<T::IpsId, DispatchError> {
-                let current_id = *id;
-                *id = id
+                let current_id = *ips_id;
+                *ips_id = ips_id
                     .checked_add(&One::one())
                     .ok_or(Error::<T>::NoAvailableIpsId)?;
-                Ok(current_id)
-            })?;
 
-            let info = IpsInfo {
-                owner: creator.clone(),
-                metadata: bounded_metadata,
-                total_issuance: Default::default(),
-                data,
-            };
-            IpsStorage::<T>::insert(ips_id, info);
+                let info = IpsInfo {
+                    owner: creator.clone(),
+                    metadata: bounded_metadata,
+                    total_issuance: Default::default(),
+                    data: data.clone(),
+                };
 
-            Self::deposit_event(Event::Created(creator, ips_id));
+                ensure!(
+                    !data.into_iter().any(|ipt_id| {
+                        creator
+                            != ipt::IptStorage::<T>::get(ipt_id)
+                                .take()
+                                .ok_or(Error::<T>::IptNotFound)
+                                .unwrap()
+                                .owner
+                    }),
+                    Error::<T>::NoPermission
+                );
 
-            Ok(().into())
+                IpsStorage::<T>::insert(current_id.clone(), info);
+
+                Self::deposit_event(Event::Created(creator, current_id));
+
+                Ok(().into())
+            })
         }
 
         /// Transfer IP Set owner account address
