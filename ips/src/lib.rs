@@ -49,17 +49,11 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
         type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        // /// The IPT ID type
-        //type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        // /// The IPS properties type
-        //type IpsData: Parameter + Member + MaybeSerializeDeserialize + Iterator;
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
     }
-
-    pub type IpsData<T> = Vec<<T as ipt::Config>::IptId>;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -68,13 +62,16 @@ pub mod pallet {
 
     pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
 
-    pub type IpsInfoOf<T> =
-        IpsInfo<<T as frame_system::Config>::AccountId, IpsData<T>, IpsMetadataOf<T>>;
+    pub type IpsInfoOf<T> = IpsInfo<
+        <T as frame_system::Config>::AccountId,
+        Vec<<T as ipt::Config>::IptId>,
+        IpsMetadataOf<T>,
+    >;
 
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        IpsData<T>,                             // IPS data
+        Vec<<T as ipt::Config>::IptId>,         // IPS data
         Vec<ipt::GenesisIptData<T>>,            // Vector of IPTs belong to this IPS
     );
 
@@ -157,7 +154,7 @@ pub mod pallet {
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            data: IpsData<T>,
+            data: Vec<<T as ipt::Config>::IptId>,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner)?;
