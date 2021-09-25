@@ -23,7 +23,7 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
 }
 
 /// IPT Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
 pub struct IptInfo<AccountId, Data, IptMetadataOf> {
     /// IPT owner
     pub owner: AccountId,

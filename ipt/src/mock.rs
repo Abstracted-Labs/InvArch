@@ -42,16 +42,13 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIpsMetadata: u32 = 1;
-    pub const MaxIptMetadata: u32 = 1;
+    pub const MaxIptMetadata: u32 = 32;
 }
 
 impl Config for Runtime {
-    type IpsId = u64;
     type IptId = u64;
-    type IpsData = ();
-    type MaxIpsMetadata = MaxIpsMetadata;
     type MaxIptMetadata = MaxIptMetadata;
+    type Event = Event;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -76,15 +73,34 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-        Ipt: ipt::{Pallet, Storage, Config<T>},
+        Ipt: ipt::{Pallet, Storage, Event<T>},
     }
 );
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const IPS_ID: <Runtime as Config>::IpsId = 0;
 pub const IPT_ID: <Runtime as Config>::IptId = 0;
-pub const IPT_ID_NOT_EXIST: <Runtime as Config>::IptId = 100;
+pub const IPT_ID_DOESNT_EXIST: <Runtime as Config>::IptId = 100;
+pub const MOCK_DATA: [u8; 32] = [
+    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
+    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
+];
+pub const MOCK_METADATA: &'static [u8] = &[
+    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
+    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
+];
+pub const MOCK_DATA_SECONDARY: [u8; 32] = [
+    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
+    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
+];
+pub const MOCK_METADATA_SECONDARY: &'static [u8] = &[
+    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
+    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
+];
+pub const MOCK_METADATA_PAST_MAX: &'static [u8] = &[
+    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
+    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 42,
+];
 
 pub struct ExtBuilder;
 
