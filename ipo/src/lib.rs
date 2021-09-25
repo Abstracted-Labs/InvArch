@@ -51,7 +51,7 @@ use codec::{Codec, MaxEncodedLen};
 use sp_std::{fmt::Debug, prelude::*};
 
 /// Import from primitives pallet
-use primitives::{IpoInfo, IpsInfo};
+use primitives::IpoInfo;
 
 pub use pallet::*;
 
@@ -60,21 +60,15 @@ pub mod pallet {
     use super::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + ips::Config {
         /// Overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPO ID type
         type IpoId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
         /// The IPO properties type
         type IpoData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
-        /// The IPS ID type
-        type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        /// IPT properties type
-        type IpsData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
         /// The maximum size of an IPS's metadata
         type MaxIpoMetadata: Get<u32>; // TODO: WIP
-        /// The maximum size of an IPT's metadata
-        type MaxIpsMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
         /// The balance of an account
@@ -97,32 +91,19 @@ pub mod pallet {
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub type IpoIndexOf<T> = <T as Config>::IpoId;
-    pub type IpoMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpoMetadata>;
-    pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpsMetadata>;
-    pub type IpoInfoOf<T> = IpoInfo<
-        <T as Config>::IpsId,
-        <T as frame_system::Config>::AccountId,
-        <T as Config>::IpoData,
-        IpoMetadataOf<T>,
-    >;
-    pub type IpsInfoOf<T> = IpsInfo<
-        <T as frame_system::Config>::AccountId,
-        <T as Config>::IpsData,
-        IpoMetadataOf<T>,
-        IpsMetadataOf<T>,
-    >;
 
-    pub type GenesisIpsData<T> = (
-        <T as frame_system::Config>::AccountId, // IPS owner
-        Vec<u8>,                                // IPS metadata
-        <T as Config>::IpsData,                 // IPS data
-    );
+    pub type IpoIndexOf<T> = <T as Config>::IpoId;
+
+    pub type IpoMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpoMetadata>;
+
+    pub type IpoInfoOf<T> =
+        IpoInfo<<T as frame_system::Config>::AccountId, <T as Config>::IpoData, IpoMetadataOf<T>>;
+
     pub type GenesisIpo<T> = (
         <T as frame_system::Config>::AccountId, // IPO owner
         Vec<u8>,                                // IPO metadata
         <T as Config>::IpoData,                 // IPO data
-        Vec<GenesisIpsData<T>>,                 // Vector of IPSs belong to this IPO
+        Vec<ips::GenesisIps<T>>,                // Vector of IPSs belong to this IPO
     );
 
     #[pallet::pallet]
@@ -133,11 +114,6 @@ pub mod pallet {
     #[pallet::getter(fn next_ipo_id)]
     pub type NextIpoId<T: Config> = StorageValue<_, T::IpoId, ValueQuery>;
 
-    /// Next available IPS ID
-    #[pallet::storage]
-    #[pallet::getter(fn next_ips_id)]
-    pub type NextIpsId<T: Config> = StorageMap<_, Blake2_128Concat, T::IpoId, T::IpsId, ValueQuery>;
-
     /// Store IPO info
     ///
     /// Return `None` if IPO info not set of removed
@@ -145,15 +121,6 @@ pub mod pallet {
     #[pallet::getter(fn ipo_storage)]
     pub type IpoStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpoId, IpoInfoOf<T>>;
 
-    /// Store IPS info
-    ///
-    /// Returns `None` if IPS info not set of removed
-    #[pallet::storage]
-    #[pallet::getter(fn ips_storage)]
-    pub type IpsStorage<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::IpoId, Blake2_128Concat, T::IpsId, IpsInfoOf<T>>;
-
-    /// IPS existence check by owner and IPO ID
     #[pallet::storage]
     #[pallet::getter(fn get_balance)]
     pub type BalanceToAccount<T: Config> =
@@ -166,7 +133,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, IpoInfoOf<T>, BalanceOf<T>, OptionQuery>;
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
         /// Some IPO were issued. \[ipo_id, owner, total_supply\]
         Issued(T::IpoId, T::AccountId, T::Balance),
@@ -269,88 +236,125 @@ pub mod pallet {
 
     /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        /// Create IP (Intellectual Property) Ownership (IPO)
+        #[pallet::weight(10000000)]
+        pub fn issue_ipo(
+            // TODO: WIP
+            owner: OriginFor<T>,
+            metadata: Vec<u8>,
+            data: T::IpoData,
+            total_issuance: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            let signer = ensure_signed(owner)?;
+
+            let bounded_metadata: BoundedVec<u8, T::MaxIpoMetadata> = metadata
+                .try_into()
+                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+
+            let ipo_id = NextIpoId::<T>::try_mutate(|id| -> Result<T::IpoId, DispatchError> {
+                let current_id = *id;
+                *id = id
+                    .checked_add(&One::one())
+                    .ok_or(Error::<T>::NoAvailableIpoId)?;
+                Ok(current_id)
+            })?;
+
+            let info = IpoInfo {
+                metadata: bounded_metadata,
+                total_issuance: Default::default(),
+                owner: signer.clone(),
+                data,
+                is_bond: false,
+            };
+            IpoStorage::<T>::insert(ipo_id, info);
+            Self::deposit_event(Event::Issued(ipo_id, signer, total_issuance));
+            Ok(().into())
+        }
+
+        /// Transfer some liquid free IPO balance to another account
+        /// Is a no-op if value to be transferred is zero or the `from` is the same as `to`.
+        #[pallet::weight(10000000)]
+        pub fn transfer(
+            origin: OriginFor<T>,
+            to: T::AccountId,
+            amount: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+
+            if amount.is_zero() || sender == to {
+                return Ok(().into());
+            }
+
+            BalanceToAccount::<T>::mutate(&sender, |bal| {
+                *bal = bal.saturating_sub(amount);
+            });
+            BalanceToAccount::<T>::mutate(&to, |bal| {
+                *bal = bal.saturating_add(amount);
+            });
+            Ok(().into())
+        }
+
+        #[pallet::weight(10000000)]
+        pub fn set_balance(
+            origin: OriginFor<T>,
+            new_free: T::Balance,
+            new_reserved: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let existential_deposit = T::ExistentialDeposit::get();
+
+            let wipeout = new_free + new_reserved < existential_deposit;
+            let new_free = if wipeout { Zero::zero() } else { new_free };
+            let new_reserved = if wipeout { Zero::zero() } else { new_reserved };
+
+            // TODO : WIP [need help]
+            // - Add more logic for free and reserved balance
+
+            (new_free, new_reserved);
+
+            Ok(().into())
+        }
+
+        /// Bind some `amount` of unit of fungible `ipo_id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
+        #[pallet::weight(10000000)]
+        pub fn bind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
+            let origin = ensure_signed(origin)?;
+
+            IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
+                let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(origin == d.owner, Error::<T>::NoPermission);
+
+                d.is_bond = true;
+
+                Self::deposit_event(Event::<T>::IpoBond(ipo_id));
+                Ok(())
+            })
+        }
+
+        /// Unbind some `amount` of unit of fungible `ipo_id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
+        #[pallet::weight(10000000)]
+        pub fn unbind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
+            let origin = ensure_signed(origin)?;
+
+            IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
+                let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(origin == d.owner, Error::<T>::NoPermission);
+
+                d.is_bond = false;
+
+                Self::deposit_event(Event::<T>::IpoUnbind(ipo_id));
+                Ok(())
+            })
+        }
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }
 
 impl<T: Config> Pallet<T> {
-    /// Create IP (Intellectual Property) Ownership (IPO)
-    pub fn issue_ipo(
-        // TODO: WIP
-        owner: T::AccountId,
-        metadata: Vec<u8>,
-        data: T::IpoData,
-        total_issuance: T::Balance,
-    ) -> Result<T::IpoId, DispatchError> {
-        let bounded_metadata: BoundedVec<u8, T::MaxIpoMetadata> = metadata
-            .try_into()
-            .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
-
-        let ipo_id = NextIpoId::<T>::try_mutate(|id| -> Result<T::IpoId, DispatchError> {
-            let current_id = *id;
-            *id = id
-                .checked_add(&One::one())
-                .ok_or(Error::<T>::NoAvailableIpoId)?;
-            Ok(current_id)
-        })?;
-
-        let info = IpoInfo {
-            metadata: bounded_metadata,
-            total_issuance: Default::default(),
-            owner: owner.clone(),
-            data,
-            is_bond: false,
-        };
-        IpoStorage::<T>::insert(ipo_id, info);
-        Self::deposit_event(Event::Issued(ipo_id, owner, total_issuance));
-        Ok(ipo_id)
-    }
-
-    /// Transfer some liquid free IPO balance to another account
-    /// Is a no-op if value to be transferred is zero or the `from` is the same as `to`.
-    pub fn transfer(
-        origin: OriginFor<T>,
-        to: T::AccountId,
-        amount: T::Balance,
-    ) -> DispatchResultWithPostInfo {
-        let sender = ensure_signed(origin)?;
-
-        if amount.is_zero() || sender == to {
-            return Ok(().into());
-        }
-
-        BalanceToAccount::<T>::mutate(&sender, |bal| {
-            *bal = bal.saturating_sub(amount);
-        });
-        BalanceToAccount::<T>::mutate(&to, |bal| {
-            *bal = bal.saturating_add(amount);
-        });
-        Ok(().into())
-    }
-
-    pub fn set_balance(
-        origin: OriginFor<T>,
-        new_free: T::Balance,
-        new_reserved: T::Balance,
-    ) -> DispatchResultWithPostInfo {
-        ensure_root(origin)?;
-
-        let existential_deposit = T::ExistentialDeposit::get();
-
-        let wipeout = new_free + new_reserved < existential_deposit;
-        let new_free = if wipeout { Zero::zero() } else { new_free };
-        let new_reserved = if wipeout { Zero::zero() } else { new_reserved };
-
-        // TODO : WIP [need help]
-        // - Add more logic for free and reserved balance
-
-        (new_free, new_reserved);
-
-        Ok(().into())
-    }
-
     /// Get the free balance of an account.
     pub fn free_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
         Self::account(who.borrow()).free
@@ -364,35 +368,5 @@ impl<T: Config> Pallet<T> {
     /// Get both the free and reserved balances of an account.
     fn account(who: &T::AccountId) -> AccountData<T::Balance> {
         T::AccountStore::get(who)
-    }
-
-    /// Bind some `amount` of unit of fungible `ipo_id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
-    pub fn bind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
-        let origin = ensure_signed(origin)?;
-
-        IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
-            let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-            ensure!(origin == d.owner, Error::<T>::NoPermission);
-
-            d.is_bond = true;
-
-            Self::deposit_event(Event::<T>::IpoBond(ipo_id));
-            Ok(())
-        })
-    }
-
-    /// Unbind some `amount` of unit of fungible `ipo_id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
-    pub fn unbind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
-        let origin = ensure_signed(origin)?;
-
-        IpoStorage::<T>::try_mutate(ipo_id, |maybe_details| {
-            let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-            ensure!(origin == d.owner, Error::<T>::NoPermission);
-
-            d.is_bond = false;
-
-            Self::deposit_event(Event::<T>::IpoUnbind(ipo_id));
-            Ok(())
-        })
     }
 }

@@ -98,6 +98,8 @@ pub mod pallet {
         NoPermission,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
+        /// Tried to amend an IPT without any changes
+        AmendWithoutChanging,
     }
 
     #[pallet::event]
@@ -164,28 +166,29 @@ pub mod pallet {
         #[pallet::weight(10000000)]
         pub fn amend(
             owner: OriginFor<T>,
+            ipt_id: T::IptId,
             new_metadata: Vec<u8>,
             data: T::Hash,
         ) -> DispatchResultWithPostInfo {
-            NextIptId::<T>::try_mutate(|id| -> DispatchResultWithPostInfo {
+            IptStorage::<T>::try_mutate(ipt_id, |ipt_info| -> DispatchResultWithPostInfo {
                 let owner = ensure_signed(owner)?;
+                let ipt = ipt_info.clone().ok_or(Error::<T>::IptNotFound)?;
+                ensure!(ipt.owner == owner, Error::<T>::NoPermission);
                 let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> =
                     new_metadata
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
-                let ipt_id = *id;
-                *id = id
-                    .checked_add(&One::one())
-                    .ok_or(Error::<T>::NoAvailableIptId)?;
+                ensure!(
+                    ((ipt.metadata != bounded_metadata) || (ipt.data != data)),
+                    Error::<T>::AmendWithoutChanging
+                );
 
-                let ipt_info = IptInfo {
+                ipt_info.replace(IptInfo {
                     metadata: bounded_metadata,
                     owner: owner.clone(),
                     data,
-                };
-
-                IptStorage::<T>::insert(ipt_id, ipt_info);
+                });
 
                 Self::deposit_event(Event::Amended(owner, ipt_id, data));
 
