@@ -26,7 +26,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{KeyOwnerProofSystem, Randomness, StorageInfo, Currency},
+    traits::{Currency, KeyOwnerProofSystem, Randomness, StorageInfo},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
@@ -280,8 +280,6 @@ impl ips::Config for Runtime {
     type MaxIpsMetadata = MaxIpsMetadata;
     // The IPS ID type
     type IpsId = u64;
-    // The IPS properties type
-    type IpsData = u64;
     // The IPS Pallet Events
     type Event = Event;
     // Currency
