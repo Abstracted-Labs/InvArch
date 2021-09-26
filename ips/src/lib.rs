@@ -187,7 +187,7 @@ pub mod pallet {
                     Error::<T>::NoPermission
                 );
 
-                IpsStorage::<T>::insert(current_id.clone(), info);
+                IpsStorage::<T>::insert(current_id, info);
 
                 Self::deposit_event(Event::Created(creator, current_id));
 
