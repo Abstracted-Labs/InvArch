@@ -26,7 +26,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, Get, StoredMap, WithdrawReasons},
+    traits::{Currency, Get, WithdrawReasons},
     BoundedVec, Parameter,
 };
 
@@ -85,8 +85,6 @@ pub mod pallet {
         /// The minimum amount required to keep an account open.
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
-        /// The means of storing the balances of an account.
-        type AccountStore: StoredMap<Self::AccountId, AccountData<Self::Balance>>;
     }
 
     pub type BalanceOf<T> =
@@ -352,21 +350,4 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-}
-
-impl<T: Config> Pallet<T> {
-    /// Get the free balance of an account.
-    pub fn free_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
-        Self::account(who.borrow()).free
-    }
-
-    /// Get the reserved balance of an account.
-    pub fn reserved_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
-        Self::account(who.borrow()).reserved
-    }
-
-    /// Get both the free and reserved balances of an account.
-    fn account(who: &T::AccountId) -> AccountData<T::Balance> {
-        T::AccountStore::get(who)
-    }
 }
