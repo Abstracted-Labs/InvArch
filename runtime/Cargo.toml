@@ -16,6 +16,11 @@ default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
 package = "ipt"
 
+[dependencies.ips]
+default-features = false
+git = "https://github.com/InvArch/InvArch-Pallet-Library"
+package = "ips"
+
 [build-dependencies.substrate-wasm-builder]
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-09+1'
@@ -220,5 +225,6 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
-    'ipt/std',    
+    'ipt/std',
+    'ips/std', 
 ]

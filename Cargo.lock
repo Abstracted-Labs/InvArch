@@ -2306,6 +2306,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
+ "ips",
  "ipt",
  "pallet-aura",
  "pallet-balances",
@@ -2333,7 +2334,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#8cfab2b2b3e4bbc0f311568f7d90c77d9444e481"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -2377,9 +2378,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
 
 [[package]]
+name = "ips"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "ipt",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#8cfab2b2b3e4bbc0f311568f7d90c77d9444e481"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7302,7 +7318,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
