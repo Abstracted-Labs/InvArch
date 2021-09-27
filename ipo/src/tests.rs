@@ -13,13 +13,15 @@ fn issue_ipo_should_work() {
         assert_ok!(Ipo::issue_ipo(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
-            H256::from(MOCK_DATA)
+            H256::from(MOCK_DATA),
+            MOCK_TOTAL_ISSUANCE.to_vec()
         ));
         assert_eq!(Ipo::next_ipo_id(), 1);
         assert_ok!(Ipo::issue_ipo(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
-            H256::from(MOCK_DATA_SECONDARY)
+            H256::from(MOCK_DATA_SECONDARY),
+            MOCK_TOTAL_ISSUANCE.to_vec()
         ));
         assert_eq!(Ipo::next_ipo_id(), 2);
 
@@ -28,7 +30,8 @@ fn issue_ipo_should_work() {
             Some(IpoInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
-                data: H256::from(MOCK_DATA)
+                data: H256::from(MOCK_DATA),
+                total_issuance: MOCK_TOTAL_ISSUANCE.to_vec().try_into().unwrap()
             })
         );
 
@@ -37,26 +40,110 @@ fn issue_ipo_should_work() {
             Some(IpoInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
-                data: H256::from(MOCK_DATA_SECONDARY)
+                data: H256::from(MOCK_DATA_SECONDARY),
+                total_issuance: MOCK_TOTAL_ISSUANCE.to_vec().try_into().unwrap()
             })
         );
     });
 }
 
-fn issue_ipo_should_fail() {}
+fn issue_ipo_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Ipo::issue_ipo(
+                Origin::none(),
+                MOCK_METADATA_PAST_MAX.to_vec(),
+                H256::from(MOCK_DATA),
+                MOCK_TOTAL_ISSUANCE.to_vec()
+            ),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Ipo::issue_ipo(
+                Origin::signed(BOB),
+                MOCK_METADATA_PAST_MAX.to_vec(),
+                H256::from(MOCK_DATA),
+                MOCK_TOTAL_ISSUANCE.to_vec()
+            ),
+            Error::<Runtime>::MaxMetadataExceeded,
+        );
 
-fn transfer_should_work() {}
+        NextIpoId::<Runtime>::mutate(|id| *id = <Runtime as Config>::IpoId::max_value());
+        assert_noop!(
+            Ipo::issue_ipo(
+                Origin::signed(BOB),
+                MOCK_METADATA.to_vec(),
+                H256::from(MOCK_DATA),
+                MOCK_TOTAL_ISSUANCE.to_vec()
+            ),
+            Error::<Runtime>::NoAvailableIpoId
+        );
 
-fn transfer_should_fail() {}
+        assert_eq!(IpoStorage::<Runtime>::get(0), None);
+    });
+}
 
+#[test]
+fn transfer_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::transfer(
+            Origin::signed(BOB),
+            AccountId::get(ALICE),
+            MOCK_AMOUNT.to_vec(),
+        ));
+
+        assert_ok!(Ipo::transfer(Origin::signed(BOB), IPO_ID));
+
+        assert_eq!(IpoStorage::<Runtime>::get(0), None);
+    });
+}
+
+#[test]
+fn transfer_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::transfer(
+            Origin::signed(BOB),
+            AccountId::get(ALICE),
+            MOCK_AMOUNT.to_vec(),
+        ));
+
+        assert_noop!(Ipo::transfer(Origin::none(), IPO_ID), DispatchError::BadOrigin);
+
+        assert_noop!(
+            Ipo::transfer(Origin::signed(BOB), IPO_ID_DOESNT_EXIST),
+            Error::<Runtime>::IpoNotFound
+        );
+
+        assert_noop!(
+            Ipo::transfer(Origin::signed(ALICE), IPO_ID),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(
+            IpoStorage::<Runtime>::get(0),
+            Some(IpoInfoOf::<Runtime> {
+                owned: BOB,
+                AccountId::get(BOB),
+                MOCK_AMOUNT.to_vec()
+            })
+        );
+    });
+}
+
+#[test]
 fn set_balance_should_work() {}
 
+#[test]
 fn set_balance_should_fail() {}
 
+#[test]
 fn bind_should_work() {}
 
+#[test]
 fn bind_should_fail() {}
 
+#[test]
 fn unbind_should_work() {}
 
+#[test]
 fn unbind_should_fail() {}
