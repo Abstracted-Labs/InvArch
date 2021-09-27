@@ -131,10 +131,46 @@ fn transfer_should_fail() {
 }
 
 #[test]
-fn set_balance_should_work() {}
+fn set_balance_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::set_balance(
+            Origin::root(),
+            Balance::new(),
+        ));
+
+        assert_ok!(IpoStorage::<Runtime>::get(0), None);
+    });
+}
 
 #[test]
-fn set_balance_should_fail() {}
+fn set_balance_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::set_balance(
+            Origin::root(),
+            Balance::new()
+        ));
+
+        assert_noop!(Ipo::set_balance(Origin::none(), IPO_ID), DispatchError::BadOrigin);
+
+        assert_noop!(
+            Ipo::set_balance(Origin::root(), IPO_ID_DOESNT_EXIST),
+            Error::<Runtime>::IpoNotFound
+        );
+
+        assert_noop!(
+            Ipo::set_balance(Origin::signed(ALICE), IPO_ID),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(
+            IpoStorage::<Runtime>::get(0),
+            Some(IpoInfoOf::<Runtime> {
+                origin: ROOT,
+                amount: MOCK_AMOUNT.to_vec().try_into().unwrap()
+            })
+        )
+    })
+}
 
 #[test]
 fn bind_should_work() {}

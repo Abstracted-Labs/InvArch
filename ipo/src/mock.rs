@@ -79,6 +79,7 @@ construct_runtime!(
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
+pub const ROOT: OriginFor = 0;
 pub const IPO_ID: <Runtime as Config>::IpoId = 0;
 pub const IPO_ID_DOESNT_EXIST: <Runtime as Config>::IpoId = 100;
 pub const MOCK_DATA: [u8; 32] = [
