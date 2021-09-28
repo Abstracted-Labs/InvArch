@@ -213,7 +213,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Create IP (Intellectual Property) Ownership (IPO)
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn issue_ipo(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -248,7 +248,7 @@ pub mod pallet {
 
         /// Transfer some liquid free IPO balance to another account
         /// Is a no-op if value to be transferred is zero or the `from` is the same as `to`.
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn transfer(
             origin: OriginFor<T>,
             to: T::AccountId,
@@ -270,7 +270,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10000000)]
+        /// Set the balances to a given account. The origin of this call must be root.
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn set_balance(
             origin: OriginFor<T>,
             new_balance: T::Balance,
@@ -288,7 +289,7 @@ pub mod pallet {
         }
 
         /// Bind some `amount` of unit of fungible `ipo_id` from the ballance of the function caller's account (`origin`) to a specific `IPSet` account to claim some portion of fractionalized ownership of that particular `IPset`
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn bind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
             let origin = ensure_signed(origin)?;
 
@@ -304,7 +305,7 @@ pub mod pallet {
         }
 
         /// Unbind some `amount` of unit of fungible `ipo_id` from a specific `IPSet` account to unclaim some portion of fractionalized ownership to the ballance of the function caller's account'
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn unbind(origin: OriginFor<T>, ipo_id: T::IpoId) -> DispatchResult {
             let origin = ensure_signed(origin)?;
 

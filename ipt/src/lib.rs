@@ -115,7 +115,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Mint IPT(Intellectual Property Token) to `owner`
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn mint(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -147,7 +147,7 @@ pub mod pallet {
         }
 
         /// Burn IPT(Intellectual Property Token) from `owner`
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn burn(owner: OriginFor<T>, ipt_id: T::IptId) -> DispatchResult {
             IptStorage::<T>::try_mutate(ipt_id, |ipt_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
@@ -163,7 +163,7 @@ pub mod pallet {
         }
 
         /// Amend the data stored inside an IP Token
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn amend(
             owner: OriginFor<T>,
             ipt_id: T::IptId,

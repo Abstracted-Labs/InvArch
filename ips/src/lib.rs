@@ -152,7 +152,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Create IP (Intellectual Property) Set (IPS)
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -193,7 +193,7 @@ pub mod pallet {
         }
 
         /// Transfer IP Set owner account address
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn send(from: OriginFor<T>, to: T::AccountId, ips_id: T::IpsId) -> DispatchResult {
             IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
                 let owner = ensure_signed(from)?;
@@ -214,7 +214,7 @@ pub mod pallet {
 
         /// List a IPS for sale
         /// None to delist the IPS
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn list(
             owner: OriginFor<T>,
             ips_id: T::IpsId,
@@ -237,7 +237,7 @@ pub mod pallet {
         }
 
         /// Allow a user to buy an IPS
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn buy(
             buyer: OriginFor<T>,
             ips_id: T::IpsId,
@@ -284,7 +284,7 @@ pub mod pallet {
         }
 
         /// Delete an IP Set and all of its contents
-        #[pallet::weight(10000000)]
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn destroy(owner: OriginFor<T>, ips_id: T::IpsId) -> DispatchResult {
             IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
