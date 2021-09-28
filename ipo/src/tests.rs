@@ -220,7 +220,49 @@ fn bind_should_fail() {
 }
 
 #[test]
-fn unbind_should_work() {}
+fn unbind_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::unbind(
+            Origin::signed(BOB),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_ok!(Ipo::unbind(Origin::signed(BOB), IPO_ID));
+
+        assert_eq!(IpoStorage::<Runtime>::get(0), None);
+    });
+}
 
 #[test]
-fn unbind_should_fail() {}
+fn unbind_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipo::unbind(
+            Origin::signed(BOB),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_noop!(Ipo::unbind(Origin::none(), IPO_ID), DispatchError::BadOrigin);
+
+        assert_noop!(
+            Ipo::unbind(Origin::signed(BOB), IPO_ID_DOESNT_EXIST),
+            Error::<Runtime>::IpoNotFound
+        );
+
+        assert_noop!(
+            Ipo::unbind(Origin::signed(ALICE), IPO_ID),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(
+            IpoStorage::<Runtime>::get(0),
+            Some(IpoInfoOf::<Runtime> {
+                owner: BOB,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA)
+            })
+        );
+    });
+
+}
