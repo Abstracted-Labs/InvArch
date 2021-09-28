@@ -26,7 +26,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, Get, StoredMap, WithdrawReasons},
+    traits::{Currency, Get, WithdrawReasons},
     BoundedVec, Parameter,
 };
 
@@ -64,11 +64,11 @@ pub mod pallet {
         /// Overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPO ID type
-        type IpoId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy; // TODO: WIP
+        type IpoId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
         /// The IPO properties type
-        type IpoData: Parameter + Member + MaybeSerializeDeserialize; // TODO: WIP
+        type IpoData: Parameter + Member + MaybeSerializeDeserialize;
         /// The maximum size of an IPS's metadata
-        type MaxIpoMetadata: Get<u32>; // TODO: WIP
+        type MaxIpoMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
         /// The balance of an account
@@ -85,8 +85,6 @@ pub mod pallet {
         /// The minimum amount required to keep an account open.
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
-        /// The means of storing the balances of an account.
-        type AccountStore: StoredMap<Self::AccountId, AccountData<Self::Balance>>;
     }
 
     pub type BalanceOf<T> =
@@ -137,6 +135,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Some IPO were issued. \[ipo_id, owner, total_supply\]
         Issued(T::IpoId, T::AccountId, T::Balance),
+        /// Some IPO wes transferred. \[ipo_id\]
+        Transferred(T::AccountId, T::AccountId, T::Balance),
         /// Some IPO was bond. \[ipo_id\]
         IpoBond(T::IpoId),
         /// Some IPO was unbind. \[ipo_id\]
@@ -176,33 +176,6 @@ pub mod pallet {
         }
     }
 
-    /// All balance information for an account.
-    #[derive(
-        Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo,
-    )]
-    pub struct AccountData<Balance> {
-        /// Non-reserved part of the balance. There may still be restrictions on this, but it is the
-        /// total pool what may in principle be transferred, reserved and used for tipping.
-        ///
-        /// This is the only balance that matters in terms of most operations on tokens. It
-        /// alone is used to determine the balance when in the contract execution environment.
-        pub free: Balance,
-        /// Balance which is reserved and may not be used at all.
-        ///
-        /// This can still get slashed, but gets slashed last of all.
-        ///
-        /// This balance is a 'reserve' balance that other subsystems use in order to set aside tokens
-        /// that are still 'owned' by the account holder, but which are suspendable.
-        /// This includes named reserve and unnamed reserve.
-        pub reserved: Balance,
-        /// The amount that `free` may not drop below when withdrawing for *anything except transaction
-        /// fee payment*.
-        pub misc_frozen: Balance,
-        /// The amount that `free` may not drop below when withdrawing specifically for transaction
-        /// fee payment.
-        pub fee_frozen: Balance,
-    }
-
     /// Errors for IPO pallet
     #[pallet::error]
     pub enum Error<T> {
@@ -232,6 +205,8 @@ pub mod pallet {
         InsufficientBalance,
         /// The given IPO ID is unknown
         Unknown,
+        /// Balance less than existential deposit
+        NotEnoughBalance,
     }
 
     /// Dispatch functions
@@ -240,7 +215,6 @@ pub mod pallet {
         /// Create IP (Intellectual Property) Ownership (IPO)
         #[pallet::weight(10000000)]
         pub fn issue_ipo(
-            // TODO: WIP
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             data: T::IpoData,
@@ -292,27 +266,23 @@ pub mod pallet {
             BalanceToAccount::<T>::mutate(&to, |bal| {
                 *bal = bal.saturating_add(amount);
             });
+            Self::deposit_event(Event::Transferred(sender, to, amount));
             Ok(().into())
         }
 
         #[pallet::weight(10000000)]
         pub fn set_balance(
             origin: OriginFor<T>,
-            new_free: T::Balance,
-            new_reserved: T::Balance,
+            new_balance: T::Balance,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
 
             let existential_deposit = T::ExistentialDeposit::get();
 
-            let wipeout = new_free + new_reserved < existential_deposit;
-            let new_free = if wipeout { Zero::zero() } else { new_free };
-            let new_reserved = if wipeout { Zero::zero() } else { new_reserved };
-
-            // TODO : WIP [need help]
-            // - Add more logic for free and reserved balance
-
-            (new_free, new_reserved);
+            ensure!(
+                new_balance > existential_deposit,
+                Error::<T>::NotEnoughBalance
+            );
 
             Ok(().into())
         }
@@ -352,21 +322,4 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-}
-
-impl<T: Config> Pallet<T> {
-    /// Get the free balance of an account.
-    pub fn free_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
-        Self::account(who.borrow()).free
-    }
-
-    /// Get the reserved balance of an account.
-    pub fn reserved_balance(who: impl sp_std::borrow::Borrow<T::AccountId>) -> T::Balance {
-        Self::account(who.borrow()).reserved
-    }
-
-    /// Get both the free and reserved balances of an account.
-    fn account(who: &T::AccountId) -> AccountData<T::Balance> {
-        T::AccountStore::get(who)
-    }
 }
