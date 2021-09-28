@@ -28,10 +28,10 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-// #[cfg(test)]
-// mod mock;
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 /// Import from IPT pallet
 use primitives::IpsInfo;
@@ -106,7 +106,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn ips_prices)]
     pub type IpsPrices<T: Config> =
-        StorageMap<_, Blake2_128Concat, IpsInfoOf<T>, BalanceOf<T>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::IpsId, BalanceOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -136,6 +136,8 @@ pub mod pallet {
         AlreadyOwned,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
+        /// List for the same price already listed
+        SamePrice,
         /// Buy IPS from their self
         BuyFromSelf,
         /// IPS is not for sale
@@ -171,23 +173,18 @@ pub mod pallet {
                 let info = IpsInfo {
                     owner: creator.clone(),
                     metadata: bounded_metadata,
-                    total_issuance: Default::default(),
                     data: data.clone(),
                 };
 
                 ensure!(
                     !data.into_iter().any(|ipt_id| {
-                        creator
-                            != ipt::IptStorage::<T>::get(ipt_id)
-                                .take()
-                                .ok_or(Error::<T>::IptNotFound)
-                                .unwrap()
-                                .owner
+                        ipt::IptByOwner::<T>::get(creator.clone(), ipt_id).is_none()
                     }),
                     Error::<T>::NoPermission
                 );
 
                 IpsStorage::<T>::insert(current_id, info);
+                IpsByOwner::<T>::insert(creator.clone(), current_id, ());
 
                 Self::deposit_event(Event::Created(creator, current_id));
 
@@ -221,15 +218,17 @@ pub mod pallet {
         pub fn list(
             owner: OriginFor<T>,
             ips_id: T::IpsId,
-            ips_index: IpsInfoOf<T>,
+            // ips_index: IpsInfoOf<T>,
             new_price: Option<BalanceOf<T>>,
         ) -> DispatchResult {
-            IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
+            IpsPrices::<T>::try_mutate_exists(ips_id, |price| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
-                let info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
-                ensure!(info.owner == owner, Error::<T>::NoPermission);
 
-                IpsPrices::<T>::mutate_exists(ips_index, |price| *price = new_price);
+                let info = IpsStorage::<T>::get(ips_id).ok_or(Error::<T>::IpsNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+                ensure!(*price != new_price, Error::<T>::SamePrice);
+
+                *price = new_price;
 
                 Self::deposit_event(Event::Listed(owner, ips_id, new_price));
 
@@ -241,12 +240,10 @@ pub mod pallet {
         #[pallet::weight(10000000)]
         pub fn buy(
             buyer: OriginFor<T>,
-            owner: T::AccountId,
             ips_id: T::IpsId,
-            ips_info: IpsInfoOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
-            IpsPrices::<T>::try_mutate_exists(ips_info, |price| -> DispatchResult {
+            IpsPrices::<T>::try_mutate_exists(ips_id, |price| -> DispatchResult {
                 let buyer_signed = ensure_signed(buyer)?;
 
                 let ips = IpsStorage::<T>::get(ips_id)
@@ -261,23 +258,28 @@ pub mod pallet {
 
                 IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
                     let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
+                    IpsByOwner::<T>::remove(info.owner.clone(), ips_id);
+
+                    T::Currency::transfer(
+                        &buyer_signed,
+                        &info.owner,
+                        price,
+                        ExistenceRequirement::KeepAlive,
+                    )?;
+
                     info.owner = buyer_signed.clone();
 
-                    IpsByOwner::<T>::remove(owner.clone(), ips_id);
-                    IpsByOwner::<T>::insert(buyer_signed.clone(), ips_id, ());
+                    IpsByOwner::<T>::insert(info.owner.clone(), ips_id, ());
+
+                    Self::deposit_event(Event::Bought(
+                        info.owner.clone(),
+                        buyer_signed,
+                        ips_id,
+                        price,
+                    ));
 
                     Ok(())
-                })?;
-                T::Currency::transfer(
-                    &buyer_signed,
-                    &ips.owner,
-                    price,
-                    ExistenceRequirement::KeepAlive,
-                )?;
-
-                Self::deposit_event(Event::Bought(owner, buyer_signed, ips_id, price));
-
-                Ok(())
+                })
             })
         }
 
@@ -288,8 +290,8 @@ pub mod pallet {
                 let owner = ensure_signed(owner)?;
                 let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
                 ensure!(info.owner == owner, Error::<T>::NoPermission);
-                let total_issuance: u64 = info.total_issuance;
-                ensure!(total_issuance == 0u64, Error::<T>::CannotDestroyIps);
+
+                IpsByOwner::<T>::remove(owner.clone(), ips_id);
 
                 Self::deposit_event(Event::Destroyed(owner, ips_id));
 

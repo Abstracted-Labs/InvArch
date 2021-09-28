@@ -23,6 +23,8 @@ primitives = { package = "invarch-primitives", path = "../primitives", default-f
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1" }
 sp-io = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1" }
+pallet-balances = { git = 'https://github.com/paritytech/substrate.git', tag = 'monthly-2021-09+1', version = '4.0.0-dev' }
+ipt = { path = "../ipt" }
 
 [features]
 default = ["std"]

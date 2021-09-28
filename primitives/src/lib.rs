@@ -16,8 +16,6 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
     pub owner: AccountId,
     /// IPS metadata
     pub metadata: IpsMetadataOf,
-    /// Total issuance for the IPS
-    pub total_issuance: u64,
     /// IPS Properties
     pub data: Data,
 }
