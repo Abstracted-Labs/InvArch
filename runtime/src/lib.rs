@@ -284,6 +284,8 @@ impl ips::Config for Runtime {
     type Event = Event;
     // Currency
     type Currency = Balances;
+    // The IpsData type (Vector of IPTs)
+    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
 }
 
 parameter_types! {
