@@ -82,6 +82,7 @@ impl Config for Runtime {
     type IpsId = u64;
     type MaxIpsMetadata = MaxIpsMetadata;
     type Currency = Balances;
+    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
