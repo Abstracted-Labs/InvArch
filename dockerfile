@@ -11,12 +11,14 @@ RUN apt-get install -y build-essential && \
     rustup toolchain install $(cat rust-toolchain) && \
     rustup default stable && \
     rustup target add wasm32-unknown-unknown --toolchain $(cat rust-toolchain) && \
-    cargo $(cat rust-toolchain) build --release
+    cargo build --release
+
 
 # /\-Build Stage | Final Stage-\/
 
 FROM docker.io/library/ubuntu:20.04
 COPY --from=builder /InvArch-node/target/release/invarch-node /usr/local/bin
+COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
 
 RUN useradd -m -u 1000 -U -s /bin/sh -d /invarch-node invarch-node && \
         mkdir -p /invarch-node/.local/share && \
@@ -24,6 +26,7 @@ RUN useradd -m -u 1000 -U -s /bin/sh -d /invarch-node invarch-node && \
         chown -R invarch-node:invarch-node /data && \
         ln -s /data /invarch-node/.local/share/invarch-node && \
         rm -rf /usr/bin /usr/sbin
+
 
 USER invarch-node
 EXPOSE 30333 9933 9944
