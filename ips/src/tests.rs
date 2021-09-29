@@ -249,7 +249,9 @@ fn buy_should_work() {
 
         assert_ok!(Ips::buy(Origin::signed(ALICE), 0, 100));
         assert_eq!(IpsByOwner::<Runtime>::get(ALICE, 0), Some(()));
+        assert_eq!(ipt::IptByOwner::<Runtime>::get(ALICE, 0), Some(()));
         assert_eq!(IpsByOwner::<Runtime>::get(BOB, 0), None);
+        assert_eq!(ipt::IptByOwner::<Runtime>::get(BOB, 0), None);
 
         assert_eq!(IpsPrices::<Runtime>::get(0), None);
     });
