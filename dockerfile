@@ -1,7 +1,7 @@
 FROM ubuntu as builder
 RUN apt-get update --fix-missing
 RUN apt-get install -y git && apt-get install -y curl
-RUN git clone https://github.com/InvArch/InvArch-node
+RUN git clone -b main https://github.com/InvArch/InvArch-node
 RUN apt-get install -y build-essential && \
     apt-get install -y clang && \
     apt-get install -y jq && \
