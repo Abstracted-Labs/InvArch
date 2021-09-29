@@ -55,6 +55,8 @@ pub mod pallet {
         type MaxIpsMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
+
+        type IpsData: IntoIterator + Clone;
     }
 
     pub type BalanceOf<T> =
