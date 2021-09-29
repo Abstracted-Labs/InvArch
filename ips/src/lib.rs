@@ -41,6 +41,8 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 
+    use ipt::{IptByOwner, IptStorage};
+
     use super::*;
 
     #[pallet::config]
@@ -270,6 +272,21 @@ pub mod pallet {
                     info.owner = buyer_signed.clone();
 
                     IpsByOwner::<T>::insert(info.owner.clone(), ips_id, ());
+
+                    info.data.clone().into_iter().for_each(|ipt_id| {
+                        IptStorage::<T>::mutate(ipt_id, |ipt| {
+                            IptByOwner::<T>::swap(
+                                ipt.clone().unwrap().owner,
+                                ipt_id,
+                                info.owner.clone(),
+                                ipt_id,
+                            );
+
+                            ipt.as_mut()
+                                .expect("IPS cannot be created with a non existent IPT")
+                                .owner = info.owner.clone();
+                        });
+                    });
 
                     Self::deposit_event(Event::Bought(
                         info.owner.clone(),
