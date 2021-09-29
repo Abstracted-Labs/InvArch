@@ -46,6 +46,9 @@ pub use ipt;
 /// Import the ips pallet.
 pub use ips;
 
+/// Import the ipo pallet.
+pub use ipo;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -284,6 +287,30 @@ impl ips::Config for Runtime {
     type Event = Event;
     // Currency
     type Currency = Balances;
+    // The IpsData type (Vector of IPTs)
+    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+}
+
+parameter_types! {
+    // The maximum size of an IPO's metadata
+    pub const MaxIpoMetadata: u32 = 10000;
+}
+
+impl ipo::Config for Runtime {
+    // The maximum size of an IPO's metadata
+    type MaxIpoMetadata = MaxIpoMetadata;
+    // The IPS ID type
+    type IpoId = u64;
+    // The IPS Pallet Events
+    type Event = Event;
+    // Currency
+    type Currency = Balances;
+    // The IpsData type (Vector of IPTs)
+    type IpoData = Vec<<Runtime as ips::Config>::IpsId>;
+    // Balance
+    type Balance = Balance;
+    // ExistentialDeposit
+    type ExistentialDeposit = ExistentialDeposit;
 }
 
 parameter_types! {
@@ -319,6 +346,7 @@ construct_runtime!(
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
         Ips: ips::{Pallet, Call, Storage, Event<T>},
+        Ipo: ipo::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -497,6 +525,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_ipt, Ipt);
             list_benchmark!(list, extra, pallet_ips, Ips);
+            list_benchmark!(list, extra, pallet_ipo, Ipo);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
