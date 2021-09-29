@@ -1407,7 +1407,7 @@ dependencies = [
  "num-traits",
  "parity-scale-codec",
  "parking_lot 0.11.1",
- "scale-info",
+ "scale-info 0.10.0",
 ]
 
 [[package]]
@@ -2306,6 +2306,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
+ "ipo",
  "ips",
  "ipt",
  "pallet-aura",
@@ -2334,7 +2335,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -2378,9 +2379,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
 
 [[package]]
+name = "ipo"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "ips",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info 1.0.0",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -2395,7 +2413,7 @@ dependencies = [
 [[package]]
 name = "ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#e4be0bfe53c04efb8e27e8ef61b2c7279ee6e9af"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5801,7 +5819,19 @@ dependencies = [
  "cfg-if 1.0.0",
  "derive_more",
  "parity-scale-codec",
- "scale-info-derive",
+ "scale-info-derive 0.7.0",
+]
+
+[[package]]
+name = "scale-info"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c55b744399c25532d63a0d2789b109df8d46fc93752d46b0782991a931a782f"
+dependencies = [
+ "cfg-if 1.0.0",
+ "derive_more",
+ "parity-scale-codec",
+ "scale-info-derive 1.0.0",
 ]
 
 [[package]]
@@ -5809,6 +5839,18 @@ name = "scale-info-derive"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b648fa291891a4c80187a25532f6a7d96b82c70353e30b868b14632b8fe043d6"
+dependencies = [
+ "proc-macro-crate 1.0.0",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "scale-info-derive"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baeb2780690380592f86205aa4ee49815feb2acad8c2f59e6dd207148c3f1fcd"
 dependencies = [
  "proc-macro-crate 1.0.0",
  "proc-macro2",
@@ -7318,7 +7360,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
