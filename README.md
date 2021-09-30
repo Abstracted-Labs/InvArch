@@ -100,6 +100,17 @@ ratio to either cryptocurrency tokens or company shares. 🚀
 <img src="https://i.ibb.co/7NKWDM6/Screen-Shot-2021-08-28-at-5-41-35-PM.png" style="align-center">
 </div>
 
+## Testing
+
+Clone:
+
+`git clone https://github.com/InvArch/InvArch-Pallet-Library`
+
+Test:
+
+`cd InvArch-Pallet-Library
+cargo test`
+
 ## Components
 
 ### IP Protocol & Pallets
