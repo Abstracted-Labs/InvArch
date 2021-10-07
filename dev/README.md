@@ -33,3 +33,5 @@ DEVs would be considered multi-attribute NFTs.
 <div align=center>
   <img src="https://i.ibb.co/6myQDwD/Screen-Shot-2021-10-07-at-4-07-39-PM.png">
 </div>
+
+**...WIP...**
