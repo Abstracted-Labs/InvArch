@@ -13,8 +13,8 @@ The following **components** are defined:
 The following **functions** are possible:
 * `create` - Create a new DEV agreement
 * `post` - Post a DEV as joinable
-* `add` - Add a user to a DEV
-* `remove` - Remove a user from a DEV
+* `add` - Add a user (Account Address) to a DEV
+* `remove` - Remove a user (Account Address) from a DEV
 * `update` - Update a DEV to include a new interaction
 * `freeze` - Freeze a DEV and its metadata
 
