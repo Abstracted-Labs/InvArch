@@ -1,4 +1,4 @@
-//! # IPS
+//! # Pallet IPS
 //! Intellectual Property Sets
 //!
 //! - [`Config`]
@@ -40,10 +40,8 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-
-    use ipt::{IptByOwner, IptStorage};
-
     use super::*;
+    use ipt::{IptByOwner, IptStorage};
 
     #[pallet::config]
     pub trait Config: frame_system::Config + ipt::Config {

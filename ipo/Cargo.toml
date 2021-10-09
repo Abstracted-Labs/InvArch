@@ -4,7 +4,7 @@ description = 'IPO Pallet for minting and managing IP Ownership tokens'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'ipo'
+name = 'pallet-ipo'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipo'
 version = '0.1.0-dev'
 
@@ -23,7 +23,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
-ips = { package = "ips", path = "../ips", default-features = false }
+ips = { package = "pallet-ips", path = "../ips", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1" }

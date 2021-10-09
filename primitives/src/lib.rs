@@ -34,7 +34,6 @@ pub struct IptInfo<AccountId, Data, IptMetadataOf> {
 /// IPO Info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
 pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
-    // TODO: WIP
     /// IPO metadata
     pub metadata: IpoMetadataOf,
     /// Total issuance for the IPO
