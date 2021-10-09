@@ -4,7 +4,7 @@ description = 'IPS Pallet for creating and managing sets of tokenized IP'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'ips'
+name = 'pallet-ips'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
 version = '0.1.0-dev'
 
@@ -17,14 +17,13 @@ frame-support = { git = "https://github.com/paritytech/substrate", tag = "monthl
 frame-system = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1", default-features = false }
 
 # InvArch dependencies
-ipt = { package = "ipt", path = "../ipt", default-features = false }
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
+ipt = { package = "pallet-ipt", path = "../ipt", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1" }
 sp-io = { git = "https://github.com/paritytech/substrate", tag = "monthly-2021-09+1" }
 pallet-balances = { git = 'https://github.com/paritytech/substrate.git', tag = 'monthly-2021-09+1', version = '4.0.0-dev' }
-ipt = { path = "../ipt" }
 
 [features]
 default = ["std"]
@@ -35,6 +34,5 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
-  "ipt/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

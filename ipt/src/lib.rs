@@ -1,4 +1,4 @@
-//! # IPT
+//! # Pallet IPT
 //! Intellectual Property Tokens
 //!
 //! - [`Config`]

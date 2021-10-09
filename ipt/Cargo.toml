@@ -4,7 +4,7 @@ description = 'IPT Pallet for tokenizing and managing intellectual property'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'ipt'
+name = 'pallet-ipt'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipt'
 version = '0.1.0-dev'
 
@@ -28,6 +28,6 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
-  "primitives/std",
+  	"primitives/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
