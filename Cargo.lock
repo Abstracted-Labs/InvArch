@@ -2306,12 +2306,12 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal",
- "ipo",
- "ips",
- "ipt",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
+ "pallet-ipo",
+ "pallet-ips",
+ "pallet-ipt",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
@@ -2335,11 +2335,10 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
- "serde",
  "sp-core",
  "sp-runtime",
  "sp-std",
@@ -2377,54 +2376,6 @@ name = "ipnet"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
-
-[[package]]
-name = "ipo"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "ips",
- "pallet-balances",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info 1.0.0",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "ips"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "ipt",
- "parity-scale-codec",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "ipt"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#3b5bbf1adb36cb2f12f160fdfdd160380a180588"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "itertools"
@@ -3878,6 +3829,52 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipo"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "pallet-balances",
+ "pallet-ips",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info 1.0.0",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ips"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "pallet-ipt",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipt"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -7360,7 +7357,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

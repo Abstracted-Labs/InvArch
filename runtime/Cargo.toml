@@ -11,20 +11,20 @@ version = '3.0.0'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-[dependencies.ipt]
+[dependencies.pallet-ipt]
 default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
-package = "ipt"
+package = "pallet-ipt"
 
-[dependencies.ips]
+[dependencies.pallet-ips]
 default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
-package = "ips"
+package = "pallet-ips"
 
-[dependencies.ipo]
+[dependencies.pallet-ipo]
 default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
-package = "ipo"
+package = "pallet-ipo"
 
 [build-dependencies.substrate-wasm-builder]
 git = 'https://github.com/paritytech/substrate.git'
@@ -230,6 +230,7 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
-    'ipt/std',
-    'ips/std', 
+    # 'pallet-ipt/std',
+    # 'pallet-ips/std',
+    # 'pallet-ipo/std',
 ]

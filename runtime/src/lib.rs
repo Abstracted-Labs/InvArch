@@ -41,13 +41,13 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 /// Import the ipt pallet.
-pub use ipt;
+pub use pallet_ipt as ipt;
 
 /// Import the ips pallet.
-pub use ips;
+pub use pallet_ips as ips;
 
 /// Import the ipo pallet.
-pub use ipo;
+pub use pallet_ipo as ipo;
 
 /// An index to a block.
 pub type BlockNumber = u32;
