@@ -8,6 +8,8 @@ pub type IpsId = u64;
 pub type IptId = u64;
 /// IPO id type
 pub type IpoId = u64;
+/// DEV id type
+pub type DevId = u64;
 
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
@@ -44,4 +46,23 @@ pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
     pub data: Data,
     /// Binding Properties
     pub is_bond: bool,
+}
+
+/// Dev Data
+#[derive(Encode, Decode, Clone, Default, PartialEq, Eq)]
+pub struct DevData {
+    roles: Vec<u8>,
+    terms: Vec<u8>,
+    milestone: Vec<u8>,
+}
+
+/// DEV Info
+#[derive(Encode, Decode, Clone, Default, PartialEq, Eq)]
+pub struct DevInfo<AccountId, DevData, DevMetadataOf> {
+    /// DEV owner
+    pub owner: AccountId,
+    /// DEV metadata
+    pub metadata: DevMetadataOf,
+    /// DEV data
+    pub data: DevData,
 }
