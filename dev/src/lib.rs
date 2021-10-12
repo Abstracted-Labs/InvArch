@@ -146,6 +146,14 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn post_dev(
+            owner: OriginFor<T>,
+        ) -> {
+            
+        }
+
     }
 
     #[pallet::hooks]
