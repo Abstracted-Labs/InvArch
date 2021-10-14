@@ -98,6 +98,8 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// Some DEV were issued. \[dev_id, owner, ipo_allocation, interaction\]
         Created(T::DevId, T::AccountId, T::Balance, Vec<u8>),
+        /// Dev is posted as joinable \[dev_id\]
+        Posted(T::DevId),
     }
 
     #[pallet::error]
@@ -117,6 +119,7 @@ pub mod pallet {
             data: T::DevData,
             ipo_allocations: T::Balance,
             interactions: Vec<u8>,
+            joinable: bool,
         ) -> DispatchResultWithPostInfo {
             let signer = ensure_signed(owner)?;
 
@@ -140,11 +143,31 @@ pub mod pallet {
             
             let ipo_allocations = ipo_allocations.clone();
             let interactions = ipo_allocations.clone();
+            let joinable = false;
 
-            DevStorage::<T>::insert(dev_id, info, ipo_allocations, interactions);
+            DevStorage::<T>::insert(dev_id, info, ipo_allocations, interactions, joinable);
             Self::deposit_event(Event::Created(dev_id, signer, ipo_allocations, interactions));
 
             Ok(().into())
+        }
+
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn post_dev(
+            owner: OriginFor<T>,
+            dev_id: T::DevId,
+        ) -> DispatchResult {
+            let origin = ensure_signed(owner)?;
+
+            DevStorage::<T>::try_mutate(dev_id |joinable| {
+                let d = joinable.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(owner == d.owner, Error::<T>::NoPermission);
+                
+                d.is_joinable = true;
+
+                Self::deposit_event(Event::<T>::Posted(dev_id));
+                
+                Ok(())
+            })     
         }
     }
 
