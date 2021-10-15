@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
+use sp_std::vec::Vec;
 
 /// IPS Id type
 pub type IpsId = u64;
