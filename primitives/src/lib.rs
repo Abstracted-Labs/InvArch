@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
-use sp_std::vec::Vec;
 
 /// IPS Id type
 pub type IpsId = u64;
@@ -49,21 +48,19 @@ pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
     pub is_bond: bool,
 }
 
-/// Dev Data
-#[derive(Encode, Decode, Clone, Default, PartialEq, Eq)]
-pub struct DevData {
-    roles: Vec<u8>,
-    terms: Vec<u8>,
-    milestone: Vec<u8>,
-}
-
 /// DEV Info
-#[derive(Encode, Decode, Clone, Default, PartialEq, Eq)]
-pub struct DevInfo<AccountId, DevData, DevMetadataOf> {
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
+pub struct DevInfo<AccountId, Data, DevMetadataOf> {
     /// DEV owner
     pub owner: AccountId,
     /// DEV metadata
     pub metadata: DevMetadataOf,
     /// DEV data
-    pub data: DevData,
+    pub data: Data,
+    /// IPO allocations for DEV
+    pub ipo_allocations: u8,
+    /// DEV interactions
+    pub interactions: u8,
+    /// DEV post as joinable
+    pub is_joinable: bool,
 }

@@ -23,24 +23,12 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, Get, WithdrawReasons},
+    traits::{Currency, Get},
     BoundedVec, Parameter,
 };
-
-use frame_system::{ensure_signed, pallet_prelude::*};
-
-use sp_runtime::{
-    traits::{
-        AtLeast32BitUnsigned, CheckedAdd, MaybeSerializeDeserialize, Member, One, Saturating, Zero,
-    },
-    DispatchError,
-};
-
-use scale_info::TypeInfo;
-use sp_std::{convert::TryInto, ops::BitOr, vec::Vec};
-
-use codec::{Codec, MaxEncodedLen};
-use sp_std::{fmt::Debug, prelude::*};
+use frame_system::pallet_prelude::*;
+use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
+use sp_std::{convert::TryInto, vec::Vec};
 
 /// Import from primitives pallet
 use primitives::DevInfo;
@@ -52,13 +40,18 @@ pub mod pallet {
     use super::*;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + ips::Config {
+    pub trait Config: frame_system::Config + ips::Config + ipo::Config {
         /// Overarching event type.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The DEV ID type
         type DevId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        /// The DEV properties type
+        type DevData: Parameter + Member + MaybeSerializeDeserialize;
         /// The maximum size of an DEV's metadata
         type MaxDevMetadata: Get<u32>;
+        /// Currency
+        type Currency: Currency<Self::AccountId>;
+        
     }
 
     pub type BalanceOf<T> =
@@ -88,24 +81,43 @@ pub mod pallet {
 
     /// Store DEV info
     ///
-    /// Return `None` if DEV info not set of removed
+    /// Return `None` if IPS info not set of removed
     #[pallet::storage]
     #[pallet::getter(fn dev_storage)]
     pub type DevStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::DevId, DevInfoOf<T>>;
 
+    /// IPS existence check by owner and IPS ID
+    #[pallet::storage]
+    #[pallet::getter(fn dev_by_owner)]
+    pub type DevByOwner<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId, // owner
+        Blake2_128Concat,
+        T::DevId,
+        (),
+    >;
+
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId", T::DevId = "IpsId")]
     pub enum Event<T: Config> {
-        /// Some DEV were issued. \[dev_id, owner, ipo_allocation, interaction\]
-        Created(T::DevId, T::AccountId, T::Balance, Vec<u8>),
+        /// Some DEV were issued.
+        Created(T::AccountId, T::DevId),
         /// Dev is posted as joinable \[dev_id\]
-        Posted(T::DevId),
+        DevPosted(T::DevId),
     }
 
     #[pallet::error]
     pub enum Error<T> {
         /// No available DEV ID
         NoAvailableDevId,
+        /// Failed because the Maximum amount of metadata was exceeded
+        MaxMetadataExceeded,
+        /// The given DEV ID is unknown
+        Unknown,
+        /// The operator is not the owner of the DEV and has no permission
+        NoPermission,
     }
 
     /// Dispatch functions
@@ -117,38 +129,37 @@ pub mod pallet {
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             data: T::DevData,
-            ipo_allocations: T::Balance,
-            interactions: Vec<u8>,
-            joinable: bool,
+            ipo_allocations: u8,
+            interactions: u8,
         ) -> DispatchResultWithPostInfo {
-            let signer = ensure_signed(owner)?;
+            NextDevId::<T>::try_mutate(|dev_id| -> DispatchResultWithPostInfo {
+                let creator = ensure_signed(owner)?;
 
-            let bounded_metadata: BoundedVec<u8, T::MaxDevMetadata> = metadata
-                .try_into()
-                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
-            
-            let dev_id = NextDevId::<T>::try_mutate(|id| -> Result<T::DevId, DispatchError> {
-                let current_id = *id;
-                *id = id
+                let bounded_metadata: BoundedVec<u8, T::MaxDevMetadata> = metadata
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+
+                let current_id = *dev_id;
+                *dev_id = dev_id
                     .checked_add(&One::one())
                     .ok_or(Error::<T>::NoAvailableDevId)?;
-                Ok(current_id)
-            })?;
 
-            let info = DevInfo {
-                owner: signer.clone(),
-                metadata: bounded_metadata,
-                data,
-            };
-            
-            let ipo_allocations = ipo_allocations.clone();
-            let interactions = ipo_allocations.clone();
-            let joinable = false;
+                let info = DevInfo {
+                    owner: creator.clone(),
+                    metadata: bounded_metadata,
+                    data: data.clone(),
+                    interactions,
+                    ipo_allocations: ipo_allocations.clone(),
+                    is_joinable: false
+                };
 
-            DevStorage::<T>::insert(dev_id, info, ipo_allocations, interactions, joinable);
-            Self::deposit_event(Event::Created(dev_id, signer, ipo_allocations, interactions));
+                DevStorage::<T>::insert(current_id, info);
+                DevByOwner::<T>::insert(creator.clone(), current_id, ());
 
-            Ok(().into())
+                Self::deposit_event(Event::Created(creator, current_id));
+
+                Ok(().into())
+            })
         }
 
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
@@ -158,13 +169,13 @@ pub mod pallet {
         ) -> DispatchResult {
             let origin = ensure_signed(owner)?;
 
-            DevStorage::<T>::try_mutate(dev_id |joinable| {
-                let d = joinable.as_mut().ok_or(Error::<T>::Unknown)?;
-                ensure!(owner == d.owner, Error::<T>::NoPermission);
+            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
+                let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(origin == d.owner, Error::<T>::NoPermission);
                 
                 d.is_joinable = true;
 
-                Self::deposit_event(Event::<T>::Posted(dev_id));
+                Self::deposit_event(Event::<T>::DevPosted(dev_id));
                 
                 Ok(())
             })     
