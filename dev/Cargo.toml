@@ -20,6 +20,7 @@ frame-system = { git = "https://github.com/paritytech/substrate", tag = "monthly
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
 ips = { package = "pallet-ips", path = "../ips", default-features = false }
+ipo = { package = "pallet-ipo", path = "../ipo", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
