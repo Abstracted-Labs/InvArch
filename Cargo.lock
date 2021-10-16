@@ -2308,6 +2308,7 @@ dependencies = [
  "hex-literal",
  "pallet-aura",
  "pallet-balances",
+ "pallet-dev",
  "pallet-grandpa",
  "pallet-ipo",
  "pallet-ips",
@@ -2335,7 +2336,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3811,6 +3812,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dev"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "pallet-ipo",
+ "pallet-ips",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?tag=monthly-2021-09+1#20a9bbb1fe47fcd62fcd64b2fa32456b4f434aaf"
@@ -3835,7 +3851,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipo"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3852,7 +3868,7 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -3866,7 +3882,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#417567ee9f30141d7444ee4d526fc61f9a2ee176"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -7357,7 +7373,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

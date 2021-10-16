@@ -49,6 +49,9 @@ pub use pallet_ips as ips;
 /// Import the ipo pallet.
 pub use pallet_ipo as ipo;
 
+/// Import the dev pallet.
+pub use pallet_dev as dev;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -305,12 +308,30 @@ impl ipo::Config for Runtime {
     type Event = Event;
     // Currency
     type Currency = Balances;
-    // The IpsData type (Vector of IPTs)
+    // The IpoData type (Vector of IPSs)
     type IpoData = Vec<<Runtime as ips::Config>::IpsId>;
     // Balance
     type Balance = Balance;
     // ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
+}
+
+parameter_types! {
+    /// The maximum size of a DEV's metadata
+    pub const MaxDevMetadata: u32 = 10000;
+}
+
+impl dev::Config for Runtime {
+    // The DEV Pallet Events
+    type Event = Event;
+    // The DEV ID type
+    type DevId = u64;
+    // The DevData type (Vector of IPSs)
+    type DevData = Vec<<Runtime as ips::Config>::IpsId>;
+    // The maximum size of an DEV's metadata
+    type MaxDevMetadata = MaxDevMetadata;
+    // Currency
+    type Currency = Balances;
 }
 
 parameter_types! {
@@ -347,6 +368,7 @@ construct_runtime!(
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
         Ips: ips::{Pallet, Call, Storage, Event<T>},
         Ipo: ipo::{Pallet, Call, Storage, Event<T>},
+        Dev: dev::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -526,6 +548,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_ipt, Ipt);
             list_benchmark!(list, extra, pallet_ips, Ips);
             list_benchmark!(list, extra, pallet_ipo, Ipo);
+            list_benchmark!(list, extra, pallet_ipo, Dev);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
