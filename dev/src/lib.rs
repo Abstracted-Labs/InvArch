@@ -106,6 +106,8 @@ pub mod pallet {
         Created(T::AccountId, T::DevId),
         /// Dev is posted as joinable \[dev_id\]
         DevPosted(T::DevId),
+        /// User is added to DEV \[owner, user_id\]
+        UserAdded(T::DevId, T::AccountId),
     }
 
     #[pallet::error]
@@ -180,6 +182,29 @@ pub mod pallet {
                 Ok(())
             })     
         }
+
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn add_dev(
+            owner: OriginFor<T>,
+            dev_id: T::DevId,
+            user: T::AccountId,
+        ) -> DispatchResult {
+            let origin = ensure_signed(owner)?;
+
+            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
+                let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(origin == d.owner, Error::<T>::NoPermission);
+
+                let user = user.clone();
+
+                DevStorage::<T>::insert(user);
+
+                Self::deposit_event(Event::<T>::UserAdded(owner, dev_id));
+
+                Ok(())
+            })
+        }
+
     }
 
     #[pallet::hooks]
