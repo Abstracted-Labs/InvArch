@@ -106,8 +106,8 @@ pub mod pallet {
         Created(T::AccountId, T::DevId),
         /// Dev is posted as joinable \[dev_id\]
         DevPosted(T::DevId),
-        /// User is added to DEV \[owner, user_id\]
-        UserAdded(T::DevId, T::AccountId),
+        /// User is added to DEV \[owner, user\]
+        UserAdded(T::DevId, u8),
     }
 
     #[pallet::error]
@@ -131,6 +131,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             data: T::DevData,
+            users: u8,
             ipo_allocations: u8,
             interactions: u8,
         ) -> DispatchResultWithPostInfo {
@@ -150,6 +151,7 @@ pub mod pallet {
                     owner: creator.clone(),
                     metadata: bounded_metadata,
                     data: data.clone(),
+                    users,
                     interactions,
                     ipo_allocations: ipo_allocations.clone(),
                     is_joinable: false
@@ -169,11 +171,11 @@ pub mod pallet {
             owner: OriginFor<T>,
             dev_id: T::DevId,
         ) -> DispatchResult {
-            let origin = ensure_signed(owner)?;
+            let creator = ensure_signed(owner)?;
 
             DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
                 let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-                ensure!(origin == d.owner, Error::<T>::NoPermission);
+                ensure!(creator == d.owner, Error::<T>::NoPermission);
                 
                 d.is_joinable = true;
 
@@ -184,22 +186,36 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn add_dev(
+        pub fn add_user(
             owner: OriginFor<T>,
+            metadata: Vec<u8>,
+            data: T::DevData,
+            users: u8,
             dev_id: T::DevId,
-            user: T::AccountId,
+            ipo_allocations: u8,
+            interactions: u8,
         ) -> DispatchResult {
-            let origin = ensure_signed(owner)?;
+            let creator = ensure_signed(owner)?;
 
             DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
                 let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-                ensure!(origin == d.owner, Error::<T>::NoPermission);
+                ensure!(creator == d.owner, Error::<T>::NoPermission);
 
-                let user = user.clone();
+                let bounded_metadata: BoundedVec<u8, T::MaxDevMetadata> = metadata
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
-                DevStorage::<T>::insert(user);
+                let info = DevInfo {
+                    owner: creator.clone(),
+                    metadata: bounded_metadata,
+                    data,
+                    users,
+                    interactions,
+                    ipo_allocations,
+                    is_joinable: Default::default(),
+                };
 
-                Self::deposit_event(Event::<T>::UserAdded(owner, dev_id));
+                Self::deposit_event(Event::<T>::UserAdded(dev_id, info.users));
 
                 Ok(())
             })
