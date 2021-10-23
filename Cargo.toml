@@ -3,7 +3,7 @@
 members = [
     #"dao",
     #"deliverables",
-    #"dev",
+    "dev",
     "ipo",
     "ips",
     "ipt",

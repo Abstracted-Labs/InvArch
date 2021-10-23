@@ -1,17 +1,22 @@
-//! Mocks for the gradually-update module.
+//! Mocks for pallet-dev.
 
 use frame_support::{construct_runtime, parameter_types, traits::Contains};
+use pallet_balances::AccountData;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
 use super::*;
+use ipo;
+use ips;
+use ipt;
 
-use crate as ipo;
+use crate as dev;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
+pub type Balance = u128;
 pub type AccountId = u128;
 pub type BlockNumber = u64;
 
@@ -31,7 +36,7 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
+    type AccountData = AccountData<AccountId>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type DbWeight = ();
@@ -42,13 +47,72 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
+    pub const ExistentialDeposit: u128 = 500;
+    pub const MaxLocks: u32 = 50;
+}
+
+impl pallet_balances::Config for Runtime {
+    type MaxLocks = MaxLocks;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
+    /// The type for recording an account's balance.
+    type Balance = Balance;
+    /// The ubiquitous event type.
+    type Event = Event;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+    pub const MaxIptMetadata: u32 = 32;
+}
+
+impl ipt::Config for Runtime {
+    type IptId = u64;
+    type MaxIptMetadata = MaxIptMetadata;
+    type Event = Event;
+}
+
+parameter_types! {
+    pub const MaxIpsMetadata: u32 = 32;
+}
+
+impl ips::Config for Runtime {
+    type Event = Event;
+    type IpsId = u64;
+    type MaxIpsMetadata = MaxIpsMetadata;
+    type Currency = Balances;
+    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+}
+
+parameter_types! {
     pub const MaxIpoMetadata: u32 = 32;
 }
 
-impl Config for Runtime {
+impl ipo::Config for Runtime {
     type IpoId = u64;
     type MaxIpoMetadata = MaxIpoMetadata;
     type Event = Event;
+    type IpoData = ();
+    type Currency = Balances;
+    type Balance = Balance;
+    type ExistentialDeposit = ExistentialDeposit;
+}
+
+parameter_types! {
+    pub const MaxDevMetadata: u32 = 32;
+}
+
+impl Config for Runtime {
+    type Event = Event;
+    type DevId = u64;
+    type DevData = Vec<u8>;
+    type MaxDevMetadata = MaxDevMetadata;
+    type Currency = Balances;
+    type Allocation = u32;
+    type Interaction = <Runtime as frame_system::Config>::Hash;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -61,7 +125,7 @@ impl Contains<Call> for BaseFilter {
         match *c {
             // Remark is used as a no-op call in the benchmarking
             Call::System(SystemCall::remark(_)) => true,
-            Call::System(_) => false,
+            _ => false,
         }
     }
 }
@@ -73,15 +137,17 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+        Dev: dev::{Pallet, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Ipt: ipt::{Pallet, Storage, Event<T>},
+        Ips: ips::{Pallet, Storage, Event<T>},
         Ipo: ipo::{Pallet, Storage, Event<T>},
     }
 );
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const ROOT: OriginFor = 0;
-pub const IPO_ID: <Runtime as Config>::IpoId = 0;
-pub const IPO_ID_DOESNT_EXIST: <Runtime as Config>::IpoId = 100;
+
 pub const MOCK_DATA: [u8; 32] = [
     12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
     0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
@@ -101,11 +167,6 @@ pub const MOCK_METADATA_SECONDARY: &'static [u8] = &[
 pub const MOCK_METADATA_PAST_MAX: &'static [u8] = &[
     12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
     0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 42,
-];
-pub const MOCK_TOTAL_ISSUANCE: &'static [u8] = &[10_000];
-pub const MOCK_AMOUNT: &'static [u8] = &[
-    120, 470, 1820, 720, 1400, 510, 1390, 2190, 1710, 740, 2470, 180, 1230, 280, 2000, 2360, 2210,
-    850, 250, 120, 2180, 0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
 ];
 
 pub struct ExtBuilder;
