@@ -50,13 +50,15 @@ pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
 
 /// DEV Info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
-pub struct DevInfo<AccountId, Data, DevMetadataOf> {
+pub struct DevInfo<AccountId, DevData, DevMetadataOf> {
     /// DEV owner
     pub owner: AccountId,
     /// DEV metadata
     pub metadata: DevMetadataOf,
     /// DEV data
-    pub data: Data,
+    pub data: DevData,
+    /// Users data
+    pub users: u8,
     /// IPO allocations for DEV
     pub ipo_allocations: u8,
     /// DEV interactions
