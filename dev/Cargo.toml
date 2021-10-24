@@ -22,9 +22,12 @@ primitives = { package = "invarch-primitives", path = "../primitives", default-f
 ips = { package = "pallet-ips", path = "../ips", default-features = false }
 ipo = { package = "pallet-ipo", path = "../ipo", default-features = false }
 
+
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sp-core = { git = "https://github.com/paritytech/substrate", tag = 'monthly-2021-09+1' }
+sp-io = { git = "https://github.com/paritytech/substrate", tag = 'monthly-2021-09+1' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate.git', tag = 'monthly-2021-09+1', version = '4.0.0-dev' }
+ipt = { package = "pallet-ipt", path = "../ipt", default-features = false }
 
 [features]
 default = ["std"]

@@ -21,6 +21,11 @@
 #![allow(clippy::unused_unit)]
 #![allow(clippy::no_effect)]
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 use frame_support::{
     pallet_prelude::*,
     traits::{Currency, Get},
@@ -37,6 +42,11 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use std::iter::{FromIterator, Sum};
+
+    use ips::IpsByOwner;
+    use sp_std::collections::btree_map::BTreeMap;
+
     use super::*;
 
     #[pallet::config]
@@ -51,7 +61,10 @@ pub mod pallet {
         type MaxDevMetadata: Get<u32>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
-        
+        /// The allocations of IPO tokens for the users
+        type Allocation: Default + Copy + AtLeast32BitUnsigned + Parameter + Member + Sum;
+        /// The interactions recorded in the DEV
+        type Interaction: Parameter + Member;
     }
 
     pub type BalanceOf<T> =
@@ -61,8 +74,20 @@ pub mod pallet {
 
     pub type DevMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxDevMetadata>;
 
-    pub type DevInfoOf<T> =
-        DevInfo<<T as frame_system::Config>::AccountId, <T as Config>::DevData, DevMetadataOf<T>>;
+    pub type DevAllocations<T> =
+        BTreeMap<<T as frame_system::Config>::AccountId, <T as Config>::Allocation>;
+
+    pub type DevInteractions<T> = Vec<<T as Config>::Interaction>;
+
+    pub type DevInfoOf<T> = DevInfo<
+        <T as frame_system::Config>::AccountId,
+        DevMetadataOf<T>,
+        <T as ips::Config>::IpsId,
+        <T as Config>::DevData,
+        DevAllocations<T>,
+        <T as Config>::Allocation,
+        DevInteractions<T>,
+    >;
 
     pub type GenesisDev<T> = (
         <T as frame_system::Config>::AccountId, // DEV owner
@@ -81,12 +106,12 @@ pub mod pallet {
 
     /// Store DEV info
     ///
-    /// Return `None` if IPS info not set of removed
+    /// Return `None` if DEV info not set of removed
     #[pallet::storage]
     #[pallet::getter(fn dev_storage)]
     pub type DevStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::DevId, DevInfoOf<T>>;
 
-    /// IPS existence check by owner and IPS ID
+    /// DEV existence check by owner and DEV ID
     #[pallet::storage]
     #[pallet::getter(fn dev_by_owner)]
     pub type DevByOwner<T: Config> = StorageDoubleMap<
@@ -98,6 +123,12 @@ pub mod pallet {
         (),
     >;
 
+    /// DEV existence check by IPS ID
+    #[pallet::storage]
+    #[pallet::getter(fn dev_by_ips_id)]
+    pub type DevByIpsId<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::DevId, Blake2_128Concat, T::IpsId, ()>;
+
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     #[pallet::metadata(T::AccountId = "AccountId", T::DevId = "IpsId")]
@@ -107,7 +138,7 @@ pub mod pallet {
         /// Dev is posted as joinable \[dev_id\]
         DevPosted(T::DevId),
         /// User is added to DEV \[owner, user\]
-        UserAdded(T::DevId, u8),
+        UserAdded(T::DevId, T::AccountId, T::Allocation),
     }
 
     #[pallet::error]
@@ -120,6 +151,12 @@ pub mod pallet {
         Unknown,
         /// The operator is not the owner of the DEV and has no permission
         NoPermission,
+        /// The operator is not the owner of the IPS and has no permission
+        NoPermissionForIps,
+        /// IPS already has a registered DEV
+        IpsAlreadyHasDev,
+        /// The allocations sum to more than the total issuance of IPO for the DEV
+        AllocationOverflow,
     }
 
     /// Dispatch functions
@@ -130,13 +167,41 @@ pub mod pallet {
         pub fn create_dev(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
+            ips_id: T::IpsId,
             data: T::DevData,
-            users: u8,
-            ipo_allocations: u8,
-            interactions: u8,
+            ipo_allocations: Vec<(T::AccountId, T::Allocation)>,
+            total_issuance: T::Allocation,
+            interactions: DevInteractions<T>,
         ) -> DispatchResultWithPostInfo {
             NextDevId::<T>::try_mutate(|dev_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner)?;
+
+                // Ensuring the signer owns the IPS he's trying to make a DEV for.
+                ensure!(
+                    IpsByOwner::<T>::get(creator.clone(), ips_id).is_some(),
+                    Error::<T>::NoPermissionForIps
+                );
+
+                // Ensuring the IPS doesn't already have a DEV.
+                ensure!(
+                    DevByIpsId::<T>::get(dev_id.clone(), ips_id).is_none(),
+                    Error::<T>::IpsAlreadyHasDev
+                );
+
+                let ipo_allocations: BTreeMap<
+                    <T as frame_system::Config>::AccountId,
+                    <T as Config>::Allocation,
+                > = BTreeMap::from_iter(ipo_allocations);
+
+                // Ensuring the total allocation isn't above the total issuance.
+                ensure!(
+                    ipo_allocations
+                        .clone()
+                        .into_values()
+                        .sum::<<T as Config>::Allocation>()
+                        <= total_issuance,
+                    Error::<T>::AllocationOverflow
+                );
 
                 let bounded_metadata: BoundedVec<u8, T::MaxDevMetadata> = metadata
                     .try_into()
@@ -150,15 +215,17 @@ pub mod pallet {
                 let info = DevInfo {
                     owner: creator.clone(),
                     metadata: bounded_metadata,
+                    ips_id,
                     data: data.clone(),
-                    users,
                     interactions,
-                    ipo_allocations: ipo_allocations.clone(),
-                    is_joinable: false
+                    ipo_allocations: BTreeMap::from_iter(ipo_allocations),
+                    total_issuance,
+                    is_joinable: false,
                 };
 
                 DevStorage::<T>::insert(current_id, info);
                 DevByOwner::<T>::insert(creator.clone(), current_id, ());
+                DevByIpsId::<T>::insert(dev_id, ips_id, ());
 
                 Self::deposit_event(Event::Created(creator, current_id));
 
@@ -166,61 +233,55 @@ pub mod pallet {
             })
         }
 
+        /// Post a DEV as joinable
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn post_dev(
-            owner: OriginFor<T>,
-            dev_id: T::DevId,
-        ) -> DispatchResult {
+        pub fn post_dev(owner: OriginFor<T>, dev_id: T::DevId) -> DispatchResult {
             let creator = ensure_signed(owner)?;
 
             DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
                 let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
                 ensure!(creator == d.owner, Error::<T>::NoPermission);
-                
+
                 d.is_joinable = true;
 
                 Self::deposit_event(Event::<T>::DevPosted(dev_id));
-                
-                Ok(())
-            })     
-        }
-
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn add_user(
-            owner: OriginFor<T>,
-            metadata: Vec<u8>,
-            data: T::DevData,
-            users: u8,
-            dev_id: T::DevId,
-            ipo_allocations: u8,
-            interactions: u8,
-        ) -> DispatchResult {
-            let creator = ensure_signed(owner)?;
-
-            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
-                let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-                ensure!(creator == d.owner, Error::<T>::NoPermission);
-
-                let bounded_metadata: BoundedVec<u8, T::MaxDevMetadata> = metadata
-                    .try_into()
-                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
-
-                let info = DevInfo {
-                    owner: creator.clone(),
-                    metadata: bounded_metadata,
-                    data,
-                    users,
-                    interactions,
-                    ipo_allocations,
-                    is_joinable: Default::default(),
-                };
-
-                Self::deposit_event(Event::<T>::UserAdded(dev_id, info.users));
 
                 Ok(())
             })
         }
 
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn add_user(
+            owner: OriginFor<T>,
+            dev_id: T::DevId,
+            user: T::AccountId,
+            allocation: T::Allocation,
+        ) -> DispatchResult {
+            let creator = ensure_signed(owner)?;
+
+            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
+                let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(creator == details.owner, Error::<T>::NoPermission);
+
+                // Ensuring the new user's allocation doesn't put the total allocation above the total issuance.
+                ensure!(
+                    details
+                        .ipo_allocations
+                        .clone()
+                        .into_values()
+                        .sum::<<T as Config>::Allocation>()
+                        + allocation
+                        <= details.total_issuance,
+                    Error::<T>::AllocationOverflow
+                );
+
+                details.ipo_allocations.insert(user.clone(), allocation);
+
+                Self::deposit_event(Event::<T>::UserAdded(dev_id, user, allocation));
+
+                Ok(())
+            })
+        }
     }
 
     #[pallet::hooks]

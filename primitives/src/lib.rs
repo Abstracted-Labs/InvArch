@@ -49,20 +49,30 @@ pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
 }
 
 /// DEV Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
-pub struct DevInfo<AccountId, DevData, DevMetadataOf> {
+#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+pub struct DevInfo<
+    AccountId,
+    DevMetadataOf,
+    IpsId,
+    DevData,
+    DevAllocations,
+    Allocation,
+    DevInteractions,
+> {
     /// DEV owner
     pub owner: AccountId,
     /// DEV metadata
     pub metadata: DevMetadataOf,
+    /// Id of the IPS that the DEV refers to
+    pub ips_id: IpsId,
     /// DEV data
     pub data: DevData,
-    /// Users data
-    pub users: u8,
     /// IPO allocations for DEV
-    pub ipo_allocations: u8,
+    pub ipo_allocations: DevAllocations,
+    /// Total issuance of IPO for this DEV (if this is 100 the ipo allocations will be percentages)
+    pub total_issuance: Allocation,
     /// DEV interactions
-    pub interactions: u8,
+    pub interactions: DevInteractions,
     /// DEV post as joinable
     pub is_joinable: bool,
 }
