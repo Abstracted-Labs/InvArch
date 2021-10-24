@@ -113,6 +113,8 @@ impl Config for Runtime {
     type Currency = Balances;
     type Allocation = u32;
     type Interaction = <Runtime as frame_system::Config>::Hash;
+    type Role = String;
+    type Term = String;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
