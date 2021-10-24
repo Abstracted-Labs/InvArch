@@ -157,6 +157,8 @@ pub mod pallet {
         IpsAlreadyHasDev,
         /// The allocations sum to more than the total issuance of IPO for the DEV
         AllocationOverflow,
+        /// The DEV isn't open to join
+        DevClosed,
     }
 
     /// Dispatch functions
@@ -184,7 +186,7 @@ pub mod pallet {
 
                 // Ensuring the IPS doesn't already have a DEV.
                 ensure!(
-                    DevByIpsId::<T>::get(dev_id.clone(), ips_id).is_none(),
+                    DevByIpsId::<T>::get(*dev_id, ips_id).is_none(),
                     Error::<T>::IpsAlreadyHasDev
                 );
 
@@ -250,6 +252,7 @@ pub mod pallet {
             })
         }
 
+        // TODO: Add checks for IPO distribution range limits
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn add_user(
             owner: OriginFor<T>,
@@ -262,6 +265,7 @@ pub mod pallet {
             DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
                 let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
                 ensure!(creator == details.owner, Error::<T>::NoPermission);
+                ensure!(details.is_joinable, Error::<T>::DevClosed);
 
                 // Ensuring the new user's allocation doesn't put the total allocation above the total issuance.
                 ensure!(
