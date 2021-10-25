@@ -42,9 +42,13 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use std::iter::{FromIterator, Sum};
+    use std::{
+        fmt::Display,
+        iter::{FromIterator, Sum},
+    };
 
     use ips::IpsByOwner;
+    use primitives::DevUser;
     use sp_std::collections::btree_map::BTreeMap;
 
     use super::*;
@@ -65,6 +69,10 @@ pub mod pallet {
         type Allocation: Default + Copy + AtLeast32BitUnsigned + Parameter + Member + Sum;
         /// The interactions recorded in the DEV
         type Interaction: Parameter + Member;
+        /// A term of the DEV
+        type Term: Parameter + Member;
+        /// A DEV user's role
+        type Role: Parameter + Member + Display;
     }
 
     pub type BalanceOf<T> =
@@ -74,19 +82,24 @@ pub mod pallet {
 
     pub type DevMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxDevMetadata>;
 
-    pub type DevAllocations<T> =
-        BTreeMap<<T as frame_system::Config>::AccountId, <T as Config>::Allocation>;
+    pub type DevUsers<T> = BTreeMap<
+        <T as frame_system::Config>::AccountId,
+        DevUser<<T as Config>::Allocation, <T as Config>::Role>,
+    >;
 
     pub type DevInteractions<T> = Vec<<T as Config>::Interaction>;
+
+    pub type DevTerms<T> = Vec<<T as Config>::Term>;
 
     pub type DevInfoOf<T> = DevInfo<
         <T as frame_system::Config>::AccountId,
         DevMetadataOf<T>,
         <T as ips::Config>::IpsId,
         <T as Config>::DevData,
-        DevAllocations<T>,
+        DevUsers<T>,
         <T as Config>::Allocation,
         DevInteractions<T>,
+        DevTerms<T>,
     >;
 
     pub type GenesisDev<T> = (
@@ -173,9 +186,9 @@ pub mod pallet {
             metadata: Vec<u8>,
             ips_id: T::IpsId,
             data: T::DevData,
-            ipo_allocations: Vec<(T::AccountId, T::Allocation)>,
+            users: Vec<(T::AccountId, T::Allocation, T::Role)>,
             total_issuance: T::Allocation,
-            interactions: DevInteractions<T>,
+            terms: DevTerms<T>,
         ) -> DispatchResultWithPostInfo {
             NextDevId::<T>::try_mutate(|dev_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner)?;
@@ -194,14 +207,23 @@ pub mod pallet {
 
                 let ipo_allocations: BTreeMap<
                     <T as frame_system::Config>::AccountId,
-                    <T as Config>::Allocation,
-                > = BTreeMap::from_iter(ipo_allocations);
+                    DevUser<T::Allocation, T::Role>,
+                > = BTreeMap::from_iter(users.into_iter().map(|user| {
+                    (
+                        user.0,
+                        DevUser {
+                            allocation: user.1,
+                            role: user.2,
+                        },
+                    )
+                }));
 
                 // Ensuring the total allocation isn't above the total issuance.
                 ensure!(
                     ipo_allocations
                         .clone()
                         .into_values()
+                        .map(|user| user.allocation)
                         .sum::<<T as Config>::Allocation>()
                         <= total_issuance,
                     Error::<T>::AllocationOverflow
@@ -221,8 +243,9 @@ pub mod pallet {
                     metadata: bounded_metadata,
                     ips_id,
                     data: data.clone(),
-                    interactions,
-                    ipo_allocations: BTreeMap::from_iter(ipo_allocations),
+                    interactions: Default::default(),
+                    terms,
+                    users: BTreeMap::from_iter(ipo_allocations),
                     total_issuance,
                     is_joinable: false,
                 };
@@ -262,6 +285,7 @@ pub mod pallet {
             dev_id: T::DevId,
             user: T::AccountId,
             allocation: T::Allocation,
+            role: T::Role,
         ) -> DispatchResult {
             let creator = ensure_signed(owner)?;
 
@@ -273,16 +297,19 @@ pub mod pallet {
                 // Ensuring the new user's allocation doesn't put the total allocation above the total issuance.
                 ensure!(
                     details
-                        .ipo_allocations
+                        .users
                         .clone()
                         .into_values()
+                        .map(|user| user.allocation)
                         .sum::<<T as Config>::Allocation>()
                         + allocation
                         <= details.total_issuance,
                     Error::<T>::AllocationOverflow
                 );
 
-                details.ipo_allocations.insert(user.clone(), allocation);
+                details
+                    .users
+                    .insert(user.clone(), DevUser { allocation, role });
 
                 Self::deposit_event(Event::<T>::UserAdded(dev_id, user, allocation));
 

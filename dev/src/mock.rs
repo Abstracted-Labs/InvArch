@@ -113,6 +113,8 @@ impl Config for Runtime {
     type Currency = Balances;
     type Allocation = u32;
     type Interaction = <Runtime as frame_system::Config>::Hash;
+    type Role = String;
+    type Term = String;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -156,7 +158,7 @@ pub const MOCK_METADATA: &'static [u8] = &[
     12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
     0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
 ];
-pub const MOCK_DATA_SECONDARY: [u8; 32] = [
+pub const _MOCK_DATA_SECONDARY: [u8; 32] = [
     47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
     230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
 ];

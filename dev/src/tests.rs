@@ -38,9 +38,12 @@ fn create_dev_should_work() {
             MOCK_METADATA.to_vec(),
             0u64,
             MOCK_DATA.to_vec(),
-            vec![(ALICE, 50u32), (BOB, 50u32)],
+            vec![
+                (ALICE, 50u32, String::from("Cofounder")),
+                (BOB, 50u32, String::from("Founder"))
+            ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
 
         assert_ok!(Dev::create_dev(
@@ -48,9 +51,12 @@ fn create_dev_should_work() {
             MOCK_METADATA.to_vec(),
             1u64,
             MOCK_DATA.to_vec(),
-            vec![(ALICE, 20u32), (BOB, 10u32)],
+            vec![
+                (ALICE, 20u32, String::from("Founder")),
+                (BOB, 10u32, String::from("Cofounder"))
+            ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
     });
 }
@@ -75,9 +81,12 @@ fn create_dev_should_fail() {
                 MOCK_METADATA.to_vec(),
                 0u64,
                 MOCK_DATA.to_vec(),
-                vec![(ALICE, 50u32), (BOB, 50u32)],
+                vec![
+                    (ALICE, 50u32, String::from("Cofounder")),
+                    (BOB, 50u32, String::from("Founder"))
+                ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)]
+                vec![]
             ),
             DispatchError::BadOrigin
         );
@@ -88,9 +97,12 @@ fn create_dev_should_fail() {
                 MOCK_METADATA.to_vec(),
                 0u64,
                 MOCK_DATA.to_vec(),
-                vec![(ALICE, 50u32), (BOB, 50u32)],
+                vec![
+                    (ALICE, 50u32, String::from("Cofounder")),
+                    (BOB, 50u32, String::from("Founder"))
+                ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)]
+                vec![]
             ),
             Error::<Runtime>::NoPermissionForIps
         );
@@ -101,9 +113,12 @@ fn create_dev_should_fail() {
                 MOCK_METADATA.to_vec(),
                 0u64,
                 MOCK_DATA.to_vec(),
-                vec![(ALICE, 50u32), (BOB, 51u32)],
+                vec![
+                    (ALICE, 50u32, String::from("Cofounder")),
+                    (BOB, 51u32, String::from("Founder"))
+                ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)]
+                vec![]
             ),
             Error::<Runtime>::AllocationOverflow
         );
@@ -128,9 +143,12 @@ fn post_dev_should_work() {
             MOCK_METADATA.to_vec(),
             0u64,
             MOCK_DATA.to_vec(),
-            vec![(ALICE, 50u32), (BOB, 50u32)],
+            vec![
+                (ALICE, 50u32, String::from("Cofounder")),
+                (BOB, 50u32, String::from("Founder"))
+            ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
 
         assert_ok!(Dev::post_dev(Origin::signed(BOB), 0));
@@ -157,9 +175,12 @@ fn post_dev_should_fail() {
             MOCK_METADATA.to_vec(),
             0u64,
             MOCK_DATA.to_vec(),
-            vec![(ALICE, 50u32), (BOB, 50u32)],
+            vec![
+                (ALICE, 50u32, String::from("Cofounder")),
+                (BOB, 50u32, String::from("Founder"))
+            ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
         assert_ok!(Ipt::mint(
             Origin::signed(ALICE),
@@ -176,9 +197,12 @@ fn post_dev_should_fail() {
             MOCK_METADATA.to_vec(),
             1u64,
             MOCK_DATA.to_vec(),
-            vec![(ALICE, 50u32), (BOB, 50u32)],
+            vec![
+                (ALICE, 50u32, String::from("Cofounder")),
+                (BOB, 50u32, String::from("Founder"))
+            ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
 
         assert_noop!(Dev::post_dev(Origin::none(), 0), DispatchError::BadOrigin);
@@ -221,23 +245,50 @@ fn add_user_should_work() {
             MOCK_METADATA.to_vec(),
             0u64,
             MOCK_DATA.to_vec(),
-            vec![(BOB, 50u32)],
+            vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
 
         assert_ok!(Dev::post_dev(Origin::signed(BOB), 0u64));
 
         assert_eq!(
-            DevStorage::<Runtime>::get(0u64).unwrap().ipo_allocations,
-            BTreeMap::from_iter([(BOB, 50u32)])
+            DevStorage::<Runtime>::get(0u64).unwrap().users,
+            BTreeMap::from_iter([(
+                BOB,
+                primitives::DevUser {
+                    allocation: 50u32,
+                    role: String::from("Founder")
+                }
+            )])
         );
 
-        assert_ok!(Dev::add_user(Origin::signed(BOB), 0u64, ALICE, 50u32));
+        assert_ok!(Dev::add_user(
+            Origin::signed(BOB),
+            0u64,
+            ALICE,
+            50u32,
+            String::from("Cofounder")
+        ));
 
         assert_eq!(
-            DevStorage::<Runtime>::get(0u64).unwrap().ipo_allocations,
-            BTreeMap::from_iter([(ALICE, 50u32), (BOB, 50u32)])
+            DevStorage::<Runtime>::get(0u64).unwrap().users,
+            BTreeMap::from_iter([
+                (
+                    BOB,
+                    primitives::DevUser {
+                        allocation: 50u32,
+                        role: String::from("Founder")
+                    }
+                ),
+                (
+                    ALICE,
+                    primitives::DevUser {
+                        allocation: 50u32,
+                        role: String::from("Cofounder")
+                    }
+                )
+            ])
         );
     })
 }
@@ -260,46 +311,88 @@ fn add_user_should_fail() {
             MOCK_METADATA.to_vec(),
             0u64,
             MOCK_DATA.to_vec(),
-            vec![(BOB, 50u32)],
+            vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)]
+            vec![]
         ));
 
         assert_noop!(
-            Dev::add_user(Origin::signed(BOB), 0u64, ALICE, 50u32),
+            Dev::add_user(
+                Origin::signed(BOB),
+                0u64,
+                ALICE,
+                50u32,
+                String::from("Cofounder")
+            ),
             Error::<Runtime>::DevClosed
         );
 
         assert_ok!(Dev::post_dev(Origin::signed(BOB), 0u64));
 
         assert_eq!(
-            DevStorage::<Runtime>::get(0u64).unwrap().ipo_allocations,
-            BTreeMap::from_iter([(BOB, 50u32)])
+            DevStorage::<Runtime>::get(0u64).unwrap().users,
+            BTreeMap::from_iter([(
+                BOB,
+                primitives::DevUser {
+                    allocation: 50u32,
+                    role: String::from("Founder")
+                }
+            )])
         );
 
         assert_noop!(
-            Dev::add_user(Origin::none(), 0u64, ALICE, 50u32),
+            Dev::add_user(
+                Origin::none(),
+                0u64,
+                ALICE,
+                50u32,
+                String::from("Cofounder")
+            ),
             DispatchError::BadOrigin
         );
 
         assert_noop!(
-            Dev::add_user(Origin::signed(ALICE), 0u64, ALICE, 50u32),
+            Dev::add_user(
+                Origin::signed(ALICE),
+                0u64,
+                ALICE,
+                50u32,
+                String::from("Cofounder")
+            ),
             Error::<Runtime>::NoPermission
         );
 
         assert_noop!(
-            Dev::add_user(Origin::signed(BOB), 1u64, ALICE, 50u32),
+            Dev::add_user(
+                Origin::signed(BOB),
+                1u64,
+                ALICE,
+                50u32,
+                String::from("Cofounder")
+            ),
             Error::<Runtime>::Unknown
         );
 
         assert_noop!(
-            Dev::add_user(Origin::signed(BOB), 0u64, ALICE, 51u32),
+            Dev::add_user(
+                Origin::signed(BOB),
+                0u64,
+                ALICE,
+                51u32,
+                String::from("Cofounder")
+            ),
             Error::<Runtime>::AllocationOverflow
         );
 
         assert_eq!(
-            DevStorage::<Runtime>::get(0u64).unwrap().ipo_allocations,
-            BTreeMap::from_iter([(BOB, 50u32)])
+            DevStorage::<Runtime>::get(0u64).unwrap().users,
+            BTreeMap::from_iter([(
+                BOB,
+                primitives::DevUser {
+                    allocation: 50u32,
+                    role: String::from("Founder")
+                }
+            )])
         );
     })
 }
