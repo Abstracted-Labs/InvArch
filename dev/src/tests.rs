@@ -43,7 +43,6 @@ fn create_dev_should_work() {
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
 
@@ -57,7 +56,6 @@ fn create_dev_should_work() {
                 (BOB, 10u32, String::from("Cofounder"))
             ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
     });
@@ -88,7 +86,6 @@ fn create_dev_should_fail() {
                     (BOB, 50u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)],
                 vec![]
             ),
             DispatchError::BadOrigin
@@ -105,7 +102,6 @@ fn create_dev_should_fail() {
                     (BOB, 50u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)],
                 vec![]
             ),
             Error::<Runtime>::NoPermissionForIps
@@ -122,7 +118,6 @@ fn create_dev_should_fail() {
                     (BOB, 51u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![H256::from(MOCK_DATA_SECONDARY)],
                 vec![]
             ),
             Error::<Runtime>::AllocationOverflow
@@ -153,7 +148,6 @@ fn post_dev_should_work() {
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
 
@@ -186,7 +180,6 @@ fn post_dev_should_fail() {
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
         assert_ok!(Ipt::mint(
@@ -209,7 +202,6 @@ fn post_dev_should_fail() {
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
 
@@ -255,7 +247,6 @@ fn add_user_should_work() {
             MOCK_DATA.to_vec(),
             vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
 
@@ -322,7 +313,6 @@ fn add_user_should_fail() {
             MOCK_DATA.to_vec(),
             vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![H256::from(MOCK_DATA_SECONDARY)],
             vec![]
         ));
 
