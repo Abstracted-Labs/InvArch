@@ -54,11 +54,11 @@ pub struct DevInfo<
     AccountId,
     DevMetadataOf,
     IpsId,
-    DevData,
     DevUsers,
     Allocation,
     DevInteractions,
     DevTerms,
+    DevMilestones,
 > {
     /// DEV owner
     pub owner: AccountId,
@@ -66,8 +66,6 @@ pub struct DevInfo<
     pub metadata: DevMetadataOf,
     /// Id of the IPS that the DEV refers to
     pub ips_id: IpsId,
-    /// DEV data
-    pub data: DevData,
     /// IPO allocations for DEV
     pub users: DevUsers,
     /// Total issuance of IPO for this DEV (if this is 100 the ipo allocations will be percentages)
@@ -76,6 +74,8 @@ pub struct DevInfo<
     pub interactions: DevInteractions,
     /// Terms of the DEV
     pub terms: DevTerms,
+    /// Dev Milestones,
+    pub milestones: DevMilestones,
     /// DEV post as joinable
     pub is_joinable: bool,
 }
