@@ -183,7 +183,6 @@ pub mod pallet {
             data: T::DevData,
             users: Vec<(T::AccountId, T::Allocation, T::Role)>,
             total_issuance: T::Allocation,
-            interactions: DevInteractions<T>,
             terms: DevTerms<T>,
         ) -> DispatchResultWithPostInfo {
             NextDevId::<T>::try_mutate(|dev_id| -> DispatchResultWithPostInfo {
@@ -239,7 +238,7 @@ pub mod pallet {
                     metadata: bounded_metadata,
                     ips_id,
                     data: data.clone(),
-                    interactions,
+                    interactions: Default::default(),
                     terms,
                     users: BTreeMap::from_iter(ipo_allocations),
                     total_issuance,
