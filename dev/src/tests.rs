@@ -37,26 +37,32 @@ fn create_dev_should_work() {
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             0u64,
-            MOCK_DATA.to_vec(),
             vec![
                 (ALICE, 50u32, String::from("Cofounder")),
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
 
         assert_ok!(Dev::create_dev(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             1u64,
-            MOCK_DATA.to_vec(),
             vec![
                 (ALICE, 20u32, String::from("Founder")),
                 (BOB, 10u32, String::from("Cofounder"))
             ],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
     });
 }
@@ -80,13 +86,16 @@ fn create_dev_should_fail() {
                 Origin::none(),
                 MOCK_METADATA.to_vec(),
                 0u64,
-                MOCK_DATA.to_vec(),
                 vec![
                     (ALICE, 50u32, String::from("Cofounder")),
                     (BOB, 50u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![]
+                vec![],
+                vec![
+                    (String::from("be awesome"), true),
+                    (String::from("change the world"), false)
+                ]
             ),
             DispatchError::BadOrigin
         );
@@ -96,13 +105,16 @@ fn create_dev_should_fail() {
                 Origin::signed(ALICE),
                 MOCK_METADATA.to_vec(),
                 0u64,
-                MOCK_DATA.to_vec(),
                 vec![
                     (ALICE, 50u32, String::from("Cofounder")),
                     (BOB, 50u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![]
+                vec![],
+                vec![
+                    (String::from("be awesome"), true),
+                    (String::from("change the world"), false)
+                ]
             ),
             Error::<Runtime>::NoPermissionForIps
         );
@@ -112,13 +124,16 @@ fn create_dev_should_fail() {
                 Origin::signed(BOB),
                 MOCK_METADATA.to_vec(),
                 0u64,
-                MOCK_DATA.to_vec(),
                 vec![
                     (ALICE, 50u32, String::from("Cofounder")),
                     (BOB, 51u32, String::from("Founder"))
                 ],
                 100u32,
-                vec![]
+                vec![],
+                vec![
+                    (String::from("be awesome"), true),
+                    (String::from("change the world"), false)
+                ]
             ),
             Error::<Runtime>::AllocationOverflow
         );
@@ -142,13 +157,16 @@ fn post_dev_should_work() {
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             0u64,
-            MOCK_DATA.to_vec(),
             vec![
                 (ALICE, 50u32, String::from("Cofounder")),
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
 
         assert_ok!(Dev::post_dev(Origin::signed(BOB), 0));
@@ -174,13 +192,16 @@ fn post_dev_should_fail() {
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             0u64,
-            MOCK_DATA.to_vec(),
             vec![
                 (ALICE, 50u32, String::from("Cofounder")),
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
         assert_ok!(Ipt::mint(
             Origin::signed(ALICE),
@@ -196,13 +217,16 @@ fn post_dev_should_fail() {
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
             1u64,
-            MOCK_DATA.to_vec(),
             vec![
                 (ALICE, 50u32, String::from("Cofounder")),
                 (BOB, 50u32, String::from("Founder"))
             ],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
 
         assert_noop!(Dev::post_dev(Origin::none(), 0), DispatchError::BadOrigin);
@@ -244,10 +268,13 @@ fn add_user_should_work() {
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             0u64,
-            MOCK_DATA.to_vec(),
             vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
 
         assert_ok!(Dev::post_dev(Origin::signed(BOB), 0u64));
@@ -310,10 +337,13 @@ fn add_user_should_fail() {
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             0u64,
-            MOCK_DATA.to_vec(),
             vec![(BOB, 50u32, String::from("Founder"))],
             100u32,
-            vec![]
+            vec![],
+            vec![
+                (String::from("be awesome"), true),
+                (String::from("change the world"), false)
+            ]
         ));
 
         assert_noop!(

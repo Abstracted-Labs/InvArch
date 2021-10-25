@@ -115,6 +115,7 @@ impl Config for Runtime {
     type Interaction = <Runtime as frame_system::Config>::Hash;
     type Role = String;
     type Term = String;
+    type Milestone = String;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;

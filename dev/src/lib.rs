@@ -73,6 +73,8 @@ pub mod pallet {
         type Term: Parameter + Member;
         /// A DEV user's role
         type Role: Parameter + Member + Display;
+        /// A milestone for the DEV
+        type Milestone: Parameter + Member + Display;
     }
 
     pub type BalanceOf<T> =
@@ -91,15 +93,17 @@ pub mod pallet {
 
     pub type DevTerms<T> = Vec<<T as Config>::Term>;
 
+    pub type DevMilestones<T> = Vec<(<T as Config>::Milestone, bool)>; // Vector of Milestone and wheter it's completed or not
+
     pub type DevInfoOf<T> = DevInfo<
         <T as frame_system::Config>::AccountId,
         DevMetadataOf<T>,
         <T as ips::Config>::IpsId,
-        <T as Config>::DevData,
         DevUsers<T>,
         <T as Config>::Allocation,
         DevInteractions<T>,
         DevTerms<T>,
+        DevMilestones<T>,
     >;
 
     pub type GenesisDev<T> = (
@@ -185,10 +189,10 @@ pub mod pallet {
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             ips_id: T::IpsId,
-            data: T::DevData,
             users: Vec<(T::AccountId, T::Allocation, T::Role)>,
             total_issuance: T::Allocation,
             terms: DevTerms<T>,
+            milestones: DevMilestones<T>,
         ) -> DispatchResultWithPostInfo {
             NextDevId::<T>::try_mutate(|dev_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner)?;
@@ -242,12 +246,12 @@ pub mod pallet {
                     owner: creator.clone(),
                     metadata: bounded_metadata,
                     ips_id,
-                    data: data.clone(),
                     interactions: Default::default(),
                     terms,
                     users: BTreeMap::from_iter(ipo_allocations),
                     total_issuance,
                     is_joinable: false,
+                    milestones,
                 };
 
                 DevStorage::<T>::insert(current_id, info);
@@ -326,7 +330,7 @@ pub mod pallet {
                 let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
                 ensure!(creator == details.owner, Error::<T>::NoPermission);
 
-                details.ipo_allocations.remove(&user);
+                details.users.remove(&user);
 
                 // TODO: Is the allocation of that particular user need to revert back to storage?
 
