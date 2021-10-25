@@ -137,8 +137,10 @@ pub mod pallet {
         Created(T::AccountId, T::DevId),
         /// Dev is posted as joinable \[dev_id\]
         DevPosted(T::DevId),
-        /// User is added to DEV \[owner, user\]
+        /// User is added to DEV \[owner, user, allocation\]
         UserAdded(T::DevId, T::AccountId, T::Allocation),
+        /// USer is removed from DEV \[owner, user\]
+        UserRemoved(T::DevId, T::AccountId),
     }
 
     #[pallet::error]
@@ -253,6 +255,7 @@ pub mod pallet {
         }
 
         // TODO: Add checks for IPO distribution range limits
+        /// Add a user to DEV
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn add_user(
             owner: OriginFor<T>,
@@ -282,6 +285,25 @@ pub mod pallet {
                 details.ipo_allocations.insert(user.clone(), allocation);
 
                 Self::deposit_event(Event::<T>::UserAdded(dev_id, user, allocation));
+
+                Ok(())
+            })
+        }
+
+        /// Remove a user fron DEV
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn remove(owner: OriginFor<T>, dev_id: T::DevId, user: T::AccountId) -> DispatchResult {
+            let creator = ensure_signed(owner)?;
+
+            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
+                let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(creator == details.owner, Error::<T>::NoPermission);
+
+                details.ipo_allocations.remove(&user);
+
+                // TODO: Is the allocation of that particular user need to revert back to storage?
+
+                Self::deposit_event(Event::<T>::UserRemoved(dev_id, user));
 
                 Ok(())
             })
