@@ -42,7 +42,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use std::iter::{FromIterator, Sum};
+    use std::{
+        fmt::Display,
+        iter::{FromIterator, Sum},
+    };
 
     use ips::IpsByOwner;
     use primitives::DevUser;
@@ -69,7 +72,7 @@ pub mod pallet {
         /// A term of the DEV
         type Term: Parameter + Member;
         /// A DEV user's role
-        type Role: Parameter + Member;
+        type Role: Parameter + Member + Display;
     }
 
     pub type BalanceOf<T> =
