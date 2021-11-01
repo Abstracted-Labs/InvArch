@@ -156,8 +156,10 @@ pub mod pallet {
         DevPosted(T::DevId),
         /// User is added to DEV \[owner, user, allocation\]
         UserAdded(T::DevId, T::AccountId, T::Allocation),
-        /// USer is removed from DEV \[owner, user\]
+        /// User is removed from DEV \[owner, user\]
         UserRemoved(T::DevId, T::AccountId),
+        /// Interaction is added to DEV \[owner, interaction\]
+        InteractionUpdated(T::DevId, T::Interaction),
     }
 
     #[pallet::error]
@@ -323,7 +325,11 @@ pub mod pallet {
 
         /// Remove a user fron DEV
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn remove(owner: OriginFor<T>, dev_id: T::DevId, user: T::AccountId) -> DispatchResult {
+        pub fn remove_user(
+            owner: OriginFor<T>,
+            dev_id: T::DevId,
+            user: T::AccountId,
+        ) -> DispatchResult {
             let creator = ensure_signed(owner)?;
 
             DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
@@ -332,9 +338,28 @@ pub mod pallet {
 
                 details.users.remove(&user);
 
-                // TODO: Is the allocation of that particular user need to revert back to storage?
-
                 Self::deposit_event(Event::<T>::UserRemoved(dev_id, user));
+
+                Ok(())
+            })
+        }
+
+        /// Update a DEV to include a new interaction
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn update_interaction(
+            owner: OriginFor<T>,
+            dev_id: T::DevId,
+            interaction: T::Interaction,
+        ) -> DispatchResult {
+            let creator = ensure_signed(owner)?;
+
+            DevStorage::<T>::try_mutate(dev_id, |maybe_details| {
+                let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+                ensure!(creator == details.owner, Error::<T>::NoPermission);
+
+                details.interactions.insert(1, interaction.clone());
+
+                Self::deposit_event(Event::<T>::InteractionUpdated(dev_id, interaction));
 
                 Ok(())
             })
