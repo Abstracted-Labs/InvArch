@@ -2263,7 +2263,7 @@ version = "3.0.0-monthly-2021-09+1"
 dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
- "invarch-node-runtime",
+ "invarch-runtime",
  "jsonrpc-core",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
@@ -2296,7 +2296,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "invarch-node-runtime"
+name = "invarch-primitives"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "invarch-runtime"
 version = "3.0.0"
 dependencies = [
  "frame-benchmarking",
@@ -2331,18 +2343,6 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder",
-]
-
-[[package]]
-name = "invarch-primitives"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library#4a8cd541bbce17d88c87bbb4c1e6a155e3555fad"
-dependencies = [
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

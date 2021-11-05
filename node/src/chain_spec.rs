@@ -1,4 +1,4 @@
-use invarch_node_runtime::{
+use invarch_runtime::{
     AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
     SystemConfig, WASM_BINARY,
 };
