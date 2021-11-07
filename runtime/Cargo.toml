@@ -31,6 +31,18 @@ default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
 package = "pallet-dev"
 
+[dependencies]
+evm = { git = "https://github.com/PlasmNetwork/evm", branch = "polkadot-v0.9.11", default-features = false, features = ["with-codec"] }
+smallvec = "1.7.0"
+pallet-ethereum = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm-precompile-bn128 = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm-precompile-dispatch = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm-precompile-modexp = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm-precompile-simple = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+pallet-evm-precompile-sha3fips = { git="https://github.com/PlasmNetwork/frontier", branch="polkadot-v0.9.11", default-features=false }
+
+
 [build-dependencies.substrate-wasm-builder]
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-09+1'
@@ -216,6 +228,7 @@ std = [
     'frame-support/std',
     'frame-system-rpc-runtime-api/std',
     'frame-system/std',
+
     'pallet-aura/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
@@ -224,6 +237,14 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
     'pallet-transaction-payment/std',
+    "pallet-ethereum/std",
+    "pallet-evm/std",
+    "pallet-evm-precompile-simple/std",
+    "pallet-evm-precompile-bn128/std",
+    "pallet-evm-precompile-dispatch/std",
+    "pallet-evm-precompile-modexp/std",
+    "pallet-evm-precompile-sha3fips/std",
+
     'sp-api/std',
     'sp-block-builder/std',
     'sp-consensus-aura/std',
