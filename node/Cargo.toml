@@ -20,7 +20,7 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-09+1'
 version = '3.0.0'
 
-[dependencies.invarch-node-runtime]
+[dependencies.invarch-runtime]
 path = '../runtime'
 version = '3.0.0'
 
@@ -173,4 +173,4 @@ version = '4.0.0-dev'
 
 [features]
 default = []
-runtime-benchmarks = ['invarch-node-runtime/runtime-benchmarks']
+runtime-benchmarks = ['invarch-runtime/runtime-benchmarks']
