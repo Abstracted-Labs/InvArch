@@ -6,7 +6,7 @@
   * InvArch is a next generation blockchain for intellectual property tokenization, development, & networking.
   * The InvArch platform provides utility for this new technology by allowing intellectual property tokens (IPTs) to be owned by a Decentralized Entrepreneurial Venture (DEV) contract and governed as a DAO using built-in fungible IP Ownership (IPO) tokens. These tokens may also be leverages by participants in a DEV to raise startup funds for their projects.
   * InvArch is built using Substrate/Rust.
-  * Every member of the time has an honest belief that this project will help make the world better through increased economic decentralization and by helping to catalyze future innovations, it's a belief that motivates and inspires every one of us to see this project through.
+  * Every member of the team has an honest belief that this project will help make the world better through increased economic decentralization and by helping to catalyze future innovations, it's a belief that motivates and inspires every one of us to see this project through.
 
 ### Project Details
 
