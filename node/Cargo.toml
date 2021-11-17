@@ -19,7 +19,7 @@ name = 'invarch-node'
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.12"
 
-[dependencies.invarch-node-runtime]
+[dependencies.invarch-runtime]
 path = '../runtime'
 version = '3.0.0'
 
@@ -144,4 +144,4 @@ branch = "polkadot-v0.9.12"
 
 [features]
 default = []
-runtime-benchmarks = ['invarch-node-runtime/runtime-benchmarks']
+runtime-benchmarks = ['invarch-runtime/runtime-benchmarks']
