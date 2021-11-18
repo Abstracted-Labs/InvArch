@@ -193,14 +193,14 @@ pub mod pallet {
 
                 pallet_assets::Pallet::<T>::create(
                     owner.clone(),
-                    ips_id.clone().into(),
+                    (*ips_id).into(),
                     T::Lookup::unlookup(creator.clone()),
                     T::ExistentialDeposit::get(),
                 )?;
 
                 pallet_assets::Pallet::<T>::set_metadata(
                     owner,
-                    ips_id.clone().into(),
+                    (*ips_id).into(),
                     format!("IPO {}", ips_id.clone()).as_bytes().to_vec(),
                     format!("$IPO {}", ips_id.clone()).as_bytes().to_vec(),
                     18,
