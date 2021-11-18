@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 
 /// IPS Id type
 pub type IpsId = u64;
@@ -12,7 +13,7 @@ pub type IpoId = u64;
 pub type DevId = u64;
 
 /// IPS info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
     /// IPS owner
     pub owner: AccountId,
@@ -23,7 +24,7 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
 }
 
 /// IPT Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IptInfo<AccountId, Data, IptMetadataOf> {
     /// IPT owner
     pub owner: AccountId,

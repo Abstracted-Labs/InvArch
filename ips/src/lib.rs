@@ -21,7 +21,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency, ExistenceRequirement, Get},
+    traits::{Currency as FSCurrency, ExistenceRequirement, Get},
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -33,7 +33,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Import from IPT pallet
+/// Import the primitives crate
 use primitives::IpsInfo;
 
 pub use pallet::*;
@@ -42,23 +42,35 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use ipt::{IptByOwner, IptStorage};
+    use scale_info::prelude::fmt::Display;
+    use scale_info::prelude::format;
+    use sp_runtime::traits::StaticLookup;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + ipt::Config {
+    pub trait Config: frame_system::Config + ipt::Config + pallet_assets::Config {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
-        type IpsId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        type IpsId: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + Display
+            + IsType<<Self as pallet_assets::Config>::AssetId>;
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>;
         /// Currency
-        type Currency: Currency<Self::AccountId>;
+        type Currency: FSCurrency<Self::AccountId>;
 
         type IpsData: IntoIterator + Clone;
+
+        #[pallet::constant]
+        type ExistentialDeposit: Get<<Self as pallet_assets::Config>::Balance>;
     }
 
     pub type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
     pub type IpsIndexOf<T> = <T as Config>::IpsId;
 
@@ -112,7 +124,7 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", T::IpsId = "IpsId")]
+    // #[pallet::metadata(T::AccountId = "AccountId", T::IpsId = "IpsId")]
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
         Sent(T::AccountId, T::AccountId, T::IpsId),
@@ -161,7 +173,7 @@ pub mod pallet {
             data: Vec<<T as ipt::Config>::IptId>,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
-                let creator = ensure_signed(owner)?;
+                let creator = ensure_signed(owner.clone())?;
 
                 let bounded_metadata: BoundedVec<u8, T::MaxIpsMetadata> = metadata
                     .try_into()
@@ -172,18 +184,33 @@ pub mod pallet {
                     .checked_add(&One::one())
                     .ok_or(Error::<T>::NoAvailableIpsId)?;
 
-                let info = IpsInfo {
-                    owner: creator.clone(),
-                    metadata: bounded_metadata,
-                    data: data.clone(),
-                };
-
                 ensure!(
-                    !data.into_iter().any(|ipt_id| {
+                    !data.clone().into_iter().any(|ipt_id| {
                         ipt::IptByOwner::<T>::get(creator.clone(), ipt_id).is_none()
                     }),
                     Error::<T>::NoPermission
                 );
+
+                pallet_assets::Pallet::<T>::create(
+                    owner.clone(),
+                    (*ips_id).into(),
+                    T::Lookup::unlookup(creator.clone()),
+                    T::ExistentialDeposit::get(),
+                )?;
+
+                pallet_assets::Pallet::<T>::set_metadata(
+                    owner,
+                    (*ips_id).into(),
+                    format!("IPO {}", ips_id.clone()).as_bytes().to_vec(),
+                    format!("$IPO {}", ips_id.clone()).as_bytes().to_vec(),
+                    18,
+                )?;
+
+                let info = IpsInfo {
+                    owner: creator.clone(),
+                    metadata: bounded_metadata,
+                    data,
+                };
 
                 IpsStorage::<T>::insert(current_id, info);
                 IpsByOwner::<T>::insert(creator.clone(), current_id, ());
@@ -262,7 +289,7 @@ pub mod pallet {
                     let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
                     IpsByOwner::<T>::remove(info.owner.clone(), ips_id);
 
-                    T::Currency::transfer(
+                    <T as pallet::Config>::Currency::transfer(
                         &buyer_signed,
                         &info.owner,
                         price,

@@ -77,12 +77,37 @@ parameter_types! {
     pub const MaxIpsMetadata: u32 = 32;
 }
 
+parameter_types! {
+    pub const AssetDeposit: Balance = 100;
+    pub const ApprovalDeposit: Balance = 500;
+    pub const AssetsStringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = 68;
+    pub const MetadataDepositPerByte: Balance = 1;
+}
+
+impl pallet_assets::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type AssetId = u64;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = AssetsStringLimit;
+    type Freezer = ();
+    type Extra = ();
+    type WeightInfo = ();
+}
+
 impl Config for Runtime {
     type Event = Event;
     type IpsId = u64;
     type MaxIpsMetadata = MaxIpsMetadata;
     type Currency = Balances;
     type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+    type ExistentialDeposit = ExistentialDeposit;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -95,7 +120,7 @@ impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
         match *c {
             // Remark is used as a no-op call in the benchmarking
-            Call::System(SystemCall::remark(_)) => true,
+            Call::System(SystemCall::remark { .. }) => true,
             Call::System(_) => false,
             _ => false,
         }
@@ -112,6 +137,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
         Ipt: ipt::{Pallet, Storage, Event<T>},
         Ips: ips::{Pallet, Storage, Event<T>},
+        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
     }
 );
 

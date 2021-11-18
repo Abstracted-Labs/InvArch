@@ -104,7 +104,7 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", T::IptId = "IptId", T::Hash = "Hash")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::IptId = "IptId", T::Hash = "Hash")]
     pub enum Event<T: Config> {
         Minted(T::AccountId, T::IptId, T::Hash),
         Amended(T::AccountId, T::IptId, T::Hash),

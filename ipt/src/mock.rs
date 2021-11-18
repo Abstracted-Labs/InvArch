@@ -60,7 +60,7 @@ impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
         match *c {
             // Remark is used as a no-op call in the benchmarking
-            Call::System(SystemCall::remark(_)) => true,
+            Call::System(SystemCall::remark { .. }) => true,
             Call::System(_) => false,
         }
     }
