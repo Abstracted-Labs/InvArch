@@ -6,7 +6,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::{Decode, Encode};
 use pallet_grandpa::{
     fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -31,7 +30,7 @@ use sp_version::RuntimeVersion;
 // use fp_rpc::TransactionStatus; TODO
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{Currency, KeyOwnerProofSystem, Randomness, StorageInfo},
+    traits::{Contains, Currency, KeyOwnerProofSystem, Randomness, StorageInfo},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
@@ -51,11 +50,10 @@ pub use pallet_ipt as ipt;
 /// Import the ips pallet.
 pub use pallet_ips as ips;
 
-/// Import the ipo pallet.
-pub use pallet_ipo as ipo;
-
-/// Import the dev pallet.
-pub use pallet_dev as dev;
+// Runtime Constants
+mod constants;
+// Weights
+mod weights;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -75,6 +73,9 @@ pub type Index = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+/// The IpsId + AssetId
+type CommonId = u64;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -157,11 +158,17 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
-// Configure FRAME pallets to include in runtime.
+pub struct BaseFilter;
+impl Contains<Call> for BaseFilter {
+    fn contains(c: &Call) -> bool {
+        // Disable permissionless asset creation.
+        !matches!(c, Call::Assets(pallet_assets::Call::create { .. }))
+    }
+}
 
 impl frame_system::Config for Runtime {
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = frame_support::traits::Everything;
+    type BaseCallFilter = BaseFilter;
     /// Block & extrinsics weights: base values and limits.
     type BlockWeights = BlockWeights;
     /// The maximum length of a block (in bytes).
@@ -212,9 +219,14 @@ impl frame_system::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+parameter_types! {
+      pub const MaxAuthorities: u32 = 100_000;
+}
+
 impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 impl pallet_grandpa::Config for Runtime {
@@ -234,6 +246,7 @@ impl pallet_grandpa::Config for Runtime {
     type HandleEquivocation = ();
 
     type WeightInfo = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 parameter_types! {
@@ -290,57 +303,20 @@ impl ips::Config for Runtime {
     // The maximum size of an IPS's metadata
     type MaxIpsMetadata = MaxIpsMetadata;
     // The IPS ID type
-    type IpsId = u64;
+    type IpsId = CommonId;
     // The IPS Pallet Events
     type Event = Event;
     // Currency
     type Currency = Balances;
     // The IpsData type (Vector of IPTs)
     type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
-}
-
-parameter_types! {
-    // The maximum size of an IPO's metadata
-    pub const MaxIpoMetadata: u32 = 10000;
-}
-
-impl ipo::Config for Runtime {
-    // The maximum size of an IPO's metadata
-    type MaxIpoMetadata = MaxIpoMetadata;
-    // The IPS ID type
-    type IpoId = u64;
-    // The IPS Pallet Events
-    type Event = Event;
-    // Currency
-    type Currency = Balances;
-    // The IpoData type (Vector of IPSs)
-    type IpoData = Vec<<Runtime as ips::Config>::IpsId>;
-    // Balance
-    type Balance = Balance;
-    // ExistentialDeposit
+    // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
 }
 
 parameter_types! {
-    /// The maximum size of a DEV's metadata
-    pub const MaxDevMetadata: u32 = 10000;
-}
-
-impl dev::Config for Runtime {
-    // The DEV Pallet Events
-    type Event = Event;
-    // The DEV ID type
-    type DevId = u64;
-    // The DevData type (Vector of IPSs)
-    type DevData = Vec<<Runtime as ips::Config>::IpsId>;
-    // The maximum size of an DEV's metadata
-    type MaxDevMetadata = MaxDevMetadata;
-    // Currency
-    type Currency = Balances;
-}
-
-parameter_types! {
     pub const TransactionByteFee: Balance = 1;
+    pub const OperationalFeeMultiplier: u8 = 5;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -348,11 +324,43 @@ impl pallet_transaction_payment::Config for Runtime {
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate = ();
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
+}
+
+parameter_types! {
+    pub const AssetDeposit: Balance = 100 * constants::currency::DOLLARS; // 100 DOLLARS deposit to create asset
+    pub const ApprovalDeposit: Balance = constants::currency::EXISTENTIAL_DEPOSIT;
+    pub const AssetsStringLimit: u32 = 50;
+    pub const MetadataDepositBase: Balance = constants::currency::deposit(1, 68);
+    pub const MetadataDepositPerByte: Balance = constants::currency::deposit(0, 1);
+    //pub const ExecutiveBody: BodyId = BodyId::Executive;
+}
+
+//pub type AssetsForceOrigin = EnsureOneOf<
+//    AccountId,
+//    EnsureRoot<AccountId>,
+//    EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
+//>;
+
+impl pallet_assets::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type AssetId = CommonId;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = AssetsStringLimit;
+    type Freezer = ();
+    type Extra = ();
+    type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -372,8 +380,7 @@ construct_runtime!(
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
         Ips: ips::{Pallet, Call, Storage, Event<T>},
-        Ipo: ipo::{Pallet, Call, Storage, Event<T>},
-        Dev: dev::{Pallet, Call, Storage, Event<T>},
+        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -421,7 +428,7 @@ impl_runtime_apis! {
 
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
+            OpaqueMetadata::new(Runtime::metadata().into())
         }
     }
 
@@ -468,7 +475,7 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            Aura::authorities()
+            Aura::authorities().into_inner()
         }
     }
 
