@@ -14,13 +14,13 @@ targets = ['x86_64-unknown-linux-gnu']
 [dependencies.pallet-ipt]
 default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
-branch = "develop"
+branch = "development"
 package = "pallet-ipt"
 
 [dependencies.pallet-ips]
 default-features = false
 git = "https://github.com/InvArch/InvArch-Pallet-Library"
-branch = "develop"
+branch = "development"
 package = "pallet-ips"
 
 [dependencies.pallet-assets]
