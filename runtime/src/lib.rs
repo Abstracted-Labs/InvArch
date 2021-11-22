@@ -6,6 +6,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use frame_support::ConsensusEngineId;
 use pallet_grandpa::{
     fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -13,7 +14,7 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
     crypto::{KeyTypeId, Public},
-    OpaqueMetadata, H160, H256, U256,
+    OpaqueMetadata, H160, U256,
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
@@ -30,7 +31,7 @@ use sp_version::RuntimeVersion;
 // use fp_rpc::TransactionStatus; TODO
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{Contains, Currency, KeyOwnerProofSystem, Randomness, StorageInfo},
+    traits::{Contains, Currency, FindAuthor, KeyOwnerProofSystem, Randomness, StorageInfo},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
@@ -54,6 +55,22 @@ pub use pallet_ips as ips;
 mod constants;
 // Weights
 mod weights;
+
+use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
+
+pub struct FindAuthorTruncated<F>(PhantomData<F>);
+impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
+    fn find_author<'a, I>(digests: I) -> Option<H160>
+    where
+        I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+    {
+        if let Some(author_index) = F::find_author(digests) {
+            let authority_id = Aura::authorities()[author_index as usize].clone();
+            return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
+        }
+        None
+    }
+}
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -161,8 +178,13 @@ parameter_types! {
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
-        // Disable permissionless asset creation.
-        !matches!(c, Call::Assets(pallet_assets::Call::create { .. }))
+        match c {
+            Call::Assets(method) => match method {
+                pallet_assets::Call::create { .. } => false,
+                _ => true,
+            },
+            _ => true,
+        }
     }
 }
 
@@ -363,6 +385,29 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+    pub const ChainId: u64 = 42;
+    pub BlockGasLimit: U256 = U256::from(u32::max_value());
+}
+
+impl pallet_evm::Config for Runtime {
+    type FeeCalculator = ();
+    type GasWeightMapping = ();
+    type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
+    type CallOrigin = EnsureAddressTruncated;
+    type WithdrawOrigin = EnsureAddressTruncated;
+    type AddressMapping = HashedAddressMapping<BlakeTwo256>;
+    type Currency = Balances;
+    type Event = Event;
+    type Runner = pallet_evm::runner::stack::Runner<Self>;
+    type ChainId = ChainId;
+    type BlockGasLimit = BlockGasLimit;
+    type OnChargeTransaction = ();
+    type FindAuthor = FindAuthorTruncated<Aura>;
+    type PrecompilesType = ();
+    type PrecompilesValue = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -381,6 +426,7 @@ construct_runtime!(
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
         Ips: ips::{Pallet, Call, Storage, Event<T>},
         Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>}
     }
 );
 
