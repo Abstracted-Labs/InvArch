@@ -8,12 +8,12 @@
 use std::sync::Arc;
 
 use invarch_runtime::{opaque::Block, AccountId, Balance, BlockNumber, Hash, Index};
+use pallet_contracts_rpc::{Contracts, ContractsApi};
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use pallet_contracts_rpc::{Contracts, ContractsApi};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -63,10 +63,7 @@ where
     // `io.extend_with(YourRpcTrait::to_delegate(YourRpcStruct::new(ReferenceToClient, ...)));`
 
     // Contracts RPC API extensions
-    io.extend_with(
-        ContractsApi::to_delegate(Contracts::new(
-            client.clone(),
-    )));
+    io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
 
     io
 }
