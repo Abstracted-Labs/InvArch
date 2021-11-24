@@ -345,3 +345,4 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
     network_starter.start_network();
     Ok(task_manager)
 }
+

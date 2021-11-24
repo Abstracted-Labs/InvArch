@@ -6,7 +6,7 @@ license = 'Unlicense'
 name = 'invarch-node'
 publish = false
 repository = 'https://github.com/InvArch/InvArch-node/'
-version = '3.0.0-monthly-2021-09+1'
+version = '3.0.0'
 build = 'build.rs'
 
 [package.metadata.docs.rs]
@@ -147,6 +147,11 @@ branch = "polkadot-v0.9.13"
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
 
+[dependencies.pallet-contracts-rpc]
+git = 'https://github.com/paritytech/substrate.git'
+branch = "polkadot-v0.9.13"
+
 [features]
 default = []
 runtime-benchmarks = ['invarch-runtime/runtime-benchmarks']
+contracts-unstable-interface = ['invarch-runtime/contracts-unstable-interface']
