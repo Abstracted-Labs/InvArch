@@ -24,7 +24,7 @@
 //!       }
 //!     }
 //! ```
-//! 3. Set `RewardAmount` to desiced block reward value in native currency.
+
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
