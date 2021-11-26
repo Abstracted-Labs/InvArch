@@ -6,7 +6,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-
 use codec::{Decode, Encode};
 use frame_support::ConsensusEngineId;
 use pallet_grandpa::{
@@ -20,7 +19,10 @@ use sp_core::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, Verify},
+    traits::{
+        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount,
+        NumberFor, Verify,
+    },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature, RuntimeDebug,
 };
@@ -33,12 +35,15 @@ use sp_version::RuntimeVersion;
 // use fp_rpc::TransactionStatus; TODO
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{Contains, Currency, FindAuthor, Imbalance, KeyOwnerProofSystem, Randomness, StorageInfo, OnUnbalanced},
+    traits::{
+        Contains, Currency, FindAuthor, Imbalance, KeyOwnerProofSystem, OnUnbalanced, Randomness,
+        StorageInfo,
+    },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
     },
-    StorageValue, PalletId,
+    PalletId, StorageValue,
 };
 pub use pallet_balances::Call as BalancesCall;
 use pallet_contracts::weights::WeightInfo;
@@ -563,7 +568,6 @@ impl<AccountId> pallet_ip_staking::traits::IsContract for SmartContract<AccountI
         }
     }
 }
-
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
