@@ -4037,6 +4037,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-block-rewards"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+]
+
+[[package]]
 name = "pallet-contracts"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.13#7db0768a85dc36a3f2a44d042b32f3715c00a90d"
