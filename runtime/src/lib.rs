@@ -6,6 +6,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+
+use codec::{Decode, Encode};
 use frame_support::ConsensusEngineId;
 use pallet_grandpa::{
     fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -18,9 +20,9 @@ use sp_core::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, Verify},
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
+    ApplyExtrinsicResult, MultiSignature, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -31,12 +33,12 @@ use sp_version::RuntimeVersion;
 // use fp_rpc::TransactionStatus; TODO
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{Contains, Currency, FindAuthor, KeyOwnerProofSystem, Randomness, StorageInfo},
+    traits::{Contains, Currency, FindAuthor, Imbalance, KeyOwnerProofSystem, Randomness, StorageInfo, OnUnbalanced},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         IdentityFee, Weight,
     },
-    StorageValue,
+    StorageValue, PalletId,
 };
 pub use pallet_balances::Call as BalancesCall;
 use pallet_contracts::weights::WeightInfo;
@@ -298,7 +300,7 @@ parameter_types! {
 impl pallet_timestamp::Config for Runtime {
     /// A timestamp: milliseconds since the unix epoch.
     type Moment = u64;
-    type OnTimestampSet = Aura;
+    type OnTimestampSet = (Aura, BlockRewards);
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
 }
@@ -468,6 +470,101 @@ impl pallet_contracts::Config for Runtime {
     type CallStack = [pallet_contracts::Frame<Self>; 31];
 }
 
+parameter_types! {
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+    pub const IpStakingPalletId: PalletId = PalletId(*b"py/ipsst");
+}
+
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+pub struct OnBlockReward;
+impl OnUnbalanced<NegativeImbalance> for OnBlockReward {
+    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
+        let (ip, maintain) = amount.ration(50, 50);
+
+        // IP Staking block reward
+        IpStaking::on_unbalanced(ip);
+
+        // XXX: skip block author reward, it's local runtime didn't
+        let (treasury, _) = maintain.ration(40, 10);
+        // treasury slice of block reward
+        Balances::resolve_creating(&TreasuryPalletId::get().into_account(), treasury);
+    }
+}
+
+parameter_types! {
+    pub const RewardAmount: Balance = 2_664 * MILLICENTS;
+}
+
+impl pallet_block_rewards::Config for Runtime {
+    type Currency = Balances;
+    type OnBlockReward = OnBlockReward;
+    type RewardAmount = RewardAmount;
+}
+
+parameter_types! {
+    pub const BlockPerEra: BlockNumber = 60;
+    pub const RegisterDeposit: Balance = 100 * CENTS;
+    pub const DeveloperRewardPercentage: Perbill = Perbill::from_percent(80);
+    pub const MaxNumberOfStakersPerContract: u32 = 512;
+    pub const MinimumStakingAmount: Balance = 10 * CENTS;
+    pub const MinimumRemainingAmount: Balance = 1 * CENTS;
+    pub const HistoryDepth: u32 = 14;
+    pub const BonusEraDuration: u32 = 100;
+}
+
+impl pallet_ip_staking::Config for Runtime {
+    type Currency = Balances;
+    type BlockPerEra = BlockPerEra;
+    type SmartContract = SmartContract<AccountId>;
+    type RegisterDeposit = RegisterDeposit;
+    type DeveloperRewardPercentage = DeveloperRewardPercentage;
+    type Event = Event;
+    type WeightInfo = pallet_ip_staking::weights::SubstrateWeight<Self>;
+    type MaxNumberOfStakersPerContract = MaxNumberOfStakersPerContract;
+    type MinimumStakingAmount = MinimumStakingAmount;
+    type PalletId = IpStakingPalletId;
+    type MinimumRemainingAmount = MinimumRemainingAmount;
+    type HistoryDepth = HistoryDepth;
+    type BonusEraDuration = BonusEraDuration;
+}
+
+/// Multi-VM pointer to smart contract instance.
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub enum SmartContract<AccountId> {
+    /// EVM smart contract instance.
+    Evm(sp_core::H160),
+    /// Wasm smart contract instance.
+    Wasm(AccountId),
+}
+
+impl<AccountId> Default for SmartContract<AccountId> {
+    fn default() -> Self {
+        SmartContract::Evm(H160::repeat_byte(0x00))
+    }
+}
+
+#[cfg(not(feature = "runtime-benchmarks"))]
+impl<AccountId> pallet_ip_staking::traits::IsContract for SmartContract<AccountId> {
+    fn is_valid(&self) -> bool {
+        match self {
+            SmartContract::Wasm(_account) => false,
+            SmartContract::Evm(account) => EVM::account_codes(&account).len() > 0,
+        }
+    }
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<AccountId> pallet_ip_staking::traits::IsContract for SmartContract<AccountId> {
+    fn is_valid(&self) -> bool {
+        match self {
+            SmartContract::Wasm(_account) => false,
+            SmartContract::Evm(_account) => true,
+        }
+    }
+}
+
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -491,6 +588,10 @@ construct_runtime!(
 
         // Smart Contracts.
         Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>},
+
+        // IP Staking
+        IpStaking: pallet_ip_staking::{Pallet, Call, Storage, Event<T>},
+        BlockRewards: pallet_block_rewards::{Pallet},
     }
 );
 
