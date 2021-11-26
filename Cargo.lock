@@ -4248,6 +4248,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-ip-staking"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-balances",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#3f69b7614aac82eeb861221337a1977b6fd1ec97"
