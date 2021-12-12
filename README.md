@@ -4,7 +4,7 @@
 
  ## What is InvArch? ##
   * InvArch is a next generation blockchain for intellectual property tokenization, development, & networking.
-  * The InvArch platform provides utility for this new technology by allowing intellectual property tokens (IPTs) to be owned by a Decentralized Entrepreneurial Venture (DEV) contract and governed as a DAO using built-in fungible IP Ownership (IPO) tokens. These tokens may also be leveraged by participants in a DEV to raise startup funds for their projects.
+  * The InvArch platform provides utility for this new technology by allowing intellectual property tokens (IPFs) to be owned by a Decentralized Entrepreneurial Venture (DEV) contract and governed as a DAO using built-in fungible IP Ownership (IPO) tokens. These tokens may also be leveraged by participants in a DEV to raise startup funds for their projects.
   * InvArch is built using Substrate/Rust.
   * Every member of the team has an honest belief that this project will help make the world better through increased economic decentralization and by helping to catalyze future innovations, it's a belief that motivates and inspires every one of us to see this project through.
 
@@ -19,15 +19,15 @@
 * IP Tokens  = components of their idea. 
 * An IP Set can have built-in IP Ownership tokens. 
 * You can,`list`,`sell`,`buy`,`transfer`, and `destroy` an IP Set, but not individual IP Tokens, since they're only components. 
-* A new IP set can be created (`create`) and new IPT can be minted (`mint`) and added to a Set.
-* Existing IPT can be burned (`burn`) or amended (`amend`). 
+* A new IP set can be created (`create`) and new IPF can be minted (`mint`) and added to a Set.
+* Existing IPF can be burned (`burn`) or amended (`amend`). 
 * Subsequently, an entire IP Set could be destroyed (`destroy`) as well, burning all of its contents.
 
 ### Components
 
 ### 1. IP Protocol & Pallets
 * `Pallet_ips` - Provides basic functionality for creating and managing an `IPSet`. You can think of an `IPSet` as an idea, which is basically a collection of components (intellectual property tokens) that define and describe that idea.
-* `Pallet_ipt` - Provides basic functionality for creating and managing an `IPToken`. You can think of an `IPToken` as a component of an idea. For example, a business summary PDF file, or even a 3D rendering of a prototype mold. When combined and stored in an `IPSet`, that collection forms the foundation for an idea. The more detailed and/or comprehensive an `IPSet` is, the stronger the idea.
+* `Pallet_ipf` - Provides basic functionality for creating and managing an `IP File`. You can think of an `IP File` as a component of an idea. For example, a business summary PDF file, or even a 3D rendering of a prototype mold. When combined and stored in an `IPSet`, that collection forms the foundation for an idea. The more detailed and/or comprehensive an `IPSet` is, the stronger the idea.
 * `Pallet_ipo` - Provides basic functionality for creating and managing a `IPOwnership` tokens. You can think of `IPOwnership` tokens as a form of fungible and fractionalized ownership that are built-in to every `IPSet`. 
 
 ### 2. DEV Protocol & Pallets

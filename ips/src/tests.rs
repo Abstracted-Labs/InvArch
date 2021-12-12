@@ -1,4 +1,4 @@
-//! Unit tests for the IPT pallet.
+//! Unit tests for the IPS pallet.
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
@@ -9,17 +9,17 @@ use sp_runtime::DispatchError;
 #[test]
 fn create_ips_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             H256::from(MOCK_DATA_SECONDARY)
@@ -63,12 +63,12 @@ fn create_ips_should_work() {
 #[test]
 fn create_ips_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             H256::from(MOCK_DATA_SECONDARY)
@@ -92,7 +92,7 @@ fn create_ips_should_fail() {
         );
         assert_noop!(
             Ips::create_ips(Origin::signed(BOB), MOCK_METADATA.to_vec(), vec![2]),
-            Error::<Runtime>::NoPermission, // BOB doesn't own that IPT because it doesn't exist, so he has no permission to use it
+            Error::<Runtime>::NoPermission, // BOB doesn't own that IPF because it doesn't exist, so he has no permission to use it
         );
 
         NextIpsId::<Runtime>::mutate(|id| *id = <Runtime as Config>::IpsId::max_value());
@@ -108,7 +108,7 @@ fn create_ips_should_fail() {
 #[test]
 fn send_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -129,7 +129,7 @@ fn send_should_work() {
 #[test]
 fn send_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -168,7 +168,7 @@ fn send_should_fail() {
 #[test]
 fn list_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -193,7 +193,7 @@ fn list_should_work() {
 #[test]
 fn list_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -232,7 +232,7 @@ fn list_should_fail() {
 #[test]
 fn buy_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -249,9 +249,9 @@ fn buy_should_work() {
 
         assert_ok!(Ips::buy(Origin::signed(ALICE), 0, 100));
         assert_eq!(IpsByOwner::<Runtime>::get(ALICE, 0), Some(()));
-        assert_eq!(ipt::IptByOwner::<Runtime>::get(ALICE, 0), Some(()));
+        assert_eq!(ipf::IpfByOwner::<Runtime>::get(ALICE, 0), Some(()));
         assert_eq!(IpsByOwner::<Runtime>::get(BOB, 0), None);
-        assert_eq!(ipt::IptByOwner::<Runtime>::get(BOB, 0), None);
+        assert_eq!(ipf::IpfByOwner::<Runtime>::get(BOB, 0), None);
 
         assert_eq!(IpsPrices::<Runtime>::get(0), None);
     });
@@ -260,7 +260,7 @@ fn buy_should_work() {
 #[test]
 fn buy_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -271,7 +271,7 @@ fn buy_should_fail() {
             vec![0]
         ));
         assert_ok!(Ips::list(Origin::signed(BOB), 0, Some(100)));
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             H256::from(MOCK_DATA_SECONDARY)
@@ -312,7 +312,7 @@ fn buy_should_fail() {
 #[test]
 fn destroy_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
@@ -341,7 +341,7 @@ fn destroy_should_work() {
 #[test]
 fn destroy_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)

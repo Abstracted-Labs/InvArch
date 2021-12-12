@@ -8,7 +8,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup};
 use super::*;
 
 use crate as ips;
-use ipt;
+use ipf;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -64,12 +64,12 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIptMetadata: u32 = 32;
+    pub const MaxIpfMetadata: u32 = 32;
 }
 
-impl ipt::Config for Runtime {
-    type IptId = u64;
-    type MaxIptMetadata = MaxIptMetadata;
+impl ipf::Config for Runtime {
+    type IpfId = u64;
+    type MaxIpfMetadata = MaxIpfMetadata;
     type Event = Event;
 }
 
@@ -106,7 +106,7 @@ impl Config for Runtime {
     type IpsId = u64;
     type MaxIpsMetadata = MaxIpsMetadata;
     type Currency = Balances;
-    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     type ExistentialDeposit = ExistentialDeposit;
 }
 
@@ -135,7 +135,7 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Ipt: ipt::{Pallet, Storage, Event<T>},
+        Ipf: ipf::{Pallet, Storage, Event<T>},
         Ips: ips::{Pallet, Storage, Event<T>},
         Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
     }

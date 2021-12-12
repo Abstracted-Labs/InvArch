@@ -41,13 +41,13 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use ipt::{IptByOwner, IptStorage};
+    use ipf::{IpfByOwner, IpfStorage};
     use scale_info::prelude::fmt::Display;
     use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + ipt::Config + pallet_assets::Config {
+    pub trait Config: frame_system::Config + ipf::Config + pallet_assets::Config {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
@@ -78,15 +78,15 @@ pub mod pallet {
 
     pub type IpsInfoOf<T> = IpsInfo<
         <T as frame_system::Config>::AccountId,
-        Vec<<T as ipt::Config>::IptId>,
+        Vec<<T as ipf::Config>::IpfId>,
         IpsMetadataOf<T>,
     >;
 
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        Vec<<T as ipt::Config>::IptId>,         // IPS data
-        Vec<ipt::GenesisIptData<T>>,            // Vector of IPTs belong to this IPS
+        Vec<<T as ipf::Config>::IpfId>,         // IPS data
+        Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPS
     );
 
     #[pallet::pallet]
@@ -133,18 +133,18 @@ pub mod pallet {
         Destroyed(T::AccountId, T::IpsId),
     }
 
-    /// Errors for IPT pallet
+    /// Errors for IPF pallet
     #[pallet::error]
     pub enum Error<T> {
         /// No available IPS ID
         NoAvailableIpsId,
-        /// No available IPT ID
-        NoAvailableIptId,
-        /// IPT (IpsId, IptId) not found
-        IptNotFound,
+        /// No available IPF ID
+        NoAvailableIpfId,
+        /// IPF (IpsId, IpfId) not found
+        IpfNotFound,
         /// IPS not found
         IpsNotFound,
-        /// The operator is not the owner of the IPT and has no permission
+        /// The operator is not the owner of the IPF and has no permission
         NoPermission,
         /// The IPS is already owned
         AlreadyOwned,
@@ -170,7 +170,7 @@ pub mod pallet {
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            data: Vec<<T as ipt::Config>::IptId>,
+            data: Vec<<T as ipf::Config>::IpfId>,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -185,37 +185,40 @@ pub mod pallet {
                     .ok_or(Error::<T>::NoAvailableIpsId)?;
 
                 ensure!(
-                    !data.clone().into_iter().any(|ipt_id| {
-                        ipt::IptByOwner::<T>::get(creator.clone(), ipt_id).is_none()
+                    !data.clone().into_iter().any(|ipf_id| {
+                        ipf::IpfByOwner::<T>::get(creator.clone(), ipf_id).is_none()
                     }),
                     Error::<T>::NoPermission
                 );
 
                 pallet_assets::Pallet::<T>::create(
                     owner.clone(),
-                    (*ips_id).into(),
+                    current_id.into(),
                     T::Lookup::unlookup(creator.clone()),
                     T::ExistentialDeposit::get(),
                 )?;
 
                 pallet_assets::Pallet::<T>::set_metadata(
                     owner,
-                    (*ips_id).into(),
+                    current_id.into(),
                     format!("IPO {}", ips_id.clone()).as_bytes().to_vec(),
                     format!("$IPO {}", ips_id.clone()).as_bytes().to_vec(),
                     18,
                 )?;
 
+                let ips_account =
+                    primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(current_id);
+
                 let info = IpsInfo {
-                    owner: creator.clone(),
+                    owner: ips_account.clone(),
                     metadata: bounded_metadata,
                     data,
                 };
 
                 IpsStorage::<T>::insert(current_id, info);
-                IpsByOwner::<T>::insert(creator.clone(), current_id, ());
+                IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
 
-                Self::deposit_event(Event::Created(creator, current_id));
+                Self::deposit_event(Event::Created(ips_account, current_id));
 
                 Ok(().into())
             })
@@ -300,17 +303,17 @@ pub mod pallet {
 
                     IpsByOwner::<T>::insert(info.owner.clone(), ips_id, ());
 
-                    info.data.clone().into_iter().for_each(|ipt_id| {
-                        IptStorage::<T>::mutate(ipt_id, |ipt| {
-                            IptByOwner::<T>::swap(
-                                ipt.clone().unwrap().owner,
-                                ipt_id,
+                    info.data.clone().into_iter().for_each(|ipf_id| {
+                        IpfStorage::<T>::mutate(ipf_id, |ipf| {
+                            IpfByOwner::<T>::swap(
+                                ipf.clone().unwrap().owner,
+                                ipf_id,
                                 info.owner.clone(),
-                                ipt_id,
+                                ipf_id,
                             );
 
-                            ipt.as_mut()
-                                .expect("IPS cannot be created with a non existent IPT")
+                            ipf.as_mut()
+                                .expect("IPS cannot be created with a non existent IPF")
                                 .owner = info.owner.clone();
                         });
                     });

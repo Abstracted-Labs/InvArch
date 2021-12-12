@@ -1,14 +1,14 @@
 [![Compatible with Substrate v3.0.0](https://img.shields.io/badge/Substrate-v3.0.0-E6007A)](https://github.com/paritytech/substrate/releases/tag/v3.0.0)
 
-# IPT Pallet: IP Tokens for Substrate
+# IPF Pallet: IP Tokens for Substrate
 
 This is a [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
 to create and manage [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token). 
 
-# IPTokens : Non-fungible components that define an idea.
+# IPFokens : Non-fungible components that define an idea.
 
 The following **components** are defined:
-* `IPToken` + Metadata
+* `IPFoken` + Metadata
 
 The following **functions** are possible:
 * `mint` - Create a new IP Token and add to an IP Set
@@ -18,9 +18,9 @@ The following **functions** are possible:
 
 # IP Token
 
-An IP Token (IPT) is a part of a set, and can be thought of as a component of an idea. Either by itself or in combination with other IP Tokens, it serves to strengethen the foundation for an innovation. IP Tokens represent a unique digital asset.
+An IP Token (IPF) is a part of a set, and can be thought of as a component of an idea. Either by itself or in combination with other IP Tokens, it serves to strengethen the foundation for an innovation. IP Tokens represent a unique digital asset.
 
-## IPT Standard
+## IPF Standard
 
 ```json
 {
@@ -30,11 +30,11 @@ An IP Token (IPT) is a part of a set, and can be thought of as a component of an
   },
   "name": {
     "type": "string",
-    "description": "Name of the IPT. E.g. Hover Craft Schematics, Hover Craft PoC."
+    "description": "Name of the IPF. E.g. Hover Craft Schematics, Hover Craft PoC."
   },
   "sn": {
     "type": "string",
-    "description": "Serial number or issuance number of the IPT, padded so that its total length is 16, e.g. 0000000000000123"
+    "description": "Serial number or issuance number of the IPF, padded so that its total length is 16, e.g. 0000000000000123"
   },
   "metadata?": {
     "type": "string",
@@ -55,14 +55,14 @@ still recommended to include it alongside `data`.
 
 Computed fields are fields that are used in interactions, but are not explicitly set on their
 entities. Computed fields are the result of applying a standardized calculation or merger formula to
-specific fields. The IPT entity has the following computed fields, to be provided by
+specific fields. The IPF entity has the following computed fields, to be provided by
 implementations:
 
 ```json
 {
   "id": {
     "type": "computed",
-    "description": "An IPT is uniquely identified by the combination of its minting block number, set ID, its instance ID, and its serial number, e.g. 4110010-0aff6865bed5g76b-HOVER-0000000000000123"
+    "description": "An IPF is uniquely identified by the combination of its minting block number, set ID, its instance ID, and its serial number, e.g. 4110010-0aff6865bed5g76b-HOVER-0000000000000123"
   }
 }
 ```
@@ -138,7 +138,7 @@ data: {
 
 ## Example
 
-IPT:
+IPF:
 
 ```json
 {

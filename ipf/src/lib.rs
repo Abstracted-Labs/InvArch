@@ -1,4 +1,4 @@
-//! # Pallet IPT
+//! # Pallet IPF
 //! Intellectual Property Tokens
 //!
 //! - [`Config`]
@@ -20,7 +20,7 @@
 use frame_support::{ensure, traits::Get, BoundedVec, Parameter};
 use frame_system::ensure_signed;
 use frame_system::pallet_prelude::OriginFor;
-use primitives::IptInfo;
+use primitives::IpfInfo;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
@@ -41,122 +41,122 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The IPT Pallet Events
+        /// The IPF Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// The IPT ID type
-        type IptId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-        /// The maximum size of an IPT's metadata
-        type MaxIptMetadata: Get<u32>;
+        /// The IPF ID type
+        type IpfId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        /// The maximum size of an IPF's metadata
+        type MaxIpfMetadata: Get<u32>;
     }
 
-    pub type IptMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIptMetadata>;
-    pub type IptInfoOf<T> = IptInfo<
+    pub type IpfMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIpfMetadata>;
+    pub type IpfInfoOf<T> = IpfInfo<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::Hash, // CID stored as just the hash
-        IptMetadataOf<T>,
+        IpfMetadataOf<T>,
     >;
 
-    pub type GenesisIptData<T> = (
-        <T as frame_system::Config>::AccountId, // IPT owner
-        Vec<u8>,                                // IPT metadata
+    pub type GenesisIpfData<T> = (
+        <T as frame_system::Config>::AccountId, // IPF owner
+        Vec<u8>,                                // IPF metadata
         <T as frame_system::Config>::Hash,      // CID stored as just the hash
     );
 
-    /// Next available IPT ID
+    /// Next available IPF ID
     #[pallet::storage]
-    #[pallet::getter(fn next_ipt_id)]
-    pub type NextIptId<T: Config> = StorageValue<_, T::IptId, ValueQuery>;
+    #[pallet::getter(fn next_ipf_id)]
+    pub type NextIpfId<T: Config> = StorageValue<_, T::IpfId, ValueQuery>;
 
-    /// Store IPT info
+    /// Store IPF info
     ///
-    /// Returns `None` if IPT info not set of removed
+    /// Returns `None` if IPF info not set of removed
     #[pallet::storage]
-    #[pallet::getter(fn ipt_storage)]
-    pub type IptStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IptId, IptInfoOf<T>>;
+    #[pallet::getter(fn ipf_storage)]
+    pub type IpfStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpfId, IpfInfoOf<T>>;
 
-    /// IPT existence check by owner and IPT ID
+    /// IPF existence check by owner and IPF ID
     #[pallet::storage]
-    #[pallet::getter(fn ipt_by_owner)]
-    pub type IptByOwner<T: Config> = StorageDoubleMap<
+    #[pallet::getter(fn ipf_by_owner)]
+    pub type IpfByOwner<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         T::AccountId, // owner
         Blake2_128Concat,
-        T::IptId,
+        T::IpfId,
         (),
     >;
 
-    /// Errors for IPT pallet
+    /// Errors for IPF pallet
     #[pallet::error]
     pub enum Error<T> {
-        /// No available IPT ID
-        NoAvailableIptId,
-        /// IPT (IpsId, IptId) not found
-        IptNotFound,
-        /// The operator is not the owner of the IPT and has no permission
+        /// No available IPF ID
+        NoAvailableIpfId,
+        /// IPF (IpsId, IpfId) not found
+        IpfNotFound,
+        /// The operator is not the owner of the IPF and has no permission
         NoPermission,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
-        /// Tried to amend an IPT without any changes
+        /// Tried to amend an IPF without any changes
         AmendWithoutChanging,
     }
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
-    //#[pallet::metadata(T::AccountId = "AccountId", T::IptId = "IptId", T::Hash = "Hash")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::IpfId = "IpfId", T::Hash = "Hash")]
     pub enum Event<T: Config> {
-        Minted(T::AccountId, T::IptId, T::Hash),
-        Amended(T::AccountId, T::IptId, T::Hash),
-        Burned(T::AccountId, T::IptId),
+        Minted(T::AccountId, T::IpfId, T::Hash),
+        Amended(T::AccountId, T::IpfId, T::Hash),
+        Burned(T::AccountId, T::IpfId),
     }
 
     /// Dispatch functions
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Mint IPT(Intellectual Property Token) to `owner`
+        /// Mint IPF(Intellectual Property Token) to `owner`
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn mint(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             data: T::Hash,
         ) -> DispatchResultWithPostInfo {
-            NextIptId::<T>::try_mutate(|id| -> DispatchResultWithPostInfo {
+            NextIpfId::<T>::try_mutate(|id| -> DispatchResultWithPostInfo {
                 let owner = ensure_signed(owner)?;
-                let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> = metadata
+                let bounded_metadata: BoundedVec<u8, T::MaxIpfMetadata> = metadata
                     .try_into()
                     .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
-                let ipt_id = *id;
+                let ipf_id = *id;
                 *id = id
                     .checked_add(&One::one())
-                    .ok_or(Error::<T>::NoAvailableIptId)?;
+                    .ok_or(Error::<T>::NoAvailableIpfId)?;
 
-                let ipt_info = IptInfo {
+                let ipf_info = IpfInfo {
                     metadata: bounded_metadata,
                     owner: owner.clone(),
                     data,
                 };
-                IptStorage::<T>::insert(ipt_id, ipt_info);
-                IptByOwner::<T>::insert(owner.clone(), ipt_id, ());
+                IpfStorage::<T>::insert(ipf_id, ipf_info);
+                IpfByOwner::<T>::insert(owner.clone(), ipf_id, ());
 
-                Self::deposit_event(Event::Minted(owner, ipt_id, data));
+                Self::deposit_event(Event::Minted(owner, ipf_id, data));
 
                 Ok(().into())
             })
         }
 
-        /// Burn IPT(Intellectual Property Token) from `owner`
+        /// Burn IPF(Intellectual Property Token) from `owner`
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn burn(owner: OriginFor<T>, ipt_id: T::IptId) -> DispatchResult {
-            IptStorage::<T>::try_mutate(ipt_id, |ipt_info| -> DispatchResult {
+        pub fn burn(owner: OriginFor<T>, ipf_id: T::IpfId) -> DispatchResult {
+            IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
-                let t = ipt_info.take().ok_or(Error::<T>::IptNotFound)?;
+                let t = ipf_info.take().ok_or(Error::<T>::IpfNotFound)?;
                 ensure!(t.owner == owner, Error::<T>::NoPermission);
 
-                IptByOwner::<T>::remove(owner.clone(), ipt_id);
+                IpfByOwner::<T>::remove(owner.clone(), ipf_id);
 
-                Self::deposit_event(Event::Burned(owner, ipt_id));
+                Self::deposit_event(Event::Burned(owner, ipf_id));
 
                 Ok(())
             })
@@ -166,31 +166,31 @@ pub mod pallet {
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn amend(
             owner: OriginFor<T>,
-            ipt_id: T::IptId,
+            ipf_id: T::IpfId,
             new_metadata: Vec<u8>,
             data: T::Hash,
         ) -> DispatchResultWithPostInfo {
-            IptStorage::<T>::try_mutate(ipt_id, |ipt_info| -> DispatchResultWithPostInfo {
+            IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResultWithPostInfo {
                 let owner = ensure_signed(owner)?;
-                let ipt = ipt_info.clone().ok_or(Error::<T>::IptNotFound)?;
-                ensure!(ipt.owner == owner, Error::<T>::NoPermission);
-                let bounded_metadata: BoundedVec<u8, T::MaxIptMetadata> =
+                let ipf = ipf_info.clone().ok_or(Error::<T>::IpfNotFound)?;
+                ensure!(ipf.owner == owner, Error::<T>::NoPermission);
+                let bounded_metadata: BoundedVec<u8, T::MaxIpfMetadata> =
                     new_metadata
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
                 ensure!(
-                    ((ipt.metadata != bounded_metadata) || (ipt.data != data)),
+                    ((ipf.metadata != bounded_metadata) || (ipf.data != data)),
                     Error::<T>::AmendWithoutChanging
                 );
 
-                ipt_info.replace(IptInfo {
+                ipf_info.replace(IpfInfo {
                     metadata: bounded_metadata,
                     owner: owner.clone(),
                     data,
                 });
 
-                Self::deposit_event(Event::Amended(owner, ipt_id, data));
+                Self::deposit_event(Event::Amended(owner, ipf_id, data));
 
                 Ok(().into())
             })
