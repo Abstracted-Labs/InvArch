@@ -29,6 +29,7 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
 
 [dependencies]
+smallvec = "1.6.1"
 pallet-evm = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
 pallet-evm-precompile-bn128 = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
 pallet-evm-precompile-dispatch = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
@@ -36,6 +37,27 @@ pallet-evm-precompile-modexp = { git = 'https://github.com/InvArch/frontier', br
 pallet-evm-precompile-simple = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
 pallet-evm-precompile-sha3fips = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
 pallet-evm-precompile-blake2 = { git = 'https://github.com/InvArch/frontier', branch = "polkadot-v0.9.13", default-features = false }
+
+# Cumulus dependencies
+cumulus-pallet-aura-ext = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-pallet-dmp-queue = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-pallet-parachain-system = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-pallet-xcmp-queue = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-primitives-timestamp = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-primitives-utility = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+parachain-info = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+cumulus-pallet-session-benchmarking = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false, version = "3.0.0"}
+
+# Polkadot dependencies
+polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
+polkadot-runtime-common = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
+pallet-xcm = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
+xcm = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
+xcm-builder = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
+xcm-executor = { git = 'https://github.com/paritytech/polkadot', default-features = false, branch = 'release-v0.9.13' }
 
 # Contracts specific packages
 [dependencies.pallet-contracts]
@@ -227,10 +249,12 @@ runtime-benchmarks = [
     'frame-system-benchmarking',
     'frame-system/runtime-benchmarks',
     'hex-literal',
+    'xcm-builder/runtime-benchmarks',
     'pallet-balances/runtime-benchmarks',
     'pallet-timestamp/runtime-benchmarks',
     'pallet-evm/runtime-benchmarks',
     'sp-runtime/runtime-benchmarks',
+    'pallet-xcm/runtime-benchmarks',
 ]
 std = [
     'codec/std',
@@ -251,6 +275,14 @@ std = [
     'pallet-transaction-payment-rpc-runtime-api/std',
     'pallet-transaction-payment/std',
    # 'pallet-ethereum/std',
+    'cumulus-pallet-aura-ext/std',
+    'cumulus-pallet-parachain-system/std',
+    'cumulus-pallet-xcm/std',
+	'cumulus-pallet-xcmp-queue/std',
+    'cumulus-primitives-core/std',
+    'cumulus-primitives-timestamp/std',
+    'cumulus-primitives-utility/std',
+    'cumulus-pallet-dmp-queue/std',
     'pallet-evm/std',
     'pallet-evm-precompile-simple/std',
     'pallet-evm-precompile-bn128/std',
@@ -272,6 +304,12 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
+    'parachain-info/std',
+    'polkadot-parachain/std',
+	'polkadot-runtime-common/std',
+	'xcm-builder/std',
+	'xcm-executor/std',
+	'xcm/std',
 ]
 
 # Make contract callable functions marked as __unstable__ available. Do not enable
