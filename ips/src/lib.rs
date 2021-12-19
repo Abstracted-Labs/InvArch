@@ -46,7 +46,9 @@ pub mod pallet {
     use sp_runtime::traits::StaticLookup;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + ipf::Config + pallet_assets::Config {
+    pub trait Config:
+        frame_system::Config + ipf::Config + pallet_assets::Config + pallet_balances::Config
+    {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The IPS ID type
@@ -117,7 +119,6 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
-    // #[pallet::metadata(T::AccountId = "AccountId", T::IpsId = "IpsId")]
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
         Destroyed(T::AccountId, T::IpsId),
@@ -173,23 +174,50 @@ pub mod pallet {
                     Error::<T>::NoPermission
                 );
 
+                let ips_account =
+                    primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(current_id);
+
+                pallet_balances::Pallet::<T>::transfer_keep_alive(
+                    owner.clone(),
+                    T::Lookup::unlookup(ips_account.clone()),
+                    <T as pallet_balances::Config>::ExistentialDeposit::get(),
+                )?;
+
                 pallet_assets::Pallet::<T>::create(
                     owner.clone(),
                     current_id.into(),
-                    T::Lookup::unlookup(creator),
-                    T::ExistentialDeposit::get(),
+                    T::Lookup::unlookup(creator.clone()),
+                    <T as pallet::Config>::ExistentialDeposit::get(),
                 )?;
 
                 pallet_assets::Pallet::<T>::set_metadata(
-                    owner,
+                    owner.clone(),
                     current_id.into(),
-                    format!("IPO {}", ips_id.clone()).as_bytes().to_vec(),
-                    format!("$IPO {}", ips_id.clone()).as_bytes().to_vec(),
+                    format!("IPT {}", current_id.clone()).as_bytes().to_vec(),
+                    format!("$IPT_{}", current_id.clone()).as_bytes().to_vec(),
                     18,
                 )?;
 
-                let ips_account =
-                    primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(current_id);
+                pallet_assets::Pallet::<T>::mint(
+                    owner.clone(),
+                    current_id.into(),
+                    T::Lookup::unlookup(creator),
+                    <T as pallet::Config>::ExistentialDeposit::get(),
+                )?;
+
+                pallet_assets::Pallet::<T>::set_team(
+                    owner.clone(),
+                    current_id.into(),
+                    T::Lookup::unlookup(ips_account.clone()),
+                    T::Lookup::unlookup(ips_account.clone()),
+                    T::Lookup::unlookup(ips_account.clone()),
+                )?;
+
+                pallet_assets::Pallet::<T>::transfer_ownership(
+                    owner.clone(),
+                    current_id.into(),
+                    T::Lookup::unlookup(ips_account.clone()),
+                )?;
 
                 let info = IpsInfo {
                     owner: ips_account.clone(),

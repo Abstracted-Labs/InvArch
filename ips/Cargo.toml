@@ -26,9 +26,10 @@ ipf = { package = "pallet-ipf", path = "../ipf", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 
+pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.13", default-features = false }
+
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.13" }
 
 [features]
 default = ["std"]
@@ -41,6 +42,7 @@ std = [
 	"frame-system/std",
   "sp-io/std",
   "scale-info/std",
+  "pallet-balances/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
 
