@@ -21,7 +21,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency as FSCurrency, ExistenceRequirement, Get},
+    traits::{Currency as FSCurrency, Get},
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -41,7 +41,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use ipf::{IpfByOwner, IpfStorage};
     use scale_info::prelude::fmt::Display;
     use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
@@ -116,20 +115,11 @@ pub mod pallet {
         (),
     >;
 
-    /// Get IPS price. None means not for sale.
-    #[pallet::storage]
-    #[pallet::getter(fn ips_prices)]
-    pub type IpsPrices<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::IpsId, BalanceOf<T>, OptionQuery>;
-
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     // #[pallet::metadata(T::AccountId = "AccountId", T::IpsId = "IpsId")]
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
-        Sent(T::AccountId, T::AccountId, T::IpsId),
-        Listed(T::AccountId, T::IpsId, Option<BalanceOf<T>>),
-        Bought(T::AccountId, T::AccountId, T::IpsId, BalanceOf<T>),
         Destroyed(T::AccountId, T::IpsId),
     }
 
@@ -150,14 +140,6 @@ pub mod pallet {
         AlreadyOwned,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
-        /// List for the same price already listed
-        SamePrice,
-        /// Buy IPS from their self
-        BuyFromSelf,
-        /// IPS is not for sale
-        NotForSale,
-        /// Buy price is too low
-        PriceTooLow,
         /// Can not destroy IPS
         CannotDestroyIps,
     }
@@ -194,7 +176,7 @@ pub mod pallet {
                 pallet_assets::Pallet::<T>::create(
                     owner.clone(),
                     current_id.into(),
-                    T::Lookup::unlookup(creator.clone()),
+                    T::Lookup::unlookup(creator),
                     T::ExistentialDeposit::get(),
                 )?;
 
@@ -221,112 +203,6 @@ pub mod pallet {
                 Self::deposit_event(Event::Created(ips_account, current_id));
 
                 Ok(().into())
-            })
-        }
-
-        /// Transfer IP Set owner account address
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn send(from: OriginFor<T>, to: T::AccountId, ips_id: T::IpsId) -> DispatchResult {
-            IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
-                let owner = ensure_signed(from)?;
-                let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
-                ensure!(info.owner == owner, Error::<T>::NoPermission);
-                ensure!(owner != to, Error::<T>::AlreadyOwned);
-
-                info.owner = to.clone();
-
-                IpsByOwner::<T>::remove(owner.clone(), ips_id);
-                IpsByOwner::<T>::insert(to.clone(), ips_id, ());
-
-                Self::deposit_event(Event::Sent(owner, to, ips_id));
-
-                Ok(())
-            })
-        }
-
-        /// List a IPS for sale
-        /// None to delist the IPS
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn list(
-            owner: OriginFor<T>,
-            ips_id: T::IpsId,
-            // ips_index: IpsInfoOf<T>,
-            new_price: Option<BalanceOf<T>>,
-        ) -> DispatchResult {
-            IpsPrices::<T>::try_mutate_exists(ips_id, |price| -> DispatchResult {
-                let owner = ensure_signed(owner)?;
-
-                let info = IpsStorage::<T>::get(ips_id).ok_or(Error::<T>::IpsNotFound)?;
-                ensure!(info.owner == owner, Error::<T>::NoPermission);
-                ensure!(*price != new_price, Error::<T>::SamePrice);
-
-                *price = new_price;
-
-                Self::deposit_event(Event::Listed(owner, ips_id, new_price));
-
-                Ok(())
-            })
-        }
-
-        /// Allow a user to buy an IPS
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn buy(
-            buyer: OriginFor<T>,
-            ips_id: T::IpsId,
-            max_price: BalanceOf<T>,
-        ) -> DispatchResult {
-            IpsPrices::<T>::try_mutate_exists(ips_id, |price| -> DispatchResult {
-                let buyer_signed = ensure_signed(buyer)?;
-
-                let ips = IpsStorage::<T>::get(ips_id)
-                    .take()
-                    .ok_or(Error::<T>::IpsNotFound)?;
-
-                ensure!(buyer_signed != ips.owner, Error::<T>::BuyFromSelf);
-
-                let price = price.take().ok_or(Error::<T>::NotForSale)?;
-
-                ensure!(max_price >= price, Error::<T>::PriceTooLow);
-
-                IpsStorage::<T>::try_mutate(ips_id, |ips_info| -> DispatchResult {
-                    let mut info = ips_info.as_mut().ok_or(Error::<T>::IpsNotFound)?;
-                    IpsByOwner::<T>::remove(info.owner.clone(), ips_id);
-
-                    <T as pallet::Config>::Currency::transfer(
-                        &buyer_signed,
-                        &info.owner,
-                        price,
-                        ExistenceRequirement::KeepAlive,
-                    )?;
-
-                    info.owner = buyer_signed.clone();
-
-                    IpsByOwner::<T>::insert(info.owner.clone(), ips_id, ());
-
-                    info.data.clone().into_iter().for_each(|ipf_id| {
-                        IpfStorage::<T>::mutate(ipf_id, |ipf| {
-                            IpfByOwner::<T>::swap(
-                                ipf.clone().unwrap().owner,
-                                ipf_id,
-                                info.owner.clone(),
-                                ipf_id,
-                            );
-
-                            ipf.as_mut()
-                                .expect("IPS cannot be created with a non existent IPF")
-                                .owner = info.owner.clone();
-                        });
-                    });
-
-                    Self::deposit_event(Event::Bought(
-                        info.owner.clone(),
-                        buyer_signed,
-                        ips_id,
-                        price,
-                    ));
-
-                    Ok(())
-                })
             })
         }
 
