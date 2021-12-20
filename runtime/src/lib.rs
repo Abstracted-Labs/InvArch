@@ -294,6 +294,7 @@ parameter_types! {
         .build_or_panic();
 
     pub const SS58Prefix: u16 = 42;
+
 }
 
 pub struct BaseFilter;
