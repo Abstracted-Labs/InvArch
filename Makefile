@@ -8,7 +8,7 @@ test:
 	cargo test
 
 run:
-	./target/release/invarch-node --dev --tmp
+	./target/release/invarch-collator --dev --tmp
 
 purge-alice:
 	./target/release/invarch-node purge-chain --base-path /tmp/alice --chain local
