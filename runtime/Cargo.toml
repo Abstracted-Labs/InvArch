@@ -185,11 +185,6 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
 
-[dependencies.pallet-grandpa]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = "polkadot-v0.9.13"
-
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -305,12 +300,7 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
     'pallet-transaction-payment/std',
-
-    # to be removed ---
-    'pallet-grandpa/std',
     'pallet-randomness-collective-flip/std',
-    # -------------------
-
     # 'pallet-ethereum/std',
     'pallet-evm/std',
     'pallet-evm-precompile-simple/std',

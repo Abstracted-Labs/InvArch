@@ -103,12 +103,6 @@ branch = "polkadot-v0.9.13"
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
 
-## To be replaced ----
-[dependencies.sc-finality-grandpa]
-git = 'https://github.com/paritytech/substrate.git'
-branch = "polkadot-v0.9.13"
-## -------------------
-
 [dependencies.sc-keystore]
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
@@ -166,12 +160,6 @@ branch = "polkadot-v0.9.13"
 [dependencies.sp-core]
 git = 'https://github.com/paritytech/substrate.git'
 branch = "polkadot-v0.9.13"
-
-## To be replaced ----
-[dependencies.sp-finality-grandpa]
-git = 'https://github.com/paritytech/substrate.git'
-branch = "polkadot-v0.9.13"
-## -------------------
 
 [dependencies.sp-inherents]
 git = 'https://github.com/paritytech/substrate.git'
