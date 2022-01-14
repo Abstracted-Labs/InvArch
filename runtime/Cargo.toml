@@ -51,7 +51,6 @@ default-features = false
 # smallvec = "1.6.1"
 
 
-
 # Contracts specific packages
 [dependencies.pallet-contracts]
 default-features = false
