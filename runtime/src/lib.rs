@@ -32,7 +32,8 @@ use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::{KeyTypeId, Public},
-    OpaqueMetadata, H160, 
+    OpaqueMetadata,
+    H160,
     // U256,
 };
 use sp_runtime::{
@@ -407,16 +408,15 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const UncleGenerations: u32 = 0;
+    pub const UncleGenerations: u32 = 0;
 }
 
 impl pallet_authorship::Config for Runtime {
-	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
-	type EventHandler = (CollatorSelection,);
+    type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+    type UncleGenerations = UncleGenerations;
+    type FilterUncle = ();
+    type EventHandler = (CollatorSelection,);
 }
-
 
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
