@@ -32,7 +32,8 @@ use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::{KeyTypeId, Public},
-    OpaqueMetadata, H160, U256,
+    OpaqueMetadata, H160, 
+    // U256,
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
@@ -101,7 +102,7 @@ mod weights;
 
 pub use pallet_contracts;
 
-use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
+// use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -744,28 +745,28 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-    pub const ChainId: u64 = 42;
-    pub BlockGasLimit: U256 = U256::from(u32::max_value());
-}
+// parameter_types! {
+//     pub const ChainId: u64 = 42;
+//     pub BlockGasLimit: U256 = U256::from(u32::max_value());
+// }
 
-impl pallet_evm::Config for Runtime {
-    type FeeCalculator = ();
-    type GasWeightMapping = ();
-    type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
-    type CallOrigin = EnsureAddressTruncated;
-    type WithdrawOrigin = EnsureAddressTruncated;
-    type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-    type Currency = Balances;
-    type Event = Event;
-    type Runner = pallet_evm::runner::stack::Runner<Self>;
-    type ChainId = ChainId;
-    type BlockGasLimit = BlockGasLimit;
-    type OnChargeTransaction = ();
-    type FindAuthor = FindAuthorTruncated<Aura>;
-    type PrecompilesType = ();
-    type PrecompilesValue = ();
-}
+// impl pallet_evm::Config for Runtime {
+//     type FeeCalculator = ();
+//     type GasWeightMapping = ();
+//     type BlockHashMapping = pallet_evm::SubstrateBlockHashMapping<Self>;
+//     type CallOrigin = EnsureAddressTruncated;
+//     type WithdrawOrigin = EnsureAddressTruncated;
+//     type AddressMapping = HashedAddressMapping<BlakeTwo256>;
+//     type Currency = Balances;
+//     type Event = Event;
+//     type Runner = pallet_evm::runner::stack::Runner<Self>;
+//     type ChainId = ChainId;
+//     type BlockGasLimit = BlockGasLimit;
+//     type OnChargeTransaction = ();
+//     type FindAuthor = FindAuthorTruncated<Aura>;
+//     type PrecompilesType = ();
+//     type PrecompilesValue = ();
+// }
 
 parameter_types! {
     pub ContractDeposit: Balance = deposit(
@@ -845,7 +846,7 @@ construct_runtime!(
         // FRAME
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 40,
         Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 41,
-        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 42,
+        // EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 42,
         Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>} = 43,
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 44,
 
