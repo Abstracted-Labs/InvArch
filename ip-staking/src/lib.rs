@@ -399,12 +399,101 @@ pub mod pallet{
 
         }
 
+        /// Lock up and stake balance of the origin account.
+        ///
+        /// `value` must be more than the `minimum_balance` specified by `T::Currency`
+        /// unless account already has bonded value equal or more than 'minimum_balance'.
+        ///
+        /// The dispatch origin for this call must be _Signed_ by the staker's account.
+        ///
+        /// Effects of staking will be felt at the beginning of the next era.
+        ///
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn bond_and_stake(
+            origin: OriginFor<T>,
+            ips_id: IpsId, 
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let staker = ensure_signed(origin)?;
+
+            // Check that IPS is ready for staking.
+            ensure!(
+                Self::is_active(&ips_id),
+                Error::<T>::NotOperatedIps
+            );
+
+            // Ensure that staker has enough balance to bond & stake.
+            let free_balance =
+                T::Currency::free_balance(&staker).saturating_sub(T::MinimumRemainingAmount::get());
+
+            // Remove already locked funds from the free balance
+            let available_balance = free_balance.saturating_sub(ledger.locked);
+            let value_to_stake = value.min(available_balance);
+            ensure!(
+                value_to_stake > Zero::zero(),
+                Error::<T>::StakingWithNoValue
+            );
+
+            // Get the latest era staking point info or create it if IPS hasn't been staked yet so far.
+            let current_era = Self::current_era();
+            let mut staking_info = Self::staking_info(&ips_id, current_era);
+
+            // Ensure that we can add additional staker for the IPS
+            if !staking_info.stakers.contains_key(&staker) {
+                ensure!(
+                    staking_info.stakers.len() < T::MaxNumberOfStakersPerIps::get() as usize,
+                    Error::<T>::MaxNumberOfStakersExceeded,
+                );
+            }
+
+            // Increment ledger and total staker value for IPS. 
+            // Overflow shouldn't be possible but the check is here just for safety.
+            ledger.locked = ledger
+                .locked
+                .checked_add(&value_to_stake)
+                .ok_or(ArithmeticError::Overflow)?;
+            staking_info.total = staking_info
+                .total
+                .checked_add(&value_to_stake)
+                .ok_or(ArithmeticError::Overflow)?;
+
+            // Increment personal staking amount.
+            let entry = staking_info.stakers.entry(staker.clone()).or_default();
+            *entry = entry
+                .checked_add(&value_to_stake)
+                .ok_or(ArithmeticError::Overflow)?;
+
+            ensure!(
+                *entry >= T::MinimumStakingAmount::get(),
+                Error::<T>::InsufficientValue,
+            );
+
+            // Update total staked value in era.
+            EraRewardsAndStakes::<T>::mutate(&current_era, |value| {
+                if let Some(x) = value {
+                    x.staked = x.staked.saturating_add(value_to_stake)
+                }
+            });
+
+            // Update ledger and payee
+            Self::update_ledger(&staker, ledger);
+
+            // Update staked information for IPS in current era
+            IpsEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
+
+            Self::deposit_event(Event::<T>::BondAndStake(
+                staker,
+                ips_id,
+                value_to_stake,
+            ));
+            Ok(().into())
+        }
+
         // TODO: other functions WIP
 
         impl<T: Config> Pallet<T> {
             // TODO: WIP
         }
-
 
 
     }
