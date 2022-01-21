@@ -338,9 +338,68 @@ pub mod pallet{
             Self::deposit_event(Event::<T>::NewIpsStaking(owner, ips_id));
 
             Ok(().into())
-
-            // TODO: other functions WIP
         }
+
+        /// Unregister existing IPS from IP staking
+        ///
+        /// This must be called by the owner who registered the IPS.
+        ///
+        /// Warning: After this action, IPS can not be assigned again.
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn unregister(
+            origin: OriginFor<T>,
+            ips_id: IpsId,
+        ) -> DispatchResultWithPostInfo {
+            let Owner = ensure_signed(origin)?;
+
+            let registered_ips = 
+                RegisteredOwners::<T>::get(&owner).ok_or(Error::<T>::NotOwnedIps)?;
+            
+            // This is a sanity check for the unregistration since it requires the caller
+            // to input the correct IPS Id.
+
+            ensure!(
+                registered_ips == ips_id,
+                Error::<T>::NotOwnedIps,
+            );
+
+            // We need to unstake all funds that are currently staked
+            let current_era = Self::current_era();
+            let staking_info = Self::staking_info(&ips_id, current_era);
+            for (staker, amount) in staking_info.stakers.iter() {
+                let mut ledger = Self::ledger(staker);
+                ledger.locked = ledger.locked.saturating_sub(*amount);
+                Self::update_ledger(staker, ledger);
+            }
+
+            // Need to update total amount staked
+            let staking_total = staking_info.total;
+            EraRewardsAndStakes::<T>::mutate(
+                &current_era,
+                // XXX: RewardsAndStakes should be set by `on_initialize` for each era
+                |value| {
+                    if let Some(x) = value {
+                        x.staked = x.staked.saturating_sub(staking_total)
+                    }
+                },
+            );
+
+            // Nett to update staking data for next era
+            let empty_staking_info = EraStakingPoints::<T::AccountId, BalanceOf<T>>::default();
+            IpsEraStake::<T>::insert(ips_id.clone(), current_era, empty_staking_info);
+
+            // Owner account released but IPS can not be released more.
+            T::Currency::unreserve(&owner, T::RegisterDeposit::get());
+            RegisteredOwners::<T>::remove(&owner);
+
+            Self::deposit_event(Event::<T>::IpStakingtRemoved(owner, ips_id));
+
+            let number_of_stakers = staking_info.stakers.len();
+            Ok(Some(T::WeightInfo::unregister(number_of_stakers as u32)).into())
+
+        }
+
+        // TODO: other functions WIP
 
         impl<T: Config> Pallet<T> {
             // TODO: WIP
