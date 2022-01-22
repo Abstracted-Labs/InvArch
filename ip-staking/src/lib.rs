@@ -238,8 +238,8 @@ pub mod pallet{
         InsufficientValue,
         /// Number of stakers per IPS exceeded.
         MaxNumberOfStakersExceeded,
-        /// Targets must be operated IPS
-        NotOperatedIps,
+        /// Targets must be operated IPS Staking
+        NotOperatedIpsStaking,
         /// IPS isn't staked.
         NotStakedIps,
         /// Unstaking a IPS with zero value
@@ -345,6 +345,7 @@ pub mod pallet{
         /// This must be called by the owner who registered the IPS.
         ///
         /// Warning: After this action, IPS can not be assigned again.
+        /// 
         #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
         pub fn unregister(
             origin: OriginFor<T>,
@@ -419,7 +420,7 @@ pub mod pallet{
             // Check that IPS is ready for staking.
             ensure!(
                 Self::is_active(&ips_id),
-                Error::<T>::NotOperatedIps
+                Error::<T>::NotOperatedIpsStaking
             );
 
             // Ensure that staker has enough balance to bond & stake.
@@ -487,6 +488,91 @@ pub mod pallet{
                 value_to_stake,
             ));
             Ok(().into())
+        }
+
+        /// Start unbonding process and unstake balance from the IP Staking.
+        ///
+        /// The unstaked amount will no longer be eligible for rewards but still won't be unlocked.
+        /// User needs to wait for the unbonding period to finish before being able to withdraw
+        /// the funds via `withdraw_unbonded` call.
+        ///
+        /// In case remaining staked balance on IP Staking is below minimum staking amount,
+        /// entire stake for that IP Staking will be unstaked.
+        /// 
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn unbond_and_unstake(
+            origin: OriginFor<T>,
+            ips_id: IpsId,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> {
+            let staker = ensure_signed(origin)?;
+
+            ensure!(value > Zero::zero(), Error::<T>::UnstakingWithNoValue);
+            ensure!(
+                Self::is_active(&ips_id),
+                Error::<T>::NotOperatedIpsStaking,
+            );
+
+            // Get the latest era staking points for the IP Staking.
+            let current_era = Self::current_era();
+            let mut staking_info = Self::staking_info(&ips_id, current_era);
+
+            ensure!(
+                staking_info.stakers.contains_key(&staker),
+                Error::<T>::NotStakedIps,
+            );
+            let staked_value = staking_info.stakers[&staker];
+
+            // Calculate the value which will be unstaked.
+            let remaining = staked_value.saturating_sub(value);
+            let value_to_unstake = if remaining < T::MinimumStakingAmount::get() {
+                staking_info.stakers.remove(&staker);
+                staked_value
+            } else {
+                staking_info.stakers.insert(staker.clone(), remaining);
+                value
+            };
+            staking_info.total = staking_info.total.saturating_sub(value_to_unstake);
+
+            // Sanity check
+            ensure!(
+                value_to_unstake > Zero::zero(),
+                Error::<T>::UnstakingWithNoValue
+            );
+
+            let mut ledger = Self::ledger(&staker);
+
+            // Update the chunks and write them to storage
+            ledger.unbonding_info.add(UnlockingChunk {
+                amount: value_to_unstake,
+                unlock_era: current_era + T::UnbondingPeriod::get(),
+            });
+            // This should be done AFTER insertion since it's possible for chunks to merge
+            ensure!(
+                ledger.unbonding_info.len() <= T::MaxUnlockingChunks::get(),
+                Error::<T>::TooManyUnlockingChunks
+            );
+
+            Self::update_ledger(&staker, ledger);
+
+            // Update total staked value in era.
+            EraRewardsAndStakes::<T>::mutate(&current_era, |value| {
+                if let Some(x) = value {
+                    x.staked = x.staked.saturating_sub(value_to_unstake)
+                }
+            });
+
+            // Update the era staking points
+            IpsEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
+
+            Self::deposit_event(Event::<T>::UnbondAndUnstake(
+                staker,
+                ips_id,
+                value_to_unstake,
+            ));
+
+            Ok(().into())
+
         }
 
         // TODO: other functions WIP
