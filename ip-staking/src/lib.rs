@@ -575,6 +575,34 @@ pub mod pallet{
 
         }
 
+        /// Withdraw all funds that have completed the unbonding process.
+        ///
+        /// If there are unbonding chunks which will be fully unbonded in future eras,
+        /// they will remain and can be withdrawn later.
+        ///
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn withdraw_unbonded(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let staker = ensure_signed(origin)?;
+
+            let mut ledger = Self::ledger(&staker);
+            let current_era = Self::current_era();
+
+            let (valid_chunks, future_chunks) = ledger.unbonding_info.partition(current_era);
+            let withdraw_amount = valid_chunks.sum();
+
+            ensure!(!withdraw_amount.is_zero(), Error::<T>::NothingToWithdraw);
+
+            // Get the staking ledger and update it
+            ledger.locked = ledger.locked.saturating_sub(withdraw_amount);
+            ledger.unbonding_info = future_chunks;
+
+            Self::update_ledger(&staker, ledger);
+
+            Self::deposit_event(Event::<T>::Withdrawn(staker, withdraw_amount));
+
+            Ok(().into())
+        }
+
         // TODO: other functions WIP
 
         impl<T: Config> Pallet<T> {
