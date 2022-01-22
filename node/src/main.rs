@@ -1,4 +1,5 @@
-//! Substrate InvArch Node CLI library.
+//! InvArch Parachain Node CLI.
+
 #![warn(missing_docs)]
 
 mod chain_spec;
