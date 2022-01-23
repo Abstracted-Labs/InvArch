@@ -698,16 +698,62 @@ pub mod pallet{
 
         }
 
-        // TODO: other functions WIP
-
-        impl<T: Config> Pallet<T> {
-            // TODO: WIP
+        /// Force there to be a new era at the end of the next block. After this, it will be
+        /// reset to normal (non-forced) behaviour.
+        ///
+        /// The dispatch origin must be Root.
+        ///
+        ///
+        /// # <weight>
+        /// - No arguments.
+        /// - Weight: O(1)
+        /// - Write ForceEra
+        /// # </weight>
+        /// 
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn force_new_era(origin: OriginFor<T>) -> DispatchResult {
+            ensure_root(origin)?;
+            ForceEra::<T>::put(Forcing::ForceNew);
+            Ok(())
         }
 
+        /// Add IP Staking to the pre-approved list.
+        ///
+        /// Sudo call is required
+        /// 
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn owner_pre_approval(
+        origin: OriginFor<T>,
+        owner: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
 
+            ensure!(
+                !PreApprovedOwners::<T>::contains_key(&owner),
+                Error::<T>::AlreadyPreApprovedOwnerr
+            );
+            PreApprovedOwners::<T>::insert(owner, ());
+
+            Ok(().into())
+        }
+
+        /// Enable or disable adding new IP Staking to the pre-approved list
+        ///
+        /// Sudo call is required
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn enable_owner_pre_approval(
+            origin: OriginFor<T>,
+            enabled: bool,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            PreApprovalIsEnabled::<T>::put(enabled);
+            Ok(().into())
+        }
     }
 
-
+    impl<T: Config> Pallet<T> {
+        // TODO: WIP
+    }
 
 
 
