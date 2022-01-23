@@ -752,10 +752,76 @@ pub mod pallet{
     }
 
     impl<T: Config> Pallet<T> {
-        // TODO: WIP
+        /// Get AccountId assigned to the pallet.
+        fn account_id() -> T::AccountId {
+            T::PalletId::get().into_account()
+        }
+
+        /// Update the ledger for a staker. This will also update the stash lock.
+        /// This lock will lock the entire funds except paying for further transactions.
+        fn update_ledger(staker: &T::AccountId, ledger: AccountLedger<BalanceOf<T>>) {
+            if ledger.locked.is_zero() && ledger.unbonding_info.is_empty() {
+                Ledger::<T>::remove(&staker);
+                T::Currency::remove_lock(STAKING_ID, &staker);
+            } else {
+                T::Currency::set_lock(STAKING_ID, &staker, ledger.locked, WithdrawReasons::all());
+                Ledger::<T>::insert(staker, ledger);
+            }
+        }
+
+        /// The block rewards are accumulated on the pallets's account during an era.
+        /// This function takes a snapshot of the pallet's balance accrued during current era
+        /// and stores it for future distribution
+        ///
+        /// This is called just at the beginning of an era.
+        fn reward_balance_snapshoot(era: EraIndex, reward: BalanceOf<T>) {
+            // Get the reward and stake information for previous era
+            let mut reward_and_stake = Self::era_reward_and_stake(era).unwrap_or_default();
+
+            // Prepare info for the next era
+            EraRewardsAndStakes::<T>::insert(
+                era + 1,
+                EraRewardAndStake {
+                    rewards: Zero::zero(),
+                    staked: reward_and_stake.staked.clone(),
+                },
+            );
+
+            // Set the reward for the previous era.
+            reward_and_stake.rewards = reward;
+            EraRewardsAndStakes::<T>::insert(era, reward_and_stake);
+        }
+
+        /// This helper returns `EraStakingPoints` for given era if possible or latest stored data
+        /// or finally default value if storage have no data for it.
+        pub(crate) fn staking_info(
+            ips_id: &IpsId,
+            era: EraIndex,
+        ) -> EraStakingPoints<T::AccountId, BalanceOf<T>> {
+            if let Some(staking_info) = IpEraStake::<T>::get(ips_id, era) {
+                staking_info
+            } else {
+                let avail_era = IpEraStake::<T>::iter_key_prefix(&ips_id)
+                    .filter(|x| *x <= era)
+                    .max()
+                    .unwrap_or(Zero::zero());
+
+                let mut staking_points =
+                    IpEraStake::<T>::get(ips_id, avail_era).unwrap_or_default();
+                // Needs to be reset since otherwise it might seem as if rewards were already claimed for this era.
+                staking_points.claimed_rewards = Zero::zero();
+                staking_points
+            }
+        }
+        
+        /// Check that IP staking have active owner linkage.
+        fn is_active(ips_id: &IpsId) -> bool {
+            if let Some(owner) = RegisteredIpStaking::<T>::get(ips_id) {
+                if let Some(r_ips_id) = RegisteredOwners::<T>::get(&owner) {
+                    return r_ips_id == *ips_id;
+                }
+            }
+            false
+        }   
     }
-
-
-
-
 }
