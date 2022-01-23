@@ -90,8 +90,8 @@ use xcm_executor::{Config, XcmExecutor};
 
 use pallet_contracts::weights::WeightInfo;
 
-/// Import the ipt pallet.
-pub use pallet_ipt as ipt;
+/// Import the ipf pallet.
+pub use pallet_ipf as ipf;
 
 /// Import the ips pallet.
 pub use pallet_ips as ips;
@@ -676,16 +676,16 @@ impl pallet_collator_selection::Config for Runtime {
 // ------ InvArch Modules ---
 
 parameter_types! {
-    // The maximum size of an IPT's metadata
-    pub const MaxIptMetadata: u32 = 10000;
+    // The maximum size of an IPF's metadata
+    pub const MaxIpfMetadata: u32 = 10000;
 }
 
-impl ipt::Config for Runtime {
-    // The maximum size of an IPT's metadata
-    type MaxIptMetadata = MaxIptMetadata;
-    // The IPT ID type
-    type IptId = u64;
-    // Th IPT pallet events
+impl ipf::Config for Runtime {
+    // The maximum size of an IPF's metadata
+    type MaxIpfMetadata = MaxIpfMetadata;
+    // The IPF ID type
+    type IpfId = u64;
+    // Th IPF pallet events
     type Event = Event;
 }
 
@@ -851,7 +851,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 44,
 
         // InvArch stuff
-        Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 50,
+        Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 50,
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
 
     }
