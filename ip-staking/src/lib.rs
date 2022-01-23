@@ -87,7 +87,7 @@ pub mod pallet{
 
         /// Percentage of reward paid to IPS owners.
         #[pallet::constant]
-        type IpsOwnerRewardPercentage: Get<Perbill>;
+        type OwnerRewardPercentage: Get<Perbill>;
 
         /// Maximum number of unique stakers per IPS.
         #[pallet::constant]
@@ -169,7 +169,7 @@ pub mod pallet{
     /// Registered IPS points to the owner who registered it
     #[pallet::storage]
     #[pallet::getter(fn registered_owner)]
-    pub(crate) type RegisteredIps<T: Config> =
+    pub(crate) type RegisteredIpStaking<T: Config> =
         StorageMap<_, Blake2_128Concat, T::IpsId, T::AccountId>;
 
     /// Total block rewards for the pallet per era and total staked funds
@@ -181,7 +181,7 @@ pub mod pallet{
     /// Stores amount staked and stakers for an IPS per era
     #[pallet::storage]
     #[pallet::getter(fn ips_era_stake)]
-    pub(crate) type IpsEraStake<T: Config> = StorageDoubleMap<
+    pub(crate) type IpEraStake<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         T::IpsId,
@@ -221,11 +221,11 @@ pub mod pallet{
         /// Account has withdrawn unbonded funds.
         Withdrawn(T::AccountId, BalanceOf<T>),
         /// New IPS added for staking.
-        NewIpsStaking(T::AccountId, T::IpsId),
-        /// IPS removed from IPS staking.
+        NewIpStaking(T::AccountId, T::IpsId),
+        /// IPS removed from IP staking.
         IpStakingtRemoved(T::AccountId, T::IpsId),
-        /// New IPS staking era. Distribute era rewards to IPS.
-        NewIpsStakingEra(EraIndex),
+        /// New IP staking era. Distribute era rewards to IPS.
+        NewIpStakingEra(EraIndex),
         /// Reward paid to staker or owner.
         Reward(T::AccountId, T::IpsId, EraIndex, BalanceOf<T>),
     }
@@ -238,8 +238,8 @@ pub mod pallet{
         InsufficientValue,
         /// Number of stakers per IPS exceeded.
         MaxNumberOfStakersExceeded,
-        /// Targets must be operated IPS Staking
-        NotOperatedIpsStaking,
+        /// Targets must be operated IP Staking
+        NotOperatedIpStaking,
         /// IPS isn't staked.
         NotStakedIps,
         /// Unstaking a IPS with zero value
@@ -250,7 +250,7 @@ pub mod pallet{
         AlreadyRegisteredIps,
         /// User attempts to register with address which is not IPS
         IpsIsNotValid,
-        /// This account was already used to register contract
+        /// This account was already used to register IP Staking
         AlreadyUsedOwnerAccount,
         /// IPS not owned by the account id.
         NotOwnedIps,
@@ -266,7 +266,7 @@ pub mod pallet{
         /// Era parameter is out of bounds
         EraOutOfBounds,
         /// To register a IPS, pre-approval is needed for this address
-        RequiredContractPreApproval,
+        RequiredIpsPreApproval,
         /// Owner's account is already part of pre-approved list
         AlreadyPreApprovedOwner,
     }
@@ -318,24 +318,24 @@ pub mod pallet{
                 Error::<T>::AlreadyUsedOwnerAccount,
             );
             ensure!(
-                !RegisteredIps::<T>::contains_key(&ips_id),
-                Error::<T>::AlreadyRegisteredIps,
+                !RegisteredIpStaking::<T>::contains_key(&ips_id),
+                Error::<T>::AlreadyRegisteredIpStaking,
             );
             ensure!(ips_id.is_valid(), Error::<T>::IpsIsNotValid);
 
             if Self::pre_approval_is_enabled() {
                 ensure!(
                     PreApprovalOwners::<T>::contains_key(&owner),
-                    Error::<T>::RequiredIpsApproval,
+                    Error::<T>::RequiredIpsPreApproval,
                 );
             }
 
             T::Currency::reserve(&owner, T::RegisterDeposit::get())?;
 
-            RegisteredIps::<T>::insert(ips_id.clone(), owner.clone());
+            RegisteredIpStaking::<T>::insert(ips_id.clone(), owner.clone());
             RegisteredOwners::<T>::insert(&owner, ips_id.clone());
 
-            Self::deposit_event(Event::<T>::NewIpsStaking(owner, ips_id));
+            Self::deposit_event(Event::<T>::NewIpStaking(owner, ips_id));
 
             Ok(().into())
         }
@@ -387,7 +387,7 @@ pub mod pallet{
 
             // Nett to update staking data for next era
             let empty_staking_info = EraStakingPoints::<T::AccountId, BalanceOf<T>>::default();
-            IpsEraStake::<T>::insert(ips_id.clone(), current_era, empty_staking_info);
+            IpEraStake::<T>::insert(ips_id.clone(), current_era, empty_staking_info);
 
             // Owner account released but IPS can not be released more.
             T::Currency::unreserve(&owner, T::RegisterDeposit::get());
@@ -420,7 +420,7 @@ pub mod pallet{
             // Check that IPS is ready for staking.
             ensure!(
                 Self::is_active(&ips_id),
-                Error::<T>::NotOperatedIpsStaking
+                Error::<T>::NotOperatedIpStaking
             );
 
             // Ensure that staker has enough balance to bond & stake.
@@ -480,7 +480,7 @@ pub mod pallet{
             Self::update_ledger(&staker, ledger);
 
             // Update staked information for IPS in current era
-            IpsEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
+            IpEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
 
             Self::deposit_event(Event::<T>::BondAndStake(
                 staker,
@@ -510,7 +510,7 @@ pub mod pallet{
             ensure!(value > Zero::zero(), Error::<T>::UnstakingWithNoValue);
             ensure!(
                 Self::is_active(&ips_id),
-                Error::<T>::NotOperatedIpsStaking,
+                Error::<T>::NotOperatedIpStaking,
             );
 
             // Get the latest era staking points for the IP Staking.
@@ -563,7 +563,7 @@ pub mod pallet{
             });
 
             // Update the era staking points
-            IpsEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
+            IpEraStake::<T>::insert(ips_id.clone(), current_era, staking_info);
 
             Self::deposit_event(Event::<T>::UnbondAndUnstake(
                 staker,
@@ -601,6 +601,101 @@ pub mod pallet{
             Self::deposit_event(Event::<T>::Withdrawn(staker, withdraw_amount));
 
             Ok(().into())
+        }
+
+        /// Claim the rewards earned by ips_id.
+        /// All stakers and owner for this IP Staking will be paid out with single call.
+        /// Claim is valid for all unclaimed eras but not longer than history_depth().
+        /// Any reward older than history_depth() will go to Treasury.
+        /// Any user can call this function.
+        /// 
+        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        pub fn claim(
+            origin: OriginFor<T>,
+            ips_id: IpsId,
+            #[pallet::compact] era: EraIndex,
+        ) -> DispatchResultWithPostInfo {
+            let _ = ensure_signed(origin)?;
+
+            let owner =
+                RegisteredIpStaking::<T>::get(&ips_id).ok_or(Error::<T>::NotOperatedIpStaking)?;
+
+            let current_era = Self::current_era();
+            let era_low_bound = current_era.saturating_sub(T::HistoryDepth::get());
+
+            ensure!(
+                era < current_era && era >= era_low_bound,
+                Error::<T>::EraOutOfBounds,
+            );
+            let mut staking_info = Self::staking_info(&ips_id, era);
+
+            ensure!(
+                staking_info.claimed_rewards.is_zero(),
+                Error::<T>::AlreadyClaimedInThisEra,
+            );
+
+            ensure!(!staking_info.stakers.is_empty(), Error::<T>::NotStaked,);
+
+            let reward_and_stake =
+                Self::era_reward_and_stake(era).ok_or(Error::<T>::UnknownEraReward)?;
+            
+            // Calculate the IP Staking reward for this era.
+            let reward_ratio = Perbill::from_rational(staking_info.total, reward_and_stake.staked);
+            let ip_staking_reward = if era < T::BonusEraDuration::get() {
+                // Double reward as a bonus.
+                reward_ratio
+                    * reward_and_stake
+                        .rewards
+                        .saturating_mul(REWARD_SCALING.into())
+            } else {
+                reward_ratio * reward_and_stake.rewards
+            };
+
+            // Withdraw reward funds from the IP Staking
+            let reward_pool = T::Currency::withdraw(
+                &Self::account_id(),
+                ip_staking_reward,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::AllowDeath,
+            )?;
+
+            // Divide reward between stakers and the owner of the IPS Stasking
+            let (owner_reward, mut stakers_reward) =
+                reward_pool.split(T::OwnerRewardPercentage::get() * ip_staking_reward);
+
+            Self::deposit_event(Event::<T>::Reward(
+                owner.clone(),
+                ips_id.clone(),
+                era,
+                owner_reward.peek(),
+            ));
+            T::Currency::resolve_creating(&owner, owner_reward);
+
+            // Calculate & pay rewards for all stakers
+            let stakers_total_reward = stakers_reward.peek();
+            for (staker, staked_balance) in &staking_info.stakers {
+                let ratio = Perbill::from_rational(*staked_balance, staking_info.total);
+                let (reward, new_stakers_reward) =
+                    stakers_reward.split(ratio * stakers_total_reward);
+                stakers_reward = new_stakers_reward;
+
+                Self::deposit_event(Event::<T>::Reward(
+                    staker.clone(),
+                    ips_id.clone(),
+                    era,
+                    reward.peek(),
+                ));
+                T::Currency::resolve_creating(staker, reward);
+            }
+
+            let number_of_payees = staking_info.stakers.len() + 1;
+
+            // Updated counter for total rewards paid to the IP Staking
+            staking_info.claimed_rewards = ip_staking_reward;
+            <IpEraStake<T>>::insert(&ips_id, era, staking_info);
+
+            Ok(Some(T::WeightInfo::claim(number_of_payees as u32)).into())
+
         }
 
         // TODO: other functions WIP
