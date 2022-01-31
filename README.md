@@ -58,9 +58,12 @@ InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring
 ### INV4 Protocol & Pallets
 * `Pallet_IPS` - W.I.P.
 * `Pallet_IPF` - W.I.P.
-* `Pallet_BIP` - W.I.P.
-* `Pallet_WIP` - W.I.P.
+* `Pallet_IPR` - W.I.P.
+* `Pallet_BridgeIP` - W.I.P.
+* `Pallet_BondIP` - W.I.P.
+* `Pallet_IPSynth` - W.I.P.
 * `Pallet_IPT` - W.I.P.
+* `Pallet_MultiSig` - W.I.P.
 * `Pallet_IPVM` - W.I.P.
 
 ### XCA Protocol & Pallets
