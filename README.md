@@ -41,7 +41,7 @@ InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring
 ## Features
 
 | Term | Abbreviation(s) | Description |
-| -----: | ----------- | ------------- |
+| ----- | ----------- | ------------- |
 | Intellectual Property File | IP File, IPF | Intellectual Property (IP) stored as non-fungible & authenticated files |
 | Intellectual Property Set | IP Set | Root collections of bonded & interchangeable IP Files and/or Subsets |
 | Intellectual Property Subset | IP Subset, Subset | Child collections of bonded & interchangeable IP Files and/or additional IP Subsets|
