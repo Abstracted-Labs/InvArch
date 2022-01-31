@@ -35,7 +35,7 @@ InvArch features the INV4 (Invention, Involvement, Inventory, Investment) Standa
 InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
 
 <div align="center">
-<img src="https://i.ibb.co/mNtNbdy/01-2.png">
+<img src="https://github.com/InvArch/brand/blob/main/architecture.png">
 </div>
 
 ## Features
