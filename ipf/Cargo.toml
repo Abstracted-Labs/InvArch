@@ -1,11 +1,11 @@
 [package]
 authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'IPS Pallet for creating and managing sets of tokenized IP'
+description = 'IPF Pallet for tokenizing and managing intellectual property'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'pallet-ips'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
+name = 'pallet-ipf'
+repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipf'
 version = '0.1.0-dev'
 
 [dependencies]
@@ -15,21 +15,10 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
-
-scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
-
-# InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
-ipf = { package = "pallet-ipf", path = "../ipf", default-features = false }
-
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
-
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.13", default-features = false }
-
-[dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
 
 [features]
 default = ["std"]
@@ -40,9 +29,8 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
+  "primitives/std",
   "sp-io/std",
   "scale-info/std",
-  "pallet-balances/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
-

@@ -1,12 +1,8 @@
 [workspace]
 
 members = [
-    #"dao",
-    #"deliverables",
-    #"dev",
-    #"ipo",
     "ips",
-    "ipt",
-    #"listings",
-    #"worklog"
+    "ipf",
+    "smartip",
+    "multisig",
 ]

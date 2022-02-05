@@ -6,7 +6,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup};
 
 use super::*;
 
-use crate as ipt;
+use crate as ipf;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -42,12 +42,12 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIptMetadata: u32 = 32;
+    pub const MaxIpfMetadata: u32 = 32;
 }
 
 impl Config for Runtime {
-    type IptId = u64;
-    type MaxIptMetadata = MaxIptMetadata;
+    type IpfId = u64;
+    type MaxIpfMetadata = MaxIpfMetadata;
     type Event = Event;
 }
 
@@ -73,14 +73,14 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-        Ipt: ipt::{Pallet, Storage, Event<T>},
+        Ipf: ipf::{Pallet, Storage, Event<T>},
     }
 );
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const IPT_ID: <Runtime as Config>::IptId = 0;
-pub const IPT_ID_DOESNT_EXIST: <Runtime as Config>::IptId = 100;
+pub const IPF_ID: <Runtime as Config>::IpfId = 0;
+pub const IPF_ID_DOESNT_EXIST: <Runtime as Config>::IpfId = 100;
 pub const MOCK_DATA: [u8; 32] = [
     12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
     0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,

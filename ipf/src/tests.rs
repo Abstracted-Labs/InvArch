@@ -1,4 +1,4 @@
-//! Unit tests for the IPT pallet.
+//! Unit tests for the IPF pallet.
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
@@ -9,23 +9,23 @@ use sp_runtime::DispatchError;
 #[test]
 fn mint_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_eq!(Ipt::next_ipt_id(), 0);
-        assert_ok!(Ipt::mint(
+        assert_eq!(Ipf::next_ipf_id(), 0);
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
-        assert_eq!(Ipt::next_ipt_id(), 1);
-        assert_ok!(Ipt::mint(
+        assert_eq!(Ipf::next_ipf_id(), 1);
+        assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             H256::from(MOCK_DATA_SECONDARY)
         ));
-        assert_eq!(Ipt::next_ipt_id(), 2);
+        assert_eq!(Ipf::next_ipf_id(), 2);
 
         assert_eq!(
-            IptStorage::<Runtime>::get(0),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)
@@ -33,8 +33,8 @@ fn mint_should_work() {
         );
 
         assert_eq!(
-            IptStorage::<Runtime>::get(1),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
                 owner: ALICE,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA_SECONDARY)
@@ -47,7 +47,7 @@ fn mint_should_work() {
 fn mint_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Ipt::mint(
+            Ipf::mint(
                 Origin::none(),
                 MOCK_METADATA_PAST_MAX.to_vec(),
                 H256::from(MOCK_DATA)
@@ -55,7 +55,7 @@ fn mint_should_fail() {
             DispatchError::BadOrigin
         );
         assert_noop!(
-            Ipt::mint(
+            Ipf::mint(
                 Origin::signed(BOB),
                 MOCK_METADATA_PAST_MAX.to_vec(),
                 H256::from(MOCK_DATA)
@@ -63,59 +63,59 @@ fn mint_should_fail() {
             Error::<Runtime>::MaxMetadataExceeded,
         );
 
-        NextIptId::<Runtime>::mutate(|id| *id = <Runtime as Config>::IptId::max_value());
+        NextIpfId::<Runtime>::mutate(|id| *id = <Runtime as Config>::IpfId::max_value());
         assert_noop!(
-            Ipt::mint(
+            Ipf::mint(
                 Origin::signed(BOB),
                 MOCK_METADATA.to_vec(),
                 H256::from(MOCK_DATA)
             ),
-            Error::<Runtime>::NoAvailableIptId
+            Error::<Runtime>::NoAvailableIpfId
         );
 
-        assert_eq!(IptStorage::<Runtime>::get(0), None);
+        assert_eq!(IpfStorage::<Runtime>::get(0), None);
     });
 }
 
 #[test]
 fn burn_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
 
-        assert_ok!(Ipt::burn(Origin::signed(BOB), IPT_ID));
+        assert_ok!(Ipf::burn(Origin::signed(BOB), IPF_ID));
 
-        assert_eq!(IptStorage::<Runtime>::get(0), None);
+        assert_eq!(IpfStorage::<Runtime>::get(0), None);
     });
 }
 
 #[test]
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
 
-        assert_noop!(Ipt::burn(Origin::none(), IPT_ID), DispatchError::BadOrigin);
+        assert_noop!(Ipf::burn(Origin::none(), IPF_ID), DispatchError::BadOrigin);
 
         assert_noop!(
-            Ipt::burn(Origin::signed(BOB), IPT_ID_DOESNT_EXIST),
-            Error::<Runtime>::IptNotFound
+            Ipf::burn(Origin::signed(BOB), IPF_ID_DOESNT_EXIST),
+            Error::<Runtime>::IpfNotFound
         );
 
         assert_noop!(
-            Ipt::burn(Origin::signed(ALICE), IPT_ID),
+            Ipf::burn(Origin::signed(ALICE), IPF_ID),
             Error::<Runtime>::NoPermission
         );
 
         assert_eq!(
-            IptStorage::<Runtime>::get(0),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)
@@ -127,31 +127,31 @@ fn burn_should_fail() {
 #[test]
 fn amend_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
 
         assert_eq!(
-            IptStorage::<Runtime>::get(0),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_DATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)
             })
         );
 
-        assert_ok!(Ipt::amend(
+        assert_ok!(Ipf::amend(
             Origin::signed(BOB),
-            IPT_ID,
+            IPF_ID,
             MOCK_METADATA_SECONDARY.to_vec(),
             H256::from(MOCK_DATA_SECONDARY)
         ));
 
         assert_eq!(
-            IptStorage::<Runtime>::get(0),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA_SECONDARY)
@@ -163,16 +163,16 @@ fn amend_should_work() {
 #[test]
 fn amend_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::mint(
+        assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
             H256::from(MOCK_DATA)
         ));
 
         assert_noop!(
-            Ipt::amend(
+            Ipf::amend(
                 Origin::none(),
-                IPT_ID,
+                IPF_ID,
                 MOCK_METADATA_SECONDARY.to_vec(),
                 H256::from(MOCK_DATA_SECONDARY)
             ),
@@ -180,19 +180,19 @@ fn amend_should_fail() {
         );
 
         assert_noop!(
-            Ipt::amend(
+            Ipf::amend(
                 Origin::signed(BOB),
-                IPT_ID_DOESNT_EXIST,
+                IPF_ID_DOESNT_EXIST,
                 MOCK_METADATA_SECONDARY.to_vec(),
                 H256::from(MOCK_DATA_SECONDARY)
             ),
-            Error::<Runtime>::IptNotFound
+            Error::<Runtime>::IpfNotFound
         );
 
         assert_noop!(
-            Ipt::amend(
+            Ipf::amend(
                 Origin::signed(ALICE),
-                IPT_ID,
+                IPF_ID,
                 MOCK_METADATA_SECONDARY.to_vec(),
                 H256::from(MOCK_DATA_SECONDARY)
             ),
@@ -200,9 +200,9 @@ fn amend_should_fail() {
         );
 
         assert_noop!(
-            Ipt::amend(
+            Ipf::amend(
                 Origin::signed(BOB),
-                IPT_ID,
+                IPF_ID,
                 MOCK_METADATA.to_vec(),
                 H256::from(MOCK_DATA)
             ),
@@ -210,8 +210,8 @@ fn amend_should_fail() {
         );
 
         assert_eq!(
-            IptStorage::<Runtime>::get(0),
-            Some(IptInfoOf::<Runtime> {
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)

@@ -1,11 +1,11 @@
 [package]
 authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'IPT Pallet for tokenizing and managing intellectual property'
+description = 'IPS Pallet for creating and managing sets of tokenized IP'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'pallet-ipt'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipt'
+name = 'pallet-smartip'
+repository = 'https://github.com/InvArch/InvArch-Pallet-Library/smartip'
 version = '0.1.0-dev'
 
 [dependencies]
@@ -15,10 +15,23 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
-primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+
 scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
+
+# InvArch dependencies
+primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
+ips = { package = "pallet-ips", path = "../ips", default-features = false }
+ipf = { package = "pallet-ipf", path = "../ipf", default-features = false }
+
+
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+
+[dev-dependencies]
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 
 [features]
 default = ["std"]
@@ -29,8 +42,12 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
-  "primitives/std",
   "sp-io/std",
   "scale-info/std",
+  "pallet-contracts/std",
+  "pallet-balances/std",
+  "ips/std",
+  "ipf/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
+

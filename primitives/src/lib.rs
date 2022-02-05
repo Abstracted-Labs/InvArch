@@ -3,15 +3,6 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
-/// IPS Id type
-pub type IpsId = u64;
-/// IPT Id type
-pub type IptId = u64;
-/// IPO id type
-pub type IpoId = u64;
-/// DEV id type
-pub type DevId = u64;
-
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
@@ -25,65 +16,23 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
 
 /// IPT Info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IptInfo<AccountId, Data, IptMetadataOf> {
+pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
     /// IPT owner
     pub owner: AccountId,
     /// IPT metadata
-    pub metadata: IptMetadataOf,
+    pub metadata: IpfMetadataOf,
     /// IPT data
     pub data: Data,
 }
 
-/// IPO Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen)]
-pub struct IpoInfo<AccountId, Data, IpoMetadataOf> {
-    /// IPO metadata
-    pub metadata: IpoMetadataOf,
-    /// Total issuance for the IPO
-    pub total_issuance: u64,
-    /// IPO owner
-    pub owner: AccountId,
-    /// IPO Properties
-    pub data: Data,
-    /// Binding Properties
-    pub is_bond: bool,
-}
+pub mod utils {
+    use codec::{Decode, Encode};
+    use sp_io::hashing::blake2_256;
 
-/// DEV Info
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct DevInfo<
-    AccountId,
-    DevMetadataOf,
-    IpsId,
-    DevUsers,
-    Allocation,
-    DevInteractions,
-    DevTerms,
-    DevMilestones,
-> {
-    /// DEV owner
-    pub owner: AccountId,
-    /// DEV metadata
-    pub metadata: DevMetadataOf,
-    /// Id of the IPS that the DEV refers to
-    pub ips_id: IpsId,
-    /// IPO allocations for DEV
-    pub users: DevUsers,
-    /// Total issuance of IPO for this DEV (if this is 100 the ipo allocations will be percentages)
-    pub total_issuance: Allocation,
-    /// DEV interactions
-    pub interactions: DevInteractions,
-    /// Terms of the DEV
-    pub terms: DevTerms,
-    /// Dev Milestones,
-    pub milestones: DevMilestones,
-    /// DEV post as joinable
-    pub is_joinable: bool,
-}
-
-/// Dev User
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct DevUser<Allocation, Role> {
-    pub allocation: Allocation,
-    pub role: Role,
+    pub fn multi_account_id<T: frame_system::Config, IpsId: Encode>(
+        ips_id: IpsId,
+    ) -> <T as frame_system::Config>::AccountId {
+        let entropy = (b"modlpy/utilisuba", ips_id).using_encoded(blake2_256);
+        T::AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+    }
 }
