@@ -1,24 +1,24 @@
 [![Compatible with Substrate v3.0.0](https://img.shields.io/badge/Substrate-v3.0.0-E6007A)](https://github.com/paritytech/substrate/releases/tag/v3.0.0)
 
-# IPF Pallet: IP Tokens for Substrate
+# IPF Pallet: IP Files for Substrate
 
 This is a [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
 to create and manage [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token). 
 
-# IPFokens : Non-fungible components that define an idea.
+# IPFiles : Non-fungible components that define an idea.
 
 The following **components** are defined:
-* `IPFoken` + Metadata
+* `IPFile` + Metadata
 
 The following **functions** are possible:
-* `mint` - Create a new IP Token and add to an IP Set
-* `burn` - Burn an IP Token from an IP Set
-* `amend` - Amend the data stored inside an IP Token
+* `mint` - Create a new IP File and add to an IP Set
+* `burn` - Burn an IP File from an IP Set
+* `amend` - Amend the data stored inside an IP File
 
 
-# IP Token
+# IP File
 
-An IP Token (IPF) is a part of a set, and can be thought of as a component of an idea. Either by itself or in combination with other IP Tokens, it serves to strengethen the foundation for an innovation. IP Tokens represent a unique digital asset.
+An IP File (IPF) is a part of a set, and can be thought of as a component of an idea. Either by itself or in combination with other IP Files, it serves to strengethen the foundation for an innovation. IP Files represent a unique digital asset.
 
 ## IPF Standard
 
@@ -107,7 +107,7 @@ data: {
 {
   "external_url": {
     "type": "string",
-    "description": "HTTP or IPFS URL for finding out more about this token. If IPFS, MUST be in the format of ipfs://ipfs/HASH"
+    "description": "HTTP or IPFS URL for finding out more about this file. If IPFS, MUST be in the format of ipfs://ipfs/HASH"
   },
   "image": {
     "type": "string",
@@ -119,11 +119,11 @@ data: {
   },
   "description": {
     "type": "string",
-    "description": "Description of the IP Token. Markdown is supported."
+    "description": "Description of the IP File. Markdown is supported."
   },
   "name": {
     "type": "string",
-    "description": "Name of the IP Token."
+    "description": "Name of the IP File."
   },
   "attributes": {
     "type": "array",
