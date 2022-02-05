@@ -301,7 +301,7 @@ pub mod pallet {
                         )
                         .saturating_add(actual_weight);
                         let post_info = Some(weight_used).into();
-                        let error = err.error.into();
+                        let error = err.error;
                         DispatchErrorWithPostInfo { post_info, error }
                     }
                     None => err,
@@ -537,7 +537,7 @@ impl<T: Config> Pallet<T> {
             });
             // Bump approvals if not yet voted and the vote is needed.
             if maybe_pos.is_some() {
-                approvals += pallet_assets::Pallet::<T>::balance(ips_id, who.clone()).into();
+                approvals += pallet_assets::Pallet::<T>::balance(ips_id, who.clone());
             }
 
             // We only bother fetching/decoding call if we know that we're ready to execute.
