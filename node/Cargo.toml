@@ -35,7 +35,7 @@ jsonrpc-core = '18.0.0'
 # Local Dependencies
 [dependencies.invarch-runtime]
 path = '../runtime'
-version = '3.0.0'
+version = '0.1.0'
 
 # Substrate Dependencies
 [dependencies.frame-benchmarking]

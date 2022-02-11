@@ -2954,7 +2954,7 @@ dependencies = [
 
 [[package]]
 name = "invarch-node"
-version = "3.0.0"
+version = "0.1.0"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-collator",
@@ -3030,7 +3030,7 @@ dependencies = [
 
 [[package]]
 name = "invarch-runtime"
-version = "3.0.0"
+version = "0.1.0"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
