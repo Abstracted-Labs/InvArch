@@ -1,12 +1,12 @@
 [package]
 authors = ['InvArchitects <https://github.com/InvArch>']
 edition = '2018'
-homepage = 'https://invarch.io'
+homepage = 'https://invarch.network'
 license = 'Unlicense'
 name = 'invarch-node'
 publish = false
 repository = 'https://github.com/InvArch/InvArch-node/'
-version = '3.0.0'
+version = '0.1.0'
 build = 'build.rs'
 
 [package.metadata.docs.rs]
