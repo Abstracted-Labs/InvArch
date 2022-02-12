@@ -3,11 +3,17 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum Parentage<AccountId, IpsId> {
+    Parent(AccountId),
+    Child(IpsId),
+}
+
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpsInfo<AccountId, Data, IpsMetadataOf> {
-    /// IPS owner
-    pub owner: AccountId,
+pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
+    /// IPS parentage
+    pub parentage: Parentage<AccountId, IpsId>,
     /// IPS metadata
     pub metadata: IpsMetadataOf,
     /// IPS Properties
@@ -23,6 +29,12 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
     pub metadata: IpfMetadataOf,
     /// IPT data
     pub data: Data,
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum AnyId<IpsId, IpfId> {
+    IpsId(IpsId),
+    IpfId(IpfId),
 }
 
 pub mod utils {

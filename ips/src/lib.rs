@@ -41,6 +41,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
     use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
@@ -79,14 +80,15 @@ pub mod pallet {
 
     pub type IpsInfoOf<T> = IpsInfo<
         <T as frame_system::Config>::AccountId,
-        Vec<<T as ipf::Config>::IpfId>,
+        Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>,
         IpsMetadataOf<T>,
+        <T as Config>::IpsId,
     >;
 
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        Vec<<T as ipf::Config>::IpfId>,         // IPS data
+        Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>, // IPS data
         Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPS
     );
 
@@ -122,6 +124,7 @@ pub mod pallet {
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
         Destroyed(T::AccountId, T::IpsId),
+        Appended(T::AccountId, T::IpsId),
     }
 
     /// Errors for IPF pallet
@@ -143,6 +146,8 @@ pub mod pallet {
         MaxMetadataExceeded,
         /// Can not destroy IPS
         CannotDestroyIps,
+        /// IPS is not a parent IPS
+        NotParent,
     }
 
     /// Dispatch functions
@@ -220,9 +225,12 @@ pub mod pallet {
                 )?;
 
                 let info = IpsInfo {
-                    owner: ips_account.clone(),
+                    parentage: Parentage::Parent(ips_account.clone()),
                     metadata: bounded_metadata,
-                    data,
+                    data: data
+                        .into_iter()
+                        .map(|ipf_id| AnyId::IpfId(ipf_id))
+                        .collect(),
                 };
 
                 IpsStorage::<T>::insert(current_id, info);
@@ -240,11 +248,90 @@ pub mod pallet {
             IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
                 let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
-                ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+                match info.parentage {
+                    Parentage::Parent(ips_account) => {
+                        ensure!(ips_account == owner, Error::<T>::NoPermission)
+                    }
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::get(parent_id)
+                            .ok_or(Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ensure!(ips_account == owner, Error::<T>::NoPermission)
+                        } else {
+                            return Err(Error::<T>::NotParent.into());
+                        }
+                    }
+                }
 
                 IpsByOwner::<T>::remove(owner.clone(), ips_id);
 
                 Self::deposit_event(Event::Destroyed(owner, ips_id));
+
+                Ok(())
+            })
+        }
+
+        /// Append new assets to an IP Set
+        #[pallet::weight(100_000)] // TODO: Set correct weight
+        pub fn append(
+            owner: OriginFor<T>,
+            ips_id: T::IpsId,
+            assets: Vec<AnyId<T::IpsId, T::IpfId>>,
+            new_metadata: Option<Vec<u8>>,
+        ) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                let parent_id = ips_id.clone();
+
+                match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => {
+                        ensure!(ips_account.clone() == owner, Error::<T>::NoPermission);
+
+                        ensure!(
+                            !assets.clone().into_iter().any(|id| {
+                                match id {
+                                    AnyId::IpsId(ips_id) => {
+                                        IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
+                                    }
+                                    AnyId::IpfId(ipf_id) => {
+                                        ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id)
+                                            .is_none()
+                                    }
+                                }
+                            }),
+                            Error::<T>::NoPermission
+                        );
+
+                        assets.clone().into_iter().for_each(|any_id| {
+                            if let AnyId::IpsId(ips_id) = any_id {
+                                IpsStorage::<T>::mutate_exists(ips_id, |ips| {
+                                    // TODO: Burn SubIP's own IPTs and mint the exact same on the parent ip
+
+                                    ips.clone().unwrap().parentage = Parentage::Child(parent_id);
+                                });
+                            }
+                        });
+
+                        *ips_info = Some(IpsInfo {
+                            parentage: info.parentage,
+                            metadata: if let Some(metadata) = new_metadata {
+                                metadata
+                                    .try_into()
+                                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                            } else {
+                                info.metadata
+                            },
+                            data: info.data.into_iter().chain(assets.into_iter()).collect(),
+                        })
+                    }
+                    Parentage::Child(_) => todo!(),
+                }
+
+                Self::deposit_event(Event::Appended(owner, ips_id));
 
                 Ok(())
             })
