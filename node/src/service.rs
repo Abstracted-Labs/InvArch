@@ -459,7 +459,7 @@ pub async fn start_parachain_node(
                             ).await;
                         let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-                        let slot =    
+                        let slot =
                             sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
                                 *time,
                                 slot_duration.slot_duration(),
