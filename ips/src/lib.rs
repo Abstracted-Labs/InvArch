@@ -41,6 +41,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use primitives::utils::multi_account_id;
     use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
     use scale_info::prelude::format;
@@ -124,7 +125,18 @@ pub mod pallet {
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
         Destroyed(T::AccountId, T::IpsId),
-        Appended(T::AccountId, T::IpsId),
+        Appended(
+            T::AccountId,
+            T::IpsId,
+            Vec<u8>,
+            Vec<AnyId<T::IpsId, T::IpfId>>,
+        ),
+        Removed(
+            T::AccountId,
+            T::IpsId,
+            Vec<u8>,
+            Vec<AnyId<T::IpsId, T::IpfId>>,
+        ),
     }
 
     /// Errors for IPF pallet
@@ -282,56 +294,176 @@ pub mod pallet {
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
             IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
-                let owner = ensure_signed(owner)?;
+                let caller_account = ensure_signed(owner.clone())?;
                 let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
 
-                let parent_id = ips_id.clone();
+                let parent_id = ips_id;
 
-                match info.parentage.clone() {
-                    Parentage::Parent(ips_account) => {
-                        ensure!(ips_account.clone() == owner, Error::<T>::NoPermission);
-
-                        ensure!(
-                            !assets.clone().into_iter().any(|id| {
-                                match id {
-                                    AnyId::IpsId(ips_id) => {
-                                        IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
-                                    }
-                                    AnyId::IpfId(ipf_id) => {
-                                        ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id)
-                                            .is_none()
-                                    }
-                                }
-                            }),
-                            Error::<T>::NoPermission
-                        );
-
-                        assets.clone().into_iter().for_each(|any_id| {
-                            if let AnyId::IpsId(ips_id) = any_id {
-                                IpsStorage::<T>::mutate_exists(ips_id, |ips| {
-                                    // TODO: Burn SubIP's own IPTs and mint the exact same on the parent ip
-
-                                    ips.clone().unwrap().parentage = Parentage::Child(parent_id);
-                                });
-                            }
-                        });
-
-                        *ips_info = Some(IpsInfo {
-                            parentage: info.parentage,
-                            metadata: if let Some(metadata) = new_metadata {
-                                metadata
-                                    .try_into()
-                                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?
-                            } else {
-                                info.metadata
-                            },
-                            data: info.data.into_iter().chain(assets.into_iter()).collect(),
-                        })
+                let ips_account = match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => ips_account,
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
+                            .map_err(|_| Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ips_account
+                        } else {
+                            todo!()
+                        }
                     }
-                    Parentage::Child(_) => todo!(),
-                }
+                };
 
-                Self::deposit_event(Event::Appended(owner, ips_id));
+                ensure!(
+                    ips_account.clone() == caller_account,
+                    Error::<T>::NoPermission
+                );
+
+                ensure!(
+                    !assets.clone().into_iter().any(|id| {
+                        match id {
+                            AnyId::IpsId(ips_id) => {
+                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
+                            }
+                            AnyId::IpfId(ipf_id) => {
+                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
+                            }
+                        }
+                    }),
+                    Error::<T>::NoPermission
+                );
+
+                assets.clone().into_iter().for_each(|any_id| {
+                    if let AnyId::IpsId(ips_id) = any_id {
+                        IpsStorage::<T>::mutate_exists(ips_id, |ips| {
+                            // TODO: Write custom pallet_assets where it's possible to read the balances of every asset owner from within another pallet.
+                            // For now we just freeze the asset.
+                            pallet_assets::Pallet::<T>::freeze_asset(owner.clone(), ips_id.into())
+                                .unwrap(); // TODO: Remove unwrap.
+                            ips.clone().unwrap().parentage = Parentage::Child(parent_id);
+                        });
+                    }
+                });
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: if let Some(metadata) = new_metadata.clone() {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.clone()
+                    },
+                    data: info
+                        .data
+                        .into_iter()
+                        .chain(assets.clone().into_iter())
+                        .collect(),
+                });
+
+                Self::deposit_event(Event::Appended(
+                    caller_account,
+                    ips_id,
+                    if let Some(metadata) = new_metadata {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.to_vec()
+                    },
+                    assets,
+                ));
+
+                Ok(())
+            })
+        }
+
+        /// Remove assets from an IP Set
+        #[pallet::weight(100_000)] // TODO: Set correct weight
+        pub fn remove(
+            owner: OriginFor<T>,
+            ips_id: T::IpsId,
+            assets: Vec<AnyId<T::IpsId, T::IpfId>>,
+            new_metadata: Option<Vec<u8>>,
+        ) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let caller_account = ensure_signed(owner.clone())?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                let ips_account = match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => ips_account,
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
+                            .map_err(|_| Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ips_account
+                        } else {
+                            todo!()
+                        }
+                    }
+                };
+
+                ensure!(
+                    ips_account.clone() == caller_account,
+                    Error::<T>::NoPermission
+                );
+
+                ensure!(
+                    !assets.clone().into_iter().any(|id| {
+                        match id {
+                            AnyId::IpsId(ips_id) => {
+                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
+                            }
+                            AnyId::IpfId(ipf_id) => {
+                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
+                            }
+                        }
+                    }),
+                    Error::<T>::NoPermission
+                );
+
+                let mut old_assets = info.data.clone();
+
+                assets.clone().into_iter().for_each(|any_id| {
+                    if let AnyId::IpsId(ips_id) = any_id {
+                        IpsStorage::<T>::mutate_exists(ips_id, |ips| {
+                            // TODO: Write custom pallet_assets where it's possible to read the balances of every asset owner from within another pallet.
+                            // For now we just freeze the asset.
+                            pallet_assets::Pallet::<T>::thaw_asset(owner.clone(), ips_id.into())
+                                .unwrap(); // TODO: Remove unwrap.
+
+                            ips.clone().unwrap().parentage =
+                                Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id));
+                        });
+                    }
+                });
+
+                old_assets.retain(|x| !assets.clone().contains(x));
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: if let Some(metadata) = new_metadata.clone() {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.clone()
+                    },
+                    data: old_assets,
+                });
+
+                Self::deposit_event(Event::Removed(
+                    caller_account,
+                    ips_id,
+                    if let Some(metadata) = new_metadata {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.to_vec()
+                    },
+                    assets,
+                ));
 
                 Ok(())
             })
