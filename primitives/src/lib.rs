@@ -45,6 +45,6 @@ pub mod utils {
         ips_id: IpsId,
     ) -> <T as frame_system::Config>::AccountId {
         let entropy = (b"modlpy/utilisuba", ips_id).using_encoded(blake2_256);
-        T::AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+        T::AccountId::decode(&mut &entropy[..]).unwrap() // TODO: Remove unwrap.
     }
 }

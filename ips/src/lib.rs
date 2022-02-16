@@ -60,7 +60,8 @@ pub mod pallet {
             + Default
             + Copy
             + Display
-            + IsType<<Self as pallet_assets::Config>::AssetId>;
+            + IsType<<Self as pallet_assets::Config>::AssetId>
+            + MaxEncodedLen;
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>;
         /// Currency
@@ -81,7 +82,10 @@ pub mod pallet {
 
     pub type IpsInfoOf<T> = IpsInfo<
         <T as frame_system::Config>::AccountId,
-        Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>,
+        BoundedVec<
+            AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>,
+            <T as Config>::MaxIpsMetadata,
+        >,
         IpsMetadataOf<T>,
         <T as Config>::IpsId,
     >;
@@ -89,7 +93,10 @@ pub mod pallet {
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>, // IPS data
+        BoundedVec<
+            AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>,
+            <T as Config>::MaxIpsMetadata,
+        >, // IPS data
         Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPS
     );
 
@@ -242,7 +249,9 @@ pub mod pallet {
                     data: data
                         .into_iter()
                         .map(|ipf_id| AnyId::IpfId(ipf_id))
-                        .collect(),
+                        .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
+                        .try_into()
+                        .unwrap(), // TODO: Remove unwrap.
                 };
 
                 IpsStorage::<T>::insert(current_id, info);
@@ -357,7 +366,9 @@ pub mod pallet {
                         .data
                         .into_iter()
                         .chain(assets.clone().into_iter())
-                        .collect(),
+                        .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
+                        .try_into()
+                        .unwrap(), // TODO: Remove unwrap.
                 });
 
                 Self::deposit_event(Event::Appended(
@@ -449,7 +460,9 @@ pub mod pallet {
                     } else {
                         info.metadata.clone()
                     },
-                    data: old_assets,
+                    data: old_assets
+                        .try_into()
+                        .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
                 });
 
                 Self::deposit_event(Event::Removed(

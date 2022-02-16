@@ -45,7 +45,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// The IPF ID type
-        type IpfId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        type IpfId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaxEncodedLen;
         /// The maximum size of an IPF's metadata
         type MaxIpfMetadata: Get<u32>;
     }
