@@ -49,7 +49,8 @@ std = [
   "pallet-contracts/std",
   "pallet-balances/std",
   "ips/std",
-  "ipf/std"
+  "ipf/std",
+  "pallet-contracts-primitives/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
 

@@ -25,7 +25,7 @@ ips = { package = "pallet-ips", path = "../ips", default-features = false }
 
 pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 
-invarch-primitives = { path = "../primitives" }
+invarch-primitives = { path = "../primitives", default-features = false }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
