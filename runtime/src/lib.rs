@@ -37,6 +37,7 @@ use sp_core::{
     // U256,
 };
 use sp_runtime::{
+    app_crypto::UncheckedFrom,
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
@@ -88,7 +89,7 @@ use xcm_executor::{Config, XcmExecutor};
 
 // use fp_rpc::TransactionStatus; TODO
 
-use pallet_contracts::weights::WeightInfo;
+use pallet_contracts::{weights::WeightInfo, AddressGenerator};
 
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
@@ -104,6 +105,8 @@ mod weights;
 pub use pallet_contracts;
 
 // use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
+
+use sp_core::crypto::ByteArray;
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -747,6 +750,8 @@ impl pallet_assets::Config for Runtime {
     type Freezer = ();
     type Extra = ();
     type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+
+    type AssetAccountDeposit = ();
 }
 
 // parameter_types! {
@@ -773,10 +778,6 @@ impl pallet_assets::Config for Runtime {
 // }
 
 parameter_types! {
-    pub ContractDeposit: Balance = deposit(
-        1,
-          <pallet_contracts::Pallet<Runtime>>::contract_info_size(),
-    );
     pub const MaxValueSize: u32 = 16 * 1024;
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
@@ -788,6 +789,18 @@ parameter_types! {
             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
         )) / 5) as u32;
     pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+}
+
+pub struct DeployingAddress;
+
+impl AddressGenerator<Runtime> for DeployingAddress {
+    fn generate_address(
+        deploying_address: &<Runtime as frame_system::Config>::AccountId,
+        _code_hash: &<Runtime as frame_system::Config>::Hash,
+        _salt: &[u8],
+    ) -> <Runtime as frame_system::Config>::AccountId {
+        deploying_address.clone().into()
+    }
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -810,6 +823,10 @@ impl pallet_contracts::Config for Runtime {
     type DeletionWeightLimit = DeletionWeightLimit;
     type Schedule = Schedule;
     type CallStack = [pallet_contracts::Frame<Self>; 31];
+
+    type DepositPerByte = ExistentialDeposit;
+    type DepositPerItem = ExistentialDeposit;
+    type AddressGenerator = DeployingAddress;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -1003,10 +1020,11 @@ impl_runtime_apis! {
             dest: AccountId,
             value: Balance,
             gas_limit: u64,
+            o: Option<Balance>,
             input_data: Vec<u8>,
         ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
             Contracts::bare_call(
-                origin, dest, value, gas_limit, input_data,
+                origin, dest, value, gas_limit, o, input_data,
                 CONTRACTS_DEBUG_OUTPUT
             )
         }
@@ -1015,12 +1033,13 @@ impl_runtime_apis! {
             origin: AccountId,
             endowment: Balance,
             gas_limit: u64,
+            o: Option<Balance>,
             code: pallet_contracts_primitives::Code<Hash>,
             data: Vec<u8>,
             salt: Vec<u8>,
         ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
-            Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt,
+            Contracts::bare_instantiate(origin, endowment, gas_limit, o, code, data, salt,
                 CONTRACTS_DEBUG_OUTPUT
             )
         }
@@ -1030,6 +1049,10 @@ impl_runtime_apis! {
             key: [u8; 32],
         ) -> pallet_contracts_primitives::GetStorageResult {
             Contracts::get_storage(address, key)
+        }
+
+        fn upload_code(origin: AccountId, code: Vec<u8>, o: Option<Balance>) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance> {
+            Contracts::bare_upload_code(origin, code, o)
         }
 
         // fn rent_projection(

@@ -314,7 +314,7 @@ where
             prometheus_registry.as_ref(),
             telemetry.as_ref().map(|t| t.handle()),
             &task_manager,
-            &relay_chain_interface.clone(),
+            relay_chain_interface.clone(),
             transaction_pool,
             network,
             params.keystore_container.sync_keystore(),

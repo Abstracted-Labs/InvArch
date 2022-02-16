@@ -101,8 +101,8 @@ pub fn development_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "UNIT".into());
-    properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 42u32.into());
 
     ChainSpec::from_genesis(
         // Name
@@ -112,6 +112,7 @@ pub fn development_config() -> ChainSpec {
         ChainType::Development,
         move || {
             testnet_genesis(
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // initial collators.
                 vec![
                     (
@@ -161,8 +162,8 @@ pub fn local_testnet_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "UNIT".into());
-    properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 42u32.into());
 
     ChainSpec::from_genesis(
         // Name
@@ -172,6 +173,7 @@ pub fn local_testnet_config() -> ChainSpec {
         ChainType::Local,
         move || {
             testnet_genesis(
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // initial collators.
                 vec![
                     (
@@ -262,13 +264,13 @@ fn testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
+        polkadot_xcm: invarch_runtime::PolkadotXcmConfig {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
         },
-        // sudo: SudoConfig {
-        //     // Assign network admin rights.
-        //     key: root_key,
-        // },
+        sudo: invarch_runtime::SudoConfig {
+            // Assign network admin rights.
+            key: Some(root_key),
+        },
         // evm: EVMConfig {
         //     accounts: {
         //         let mut map = BTreeMap::new();
