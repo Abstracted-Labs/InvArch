@@ -152,6 +152,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     /// The set of open multisig operations.
@@ -497,8 +498,9 @@ impl<T: Config> Pallet<T> {
     ///
     /// NOTE: `who` must be sorted. If it is not, then you'll get the wrong answer.
     pub fn multi_account_id(ips_id: <T as pallet_assets::Config>::AssetId) -> T::AccountId {
-        let entropy = (b"modlpy/utilisuba", ips_id).using_encoded(blake2_256);
-        T::AccountId::decode(&mut &entropy[..]).unwrap_or_default()
+        invarch_primitives::utils::multi_account_id::<T, <T as pallet_assets::Config>::AssetId>(
+            ips_id,
+        )
     }
 
     fn operate(

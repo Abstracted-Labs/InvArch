@@ -40,11 +40,13 @@ pub enum AnyId<IpsId, IpfId> {
 pub mod utils {
     use codec::{Decode, Encode};
     use sp_io::hashing::blake2_256;
+    use sp_runtime::traits::TrailingZeroInput;
 
     pub fn multi_account_id<T: frame_system::Config, IpsId: Encode>(
         ips_id: IpsId,
     ) -> <T as frame_system::Config>::AccountId {
         let entropy = (b"modlpy/utilisuba", ips_id).using_encoded(blake2_256);
-        T::AccountId::decode(&mut &entropy[..]).unwrap() // TODO: Remove unwrap.
+        Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+            .expect("infinite length input; no invalid inputs for type; qed")
     }
 }
