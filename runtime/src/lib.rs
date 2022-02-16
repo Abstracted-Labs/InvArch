@@ -707,8 +707,8 @@ impl ips::Config for Runtime {
     type Event = Event;
     // Currency
     type Currency = Balances;
-    // The IpsData type (Vector of IPTs)
-    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+    // The IpsData type (Vector of IPFs)
+    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
 }
@@ -803,7 +803,6 @@ impl pallet_contracts::Config for Runtime {
     /// change because that would break already deployed contracts. The `Call` structure itself
     /// is not allowed to change the indices of existing pallets, too.
     type CallFilter = frame_support::traits::Nothing;
-    type ContractDeposit = ContractDeposit;
     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
     type ChainExtension = ();
@@ -843,7 +842,7 @@ construct_runtime!(
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 31,
+        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config} = 31,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
@@ -1005,7 +1004,7 @@ impl_runtime_apis! {
             value: Balance,
             gas_limit: u64,
             input_data: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractExecResult {
+        ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
             Contracts::bare_call(
                 origin, dest, value, gas_limit, input_data,
                 CONTRACTS_DEBUG_OUTPUT
@@ -1019,7 +1018,7 @@ impl_runtime_apis! {
             code: pallet_contracts_primitives::Code<Hash>,
             data: Vec<u8>,
             salt: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId>
+        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
             Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt,
                 CONTRACTS_DEBUG_OUTPUT

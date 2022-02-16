@@ -21,10 +21,13 @@ log = { version = "0.4.14", default-features = false }
 scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.132", optional = true, features = ["derive"] }
 smallvec = "1.6.1"
+getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
+#pallet-ips = { path = "../../InvArch-Pallet-Library/ips", default-features = false }
+#pallet-ipf = { path = "../../InvArch-Pallet-Library/ipf", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
@@ -64,6 +67,7 @@ pallet-sudo = { git = "https://github.com/paritytech/substrate", default-feature
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 
 # EVM Dependencies
 # pallet-evm = { git = "https://github.com/InvArch/frontier", branch = "polkadot-v0.9.16", default-features = false }
@@ -89,12 +93,12 @@ cumulus-pallet-session-benchmarking = { git = "https://github.com/paritytech/cum
 
 
 # Polkadot Dependencies
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
-polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.15" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
+polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.16" }
 
 [features]
 aura = []
@@ -115,7 +119,7 @@ std = [
     "sp-consensus-aura/std",
     "sp-core/std",
     "sp-inherents/std",
-    # "sp-io/std",
+   # "sp-io/std",
     "sp-offchain/std",
     "sp-runtime/std",
     "sp-session/std",
