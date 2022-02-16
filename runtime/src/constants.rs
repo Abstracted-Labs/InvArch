@@ -1,5 +1,5 @@
 pub mod currency {
-    use node_primitives::Balance;
+    use crate::Balance;
 
     /// The existential deposit. Set to 1/10 of its parent Relay Chain (v9010).
     pub const EXISTENTIAL_DEPOSIT: Balance = 10 * CENTS;

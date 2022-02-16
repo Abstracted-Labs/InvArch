@@ -25,7 +25,6 @@ use invarch_runtime::{
     AccountId,
     AuraId,
     Signature,
-    SudoConfig,
     EXISTENTIAL_DEPOSIT,
     // EVMConfig,
 };
@@ -45,8 +44,11 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
-/// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
+/// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<invarch_runtime::GenesisConfig, Extensions>;
+
+/// The default XCM version to set in genesis config.
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -64,7 +66,6 @@ pub struct Extensions {
     /// The id of the Parachain.
     pub para_id: u32,
 }
-
 impl Extensions {
     /// Try to get the extension from the given `ChainSpec`.
     pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
@@ -100,8 +101,8 @@ pub fn development_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "UNIT".into());
-    properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 42u32.into());
 
     ChainSpec::from_genesis(
         // Name
@@ -111,7 +112,6 @@ pub fn development_config() -> ChainSpec {
         ChainType::Development,
         move || {
             testnet_genesis(
-                // Sudo account
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // initial collators.
                 vec![
@@ -149,9 +149,10 @@ pub fn development_config() -> ChainSpec {
         None,
         // Properties
         None,
+        None,
         // Extensions
         Extensions {
-            relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+            relay_chain: "rococo-local".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
         },
     )
@@ -161,8 +162,8 @@ pub fn local_testnet_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "UNIT".into());
-    properties.insert("tokenDecimals".into(), 12.into());
-    properties.insert("ss58Format".into(), 42.into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 42u32.into());
 
     ChainSpec::from_genesis(
         // Name
@@ -172,7 +173,6 @@ pub fn local_testnet_config() -> ChainSpec {
         ChainType::Local,
         move || {
             testnet_genesis(
-                // Sudo account
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 // initial collators.
                 vec![
@@ -209,6 +209,7 @@ pub fn local_testnet_config() -> ChainSpec {
         // Protocol ID
         None,
         // Properties
+        None,
         None,
         // Extensions
         Extensions {
@@ -263,9 +264,12 @@ fn testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        sudo: SudoConfig {
+        polkadot_xcm: invarch_runtime::PolkadotXcmConfig {
+            safe_xcm_version: Some(SAFE_XCM_VERSION),
+        },
+        sudo: invarch_runtime::SudoConfig {
             // Assign network admin rights.
-            key: root_key,
+            key: Some(root_key),
         },
         // evm: EVMConfig {
         //     accounts: {

@@ -37,6 +37,7 @@ use sp_core::{
     // U256,
 };
 use sp_runtime::{
+    app_crypto::UncheckedFrom,
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
@@ -88,7 +89,7 @@ use xcm_executor::{Config, XcmExecutor};
 
 // use fp_rpc::TransactionStatus; TODO
 
-use pallet_contracts::weights::WeightInfo;
+use pallet_contracts::{weights::WeightInfo, AddressGenerator};
 
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
@@ -104,6 +105,8 @@ mod weights;
 pub use pallet_contracts;
 
 // use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
+
+use sp_core::crypto::ByteArray;
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -157,6 +160,7 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -244,6 +248,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
+    state_version: 1,
 };
 
 /// This determines the average expected block time that we are targeting.
@@ -393,6 +398,7 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
     /// The set code logic, just the default since we're not a parachain.
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -458,7 +464,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
     type Event = Event;
-    type OnValidationData = ();
+    type OnSystemEvent = ();
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type DmpMessageHandler = DmpQueue;
     type ReservedDmpWeight = ReservedDmpWeight;
@@ -611,6 +617,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type ChannelInfo = ParachainSystem;
     type VersionWrapper = ();
+    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -703,8 +710,8 @@ impl ips::Config for Runtime {
     type Event = Event;
     // Currency
     type Currency = Balances;
-    // The IpsData type (Vector of IPTs)
-    type IpsData = Vec<<Runtime as ipt::Config>::IptId>;
+    // The IpsData type (Vector of IPFs)
+    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
 }
@@ -743,6 +750,8 @@ impl pallet_assets::Config for Runtime {
     type Freezer = ();
     type Extra = ();
     type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+
+    type AssetAccountDeposit = ();
 }
 
 // parameter_types! {
@@ -769,10 +778,6 @@ impl pallet_assets::Config for Runtime {
 // }
 
 parameter_types! {
-    pub ContractDeposit: Balance = deposit(
-        1,
-          <pallet_contracts::Pallet<Runtime>>::contract_info_size(),
-    );
     pub const MaxValueSize: u32 = 16 * 1024;
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
@@ -784,6 +789,18 @@ parameter_types! {
             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
         )) / 5) as u32;
     pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+}
+
+pub struct DeployingAddress;
+
+impl AddressGenerator<Runtime> for DeployingAddress {
+    fn generate_address(
+        deploying_address: &<Runtime as frame_system::Config>::AccountId,
+        _code_hash: &<Runtime as frame_system::Config>::Hash,
+        _salt: &[u8],
+    ) -> <Runtime as frame_system::Config>::AccountId {
+        deploying_address.clone().into()
+    }
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -799,7 +816,6 @@ impl pallet_contracts::Config for Runtime {
     /// change because that would break already deployed contracts. The `Call` structure itself
     /// is not allowed to change the indices of existing pallets, too.
     type CallFilter = frame_support::traits::Nothing;
-    type ContractDeposit = ContractDeposit;
     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
     type ChainExtension = ();
@@ -807,6 +823,10 @@ impl pallet_contracts::Config for Runtime {
     type DeletionWeightLimit = DeletionWeightLimit;
     type Schedule = Schedule;
     type CallStack = [pallet_contracts::Frame<Self>; 31];
+
+    type DepositPerByte = ExistentialDeposit;
+    type DepositPerItem = ExistentialDeposit;
+    type AddressGenerator = DeployingAddress;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -839,7 +859,7 @@ construct_runtime!(
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 31,
+        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config} = 31,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
@@ -856,6 +876,21 @@ construct_runtime!(
 
     }
 );
+
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+    define_benchmarks!(
+        [frame_system, SystemBench::<Runtime>]
+        [pallet_balances, Balances]
+        [pallet_session, SessionBench::<Runtime>]
+        [pallet_timestamp, Timestamp]
+        [pallet_collator_selection, CollatorSelection]
+    );
+}
 
 impl_runtime_apis! {
     impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
@@ -959,8 +994,21 @@ impl_runtime_apis! {
     }
 
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-        fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-            ParachainSystem::collect_collation_info()
+        fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
+            ParachainSystem::collect_collation_info(header)
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (Weight, Weight) {
+            log::info!("try-runtime::on_runtime_upgrade parachain-template.");
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> Weight {
+            Executive::execute_block_no_check(block)
         }
     }
 
@@ -972,10 +1020,11 @@ impl_runtime_apis! {
             dest: AccountId,
             value: Balance,
             gas_limit: u64,
+            o: Option<Balance>,
             input_data: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractExecResult {
+        ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
             Contracts::bare_call(
-                origin, dest, value, gas_limit, input_data,
+                origin, dest, value, gas_limit, o, input_data,
                 CONTRACTS_DEBUG_OUTPUT
             )
         }
@@ -984,12 +1033,13 @@ impl_runtime_apis! {
             origin: AccountId,
             endowment: Balance,
             gas_limit: u64,
+            o: Option<Balance>,
             code: pallet_contracts_primitives::Code<Hash>,
             data: Vec<u8>,
             salt: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId>
+        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
-            Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt,
+            Contracts::bare_instantiate(origin, endowment, gas_limit, o, code, data, salt,
                 CONTRACTS_DEBUG_OUTPUT
             )
         }
@@ -999,6 +1049,10 @@ impl_runtime_apis! {
             key: [u8; 32],
         ) -> pallet_contracts_primitives::GetStorageResult {
             Contracts::get_storage(address, key)
+        }
+
+        fn upload_code(origin: AccountId, code: Vec<u8>, o: Option<Balance>) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance> {
+            Contracts::bare_upload_code(origin, code, o)
         }
 
         // fn rent_projection(
@@ -1014,19 +1068,14 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_benchmarking::{Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
             let mut list = Vec::<BenchmarkList>::new();
 
-            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-            list_benchmark!(list, extra, pallet_balances, Balances);
-            list_benchmark!(list, extra, pallet_timestamp, Timestamp);
-            list_benchmark!(list, extra, pallet_collator_selection, CollatorSelection);
-            list_benchmark!(list, extra, pallet_ipt, Ipt);
-            list_benchmark!(list, extra, pallet_ips, Ips);
+            list_benchmarks!(list, extra);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1036,7 +1085,7 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
             use frame_system_benchmarking::Pallet as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
@@ -1060,12 +1109,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
-            add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_collator_selection, CollatorSelection);
-            add_benchmark!(params, batches, pallet_session, Session);
+            add_benchmarks!(params, batches);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
