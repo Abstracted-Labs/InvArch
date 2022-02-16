@@ -142,10 +142,6 @@ pub mod pallet {
         #[pallet::constant]
         type DepositFactor: Get<BalanceOf<Self>>;
 
-        /// The maximum amount of signatories allowed in the multisig.
-        #[pallet::constant]
-        type MaxSignatories: Get<u16>;
-
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
