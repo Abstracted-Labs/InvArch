@@ -26,8 +26,12 @@ getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 # Local dependencies
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
+pallet-smartip = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
+pallet-multisig = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 #pallet-ips = { path = "../../InvArch-Pallet-Library/ips", default-features = false }
 #pallet-ipf = { path = "../../InvArch-Pallet-Library/ipf", default-features = false }
+#pallet-multisig = { path = "../../InvArch-Pallet-Library/multisig", default-features = false }
+#pallet-smartip = { path = "../../InvArch-Pallet-Library/smartip", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.16" }
@@ -166,6 +170,11 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+
+  "pallet-ipf/std",
+  "pallet-ips/std",
+  "pallet-smartip/std",
+  "pallet-multisig/std",
 ]
 
 runtime-benchmarks = [

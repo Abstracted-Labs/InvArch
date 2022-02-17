@@ -831,6 +831,21 @@ impl pallet_contracts::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
+impl pallet_smartip::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type ExistentialDeposit = ExistentialDeposit;
+}
+
+impl pallet_multisig::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = ExistentialDeposit; // TODO: Use real value.
+    type DepositFactor = ExistentialDeposit; // TODO: Use real value.
+    type WeightInfo = pallet_multisig::weights::SubstrateWeight<Self>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -873,7 +888,8 @@ construct_runtime!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 50,
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
-
+        Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 52,
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
     }
 );
 
