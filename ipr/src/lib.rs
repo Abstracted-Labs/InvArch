@@ -161,9 +161,27 @@ pub mod pallet {
 			})
 		}
 
-		// TODO:
 		/// Delete IP (Intellectual Property) Replica (IPR)
 		#[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-		pub fn delete_ipr() -> DispatchResultWithPostInfo {}
+		pub fn delete_ipr(
+            owner: OriginFor<T>, 
+            ipr_id: T::IprId
+        ) -> DispatchResultWithPostInfo {
+            IprStorage::<T>::try_mutate_exists(ipr_id, |ipr_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+
+                let info = ipr_info.take().ok_or(Error::<T>::IprNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+                IprByOwner::<T>::remove(owner.clone(), ipr_id);
+
+                Self::deposit_event(Event::Deleted(owner, ipr_id))
+
+                Ok(())
+            })
+        }
 	}
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }
