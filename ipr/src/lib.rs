@@ -1,9 +1,22 @@
+//! # Pallet IPR
+//! Intellectual Property Replicas
+//!
+//! - [`Config`]
+//! - [`Call`]
+//! - [`Pallet`]
+//!
+//! ## Overview
+//! This pallet demonstrates how to produce a noted, tracked, & authorized copy of a IP File or a NFT featuring a standard that is interoperable & composable with the INV4 Protocol.
+//!
+//! ### Pallet Functions
+//!
+//! - `create` - Create a new IP Replica
+//! - `delete` - Delete an IP Replica
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
+use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 
 // #[cfg(test)]
 // mod mock;
@@ -16,87 +29,159 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
+	pub trait Config: frame_system::Config + ipf::Config {
+		/// The IPR Pallet Events
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The IPR ID type
+        type IprId: Parameter 
+		+ Member 
+		+ AtLeast32BitUnsigned 
+		+ Default 
+		+ Copy;
+
+		/// The maximum size of an IPS's metadata
+        type MaxIprMetadata: Get<u32>;
+
+		#[pallet::constant]
+        type ExistentialDeposit: Get<<Self as pallet_assets::Config>::Balance>;
 	}
+
+	pub type BalanceOf<T> =
+        <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    pub type IprIndexOf<T> = <T as Config>::IprId;
+
+    pub type IprMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxIprMetadata>;
+
+    pub type IprInfoOf<T> = IprInfo<
+        <T as frame_system::Config>::AccountId,
+        Vec<<T as ipf::Config>::IpfId>,
+        IprMetadataOf<T>,
+    >;
+
+	pub type GenesisIpr<T> = (
+        <T as frame_system::Config>::AccountId, // IPR owner
+        Vec<u8>,                                // IPR metadata
+        Vec<<T as ipf::Config>::IpfId>,         // IPR data
+        Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPR
+    );
+
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/v3/runtime/storage
+	/// Next available IPR ID.
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+	#[pallet::getter(fn next_ipr_id)]
+	pub type NextIprId<T: Config> = StorageValue<_, T::IprId, ValueQuery>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/v3/runtime/events-and-errors
+	/// Store IPR info
+    ///
+    /// Return `None` if IPR info not set of removed
+    #[pallet::storage]
+    #[pallet::getter(fn ipr_storage)]
+    pub type IprStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IprId, IprInfoOf<T>>;
+
+	/// IPR existence check by owner and IPR ID
+    #[pallet::storage]
+    #[pallet::getter(fn ipr_by_owner)]
+    pub type IprByOwner<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId, // owner
+        Blake2_128Concat,
+        T::IprId,
+        (),
+    >;
+
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
-	}
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T: Config> {
+        Created(T::AccountId, T::IprId),
+        Deleted(T::AccountId, T::IprId),
+    }
 
-	// Errors inform users that something went wrong.
+	/// Errors for IPR pallet
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
+		/// No available IPR ID
+        NoAvailableIprId,
+        /// No available IPF ID
+        NoAvailableIpfId,
+        /// IPF (IprId, IpfId) not found
+        IpfNotFound,
+        /// IPR not found
+        IprNotFound, 
+        /// Failed because the Maximum amount of metadata was exceeded
+        MaxMetadataExceeded,
+        /// Can not destroy IPR
+        CannotDestroyIpr,
 	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/v3/runtime/origins
-			let who = ensure_signed(origin)?;
+		/// Create IP (Intellectual Property) Replica (IPR)
+		#[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+		pub fn create_ipr(
+			owner: OriginFor<T>,
+            metadata: Vec<u8>,
+            data: Vec<<T as ipf::Config>::IpfId>,
+		) -> DispatchResultWithPostInfo {
+			NextIprId::<T>::try_mutate(|ipr_id| -> DispatchResultWithPostInfo {
+				let creator = ensure_signed(owner.clone())?;
 
-			// Update storage.
-			<Something<T>>::put(something);
+				let bounded_metadata: BoundedVec<u8, T::MaxIprMetadata> = metadata
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+				
+					let current_id = *ipr_id;
+					*ipr_id = ipr_id
+                    .checked_add(&One::one())
+                    .ok_or(Error::<T>::NoAvailableIprId)?;
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored(something, who));
-			// Return a successful DispatchResultWithPostInfo
-			Ok(())
+				let info = IprInfo {
+                    owner: ipr_account.clone(),
+                    metadata: bounded_metadata,
+                    data,
+                };
+
+				IprStorage::<T>::insert(current_id, info);
+                IprByOwner::<T>::insert(ipr_account.clone(), current_id, ());
+
+				Self::deposit_event(Event::Created(ipr_account, current_id));
+
+				Ok(().into())
+			})
 		}
 
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+		/// Delete IP (Intellectual Property) Replica (IPR)
+		#[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+		pub fn delete_ipr(
+            owner: OriginFor<T>, 
+            ipr_id: T::IprId
+        ) -> DispatchResultWithPostInfo {
+            IprStorage::<T>::try_mutate_exists(ipr_id, |ipr_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => Err(Error::<T>::NoneValue)?,
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
-			}
-		}
+                let info = ipr_info.take().ok_or(Error::<T>::IprNotFound)?;
+                ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+                IprByOwner::<T>::remove(owner.clone(), ipr_id);
+
+                Self::deposit_event(Event::Deleted(owner, ipr_id))
+
+                Ok(())
+            })
+        }
 	}
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }
