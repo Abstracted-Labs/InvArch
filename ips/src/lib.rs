@@ -46,10 +46,15 @@ pub mod pallet {
     use scale_info::prelude::fmt::Display;
     use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
+    use sp_std::vec;
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + ipf::Config + pallet_assets::Config + pallet_balances::Config
+        frame_system::Config
+        + ipf::Config
+        + ipt::Config
+        + pallet_assets::Config
+        + pallet_balances::Config
     {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -60,8 +65,8 @@ pub mod pallet {
             + Default
             + Copy
             + Display
-            + IsType<<Self as pallet_assets::Config>::AssetId>
-            + MaxEncodedLen;
+            + MaxEncodedLen
+            + IsType<<Self as ipt::Config>::IptId>;
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>;
         /// Currency
@@ -207,41 +212,14 @@ pub mod pallet {
                     <T as pallet_balances::Config>::ExistentialDeposit::get(),
                 )?;
 
-                pallet_assets::Pallet::<T>::create(
-                    owner.clone(),
+                ipt::Pallet::<T>::create(
+                    ips_account.clone(),
                     current_id.into(),
-                    T::Lookup::unlookup(creator.clone()),
-                    <T as pallet::Config>::ExistentialDeposit::get(),
-                )?;
-
-                pallet_assets::Pallet::<T>::set_metadata(
-                    owner.clone(),
-                    current_id.into(),
-                    format!("IPT {}", current_id.clone()).as_bytes().to_vec(),
-                    format!("$IPT_{}", current_id.clone()).as_bytes().to_vec(),
-                    18,
-                )?;
-
-                pallet_assets::Pallet::<T>::mint(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(creator),
-                    <T as pallet::Config>::ExistentialDeposit::get(),
-                )?;
-
-                pallet_assets::Pallet::<T>::set_team(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(ips_account.clone()),
-                    T::Lookup::unlookup(ips_account.clone()),
-                    T::Lookup::unlookup(ips_account.clone()),
-                )?;
-
-                pallet_assets::Pallet::<T>::transfer_ownership(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(ips_account.clone()),
-                )?;
+                    vec![(
+                        creator.clone(),
+                        <T as ipt::Config>::ExistentialDeposit::get(),
+                    )],
+                );
 
                 let info = IpsInfo {
                     parentage: Parentage::Parent(ips_account.clone()),
@@ -287,6 +265,8 @@ pub mod pallet {
                 }
 
                 IpsByOwner::<T>::remove(owner.clone(), ips_id);
+
+                // TODO: Destroy IPT.
 
                 Self::deposit_event(Event::Destroyed(owner, ips_id));
 
@@ -341,17 +321,19 @@ pub mod pallet {
                     Error::<T>::NoPermission
                 );
 
-                assets.clone().into_iter().for_each(|any_id| {
+                for any_id in assets.clone().into_iter() {
                     if let AnyId::IpsId(ips_id) = any_id {
-                        IpsStorage::<T>::mutate_exists(ips_id, |ips| {
-                            // TODO: Write custom pallet_assets where it's possible to read the balances of every asset owner from within another pallet.
-                            // For now we just freeze the asset.
-                            pallet_assets::Pallet::<T>::freeze_asset(owner.clone(), ips_id.into())
-                                .unwrap(); // TODO: Remove unwrap.
+                        IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
+                                ipt::Pallet::<T>::internal_mint(account, ips_id.into(), amount)?
+                            }
+
                             ips.clone().unwrap().parentage = Parentage::Child(parent_id);
-                        });
+
+                            Ok(().into())
+                        })?;
                     }
-                });
+                }
 
                 *ips_info = Some(IpsInfo {
                     parentage: info.parentage,
@@ -435,19 +417,20 @@ pub mod pallet {
 
                 let mut old_assets = info.data.clone();
 
-                assets.clone().into_iter().for_each(|any_id| {
+                for any_id in assets.clone().into_iter() {
                     if let AnyId::IpsId(ips_id) = any_id {
-                        IpsStorage::<T>::mutate_exists(ips_id, |ips| {
-                            // TODO: Write custom pallet_assets where it's possible to read the balances of every asset owner from within another pallet.
-                            // For now we just freeze the asset.
-                            pallet_assets::Pallet::<T>::thaw_asset(owner.clone(), ips_id.into())
-                                .unwrap(); // TODO: Remove unwrap.
+                        IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
+                                ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?
+                            }
 
                             ips.clone().unwrap().parentage =
                                 Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id));
-                        });
+
+                            Ok(().into())
+                        })?;
                     }
-                });
+                }
 
                 old_assets.retain(|x| !assets.clone().contains(x));
 
