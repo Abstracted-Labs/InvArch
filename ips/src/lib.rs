@@ -44,7 +44,6 @@ pub mod pallet {
     use primitives::utils::multi_account_id;
     use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
-    use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
     use sp_std::vec;
 
