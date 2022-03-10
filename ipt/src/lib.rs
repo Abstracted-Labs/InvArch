@@ -209,7 +209,7 @@ pub mod pallet {
                             .ok_or(Error::<T>::NotEnoughAmount)?,
                     );
 
-                    let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
+                    let old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
                     old_ipt
                         .supply
                         .checked_sub(&amount)
