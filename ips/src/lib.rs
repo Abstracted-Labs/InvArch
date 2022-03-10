@@ -415,7 +415,7 @@ pub mod pallet {
                             ips.clone().unwrap().parentage =
                                 Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id));
 
-                            Ok(().into())
+                            Ok(())
                         })?;
                     }
                 }
