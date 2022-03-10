@@ -214,10 +214,7 @@ pub mod pallet {
                 ipt::Pallet::<T>::create(
                     ips_account.clone(),
                     current_id.into(),
-                    vec![(
-                        creator.clone(),
-                        <T as ipt::Config>::ExistentialDeposit::get(),
-                    )],
+                    vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                 );
 
                 let info = IpsInfo {
