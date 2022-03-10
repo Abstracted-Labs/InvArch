@@ -323,7 +323,7 @@ pub mod pallet {
 
                             ips.clone().unwrap().parentage = Parentage::Child(parent_id);
 
-                            Ok(().into())
+                            Ok(())
                         })?;
                     }
                 }
