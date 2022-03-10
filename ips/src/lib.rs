@@ -222,7 +222,7 @@ pub mod pallet {
                     metadata: bounded_metadata,
                     data: data
                         .into_iter()
-                        .map(|ipf_id| AnyId::IpfId(ipf_id))
+                        .map(AnyId::IpfId)
                         .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
                         .try_into()
                         .unwrap(), // TODO: Remove unwrap.
