@@ -145,7 +145,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::Minted(ips_id, owner, amount));
 
-            Ok(().into())
+            Ok(())
         }
     }
 
