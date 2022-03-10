@@ -298,10 +298,7 @@ pub mod pallet {
                     }
                 };
 
-                ensure!(
-                    ips_account.clone() == caller_account,
-                    Error::<T>::NoPermission
-                );
+                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 ensure!(
                     !assets.clone().into_iter().any(|id| {
