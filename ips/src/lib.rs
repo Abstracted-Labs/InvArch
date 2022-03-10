@@ -351,8 +351,6 @@ pub mod pallet {
                     ips_id,
                     if let Some(metadata) = new_metadata {
                         metadata
-                            .try_into()
-                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
                     } else {
                         info.metadata.to_vec()
                     },
@@ -436,9 +434,7 @@ pub mod pallet {
                     } else {
                         info.metadata.clone()
                     },
-                    data: old_assets
-                        .try_into()
-                        .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+                    data: old_assets,
                 });
 
                 Self::deposit_event(Event::Removed(
@@ -446,8 +442,6 @@ pub mod pallet {
                     ips_id,
                     if let Some(metadata) = new_metadata {
                         metadata
-                            .try_into()
-                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
                     } else {
                         info.metadata.to_vec()
                     },
