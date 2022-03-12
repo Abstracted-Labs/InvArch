@@ -21,7 +21,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency as FSCurrency, Get},
+    traits::{Currency as FSCurrency, Get, WrapperKeepOpaque},
     Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -39,13 +39,18 @@ pub struct AssetDetails<Balance, AccountId> {
     deposit: Balance,
 }
 
+type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
+
 #[frame_support::pallet]
 pub mod pallet {
     use core::iter::Sum;
+    use sp_std::convert::TryInto;
 
     use super::*;
+    use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
     use scale_info::prelude::fmt::Display;
-    use sp_runtime::traits::CheckedSub;
+    use sp_core::blake2_256;
+    use sp_runtime::traits::{CheckedDiv, CheckedSub};
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -73,6 +78,15 @@ pub mod pallet {
             + Display
             + MaxEncodedLen;
 
+        /// The overarching call type.
+        type Call: Parameter
+            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + GetDispatchInfo
+            + From<frame_system::Call<Self>>;
+
+        /// The maximum numbers of caller accounts on a single Multisig call
+        type MaxCallers: Get<u32>;
+
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
     }
@@ -82,6 +96,16 @@ pub mod pallet {
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
+
+    #[pallet::storage]
+    #[pallet::getter(fn multisig)]
+    /// Details of a multisig call.
+    pub type Multisig<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        (T::IptId, [u8; 32]),
+        BoundedVec<T::AccountId, T::MaxCallers>,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn ipt)]
@@ -117,6 +141,8 @@ pub mod pallet {
         IptDoesntExist,
         NoPermission,
         NotEnoughAmount,
+        TooManySignatories,
+        UnexistentBalance,
     }
 
     /// Dispatch functions
@@ -139,6 +165,41 @@ pub mod pallet {
 
             Self::deposit_event(Event::Minted(ips_id, owner, amount));
 
+            Ok(())
+        }
+
+        #[pallet::weight(100_000)]
+        pub fn as_multi(
+            owner: OriginFor<T>,
+            ips_id: T::IptId,
+            call: OpaqueCall<T>,
+        ) -> DispatchResult {
+            let owner = ensure_signed(owner)?;
+            let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+
+            ensure!(owner == ipt.owner, Error::<T>::NoPermission);
+
+            let total_per_2 = ipt.supply / 2u32.into();
+
+            let owner_balance =
+                Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::UnexistentBalance)?;
+
+            if owner_balance > total_per_2 {}
+
+            let bounded_owners: BoundedVec<T::AccountId, T::MaxCallers> = vec![owner]
+                .try_into()
+                .map_err(|_| Error::<T>::TooManySignatories)?;
+
+            Multisig::<T>::insert((ips_id, blake2_256(call.encoded())), bounded_owners);
+            Ok(())
+        }
+
+        #[pallet::weight(100_000)]
+        pub fn approve_as_multi(
+            _owner: OriginFor<T>,
+            _ips_id: T::IptId,
+            _call_hash: [u8; 32],
+        ) -> DispatchResult {
             Ok(())
         }
     }
