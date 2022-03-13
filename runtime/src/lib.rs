@@ -699,12 +699,18 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
+parameter_types! {
+    pub const MaxCallers: u32 = 10000;
+}
+
 impl pallet_ipt::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Balance = Balance;
     type IptId = CommonId;
     type ExistentialDeposit = ExistentialDeposit;
+    type Call = Call;
+    type MaxCallers = MaxCallers;
 }
 
 parameter_types! {
@@ -725,6 +731,8 @@ impl ips::Config for Runtime {
     type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
+
+    type Balance = Balance;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -848,15 +856,6 @@ impl pallet_smartip::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
 }
 
-impl pallet_multisig::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-    type Currency = Balances;
-    type DepositBase = ExistentialDeposit; // TODO: Use real value.
-    type DepositFactor = ExistentialDeposit; // TODO: Use real value.
-    type WeightInfo = pallet_multisig::weights::SubstrateWeight<Self>;
-}
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -901,7 +900,6 @@ construct_runtime!(
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
         Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 52,
         Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 53,
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 54,
     }
 );
 

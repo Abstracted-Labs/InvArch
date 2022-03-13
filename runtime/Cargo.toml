@@ -24,11 +24,10 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
-pallet-ips = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
-pallet-ipt = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
-pallet-smartip = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
-pallet-multisig = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
+pallet-ips = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
+pallet-ipt = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
+pallet-smartip = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "development" }
 #pallet-ips = { path = "../../InvArch-Pallet-Library/ips", default-features = false }
 #pallet-ipf = { path = "../../InvArch-Pallet-Library/ipf", default-features = false }
 #pallet-multisig = { path = "../../InvArch-Pallet-Library/multisig", default-features = false }
@@ -174,8 +173,8 @@ std = [
 
   "pallet-ipf/std",
   "pallet-ips/std",
+  "pallet-ipt/std",
   "pallet-smartip/std",
-  "pallet-multisig/std",
 ]
 
 runtime-benchmarks = [

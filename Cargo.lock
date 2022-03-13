@@ -2974,7 +2974,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3020,7 +3019,6 @@ dependencies = [
  "pallet-ipf",
  "pallet-ips",
  "pallet-ipt",
- "pallet-multisig 4.0.0-dev (git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip)",
  "pallet-randomness-collective-flip",
  "pallet-session",
  "pallet-smartip",
@@ -3393,7 +3391,7 @@ dependencies = [
  "pallet-indices",
  "pallet-membership",
  "pallet-mmr-primitives",
- "pallet-multisig 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "pallet-multisig",
  "pallet-nicks",
  "pallet-offences",
  "pallet-preimage",
@@ -4753,7 +4751,6 @@ name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16#19162e43be45817b44c7d48e50d03f074f60fbf4"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -5187,7 +5184,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5204,7 +5200,6 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5225,7 +5220,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5233,6 +5227,7 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5305,23 +5300,6 @@ dependencies = [
  "sp-blockchain",
  "sp-core",
  "sp-runtime",
-]
-
-[[package]]
-name = "pallet-multisig"
-version = "4.0.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "pallet-assets",
- "pallet-ips",
- "parity-scale-codec",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -5467,7 +5445,6 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=gabriel-composability+subip#b7ac45a0a8452ad2999e9258b98b4926e2812ed9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6861,7 +6838,7 @@ dependencies = [
  "pallet-indices",
  "pallet-membership",
  "pallet-mmr-primitives",
- "pallet-multisig 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "pallet-multisig",
  "pallet-nicks",
  "pallet-offences",
  "pallet-preimage",
