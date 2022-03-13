@@ -3,7 +3,7 @@
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency as FSCurrency, Get},
+    traits::{Currency as FSCurrency, Get, WrapperKeepOpaque},
     Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -20,6 +20,8 @@ pub struct AssetDetails<Balance, AccountId> {
     /// The balance deposited for this asset. This pays for the data stored here.
     deposit: Balance,
 }
+
+type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct MultisigOperation<AccountId, Signers, Call> {
@@ -71,12 +73,11 @@ pub mod pallet {
         type Call: Parameter
             + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
             + GetDispatchInfo
-            + From<frame_system::Call<Self>>
-            + MaxEncodedLen;
+            + From<frame_system::Call<Self>>;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
-        type MaxCallers: Get<u32> + MaxEncodedLen;
+        type MaxCallers: Get<u32>;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
@@ -86,6 +87,7 @@ pub mod pallet {
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -97,7 +99,7 @@ pub mod pallet {
     pub type MultisigOperationOf<T> = MultisigOperation<
         <T as frame_system::Config>::AccountId,
         BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxCallers>,
-        <T as pallet::Config>::Call,
+        OpaqueCall<T>,
     >;
 
     #[pallet::storage]
@@ -131,15 +133,15 @@ pub mod pallet {
             T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
-            <T as pallet::Config>::Call,
+            OpaqueCall<T>,
         ),
         MultisigVoteAdded(
             T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
-            <T as pallet::Config>::Call,
+            OpaqueCall<T>,
         ),
-        MultisigExecuted(T::AccountId, <T as pallet::Config>::Call),
+        MultisigExecuted(T::AccountId, OpaqueCall<T>),
     }
 
     /// Errors for IPF pallet
@@ -152,6 +154,7 @@ pub mod pallet {
         UnexistentBalance,
         MultisigOperationUninitialized,
         MaxMetadataExceeded,
+        CouldntDecodeCall,
     }
 
     /// Dispatch functions
@@ -202,7 +205,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             include_caller: bool,
             ips_id: T::IptId,
-            call: <T as pallet::Config>::Call,
+            call: OpaqueCall<T>,
         ) -> DispatchResultWithPostInfo {
             let owner = ensure_signed(owner)?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
@@ -213,17 +216,20 @@ pub mod pallet {
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
             if owner_balance > total_per_2 {
-                call.clone().dispatch(
-                    RawOrigin::Signed(multi_account_id::<T, T::IptId>(
-                        ips_id,
-                        if include_caller {
-                            Some(owner.clone())
-                        } else {
-                            None
-                        },
-                    ))
-                    .into(),
-                )?;
+                call.clone()
+                    .try_decode()
+                    .ok_or(Error::<T>::CouldntDecodeCall)?
+                    .dispatch(
+                        RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            if include_caller {
+                                Some(owner.clone())
+                            } else {
+                                None
+                            },
+                        ))
+                        .into(),
+                    )?;
 
                 Self::deposit_event(Event::MultisigExecuted(
                     multi_account_id::<T, T::IptId>(
@@ -293,13 +299,18 @@ pub mod pallet {
                 let total_per_2 = ipt.supply / 2u32.into();
 
                 if (total_in_operation + voter_balance) > total_per_2 {
-                    old_data.actual_call.clone().dispatch(
-                        RawOrigin::Signed(multi_account_id::<T, T::IptId>(
-                            ips_id,
-                            old_data.include_original_caller.clone(),
-                        ))
-                        .into(),
-                    )?;
+                    old_data
+                        .actual_call
+                        .clone()
+                        .try_decode()
+                        .ok_or(Error::<T>::CouldntDecodeCall)?
+                        .dispatch(
+                            RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                                ips_id,
+                                old_data.include_original_caller.clone(),
+                            ))
+                            .into(),
+                        )?;
 
                     Self::deposit_event(Event::MultisigExecuted(
                         multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
