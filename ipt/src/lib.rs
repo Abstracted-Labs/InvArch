@@ -216,8 +216,7 @@ pub mod pallet {
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
             if owner_balance > total_per_2 {
-                call.clone()
-                    .try_decode()
+                call.try_decode()
                     .ok_or(Error::<T>::CouldntDecodeCall)?
                     .dispatch(
                         RawOrigin::Signed(multi_account_id::<T, T::IptId>(
@@ -301,7 +300,6 @@ pub mod pallet {
                 if (total_in_operation + voter_balance) > total_per_2 {
                     old_data
                         .actual_call
-                        .clone()
                         .try_decode()
                         .ok_or(Error::<T>::CouldntDecodeCall)?
                         .dispatch(
