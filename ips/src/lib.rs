@@ -40,6 +40,8 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use std::iter::Sum;
+
     use super::*;
     use primitives::utils::multi_account_id;
     use primitives::{AnyId, Parentage};
@@ -49,11 +51,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config
-        + ipf::Config
-        + ipt::Config
-        + pallet_assets::Config
-        + pallet_balances::Config
+        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config
     {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -73,8 +71,18 @@ pub mod pallet {
 
         type IpsData: IntoIterator + Clone;
 
+        type Balance: Member
+            + Parameter
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + MaxEncodedLen
+            + TypeInfo
+            + Sum<<Self as pallet::Config>::Balance>;
+
         #[pallet::constant]
-        type ExistentialDeposit: Get<<Self as pallet_assets::Config>::Balance>;
+        type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
     }
 
     pub type BalanceOf<T> =
@@ -202,8 +210,9 @@ pub mod pallet {
                     Error::<T>::NoPermission
                 );
 
-                let ips_account =
-                    primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(current_id);
+                let ips_account = primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(
+                    current_id, None,
+                );
 
                 pallet_balances::Pallet::<T>::transfer_keep_alive(
                     owner.clone(),
@@ -300,19 +309,40 @@ pub mod pallet {
 
                 ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
-                ensure!(
-                    !assets.clone().into_iter().any(|id| {
-                        match id {
-                            AnyId::IpsId(ips_id) => {
-                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
-                            }
-                            AnyId::IpfId(ipf_id) => {
-                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
+                for asset in assets.clone() {
+                    match asset {
+                        AnyId::IpsId(ips_id) => {
+                            if let Parentage::Parent(acc) = IpsStorage::<T>::get(ips_id)
+                                .ok_or(Error::<T>::IpsNotFound)?
+                                .parentage
+                            {
+                                ensure!(
+                                    caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
+                                        || caller_account
+                                            == multi_account_id::<T, T::IpsId>(ips_id, Some(acc)),
+                                    Error::<T>::NoPermission
+                                );
+                            } else {
+                                todo!()
                             }
                         }
-                    }),
-                    Error::<T>::NoPermission
-                );
+                        AnyId::IpfId(ipf_id) => {
+                            ensure!(
+                                caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
+                                    || caller_account
+                                        == multi_account_id::<T, T::IpsId>(
+                                            ips_id,
+                                            Some(
+                                                ipf::IpfStorage::<T>::get(ipf_id)
+                                                    .ok_or(Error::<T>::IpfNotFound)?
+                                                    .owner
+                                            )
+                                        ),
+                                Error::<T>::NoPermission
+                            );
+                        }
+                    }
+                }
 
                 for any_id in assets.clone().into_iter() {
                     if let AnyId::IpsId(ips_id) = any_id {
@@ -413,7 +443,7 @@ pub mod pallet {
                             }
 
                             ips.clone().unwrap().parentage =
-                                Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id));
+                                Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id, None));
 
                             Ok(())
                         })?;

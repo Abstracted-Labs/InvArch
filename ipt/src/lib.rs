@@ -1,27 +1,9 @@
-//! # Pallet IPS
-//! Intellectual Property Sets
-//!
-//! - [`Config`]
-//! - [`Call`]
-//! - [`Pallet`]
-//!
-//! ## Overview
-//! This pallet demonstrates how to create and manage IP Sets, which are sets of tokenized IP components, or IP Tokens.
-//!
-//! ### Pallet Functions
-//!
-//! - `create` - Create a new IP Set
-//! - `send` - Transfer IP Set owner account address
-//! - `list` - List an IP Set for sale
-//! - `buy` - Buy an IP Set
-//! - `destroy` - Delete an IP Set and all of its contents
-
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 
 use frame_support::{
     pallet_prelude::*,
-    traits::{Currency as FSCurrency, Get, WrapperKeepOpaque},
+    traits::{Currency as FSCurrency, Get},
     Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -39,18 +21,25 @@ pub struct AssetDetails<Balance, AccountId> {
     deposit: Balance,
 }
 
-type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+pub struct MultisigOperation<AccountId, Signers, Call> {
+    signers: Signers,
+    include_original_caller: Option<AccountId>,
+    actual_call: Call,
+}
 
 #[frame_support::pallet]
 pub mod pallet {
     use core::iter::Sum;
+    use frame_system::RawOrigin;
+    use primitives::utils::multi_account_id;
     use sp_std::convert::TryInto;
 
     use super::*;
     use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
     use scale_info::prelude::fmt::Display;
     use sp_core::blake2_256;
-    use sp_runtime::traits::{CheckedDiv, CheckedSub};
+    use sp_runtime::traits::CheckedSub;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -82,10 +71,12 @@ pub mod pallet {
         type Call: Parameter
             + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
             + GetDispatchInfo
-            + From<frame_system::Call<Self>>;
+            + From<frame_system::Call<Self>>
+            + MaxEncodedLen;
 
         /// The maximum numbers of caller accounts on a single Multisig call
-        type MaxCallers: Get<u32>;
+        #[pallet::constant]
+        type MaxCallers: Get<u32> + MaxEncodedLen;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<Self::Balance>;
@@ -100,11 +91,13 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
     /// Details of a multisig call.
-    pub type Multisig<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        (T::IptId, [u8; 32]),
-        BoundedVec<T::AccountId, T::MaxCallers>,
+    pub type Multisig<T: Config> =
+        StorageMap<_, Blake2_128Concat, (T::IptId, [u8; 32]), MultisigOperationOf<T>>;
+
+    pub type MultisigOperationOf<T> = MultisigOperation<
+        <T as frame_system::Config>::AccountId,
+        BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxCallers>,
+        <T as pallet::Config>::Call,
     >;
 
     #[pallet::storage]
@@ -143,6 +136,8 @@ pub mod pallet {
         NotEnoughAmount,
         TooManySignatories,
         UnexistentBalance,
+        MultisigOperationUninitialized,
+        MaxMetadataExceeded,
     }
 
     /// Dispatch functions
@@ -171,36 +166,93 @@ pub mod pallet {
         #[pallet::weight(100_000)]
         pub fn as_multi(
             owner: OriginFor<T>,
+            include_caller: bool,
             ips_id: T::IptId,
-            call: OpaqueCall<T>,
-        ) -> DispatchResult {
+            call: <T as pallet::Config>::Call,
+        ) -> DispatchResultWithPostInfo {
             let owner = ensure_signed(owner)?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
 
-            ensure!(owner == ipt.owner, Error::<T>::NoPermission);
+            //  ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
             let total_per_2 = ipt.supply / 2u32.into();
 
             let owner_balance =
-                Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::UnexistentBalance)?;
+                Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
-            if owner_balance > total_per_2 {}
+            if owner_balance > total_per_2 {
+                call.dispatch(
+                    RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                        ips_id,
+                        if include_caller { Some(owner) } else { None },
+                    ))
+                    .into(),
+                )?;
+            } else {
+                Multisig::<T>::insert(
+                    (ips_id, blake2_256(&call.encode())),
+                    MultisigOperation {
+                        signers: vec![owner.clone()]
+                            .try_into()
+                            .map_err(|_| Error::<T>::TooManySignatories)?,
+                        include_original_caller: if include_caller { Some(owner) } else { None },
+                        actual_call: call,
+                    },
+                );
+            }
 
-            let bounded_owners: BoundedVec<T::AccountId, T::MaxCallers> = vec![owner]
-                .try_into()
-                .map_err(|_| Error::<T>::TooManySignatories)?;
-
-            Multisig::<T>::insert((ips_id, blake2_256(call.encoded())), bounded_owners);
-            Ok(())
+            Ok(().into())
         }
 
         #[pallet::weight(100_000)]
         pub fn approve_as_multi(
-            _owner: OriginFor<T>,
-            _ips_id: T::IptId,
-            _call_hash: [u8; 32],
-        ) -> DispatchResult {
-            Ok(())
+            owner: OriginFor<T>,
+            ips_id: T::IptId,
+            call_hash: [u8; 32],
+        ) -> DispatchResultWithPostInfo {
+            Multisig::<T>::try_mutate_exists((ips_id, call_hash), |data| {
+                let owner = ensure_signed(owner)?;
+
+                let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+
+                let mut old_data = data
+                    .take()
+                    .ok_or(Error::<T>::MultisigOperationUninitialized)?;
+
+                let voter_balance =
+                    Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+
+                let total_in_operation: T::Balance = old_data
+                    .signers
+                    .clone()
+                    .into_iter()
+                    .map(|voter| -> Option<T::Balance> { Balance::<T>::get(ips_id, voter) })
+                    .collect::<Option<Vec<T::Balance>>>()
+                    .ok_or(Error::<T>::NoPermission)?
+                    .into_iter()
+                    .sum();
+
+                let total_per_2 = ipt.supply / 2u32.into();
+
+                if (total_in_operation + voter_balance) > total_per_2 {
+                    old_data.actual_call.dispatch(
+                        RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            old_data.include_original_caller,
+                        ))
+                        .into(),
+                    )?;
+                } else {
+                    old_data.signers = {
+                        let mut v = old_data.signers.to_vec();
+                        v.push(owner);
+                        v.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    };
+                    *data = Some(old_data);
+                }
+
+                Ok(().into())
+            })
         }
     }
 

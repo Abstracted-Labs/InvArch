@@ -5,5 +5,4 @@ members = [
     "ipf",
     "ipt",
     "smartip",
-    "multisig",
 ]
