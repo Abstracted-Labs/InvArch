@@ -6,7 +6,7 @@ use scale_info::TypeInfo;
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parentage<AccountId, IpsId> {
     Parent(AccountId),
-    Child(IpsId),
+    Child(IpsId, AccountId),
 }
 
 /// IPS info

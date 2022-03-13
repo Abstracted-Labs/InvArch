@@ -256,16 +256,7 @@ pub mod pallet {
                     Parentage::Parent(ips_account) => {
                         ensure!(ips_account == owner, Error::<T>::NoPermission)
                     }
-                    Parentage::Child(parent_id) => {
-                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::get(parent_id)
-                            .ok_or(Error::<T>::IpsNotFound)?
-                            .parentage
-                        {
-                            ensure!(ips_account == owner, Error::<T>::NoPermission)
-                        } else {
-                            return Err(Error::<T>::NotParent.into());
-                        }
-                    }
+                    Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
                 }
 
                 IpsByOwner::<T>::remove(owner.clone(), ips_id);
@@ -294,16 +285,7 @@ pub mod pallet {
 
                 let ips_account = match info.parentage.clone() {
                     Parentage::Parent(ips_account) => ips_account,
-                    Parentage::Child(parent_id) => {
-                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
-                            .map_err(|_| Error::<T>::IpsNotFound)?
-                            .parentage
-                        {
-                            ips_account
-                        } else {
-                            todo!()
-                        }
-                    }
+                    Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
                 ensure!(ips_account == caller_account, Error::<T>::NoPermission);
@@ -350,7 +332,10 @@ pub mod pallet {
                                 ipt::Pallet::<T>::internal_mint(account, ips_id.into(), amount)?
                             }
 
-                            ips.clone().unwrap().parentage = Parentage::Child(parent_id);
+                            ips.clone().unwrap().parentage = Parentage::Child(
+                                parent_id,
+                                multi_account_id::<T, T::IpsId>(ips_id, None),
+                            );
 
                             Ok(())
                         })?;
@@ -404,16 +389,7 @@ pub mod pallet {
 
                 let ips_account = match info.parentage.clone() {
                     Parentage::Parent(ips_account) => ips_account,
-                    Parentage::Child(parent_id) => {
-                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
-                            .map_err(|_| Error::<T>::IpsNotFound)?
-                            .parentage
-                        {
-                            ips_account
-                        } else {
-                            todo!()
-                        }
-                    }
+                    Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
                 ensure!(ips_account == caller_account, Error::<T>::NoPermission);
