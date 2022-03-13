@@ -40,13 +40,12 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use std::iter::Sum;
-
     use super::*;
     use primitives::utils::multi_account_id;
     use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
+    use sp_std::iter::Sum;
     use sp_std::vec;
 
     #[pallet::config]

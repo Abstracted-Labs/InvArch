@@ -30,16 +30,16 @@ pub struct MultisigOperation<AccountId, Signers, Call> {
 
 #[frame_support::pallet]
 pub mod pallet {
+    use super::*;
     use core::iter::Sum;
+    use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
     use frame_system::RawOrigin;
     use primitives::utils::multi_account_id;
-    use sp_std::convert::TryInto;
-
-    use super::*;
-    use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
     use scale_info::prelude::fmt::Display;
-    use sp_core::blake2_256;
+    use sp_io::hashing::blake2_256;
     use sp_runtime::traits::CheckedSub;
+    use sp_std::convert::TryInto;
+    use sp_std::vec;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
