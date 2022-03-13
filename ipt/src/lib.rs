@@ -126,6 +126,20 @@ pub mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
         Minted(T::IptId, T::AccountId, <T as pallet::Config>::Balance),
+        Burned(T::IptId, T::AccountId, <T as pallet::Config>::Balance),
+        MultisigVoteStarted(
+            T::AccountId,
+            <T as pallet::Config>::Balance,
+            <T as pallet::Config>::Balance,
+            <T as pallet::Config>::Call,
+        ),
+        MultisigVoteAdded(
+            T::AccountId,
+            <T as pallet::Config>::Balance,
+            <T as pallet::Config>::Balance,
+            <T as pallet::Config>::Call,
+        ),
+        MultisigExecuted(T::AccountId, <T as pallet::Config>::Call),
     }
 
     /// Errors for IPF pallet
@@ -163,6 +177,26 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::weight(100_000)] // TODO: Set correct weight
+        pub fn burn(
+            owner: OriginFor<T>,
+            ips_id: T::IptId,
+            amount: <T as pallet::Config>::Balance,
+            target: T::AccountId,
+        ) -> DispatchResult {
+            let owner = ensure_signed(owner)?;
+
+            let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+
+            ensure!(owner == ipt.owner, Error::<T>::NoPermission);
+
+            Pallet::<T>::internal_burn(target, ips_id, amount)?;
+
+            Self::deposit_event(Event::Burned(ips_id, owner, amount));
+
+            Ok(())
+        }
+
         #[pallet::weight(100_000)]
         pub fn as_multi(
             owner: OriginFor<T>,
@@ -173,21 +207,31 @@ pub mod pallet {
             let owner = ensure_signed(owner)?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
 
-            //  ensure!(owner == ipt.owner, Error::<T>::NoPermission);
-
             let total_per_2 = ipt.supply / 2u32.into();
 
             let owner_balance =
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
             if owner_balance > total_per_2 {
-                call.dispatch(
+                call.clone().dispatch(
                     RawOrigin::Signed(multi_account_id::<T, T::IptId>(
                         ips_id,
-                        if include_caller { Some(owner) } else { None },
+                        if include_caller {
+                            Some(owner.clone())
+                        } else {
+                            None
+                        },
                     ))
                     .into(),
                 )?;
+
+                Self::deposit_event(Event::MultisigExecuted(
+                    multi_account_id::<T, T::IptId>(
+                        ips_id,
+                        if include_caller { Some(owner) } else { None },
+                    ),
+                    call,
+                ));
             } else {
                 Multisig::<T>::insert(
                     (ips_id, blake2_256(&call.encode())),
@@ -195,10 +239,24 @@ pub mod pallet {
                         signers: vec![owner.clone()]
                             .try_into()
                             .map_err(|_| Error::<T>::TooManySignatories)?,
-                        include_original_caller: if include_caller { Some(owner) } else { None },
-                        actual_call: call,
+                        include_original_caller: if include_caller {
+                            Some(owner.clone())
+                        } else {
+                            None
+                        },
+                        actual_call: call.clone(),
                     },
                 );
+
+                Self::deposit_event(Event::MultisigVoteStarted(
+                    multi_account_id::<T, T::IptId>(
+                        ips_id,
+                        if include_caller { Some(owner) } else { None },
+                    ),
+                    owner_balance,
+                    ipt.supply,
+                    call,
+                ));
             }
 
             Ok(().into())
@@ -235,20 +293,32 @@ pub mod pallet {
                 let total_per_2 = ipt.supply / 2u32.into();
 
                 if (total_in_operation + voter_balance) > total_per_2 {
-                    old_data.actual_call.dispatch(
+                    old_data.actual_call.clone().dispatch(
                         RawOrigin::Signed(multi_account_id::<T, T::IptId>(
                             ips_id,
-                            old_data.include_original_caller,
+                            old_data.include_original_caller.clone(),
                         ))
                         .into(),
                     )?;
+
+                    Self::deposit_event(Event::MultisigExecuted(
+                        multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
+                        old_data.actual_call,
+                    ));
                 } else {
                     old_data.signers = {
                         let mut v = old_data.signers.to_vec();
                         v.push(owner);
                         v.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?
                     };
-                    *data = Some(old_data);
+                    *data = Some(old_data.clone());
+
+                    Self::deposit_event(Event::MultisigVoteAdded(
+                        multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
+                        voter_balance,
+                        ipt.supply,
+                        old_data.actual_call,
+                    ));
                 }
 
                 Ok(().into())
