@@ -24,10 +24,10 @@ use primitives::IpfInfo;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod mock;
+//#[cfg(test)]
+//mod tests;
 
 pub use pallet::*;
 
