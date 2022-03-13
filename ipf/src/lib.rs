@@ -24,10 +24,10 @@ use primitives::IpfInfo;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod mock;
+//#[cfg(test)]
+//mod tests;
 
 pub use pallet::*;
 
@@ -45,7 +45,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// The IPF ID type
-        type IpfId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        type IpfId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaxEncodedLen;
         /// The maximum size of an IPF's metadata
         type MaxIpfMetadata: Get<u32>;
     }

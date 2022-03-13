@@ -4,7 +4,7 @@ description = 'IPS Pallet for creating and managing sets of tokenized IP'
 edition = '2018'
 homepage = 'https://invarch.io'
 license = 'GPLv3'
-name = 'pallet-ips'
+name = 'pallet-ipt'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
 version = '0.1.0-dev'
 
@@ -15,14 +15,11 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 
 scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
 
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
-ipf = { package = "pallet-ipf", path = "../ipf", default-features = false }
-ipt = { package = "pallet-ipt", path = "../ipt", default-features = false }
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }

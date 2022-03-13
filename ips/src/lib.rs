@@ -28,10 +28,10 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod mock;
+//#[cfg(test)]
+//mod tests;
 
 /// Import the primitives crate
 use primitives::IpsInfo;
@@ -40,14 +40,18 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use std::iter::Sum;
+
     use super::*;
+    use primitives::utils::multi_account_id;
+    use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
-    use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
+    use sp_std::vec;
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + ipf::Config + pallet_assets::Config + pallet_balances::Config
+        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config
     {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -58,7 +62,8 @@ pub mod pallet {
             + Default
             + Copy
             + Display
-            + IsType<<Self as pallet_assets::Config>::AssetId>;
+            + MaxEncodedLen
+            + IsType<<Self as ipt::Config>::IptId>;
         /// The maximum size of an IPS's metadata
         type MaxIpsMetadata: Get<u32>;
         /// Currency
@@ -66,8 +71,18 @@ pub mod pallet {
 
         type IpsData: IntoIterator + Clone;
 
+        type Balance: Member
+            + Parameter
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + MaxEncodedLen
+            + TypeInfo
+            + Sum<<Self as pallet::Config>::Balance>;
+
         #[pallet::constant]
-        type ExistentialDeposit: Get<<Self as pallet_assets::Config>::Balance>;
+        type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
     }
 
     pub type BalanceOf<T> =
@@ -79,14 +94,21 @@ pub mod pallet {
 
     pub type IpsInfoOf<T> = IpsInfo<
         <T as frame_system::Config>::AccountId,
-        Vec<<T as ipf::Config>::IpfId>,
+        BoundedVec<
+            AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>,
+            <T as Config>::MaxIpsMetadata,
+        >,
         IpsMetadataOf<T>,
+        <T as Config>::IpsId,
     >;
 
     pub type GenesisIps<T> = (
         <T as frame_system::Config>::AccountId, // IPS owner
         Vec<u8>,                                // IPS metadata
-        Vec<<T as ipf::Config>::IpfId>,         // IPS data
+        BoundedVec<
+            AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>,
+            <T as Config>::MaxIpsMetadata,
+        >, // IPS data
         Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPS
     );
 
@@ -122,6 +144,18 @@ pub mod pallet {
     pub enum Event<T: Config> {
         Created(T::AccountId, T::IpsId),
         Destroyed(T::AccountId, T::IpsId),
+        Appended(
+            T::AccountId,
+            T::IpsId,
+            Vec<u8>,
+            Vec<AnyId<T::IpsId, T::IpfId>>,
+        ),
+        Removed(
+            T::AccountId,
+            T::IpsId,
+            Vec<u8>,
+            Vec<AnyId<T::IpsId, T::IpfId>>,
+        ),
     }
 
     /// Errors for IPF pallet
@@ -143,6 +177,8 @@ pub mod pallet {
         MaxMetadataExceeded,
         /// Can not destroy IPS
         CannotDestroyIps,
+        /// IPS is not a parent IPS
+        NotParent,
     }
 
     /// Dispatch functions
@@ -174,8 +210,9 @@ pub mod pallet {
                     Error::<T>::NoPermission
                 );
 
-                let ips_account =
-                    primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(current_id);
+                let ips_account = primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(
+                    current_id, None,
+                );
 
                 pallet_balances::Pallet::<T>::transfer_keep_alive(
                     owner.clone(),
@@ -183,46 +220,21 @@ pub mod pallet {
                     <T as pallet_balances::Config>::ExistentialDeposit::get(),
                 )?;
 
-                pallet_assets::Pallet::<T>::create(
-                    owner.clone(),
+                ipt::Pallet::<T>::create(
+                    ips_account.clone(),
                     current_id.into(),
-                    T::Lookup::unlookup(creator.clone()),
-                    <T as pallet::Config>::ExistentialDeposit::get(),
-                )?;
-
-                pallet_assets::Pallet::<T>::set_metadata(
-                    owner.clone(),
-                    current_id.into(),
-                    format!("IPT {}", current_id.clone()).as_bytes().to_vec(),
-                    format!("$IPT_{}", current_id.clone()).as_bytes().to_vec(),
-                    18,
-                )?;
-
-                pallet_assets::Pallet::<T>::mint(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(creator),
-                    <T as pallet::Config>::ExistentialDeposit::get(),
-                )?;
-
-                pallet_assets::Pallet::<T>::set_team(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(ips_account.clone()),
-                    T::Lookup::unlookup(ips_account.clone()),
-                    T::Lookup::unlookup(ips_account.clone()),
-                )?;
-
-                pallet_assets::Pallet::<T>::transfer_ownership(
-                    owner.clone(),
-                    current_id.into(),
-                    T::Lookup::unlookup(ips_account.clone()),
-                )?;
+                    vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
+                );
 
                 let info = IpsInfo {
-                    owner: ips_account.clone(),
+                    parentage: Parentage::Parent(ips_account.clone()),
                     metadata: bounded_metadata,
-                    data,
+                    data: data
+                        .into_iter()
+                        .map(AnyId::IpfId)
+                        .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
+                        .try_into()
+                        .unwrap(), // TODO: Remove unwrap.
                 };
 
                 IpsStorage::<T>::insert(current_id, info);
@@ -240,11 +252,228 @@ pub mod pallet {
             IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
                 let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
-                ensure!(info.owner == owner, Error::<T>::NoPermission);
+
+                match info.parentage {
+                    Parentage::Parent(ips_account) => {
+                        ensure!(ips_account == owner, Error::<T>::NoPermission)
+                    }
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::get(parent_id)
+                            .ok_or(Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ensure!(ips_account == owner, Error::<T>::NoPermission)
+                        } else {
+                            return Err(Error::<T>::NotParent.into());
+                        }
+                    }
+                }
 
                 IpsByOwner::<T>::remove(owner.clone(), ips_id);
 
+                // TODO: Destroy IPT.
+
                 Self::deposit_event(Event::Destroyed(owner, ips_id));
+
+                Ok(())
+            })
+        }
+
+        /// Append new assets to an IP Set
+        #[pallet::weight(100_000)] // TODO: Set correct weight
+        pub fn append(
+            owner: OriginFor<T>,
+            ips_id: T::IpsId,
+            assets: Vec<AnyId<T::IpsId, T::IpfId>>,
+            new_metadata: Option<Vec<u8>>,
+        ) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let caller_account = ensure_signed(owner.clone())?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                let parent_id = ips_id;
+
+                let ips_account = match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => ips_account,
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
+                            .map_err(|_| Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ips_account
+                        } else {
+                            todo!()
+                        }
+                    }
+                };
+
+                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
+
+                for asset in assets.clone() {
+                    match asset {
+                        AnyId::IpsId(ips_id) => {
+                            if let Parentage::Parent(acc) = IpsStorage::<T>::get(ips_id)
+                                .ok_or(Error::<T>::IpsNotFound)?
+                                .parentage
+                            {
+                                ensure!(
+                                    caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
+                                        || caller_account
+                                            == multi_account_id::<T, T::IpsId>(ips_id, Some(acc)),
+                                    Error::<T>::NoPermission
+                                );
+                            } else {
+                                todo!()
+                            }
+                        }
+                        AnyId::IpfId(ipf_id) => {
+                            ensure!(
+                                caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
+                                    || caller_account
+                                        == multi_account_id::<T, T::IpsId>(
+                                            ips_id,
+                                            Some(
+                                                ipf::IpfStorage::<T>::get(ipf_id)
+                                                    .ok_or(Error::<T>::IpfNotFound)?
+                                                    .owner
+                                            )
+                                        ),
+                                Error::<T>::NoPermission
+                            );
+                        }
+                    }
+                }
+
+                for any_id in assets.clone().into_iter() {
+                    if let AnyId::IpsId(ips_id) = any_id {
+                        IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
+                                ipt::Pallet::<T>::internal_mint(account, ips_id.into(), amount)?
+                            }
+
+                            ips.clone().unwrap().parentage = Parentage::Child(parent_id);
+
+                            Ok(())
+                        })?;
+                    }
+                }
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: if let Some(metadata) = new_metadata.clone() {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.clone()
+                    },
+                    data: info
+                        .data
+                        .into_iter()
+                        .chain(assets.clone().into_iter())
+                        .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
+                        .try_into()
+                        .unwrap(), // TODO: Remove unwrap.
+                });
+
+                Self::deposit_event(Event::Appended(
+                    caller_account,
+                    ips_id,
+                    if let Some(metadata) = new_metadata {
+                        metadata
+                    } else {
+                        info.metadata.to_vec()
+                    },
+                    assets,
+                ));
+
+                Ok(())
+            })
+        }
+
+        /// Remove assets from an IP Set
+        #[pallet::weight(100_000)] // TODO: Set correct weight
+        pub fn remove(
+            owner: OriginFor<T>,
+            ips_id: T::IpsId,
+            assets: Vec<AnyId<T::IpsId, T::IpfId>>,
+            new_metadata: Option<Vec<u8>>,
+        ) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let caller_account = ensure_signed(owner.clone())?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                let ips_account = match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => ips_account,
+                    Parentage::Child(parent_id) => {
+                        if let Parentage::Parent(ips_account) = IpsStorage::<T>::try_get(parent_id)
+                            .map_err(|_| Error::<T>::IpsNotFound)?
+                            .parentage
+                        {
+                            ips_account
+                        } else {
+                            todo!()
+                        }
+                    }
+                };
+
+                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
+
+                ensure!(
+                    !assets.clone().into_iter().any(|id| {
+                        match id {
+                            AnyId::IpsId(ips_id) => {
+                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
+                            }
+                            AnyId::IpfId(ipf_id) => {
+                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
+                            }
+                        }
+                    }),
+                    Error::<T>::NoPermission
+                );
+
+                let mut old_assets = info.data.clone();
+
+                for any_id in assets.clone().into_iter() {
+                    if let AnyId::IpsId(ips_id) = any_id {
+                        IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
+                                ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?
+                            }
+
+                            ips.clone().unwrap().parentage =
+                                Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id, None));
+
+                            Ok(())
+                        })?;
+                    }
+                }
+
+                old_assets.retain(|x| !assets.clone().contains(x));
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: if let Some(metadata) = new_metadata.clone() {
+                        metadata
+                            .try_into()
+                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
+                    } else {
+                        info.metadata.clone()
+                    },
+                    data: old_assets,
+                });
+
+                Self::deposit_event(Event::Removed(
+                    caller_account,
+                    ips_id,
+                    if let Some(metadata) = new_metadata {
+                        metadata
+                    } else {
+                        info.metadata.to_vec()
+                    },
+                    assets,
+                ));
 
                 Ok(())
             })

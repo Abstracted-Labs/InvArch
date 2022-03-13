@@ -15,7 +15,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_system::RawOrigin;
     use sp_core::crypto::UncheckedFrom;
     use sp_runtime::traits::{CheckedAdd, Hash, StaticLookup};
     use sp_std::vec;
@@ -118,7 +117,7 @@ pub mod pallet {
             // TODO: Mint WAT IPF
 
             let ips_account: <T as frame_system::Config>::AccountId =
-                primitives::utils::multi_account_id::<T, <T as ips::Config>::IpsId>(ips_id);
+                primitives::utils::multi_account_id::<T, <T as ips::Config>::IpsId>(ips_id, None);
 
             ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id])?;
 
@@ -133,14 +132,24 @@ pub mod pallet {
                     .into(),
             )?;
 
-            pallet_contracts::Pallet::<T>::instantiate_with_code(
-                RawOrigin::Signed(ips_account.clone()).into(),
+            pallet_contracts::Pallet::<T>::bare_instantiate(
+                ips_account.clone(),
                 endowment.into(),
                 gas_limit,
-                code,
+                Some(endowment.into()),
+                pallet_contracts_primitives::Code::Existing(
+                    pallet_contracts::Pallet::<T>::bare_upload_code(
+                        ips_account.clone(),
+                        code,
+                        Some(endowment.into()),
+                    )?
+                    .code_hash,
+                ),
                 data,
                 vec![],
-            )?;
+                true,
+            )
+            .result?;
 
             Self::deposit_event(Event::Created(ips_account, ips_id));
 
