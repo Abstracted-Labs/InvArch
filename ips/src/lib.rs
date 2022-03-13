@@ -44,7 +44,6 @@ pub mod pallet {
     use primitives::utils::multi_account_id;
     use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
-    use scale_info::prelude::format;
     use sp_runtime::traits::StaticLookup;
     use sp_std::vec;
 
@@ -215,10 +214,7 @@ pub mod pallet {
                 ipt::Pallet::<T>::create(
                     ips_account.clone(),
                     current_id.into(),
-                    vec![(
-                        creator.clone(),
-                        <T as ipt::Config>::ExistentialDeposit::get(),
-                    )],
+                    vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                 );
 
                 let info = IpsInfo {
@@ -226,7 +222,7 @@ pub mod pallet {
                     metadata: bounded_metadata,
                     data: data
                         .into_iter()
-                        .map(|ipf_id| AnyId::IpfId(ipf_id))
+                        .map(AnyId::IpfId)
                         .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
                         .try_into()
                         .unwrap(), // TODO: Remove unwrap.
@@ -302,10 +298,7 @@ pub mod pallet {
                     }
                 };
 
-                ensure!(
-                    ips_account.clone() == caller_account,
-                    Error::<T>::NoPermission
-                );
+                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 ensure!(
                     !assets.clone().into_iter().any(|id| {
@@ -330,7 +323,7 @@ pub mod pallet {
 
                             ips.clone().unwrap().parentage = Parentage::Child(parent_id);
 
-                            Ok(().into())
+                            Ok(())
                         })?;
                     }
                 }
@@ -358,8 +351,6 @@ pub mod pallet {
                     ips_id,
                     if let Some(metadata) = new_metadata {
                         metadata
-                            .try_into()
-                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
                     } else {
                         info.metadata.to_vec()
                     },
@@ -396,10 +387,7 @@ pub mod pallet {
                     }
                 };
 
-                ensure!(
-                    ips_account.clone() == caller_account,
-                    Error::<T>::NoPermission
-                );
+                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 ensure!(
                     !assets.clone().into_iter().any(|id| {
@@ -427,7 +415,7 @@ pub mod pallet {
                             ips.clone().unwrap().parentage =
                                 Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id));
 
-                            Ok(().into())
+                            Ok(())
                         })?;
                     }
                 }
@@ -443,9 +431,7 @@ pub mod pallet {
                     } else {
                         info.metadata.clone()
                     },
-                    data: old_assets
-                        .try_into()
-                        .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+                    data: old_assets,
                 });
 
                 Self::deposit_event(Event::Removed(
@@ -453,8 +439,6 @@ pub mod pallet {
                     ips_id,
                     if let Some(metadata) = new_metadata {
                         metadata
-                            .try_into()
-                            .map_err(|_| Error::<T>::MaxMetadataExceeded)?
                     } else {
                         info.metadata.to_vec()
                     },

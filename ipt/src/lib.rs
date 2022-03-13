@@ -22,14 +22,11 @@
 use frame_support::{
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get},
-    BoundedVec, Parameter,
+    Parameter,
 };
 use frame_system::pallet_prelude::*;
-use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
-use sp_std::{convert::TryInto, vec::Vec};
-
-/// Import the primitives crate
-use primitives::IpsInfo;
+use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
+use sp_std::vec::Vec;
 
 pub use pallet::*;
 
@@ -47,11 +44,8 @@ pub mod pallet {
     use core::iter::Sum;
 
     use super::*;
-    use primitives::utils::multi_account_id;
-    use primitives::{AnyId, Parentage};
     use scale_info::prelude::fmt::Display;
-    use scale_info::prelude::format;
-    use sp_runtime::traits::{CheckedSub, StaticLookup};
+    use sp_runtime::traits::CheckedSub;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -145,7 +139,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::Minted(ips_id, owner, amount));
 
-            Ok(().into())
+            Ok(())
         }
     }
 
@@ -209,7 +203,7 @@ pub mod pallet {
                             .ok_or(Error::<T>::NotEnoughAmount)?,
                     );
 
-                    let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
+                    let old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
                     old_ipt
                         .supply
                         .checked_sub(&amount)
