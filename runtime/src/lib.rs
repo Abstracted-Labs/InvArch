@@ -97,6 +97,9 @@ pub use pallet_ipf as ipf;
 /// Import the ips pallet.
 pub use pallet_ips as ips;
 
+/// Import the ipt pallet.
+pub use pallet_ipt as ipt;
+
 // Runtime Constants
 mod constants;
 // Weights
@@ -696,6 +699,14 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
+impl pallet_ipt::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IptId = CommonId;
+    type ExistentialDeposit = ExistentialDeposit;
+}
+
 parameter_types! {
     // The maximum size of an IPS's metadata
     pub const MaxIpsMetadata: u32 = 10000;
@@ -888,8 +899,9 @@ construct_runtime!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 50,
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
-        Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 52,
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
+        Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 52,
+        Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 53,
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 54,
     }
 );
 

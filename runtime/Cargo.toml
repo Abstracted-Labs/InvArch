@@ -26,6 +26,7 @@ getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 # Local dependencies
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
+pallet-ipt = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 pallet-smartip = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 pallet-multisig = { git = "https://github.com/InvArch/InvArch-Pallet-Library", default-features = false, branch = "gabriel-composability+subip" }
 #pallet-ips = { path = "../../InvArch-Pallet-Library/ips", default-features = false }
