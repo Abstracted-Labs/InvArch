@@ -201,13 +201,13 @@ pub mod pallet {
         }
 
         #[pallet::weight({
-			      call.try_decode().unwrap().get_dispatch_info().weight + 100_000
+			      call.get_dispatch_info().weight + 100_000
 		    })]
         pub fn as_multi(
             owner: OriginFor<T>,
             include_caller: bool,
             ips_id: T::IptId,
-            call: OpaqueCall<T>,
+            call: Box<<T as pallet::Config>::Call>,
         ) -> DispatchResultWithPostInfo {
             let owner = ensure_signed(owner)?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
@@ -217,27 +217,27 @@ pub mod pallet {
             let owner_balance =
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
+            let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
+
             if owner_balance > total_per_2 {
-                call.try_decode()
-                    .ok_or(Error::<T>::CouldntDecodeCall)?
-                    .dispatch(
-                        RawOrigin::Signed(multi_account_id::<T, T::IptId>(
-                            ips_id,
-                            if include_caller {
-                                Some(owner.clone())
-                            } else {
-                                None
-                            },
-                        ))
-                        .into(),
-                    )?;
+                call.dispatch(
+                    RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                        ips_id,
+                        if include_caller {
+                            Some(owner.clone())
+                        } else {
+                            None
+                        },
+                    ))
+                    .into(),
+                )?;
 
                 Self::deposit_event(Event::MultisigExecuted(
                     multi_account_id::<T, T::IptId>(
                         ips_id,
                         if include_caller { Some(owner) } else { None },
                     ),
-                    call,
+                    opaque_call,
                 ));
             } else {
                 Multisig::<T>::insert(
@@ -251,7 +251,7 @@ pub mod pallet {
                         } else {
                             None
                         },
-                        actual_call: call.clone(),
+                        actual_call: opaque_call.clone(),
                     },
                 );
 
@@ -262,7 +262,7 @@ pub mod pallet {
                     ),
                     owner_balance,
                     ipt.supply,
-                    call,
+                    opaque_call,
                 ));
             }
 
