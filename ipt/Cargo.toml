@@ -2,7 +2,7 @@
 authors = ['InvArchitects <https://github.com/InvArch>']
 description = 'IPS Pallet for creating and managing sets of tokenized IP'
 edition = '2018'
-homepage = 'https://invarch.io'
+homepage = 'https://invarch.network'
 license = 'GPLv3'
 name = 'pallet-ipt'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'

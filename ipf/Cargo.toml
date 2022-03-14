@@ -2,7 +2,7 @@
 authors = ['InvArchitects <https://github.com/InvArch>']
 description = 'IPF Pallet for tokenizing and managing intellectual property'
 edition = '2018'
-homepage = 'https://invarch.io'
+homepage = 'https://invarch.network'
 license = 'GPLv3'
 name = 'pallet-ipf'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipf'

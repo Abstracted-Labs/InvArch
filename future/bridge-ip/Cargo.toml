@@ -1,32 +1,31 @@
 [package]
-authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'IP Splicing Pallet for creating and managing sets of IP Splicing'
-edition = '2018'
-homepage = 'https://invarch.io'
-license = 'GPLv3'
 name = 'pallet-bridge-ip'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
+authors = ['InvArchitects <https://github.com/InvArch>']
+description = 'IP Brige Pallet for creating and managing sets of IP Bridge'
+edition = '2018'
+homepage = 'https://invarch.network'
+license = 'GPLv3'
+repository = 'https://github.com/InvArch/InvArch-Pallet-Library/'
 version = '0.1.0-dev'
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = [
-	"derive",
-] }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
-frame-support = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest"}
-frame-system = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest" }
-frame-benchmarking = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", features = ["derive"], default-features = false }
+scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.17" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
 
 [dev-dependencies]
-sp-core = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest" }
-sp-io = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest" }
-sp-runtime = { default-features = false, version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", tag = "devhub/latest" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
+sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
 
 [features]
 default = ["std"]
+runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 std = [
 	"codec/std",
 	"scale-info/std",
@@ -34,6 +33,4 @@ std = [
 	"frame-system/std",
 	"frame-benchmarking/std",
 ]
-
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = [ "frame-support/try-runtime" ]
