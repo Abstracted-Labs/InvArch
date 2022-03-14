@@ -42,7 +42,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use primitives::utils::multi_account_id;
-    use primitives::{AnyId, Parentage};
+    use primitives::{AnyId, IpsType, Parentage};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
     use sp_std::iter::Sum;
@@ -155,6 +155,9 @@ pub mod pallet {
             Vec<u8>,
             Vec<AnyId<T::IpsId, T::IpfId>>,
         ),
+        AllowedReplica(T::IpsId),
+        DisallowedReplica(T::IpsId),
+        ReplicaCreated(T::AccountId, T::IpsId, T::IpsId),
     }
 
     /// Errors for IPF pallet
@@ -178,6 +181,12 @@ pub mod pallet {
         CannotDestroyIps,
         /// IPS is not a parent IPS
         NotParent,
+        /// Replicas cannot allow themselves to be replicable
+        ReplicaCannotAllowReplicas,
+        /// Value Not Changed
+        ValueNotChanged,
+        /// Replicas of this IPS are not allowed
+        ReplicaNotAllowed,
     }
 
     /// Dispatch functions
@@ -189,6 +198,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             metadata: Vec<u8>,
             data: Vec<<T as ipf::Config>::IpfId>,
+            allow_replica: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -233,7 +243,9 @@ pub mod pallet {
                         .map(AnyId::IpfId)
                         .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
                         .try_into()
-                        .unwrap(), // TODO: Remove unwrap.
+                        .unwrap(),
+                    ips_type: IpsType::Normal,
+                    allow_replica, // TODO: Remove unwrap.
                 };
 
                 IpsStorage::<T>::insert(current_id, info);
@@ -357,7 +369,9 @@ pub mod pallet {
                         .chain(assets.clone().into_iter())
                         .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
                         .try_into()
-                        .unwrap(), // TODO: Remove unwrap.
+                        .unwrap(),
+                    ips_type: info.ips_type,
+                    allow_replica: info.allow_replica, // TODO: Remove unwrap.
                 });
 
                 Self::deposit_event(Event::Appended(
@@ -437,6 +451,8 @@ pub mod pallet {
                         info.metadata.clone()
                     },
                     data: old_assets,
+                    ips_type: info.ips_type,
+                    allow_replica: info.allow_replica,
                 });
 
                 Self::deposit_event(Event::Removed(
@@ -451,6 +467,131 @@ pub mod pallet {
                 ));
 
                 Ok(())
+            })
+        }
+
+        /// Allows replicas of this IPS to be made.
+        #[pallet::weight(100_000)]
+        pub fn allow_replica(owner: OriginFor<T>, ips_id: T::IpsId) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => {
+                        ensure!(ips_account == owner, Error::<T>::NoPermission)
+                    }
+                    Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
+                }
+
+                ensure!(!info.allow_replica, Error::<T>::ValueNotChanged);
+
+                ensure!(
+                    !matches!(info.ips_type, IpsType::Replica(_)),
+                    Error::<T>::ReplicaCannotAllowReplicas
+                );
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: info.metadata,
+                    data: info.data,
+                    ips_type: info.ips_type,
+                    allow_replica: true,
+                });
+
+                Self::deposit_event(Event::AllowedReplica(ips_id));
+
+                Ok(())
+            })
+        }
+
+        /// Disallows replicas of this IPS to be made.
+        #[pallet::weight(100_000)]
+        pub fn disallow_replica(owner: OriginFor<T>, ips_id: T::IpsId) -> DispatchResult {
+            IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
+                let owner = ensure_signed(owner)?;
+                let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
+
+                match info.parentage.clone() {
+                    Parentage::Parent(ips_account) => {
+                        ensure!(ips_account == owner, Error::<T>::NoPermission)
+                    }
+                    Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
+                }
+
+                ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
+
+                ensure!(
+                    !matches!(info.ips_type, IpsType::Replica(_)),
+                    Error::<T>::ReplicaCannotAllowReplicas
+                );
+
+                *ips_info = Some(IpsInfo {
+                    parentage: info.parentage,
+                    metadata: info.metadata,
+                    data: info.data,
+                    ips_type: info.ips_type,
+                    allow_replica: false,
+                });
+
+                Self::deposit_event(Event::DisallowedReplica(ips_id));
+
+                Ok(())
+            })
+        }
+
+        #[pallet::weight(100_000)]
+        pub fn create_replica(
+            owner: OriginFor<T>,
+            original_ips_id: T::IpsId,
+        ) -> DispatchResultWithPostInfo {
+            NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
+                let creator = ensure_signed(owner.clone())?;
+
+                let original_ips =
+                    IpsStorage::<T>::get(original_ips_id).ok_or(Error::<T>::IpsNotFound)?;
+
+                ensure!(original_ips.allow_replica, Error::<T>::ReplicaNotAllowed);
+
+                let current_id = *ips_id;
+                *ips_id = ips_id
+                    .checked_add(&One::one())
+                    .ok_or(Error::<T>::NoAvailableIpsId)?;
+
+                let ips_account = primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(
+                    current_id, None,
+                );
+
+                pallet_balances::Pallet::<T>::transfer_keep_alive(
+                    owner.clone(),
+                    T::Lookup::unlookup(ips_account.clone()),
+                    <T as pallet_balances::Config>::ExistentialDeposit::get(),
+                )?;
+
+                ipt::Pallet::<T>::create(
+                    ips_account.clone(),
+                    current_id.into(),
+                    vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
+                );
+
+                let info = IpsInfo {
+                    parentage: Parentage::Parent(ips_account.clone()),
+                    metadata: original_ips.metadata,
+                    data: original_ips.data,
+                    ips_type: IpsType::Replica(original_ips_id),
+                    allow_replica: false,
+                };
+
+                IpsStorage::<T>::insert(current_id, info);
+                IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
+
+                Self::deposit_event(Event::ReplicaCreated(
+                    ips_account,
+                    current_id,
+                    original_ips_id,
+                ));
+
+                Ok(().into())
             })
         }
     }

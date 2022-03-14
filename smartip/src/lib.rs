@@ -93,6 +93,7 @@ pub mod pallet {
             data: Vec<u8>,
             endowment: BalanceOf<T>,
             gas_limit: Weight,
+            allow_replica: bool,
         ) -> DispatchResultWithPostInfo
         where
             <T as pallet_balances::Config>::Balance: From<
@@ -119,7 +120,7 @@ pub mod pallet {
             let ips_account: <T as frame_system::Config>::AccountId =
                 primitives::utils::multi_account_id::<T, <T as ips::Config>::IpsId>(ips_id, None);
 
-            ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id])?;
+            ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id], allow_replica)?;
 
             pallet_balances::Pallet::<T>::transfer(
                 owner,

@@ -5,8 +5,18 @@ use scale_info::TypeInfo;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parentage<AccountId, IpsId> {
+    /// Parent IP (Account Id of itself)
     Parent(AccountId),
+    /// Child IP (Id of the immediate parent, Account Id of the topmost parent)
     Child(IpsId, AccountId),
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum IpsType<IpsId> {
+    /// Normal IPS
+    Normal,
+    /// IP Replica (Id of the original IP)
+    Replica(IpsId),
 }
 
 /// IPS info
@@ -18,6 +28,10 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
     pub metadata: IpsMetadataOf,
     /// IPS Properties
     pub data: Data,
+    /// IPS Type
+    pub ips_type: IpsType<IpsId>,
+    /// If this IPS allows replicas
+    pub allow_replica: bool,
 }
 
 /// IPT Info
