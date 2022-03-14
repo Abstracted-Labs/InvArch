@@ -200,7 +200,9 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(100_000)]
+        #[pallet::weight({
+			      call.try_decode().unwrap().get_dispatch_info().weight + 100_000
+		    })]
         pub fn as_multi(
             owner: OriginFor<T>,
             include_caller: bool,
