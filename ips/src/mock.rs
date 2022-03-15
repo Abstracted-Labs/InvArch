@@ -42,6 +42,7 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -74,31 +75,21 @@ impl ipf::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIpsMetadata: u32 = 32;
+    pub const MaxCallers: u32 = 32;
+}
+
+impl ipt::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IptId = u64;
+    type MaxCallers = MaxCallers;
+    type ExistentialDeposit = ExistentialDeposit;
+    type Call = Call;
 }
 
 parameter_types! {
-    pub const AssetDeposit: Balance = 100;
-    pub const ApprovalDeposit: Balance = 500;
-    pub const AssetsStringLimit: u32 = 50;
-    pub const MetadataDepositBase: Balance = 68;
-    pub const MetadataDepositPerByte: Balance = 1;
-}
-
-impl pallet_assets::Config for Runtime {
-    type Event = Event;
-    type Balance = Balance;
-    type AssetId = u64;
-    type Currency = Balances;
-    type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
-    type AssetDeposit = AssetDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = AssetsStringLimit;
-    type Freezer = ();
-    type Extra = ();
-    type WeightInfo = ();
+    pub const MaxIpsMetadata: u32 = 32;
 }
 
 impl Config for Runtime {
@@ -108,6 +99,7 @@ impl Config for Runtime {
     type Currency = Balances;
     type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     type ExistentialDeposit = ExistentialDeposit;
+    type Balance = Balance;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -137,7 +129,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
         Ipf: ipf::{Pallet, Storage, Event<T>},
         Ips: ips::{Pallet, Storage, Event<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        Ipt: ipt::{Pallet, Call, Storage, Event<T>},
     }
 );
 
