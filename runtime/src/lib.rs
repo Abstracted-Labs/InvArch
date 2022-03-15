@@ -58,9 +58,8 @@ pub use frame_support::{
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-        DispatchClass, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
         WeightToFeePolynomial,
-        IdentityFee,
     },
     ConsensusEngineId, PalletId,
 };
@@ -492,7 +491,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type VersionWrapper = ();
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
     type ControllerOrigin = EnsureRoot<AccountId>;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+    type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {

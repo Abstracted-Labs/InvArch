@@ -478,6 +478,6 @@ impl CliConfiguration<Self> for RelayChainCli {
     }
 
     fn node_name(&self) -> Result<String> {
-		self.base.base.node_name()
-	}
+        self.base.base.node_name()
+    }
 }
