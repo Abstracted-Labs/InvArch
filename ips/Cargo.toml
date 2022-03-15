@@ -16,6 +16,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+smallvec = "1.6.1"
 
 scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
 
@@ -46,4 +47,3 @@ std = [
   "pallet-balances/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
-
