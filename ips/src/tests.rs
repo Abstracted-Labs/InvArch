@@ -262,3 +262,30 @@ fn create_replica_should_work() {
         assert_ne!(ips_0.parentage, ips_1.parentage);
     });
 }
+
+#[test]
+fn create_replica_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            false,
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_noop!(
+            Ips::create_replica(Origin::signed(ALICE), 0),
+            Error::<Runtime>::ReplicaNotAllowed
+        );
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_eq!(IpsStorage::<Runtime>::get(1), None);
+    });
+}
