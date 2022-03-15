@@ -69,6 +69,15 @@ fn create_ips_should_work() {
                 ips_type: IpsType::Normal
             })
         );
+
+        assert_eq!(
+            ipt::Ipt::<Runtime>::get(0).unwrap().supply,
+            ExistentialDeposit::get()
+        );
+        assert_eq!(
+            ipt::Ipt::<Runtime>::get(1).unwrap().supply,
+            ExistentialDeposit::get()
+        );
     });
 }
 
