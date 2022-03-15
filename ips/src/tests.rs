@@ -259,7 +259,9 @@ fn create_replica_should_work() {
         assert_eq!(
             ips_1,
             IpsInfo {
-                parentage: Parentage::Parent(multi_account_id(1, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(1, None)
+                ),
                 metadata: ips_0.metadata,
                 data: ips_0.data,
                 ips_type: IpsType::Replica(0),
