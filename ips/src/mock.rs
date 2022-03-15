@@ -1,9 +1,17 @@
 //! Mocks for the gradually-update module.
 
-use frame_support::{construct_runtime, parameter_types, traits::Contains};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::Contains,
+    weights::{
+        constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        WeightToFeePolynomial,
+    },
+};
 use pallet_balances::AccountData;
+use smallvec::smallvec;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup};
+use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use super::*;
 
@@ -86,6 +94,7 @@ impl ipt::Config for Runtime {
     type MaxCallers = MaxCallers;
     type ExistentialDeposit = ExistentialDeposit;
     type Call = Call;
+    type WeightToFeePolynomial = WeightToFee;
 }
 
 parameter_types! {
@@ -185,5 +194,24 @@ impl ExtBuilder {
         .build_storage()
         .unwrap()
         .into()
+    }
+}
+
+pub const MILLIUNIT: Balance = 1_000_000_000;
+
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+    type Balance = Balance;
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        // in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
+        // in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
+        let p = MILLIUNIT / 10;
+        let q = 100 * Balance::from(ExtrinsicBaseWeight::get());
+        smallvec![WeightToFeeCoefficient {
+            degree: 1,
+            negative: false,
+            coeff_frac: Perbill::from_rational(p % q, q),
+            coeff_integer: p / q,
+        }]
     }
 }
