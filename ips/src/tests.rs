@@ -3,7 +3,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
-use primitives::{AnyId, IpsType, Parentage};
+use primitives::{utils::multi_account_id, AnyId, IpsType, Parentage};
 use sp_core::H256;
 use sp_runtime::DispatchError;
 
@@ -47,10 +47,9 @@ fn create_ips_should_work() {
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(0, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(0, None)
+                ),
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(0), AnyId::IpfId(1)].try_into().unwrap(),
                 allow_replica: true,
@@ -61,10 +60,9 @@ fn create_ips_should_work() {
         assert_eq!(
             IpsStorage::<Runtime>::get(1),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(1, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(1, None)
+                ),
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(2)].try_into().unwrap(),
                 allow_replica: false,
@@ -138,10 +136,9 @@ fn destroy_should_work() {
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(0, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(0, None)
+                ),
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(0)].try_into().unwrap(),
                 allow_replica: true,
@@ -150,10 +147,9 @@ fn destroy_should_work() {
         );
 
         assert_ok!(Ips::destroy(
-            Origin::signed(primitives::utils::multi_account_id::<
-                Runtime,
-                <Runtime as Config>::IpsId,
-            >(0, None)),
+            Origin::signed(multi_account_id::<Runtime, <Runtime as Config>::IpsId>(
+                0, None
+            )),
             0
         ));
 
@@ -179,10 +175,9 @@ fn destroy_should_fail() {
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(0, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(0, None)
+                ),
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(0)].try_into().unwrap(),
                 allow_replica: true,
@@ -193,10 +188,9 @@ fn destroy_should_fail() {
         assert_noop!(Ips::destroy(Origin::none(), 0), DispatchError::BadOrigin);
         assert_noop!(
             Ips::destroy(
-                Origin::signed(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(0, None)),
+                Origin::signed(multi_account_id::<Runtime, <Runtime as Config>::IpsId>(
+                    0, None
+                )),
                 1
             ),
             Error::<Runtime>::IpsNotFound
@@ -207,10 +201,9 @@ fn destroy_should_fail() {
         );
         assert_noop!(
             Ips::destroy(
-                Origin::signed(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(1, None)),
+                Origin::signed(multi_account_id::<Runtime, <Runtime as Config>::IpsId>(
+                    1, None
+                )),
                 0
             ),
             Error::<Runtime>::NoPermission
@@ -219,10 +212,9 @@ fn destroy_should_fail() {
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(primitives::utils::multi_account_id::<
-                    Runtime,
-                    <Runtime as Config>::IpsId,
-                >(0, None)),
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(0, None)
+                ),
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(0)].try_into().unwrap(),
                 allow_replica: true,
