@@ -256,13 +256,16 @@ fn create_replica_should_work() {
         let ips_0 = IpsStorage::<Runtime>::get(0).unwrap();
         let ips_1 = IpsStorage::<Runtime>::get(1).unwrap();
 
-        assert_eq!(ips_1, IpsInfo {
-            parentage: Parentage::Parent(multi_account_id(1, None)),
-            metadata: ips_0.metadata,
-            data: ips_0.data,
-            ips_type: IpsType::Replica(0),
-            allow_replica: false
-        });
+        assert_eq!(
+            ips_1,
+            IpsInfo {
+                parentage: Parentage::Parent(multi_account_id(1, None)),
+                metadata: ips_0.metadata,
+                data: ips_0.data,
+                ips_type: IpsType::Replica(0),
+                allow_replica: false
+            }
+        );
     });
 }
 
