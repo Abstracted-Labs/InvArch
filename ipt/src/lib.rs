@@ -28,23 +28,26 @@ pub struct MultisigOperation<AccountId, Signers, Call> {
     signers: Signers,
     include_original_caller: Option<AccountId>,
     actual_call: Call,
+    call_weight: Weight,
 }
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use core::iter::Sum;
-    use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
+    use frame_support::{
+        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        weights::WeightToFeePolynomial,
+    };
     use frame_system::RawOrigin;
     use primitives::utils::multi_account_id;
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
-    use sp_runtime::traits::CheckedSub;
-    use sp_std::convert::TryInto;
-    use sp_std::vec;
+    use sp_runtime::traits::{CheckedSub, StaticLookup};
+    use sp_std::{boxed::Box, convert::TryInto, vec};
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_balances::Config {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Currency
@@ -58,7 +61,11 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + MaxEncodedLen
             + TypeInfo
-            + Sum<Self::Balance>;
+            + Sum<<Self as pallet::Config>::Balance>
+            + IsType<<Self as pallet_balances::Config>::Balance>
+            + IsType<
+                <<Self as pallet::Config>::WeightToFeePolynomial as WeightToFeePolynomial>::Balance,
+            >;
 
         /// The IPS ID type
         type IptId: Parameter
@@ -75,12 +82,14 @@ pub mod pallet {
             + GetDispatchInfo
             + From<frame_system::Call<Self>>;
 
+        type WeightToFeePolynomial: WeightToFeePolynomial;
+
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
         type MaxCallers: Get<u32>;
 
         #[pallet::constant]
-        type ExistentialDeposit: Get<Self::Balance>;
+        type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
     }
 
     pub type BalanceOf<T> =
@@ -202,12 +211,12 @@ pub mod pallet {
 
         #[pallet::weight(100_000)]
         pub fn as_multi(
-            owner: OriginFor<T>,
+            caller: OriginFor<T>,
             include_caller: bool,
             ips_id: T::IptId,
-            call: OpaqueCall<T>,
+            call: Box<<T as pallet::Config>::Call>,
         ) -> DispatchResultWithPostInfo {
-            let owner = ensure_signed(owner)?;
+            let owner = ensure_signed(caller.clone())?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
 
             let total_per_2 = ipt.supply / 2u32.into();
@@ -215,29 +224,53 @@ pub mod pallet {
             let owner_balance =
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
+            let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
+
             if owner_balance > total_per_2 {
-                call.try_decode()
-                    .ok_or(Error::<T>::CouldntDecodeCall)?
-                    .dispatch(
-                        RawOrigin::Signed(multi_account_id::<T, T::IptId>(
-                            ips_id,
-                            if include_caller {
-                                Some(owner.clone())
-                            } else {
-                                None
-                            },
-                        ))
-                        .into(),
-                    )?;
+                pallet_balances::Pallet::<T>::transfer(
+                    caller,
+                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                        multi_account_id::<T, T::IptId>(ips_id, None),
+                    ),
+                    <T as pallet::Config>::Balance::from(T::WeightToFeePolynomial::calc(
+                        &call.get_dispatch_info().weight,
+                    ))
+                    .into(),
+                )?;
+
+                call.dispatch(
+                    RawOrigin::Signed(multi_account_id::<T, T::IptId>(
+                        ips_id,
+                        if include_caller {
+                            Some(owner.clone())
+                        } else {
+                            None
+                        },
+                    ))
+                    .into(),
+                )?;
 
                 Self::deposit_event(Event::MultisigExecuted(
                     multi_account_id::<T, T::IptId>(
                         ips_id,
                         if include_caller { Some(owner) } else { None },
                     ),
-                    call,
+                    opaque_call,
                 ));
             } else {
+                pallet_balances::Pallet::<T>::transfer(
+                    caller,
+                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                        multi_account_id::<T, T::IptId>(ips_id, None),
+                    ),
+                    <T as pallet::Config>::Balance::from(
+                        (T::WeightToFeePolynomial::calc(&call.get_dispatch_info().weight)
+                            / total_per_2.into())
+                            * owner_balance.into(),
+                    )
+                    .into(),
+                )?;
+
                 Multisig::<T>::insert(
                     (ips_id, blake2_256(&call.encode())),
                     MultisigOperation {
@@ -249,7 +282,8 @@ pub mod pallet {
                         } else {
                             None
                         },
-                        actual_call: call.clone(),
+                        actual_call: opaque_call.clone(),
+                        call_weight: call.get_dispatch_info().weight,
                     },
                 );
 
@@ -260,7 +294,7 @@ pub mod pallet {
                     ),
                     owner_balance,
                     ipt.supply,
-                    call,
+                    opaque_call,
                 ));
             }
 
@@ -269,12 +303,12 @@ pub mod pallet {
 
         #[pallet::weight(100_000)]
         pub fn approve_as_multi(
-            owner: OriginFor<T>,
+            caller: OriginFor<T>,
             ips_id: T::IptId,
             call_hash: [u8; 32],
         ) -> DispatchResultWithPostInfo {
             Multisig::<T>::try_mutate_exists((ips_id, call_hash), |data| {
-                let owner = ensure_signed(owner)?;
+                let owner = ensure_signed(caller.clone())?;
 
                 let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
 
@@ -285,19 +319,35 @@ pub mod pallet {
                 let voter_balance =
                     Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
-                let total_in_operation: T::Balance = old_data
+                let total_in_operation: <T as pallet::Config>::Balance = old_data
                     .signers
                     .clone()
                     .into_iter()
-                    .map(|voter| -> Option<T::Balance> { Balance::<T>::get(ips_id, voter) })
-                    .collect::<Option<Vec<T::Balance>>>()
+                    .map(|voter| -> Option<<T as pallet::Config>::Balance> {
+                        Balance::<T>::get(ips_id, voter)
+                    })
+                    .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
                     .ok_or(Error::<T>::NoPermission)?
                     .into_iter()
                     .sum();
 
                 let total_per_2 = ipt.supply / 2u32.into();
 
+                let fee: <T as pallet::Config>::Balance =
+                    T::WeightToFeePolynomial::calc(&old_data.call_weight).into();
+
                 if (total_in_operation + voter_balance) > total_per_2 {
+                    pallet_balances::Pallet::<T>::transfer(
+                        caller,
+                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                            multi_account_id::<T, T::IptId>(ips_id, None),
+                        ),
+                        fee.checked_sub(&total_in_operation)
+                            .ok_or(Error::<T>::NotEnoughAmount)
+                            .unwrap()
+                            .into(),
+                    )?;
+
                     old_data
                         .actual_call
                         .try_decode()
@@ -315,6 +365,19 @@ pub mod pallet {
                         old_data.actual_call,
                     ));
                 } else {
+                    pallet_balances::Pallet::<T>::transfer(
+                        caller,
+                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                            multi_account_id::<T, T::IptId>(ips_id, None),
+                        ),
+                        <T as pallet::Config>::Balance::from(
+                            (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                                / total_per_2.into())
+                                * voter_balance.into(),
+                        )
+                        .into(),
+                    )?;
+
                     old_data.signers = {
                         let mut v = old_data.signers.to_vec();
                         v.push(owner);
