@@ -15,7 +15,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 [dependencies]
-hex-literal = { version = "0.3.1", optional = true }
+hex-literal = { version = "0.3.4", optional = true }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"]}
 log = { version = "0.4.14", default-features = false }
 scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
@@ -130,6 +130,7 @@ std = [
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
+    "frame-system-rpc-runtime-api/std",
 
     "pallet-aura/std",
     "pallet-authorship/std",
@@ -140,6 +141,7 @@ std = [
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
     "pallet-transaction-payment/std",
+    "pallet-xcm/std",
     # "pallet-ethereum/std",
     # "pallet-evm/std",
     # "pallet-evm-precompile-simple/std",
@@ -167,10 +169,10 @@ std = [
 	"xcm-executor/std",
 	"xcm/std",
 
-  "pallet-ipf/std",
-  "pallet-ips/std",
-  "pallet-ipt/std",
-  "pallet-smartip/std",
+    "pallet-ipf/std",
+    "pallet-ips/std",
+    "pallet-ipt/std",
+    "pallet-smartip/std",
 ]
 
 runtime-benchmarks = [
