@@ -33,12 +33,13 @@ fn create_ips_should_work() {
             vec![0, 1],
             true,
         ));
+
         assert_eq!(Ips::next_ips_id(), 1);
         assert_ok!(Ips::create_ips(
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             vec![2],
-            false,
+            false
         ));
 
         assert_eq!(Ips::next_ips_id(), 2);
@@ -228,5 +229,36 @@ fn destroy_should_fail() {
                 ips_type: IpsType::Normal,
             })
         );
+    });
+}
+
+#[test]
+fn create_replica_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            true,
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        let ips_0 = IpsStorage::<Runtime>::get(0).unwrap();
+        let ips_1 = IpsStorage::<Runtime>::get(1).unwrap();
+
+        assert_eq!(ips_0.data, ips_1.data);
+
+        assert_eq!(ips_0.metadata, ips_1.metadata);
+
+        assert_ne!(ips_0.parentage, ips_1.parentage);
     });
 }
