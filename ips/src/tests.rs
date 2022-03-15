@@ -329,3 +329,30 @@ fn allow_replica_should_work() {
         )
     })
 }
+
+#[test]
+fn allow_replica_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            false,
+        ));
+
+        // Allow_Replica should be called in a multisig context
+        assert_noop!(
+            Ips::allow_replica(Origin::signed(ALICE), 0),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(IpsStorage::<Runtime>::get(0).unwrap().allow_replica, false);
+    })
+}
