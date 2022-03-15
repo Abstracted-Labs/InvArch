@@ -590,6 +590,7 @@ impl pallet_ipt::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type Call = Call;
     type MaxCallers = MaxCallers;
+    type WeightToFeePolynomial = WeightToFee;
 }
 
 parameter_types! {
