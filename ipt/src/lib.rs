@@ -35,15 +35,16 @@ pub struct MultisigOperation<AccountId, Signers, Call> {
 pub mod pallet {
     use super::*;
     use core::iter::Sum;
-    use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
-    use frame_support::weights::WeightToFeePolynomial;
+    use frame_support::{
+        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        weights::WeightToFeePolynomial,
+    };
     use frame_system::RawOrigin;
     use primitives::utils::multi_account_id;
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
     use sp_runtime::traits::{CheckedSub, StaticLookup};
-    use sp_std::convert::TryInto;
-    use sp_std::vec;
+    use sp_std::{boxed::Box, convert::TryInto, vec};
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
