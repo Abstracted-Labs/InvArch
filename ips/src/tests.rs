@@ -290,3 +290,42 @@ fn create_replica_should_fail() {
         assert_eq!(IpsStorage::<Runtime>::get(1), None);
     });
 }
+
+#[test]
+fn allow_replica_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            false,
+        ));
+
+        assert_ok!(Ips::allow_replica(
+            Origin::signed(multi_account_id::<Runtime, <Runtime as Config>::IpsId>(
+                0, None
+            )),
+            0
+        ));
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                allow_replica: true,
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, <Runtime as Config>::IpsId>(0, None)
+                ),
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Normal
+            })
+        )
+    })
+}
