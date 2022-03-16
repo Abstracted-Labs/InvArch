@@ -8,72 +8,55 @@ test:
 	cargo test
 
 run:
-	./target/release/invarch-collator --dev --tmp
-
-purge-alice:
-	./target/release/invarch-node purge-chain --base-path /tmp/alice --chain local
-
-
-run-alice:
-	./target/release/invarch-node \
-	--base-path /tmp/alice \
-	--chain local \
-	--alice \
-	--port 30333 \
-	--ws-port 9945 \
-	--rpc-port 9933 \
-	--node-key 0000000000000000000000000000000000000000000000000000000000000001 \
-	--telemetry-url "wss://telemetry.polkadot.io/submit/ 0" \
-	--validator
-
-purge-bob:
-	./target/release/invarch-node purge-chain --base-path /tmp/bob --chain local -y
-
-run-bob:
-	./target/release/invarch-node \
-	--base-path /tmp/bob \
-	--chain local \
-	--bob \
-	--port 30334 \
-	--ws-port 9946 \
-	--rpc-port 9934 \
-	--telemetry-url "wss://telemetry.polkadot.io/submit/ 0" \
-	--validator \
-	--bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp
+	./target/release/invarch-collator --dev
 
 generate-keys:
 	./target/release/invarch-collator key generate --scheme Sr25519 --password-interactive
 
-generate-derive-keys:
-	./target/release/invarch-collator key inspect --password-interactive --scheme Ed25519 0xd44687c2ae9c9767027fc2beaf1e7f952bd1f5f1d579430de564245ca2f6ddb8
+# generate-derive-keys:
+# 	./target/release/invarch-collator key inspect --password-interactive --scheme Ed25519 0xd44687c2ae9c9767027fc2beaf1e7f952bd1f5f1d579430de564245ca2f6ddb8
 
+genesis-state:
+	./target/release/invarch-collator export-genesis-state > node/testnet/genesis-state
 
-build-spec-local-rococo-plain:
-	./target/release/invarch-collator build-spec --disable-default-bootnode > node/testnet/rococo-local-parachain-plain.json
-
-build-spec-local-rococo-raw:
-	./target/release/invarch-collator build-spec --chain node/testnet/rococo-local-parachain-plain.json --raw --disable-default-bootnode > node/testnet/rococo-local-parachain-2000-raw.json
-
-generate-wasm:
-	./target/release/invarch-collator export-genesis-wasm --chain node/testnet/rococo-local-parachain-2000-raw.json > node/testnet/para-2000-wasm
-
-generate-genesis:
-	./target/release/invarch-collator export-genesis-state --chain node/testnet/rococo-local-parachain-2000-raw.json > node/testnet/para-2000-genesis
+genesis-wasm:
+	./target/release/invarch-collator export-genesis-wasm > node/testnet/genesis-wasm
 
 purge-first-node:
 	./target/release/invarch-collator purge-chain --base-path /tmp/node01 --chain local -y
 
 start-collator1:
 	./target/release/invarch-collator \
-	--alice \
 	--collator \
+	--alice \
 	--force-authoring \
-	--chain node/testnet/rococo-local-parachain-2000-raw.json \
-	--base-path /tmp/parachain/alice \
-	--port 40333 \
-	--ws-port 8844 \
+	--tmp \
+	--port 40335 \
+	--ws-port 9946 \
 	-- \
 	--execution wasm \
-	--chain /home/kresna/invarch/polkadot/node/invarch/testnet/tinker/tinker-local-spec-raw.json \
-	--port 30343 \
-	--ws-port 9977
+	--chain <relative path local rococo json file> \
+	--port 30335 \
+
+start-collator2:
+	./target/release/invarch-collator \
+	--collator \
+	--bob \
+	--force-authoring \
+	--tmp \
+	--port 40336 \
+	--ws-port 9947 \
+	-- \
+	--execution wasm \
+	--chain <relative path local rococo json file> \
+	--port 30336 \
+
+start-parachain-full-node:
+	./target/release/invarch-collator \
+	--tmp \
+	--port 40337 \
+	--ws-port 9948 \
+	-- \
+	--execution wasm \
+	--chain <relative path local rococo json file> \
+	--port 30337 \
