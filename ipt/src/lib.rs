@@ -182,9 +182,9 @@ pub mod pallet {
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
-            Pallet::<T>::internal_mint(target, ips_id, amount)?;
+            Pallet::<T>::internal_mint(target.clone(), ips_id, amount)?;
 
-            Self::deposit_event(Event::Minted(ips_id, owner, amount));
+            Self::deposit_event(Event::Minted(ips_id, target, amount));
 
             Ok(())
         }
@@ -202,9 +202,9 @@ pub mod pallet {
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
-            Pallet::<T>::internal_burn(target, ips_id, amount)?;
+            Pallet::<T>::internal_burn(target.clone(), ips_id, amount)?;
 
-            Self::deposit_event(Event::Burned(ips_id, owner, amount));
+            Self::deposit_event(Event::Burned(ips_id, target, amount));
 
             Ok(())
         }
