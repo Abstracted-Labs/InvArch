@@ -43,7 +43,7 @@ pub mod pallet {
     use primitives::utils::multi_account_id;
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
-    use sp_runtime::traits::{CheckedSub, StaticLookup};
+    use sp_runtime::traits::{CheckedSub, One, StaticLookup};
     use sp_std::{boxed::Box, convert::TryInto, vec};
 
     #[pallet::config]
@@ -182,9 +182,9 @@ pub mod pallet {
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
-            Pallet::<T>::internal_mint(target, ips_id, amount)?;
+            Pallet::<T>::internal_mint(target.clone(), ips_id, amount)?;
 
-            Self::deposit_event(Event::Minted(ips_id, owner, amount));
+            Self::deposit_event(Event::Minted(ips_id, target, amount));
 
             Ok(())
         }
@@ -202,9 +202,9 @@ pub mod pallet {
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
-            Pallet::<T>::internal_burn(target, ips_id, amount)?;
+            Pallet::<T>::internal_burn(target.clone(), ips_id, amount)?;
 
-            Self::deposit_event(Event::Burned(ips_id, owner, amount));
+            Self::deposit_event(Event::Burned(ips_id, target, amount));
 
             Ok(())
         }
@@ -219,7 +219,10 @@ pub mod pallet {
             let owner = ensure_signed(caller.clone())?;
             let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
 
-            let total_per_2 = ipt.supply / 2u32.into();
+            let total_per_2 = ipt.supply / {
+                let one: <T as Config>::Balance = One::one();
+                one + one
+            };
 
             let owner_balance =
                 Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
@@ -458,8 +461,8 @@ pub mod pallet {
                             .ok_or(Error::<T>::NotEnoughAmount)?,
                     );
 
-                    let old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
-                    old_ipt
+                    let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
+                    old_ipt.supply = old_ipt
                         .supply
                         .checked_sub(&amount)
                         .ok_or(Error::<T>::NotEnoughAmount)?;
