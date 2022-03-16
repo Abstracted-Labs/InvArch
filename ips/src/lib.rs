@@ -300,7 +300,7 @@ pub mod pallet {
                     Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
-                ensure!(ips_account == caller_account, Error::<T>::NoPermission);
+                //   ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 for asset in assets.clone() {
                     match asset {
@@ -310,21 +310,23 @@ pub mod pallet {
                                 .parentage
                             {
                                 ensure!(
-                                    caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
-                                        || caller_account
-                                            == multi_account_id::<T, T::IpsId>(ips_id, Some(acc)),
+                                    caller_account
+                                        == multi_account_id::<T, T::IpsId>(parent_id, Some(acc)),
                                     Error::<T>::NoPermission
                                 );
                             } else {
-                                todo!()
+                                return Err(Error::<T>::NotParent.into());
                             }
                         }
                         AnyId::IpfId(ipf_id) => {
                             ensure!(
-                                caller_account == multi_account_id::<T, T::IpsId>(ips_id, None)
+                                ipf::IpfStorage::<T>::get(ipf_id)
+                                    .ok_or(Error::<T>::IpfNotFound)?
+                                    .owner
+                                    == ips_account
                                     || caller_account
                                         == multi_account_id::<T, T::IpsId>(
-                                            ips_id,
+                                            parent_id,
                                             Some(
                                                 ipf::IpfStorage::<T>::get(ipf_id)
                                                     .ok_or(Error::<T>::IpfNotFound)?
