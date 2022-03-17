@@ -422,12 +422,94 @@ fn allow_replica_should_fail() {
             false,
         ));
 
-        // Allow_Replica should be called in a multisig context
+        // Case 0: Extrinsic called in a non-multisig context:
         assert_noop!(
             Ips::allow_replica(Origin::signed(ALICE), 0),
             Error::<Runtime>::NoPermission
         );
 
+        // Case 1: An unknown origin tries to allow replica on IPS 0:
+        assert_noop!(
+            Ips::allow_replica(Origin::none(), 0),
+            DispatchError::BadOrigin,
+        );
+
         assert_eq!(IpsStorage::<Runtime>::get(0).unwrap().allow_replica, false);
+    })
+}
+
+#[test]
+fn append_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY),
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            true,
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0,
+                Some(ALICE)
+            )),
+            0,
+            vec![AnyId::IpfId(1)],
+            None
+        ));
+
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0,
+                Some(multi_account_id::<Runtime, IpsId>(
+                    1, None
+                ))
+            )),
+            0,
+            vec![AnyId::IpsId(1)],
+            None
+        ));
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, IpsId>(0, None)
+                ),
+                allow_replica: true,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0), AnyId::IpfId(1), AnyId::IpsId(1)]
+                    .try_into()
+                    .unwrap(),
+                ips_type: IpsType::Normal,
+            })
+        );
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(1),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(1, None)),
+                allow_replica: false,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Replica(0)
+            })
+        )
     })
 }
