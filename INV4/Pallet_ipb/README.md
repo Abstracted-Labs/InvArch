@@ -5,7 +5,7 @@
 This is a Substrate [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
 to bridge [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token) and upgrade them to Intellectual Property Set (IPS).
 
-# Bridged IP : NFTs from an outside protocol, ignorant of the arriving chain's consensus, bridged & minted as an IPS. 
+# Bridged IP
 
 The following **components** are defined:
 
