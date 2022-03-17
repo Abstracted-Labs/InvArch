@@ -3,11 +3,11 @@
 </div>
 
 <div align="Center">
-<h1>InvArch Pallet Library</h1>
-<h2> An IP Ownership, Utility, & Cross-Chain Authentication (XCA) Protocol for Web3 </h2>
+<h1>InvArch FRAME Pallet Library</h1>
+<h2> A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3 </h2>
 
 <br>
-Official Repository for the InvArch Pallet Library 💡
+Official Repository for the InvArch FRAME Pallet Library 💡
 Built on Substrate
 
 <br>  
