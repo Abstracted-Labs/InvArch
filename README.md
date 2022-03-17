@@ -64,18 +64,22 @@ XCM features Cross-Consensus Messaging (XCM) to index, cross-reference, & certif
 
 - `Pallet_IPS` - W.I.P.
 - `Pallet_IPF` - W.I.P.
-- `Pallet_IPR` - W.I.P.
-- `Pallet_BridgeIP` - W.I.P.
-- `Pallet_BondIP` - W.I.P.
-- `Pallet_IPSynth` - W.I.P.
 - `Pallet_IPT` - W.I.P.
-- `Pallet_MultiSig` - W.I.P.
+- `Pallet_IPL` - W.I.P.
+- `Pallet_IPB` - W.I.P.
 - `Pallet_IPVM` - W.I.P.
+
+### XCA Protocol & Pallets
+
+- `Pallet_IPStaking` - W.I.P.
+- `Pallet_IPFarming` - W.I.P.
+- `Pallet_IPDonate` - W.I.P.
 
 ### XCA Protocol & Pallets
 
 - `Pallet_XCA` - W.I.P.
 - `Pallet_DisputeXCA` - W.I.P.
+- `Pallet_ManageXCA` - W.I.P.
 
 ## How to contribute
 
