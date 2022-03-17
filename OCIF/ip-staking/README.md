@@ -3,25 +3,19 @@
 # IP Staking Pallet: IP Staking for Substrate
 
 This is a Substrate [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
-to stake on the [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property).
+to Intellectual Property Sets (IPS), and to stake .
 
-# IP Staking : Staking on the IP
+## IP Staking
 
 The following **components** are defined:
 
-- `IP Staking` + Metadata
+- `IP Staking`
 
 The following **functions** are possible:
 
-- `stake` - Create a new IP Staking
-- `unstake` - Unstake an IP
+- `stake_token` - Stake a fungible token to an IP Set
+- `unstake_token` - Unstake a fungible token from an IP Set
+- `stake_ips` - Stake an IP Set to the network
+- `unstake_ips` - Unstake an IP Set from the network
 
-# IP Staking
-
-This standard defines how **Staking** on the respected IP Set.
-
-## IP Staking Standard
-
-An IP Staking MUST adhere to the following standard.
-
-[dApp](https://github.com/AstarNetwork/Astar/tree/2856cb3945d438f8a194e51a52d7a019dd13491e/frame/dapps-staking/src)
+### WIP
