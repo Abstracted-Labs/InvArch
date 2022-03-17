@@ -294,13 +294,75 @@ fn create_replica_should_fail() {
             false,
         ));
 
+        // Case 0: An unknown origin tries to replicate a non-replicable IPS
+        assert_noop!(
+            Ips::create_replica(Origin::none(), 0),
+            DispatchError::BadOrigin,
+        );
+
+        // Case 1: Alice didn't allow replicas and tried to replicate her own IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_noop!(
             Ips::create_replica(Origin::signed(ALICE), 0),
             Error::<Runtime>::ReplicaNotAllowed
         );
+
+        // Case 2: Bob tried to replicate Alice's IPS
         assert_eq!(Ips::next_ips_id(), 1);
-        assert_eq!(IpsStorage::<Runtime>::get(1), None);
+        assert_noop!(
+            Ips::create_replica(Origin::signed(BOB), 0),
+            Error::<Runtime>::ReplicaNotAllowed,
+        );
+
+        // Case 3: Alice allows replica, then replicates IPS 0. Soon, Bob tries to replicate Alice's replica.
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::allow_replica(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0, None
+            )),
+            0
+        ));
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, IpsId>(0, None)
+                ),
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Normal,
+                allow_replica: true,
+            })
+        );
+
+        // Subcase 0: An unknown origin tries to replicate a replicable IPS
+        assert_noop!(
+            Ips::create_replica(Origin::none(), 0),
+            DispatchError::BadOrigin
+        );
+
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(1),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(
+                    multi_account_id::<Runtime, IpsId>(1, None)
+                ),
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Replica(0),
+                allow_replica: false,
+            })
+        );
+
+        assert_noop!(
+            Ips::create_replica(Origin::signed(BOB), 1),
+            Error::<Runtime>::ReplicaNotAllowed
+        );
+
+        assert_eq!(Ips::next_ips_id(), 2);
     });
 }
 
