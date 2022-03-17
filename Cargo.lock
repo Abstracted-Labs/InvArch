@@ -2955,7 +2955,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#34076571729b243a5ef9c1cfc5b45c2b0a53c8ce"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#b47a8d3de67de4853272006030a2d1dce4adffa1"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5256,7 +5256,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#34076571729b243a5ef9c1cfc5b45c2b0a53c8ce"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#b47a8d3de67de4853272006030a2d1dce4adffa1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5273,7 +5273,7 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#34076571729b243a5ef9c1cfc5b45c2b0a53c8ce"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#b47a8d3de67de4853272006030a2d1dce4adffa1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5294,7 +5294,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#34076571729b243a5ef9c1cfc5b45c2b0a53c8ce"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#b47a8d3de67de4853272006030a2d1dce4adffa1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5520,7 +5520,7 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Pallet-Library?branch=development#34076571729b243a5ef9c1cfc5b45c2b0a53c8ce"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#b47a8d3de67de4853272006030a2d1dce4adffa1"
 dependencies = [
  "frame-support",
  "frame-system",
