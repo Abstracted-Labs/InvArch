@@ -513,3 +513,125 @@ fn append_should_work() {
         )
     })
 }
+
+#[test]
+fn append_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY),
+        ));
+
+        assert_ok!(Ipf::mint(
+            Origin::signed(BOB),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY),
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            false,
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(BOB),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            vec![2],
+            false,
+        ));
+
+        // Case 0: Alice tries to append an IPF to an IPS in a non-multisig context
+        assert_noop!(
+            Ips::append(Origin::signed(ALICE), 0, vec![AnyId::IpfId(1)], None),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 1: Multisig context, but didn't include caller
+        assert_noop!(
+            Ips::append(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(
+                    0, None
+                )),
+                0,
+                vec![AnyId::IpfId(1)],
+                None,
+            ),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 2: Multisig context, but wrong IPF
+        assert_noop!(
+            Ips::append(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(
+                    0,
+                    Some(ALICE)
+                )),
+                0,
+                vec![AnyId::IpfId(2)],
+                None,
+            ),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 3: Unknown origin
+        assert_noop!(
+            Ips::append(Origin::none(), 0, vec![AnyId::IpfId(1)], None),
+            DispatchError::BadOrigin
+        );
+
+        // Case 4: Alice tries to append an IPS to another IPS in a non-multisig context
+        assert_noop!(
+            Ips::append(Origin::signed(ALICE), 0, vec![AnyId::IpsId(1)], None),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 5: An IPS account tries to append a different IPS to the first one
+        assert_noop!(
+            Ips::append(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(
+                    0,
+                    Some(multi_account_id::<Runtime, IpsId>(
+                        7, /*This IPS does not exist*/
+                        None
+                    ))
+                )),
+                0,
+                vec![AnyId::IpsId(1)],
+                None
+            ),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(0, None)),
+                allow_replica: false,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Normal,
+            })
+        );
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(1),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(1, None)),
+                allow_replica: false,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(2)].try_into().unwrap(),
+                ips_type: IpsType::Normal,
+            })
+        )
+    });
+}
