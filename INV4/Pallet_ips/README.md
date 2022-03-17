@@ -5,7 +5,7 @@
 This is a Substrate [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
 to create and manage sets of [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token). 
 
-# IPSets : Storing sets of components that define an idea.
+# IP Set : Non-Fungible Folders of IP Files & other IP Sets
 
 The following **components** are defined:
 * `IPSet` + Metadata
@@ -93,11 +93,15 @@ A collection SHOULD have metadata to describe it and help visualization on vario
 {
   "description": {
     "type": "string",
-    "description": "Description of the IP Set/idea as a whole. Markdown is supported."
+    "description": "Description of the IP Set as a whole. Markdown is supported."
   },
-  "industry": {
+  "category": {
     "type": "string",
-    "description": "A string citing the idea's related industry. Markdown is supported."
+    "description": "A string citing the IP Set's category. Markdown is supported."
+  },
+  "sub_category": {
+    "type": "string",
+    "description": "A string citing the IP Set's sub-category, relative to its primary category. Markdown is supported."
   },
   "attributes": {
     "type": "array",
@@ -115,31 +119,5 @@ A collection SHOULD have metadata to describe it and help visualization on vario
     "type": "string?",
     "description": "[OPTIONAL] Use only if you don't have the image field (they are mutually exclusive and image takes precedence). Raw base64 or SVG data for the image. If SVG, MUST start with <svg, if base64, MUST start with base64:"
   }
-}
-```
-
-## Examples
-
-Collection:
-
-```json
-{
-  "name": "Hover Craft",
-  "account": "CpjsLDC1JFydhtd64jn2ThY7qnd28UhwTwqjqGTRegbeaq1",
-  "symbol": "HOVER",
-  "id": "0aff6865bed5g76b-HOVER",
-  "metadata": "ipfs://ipfs/QmVgs8P4awhZpFXhkkgnCwBp4AdKRj3F9K56dbYwu3q"
-}
-```
-
-Metadata:
-
-```json
-{
-  "description": "An idea for a fully functioning street-legal hover craft!",
-  "industry": "Mechanical Engineering",
-  "attributes": [],
-  "external_url": "https://invarch.app/registry/0aff6865bed5g76b-HOVER",
-  "image": "ipfs://ipfs/QmYcWFQCY1bAZ7ffRggt367McqwrgfeqrZjXtribj5hzzeCWQ"
 }
 ```
