@@ -251,8 +251,13 @@ fn create_replica_should_work() {
             true,
         ));
 
+        // Case 0: Alice replicates her own IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        // Case 1: Bob replicates Alice's IPS
+        assert_eq!(Ips::next_ips_id(), 2);
+        assert_ok!(Ips::create_replica(Origin::signed(BOB), 0));
 
         let ips_0 = IpsStorage::<Runtime>::get(0).unwrap();
         let ips_1 = IpsStorage::<Runtime>::get(1).unwrap();
