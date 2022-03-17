@@ -29,15 +29,15 @@ Built on Substrate
 
 ## Intro
 
-This repository should contains the Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
+This repository should contains the Substrate FRAME Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
 
 ## Overview
 
-InvArch is the world's first truly composable IP ownership, utility, & cross-chain authentication (XCA) protocol.
+InvArch A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3
 
-InvArch features the INV4 (Invention, Involvement, Inventory, Investment) Standard for minting authenticated & interoperable files or NFTs as IP Files (IPFs), truly composable IP Sets, IP Replicas (IPRs), Bridged IP (BIPs), Wrapped IP (WIPs), & pegged IP Tokens (IPTs) featuring multi-purpose & multi-level utility to Web 3.0.
+InvArch features the INV4 (Invention, Involvement, Inventory, Investment), OCIF (On-Chain Innovation Funding), & XCA (Cross-Chain Authentication) Protocols.
 
-InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
+XCM features Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
 
 <div align="center">
 <img src="https://github.com/InvArch/brand/blob/main/architecture.png">
