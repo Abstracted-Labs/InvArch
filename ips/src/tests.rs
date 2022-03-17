@@ -469,7 +469,7 @@ fn append_should_work() {
         assert_eq!(
             IpsStorage::<Runtime>::get(1),
             Some(IpsInfoOf::<Runtime> {
-                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(1, None)),
+                parentage: Parentage::Child(0, multi_account_id::<Runtime, IpsId>(0, None)),
                 allow_replica: false,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: vec![AnyId::IpfId(0)].try_into().unwrap(),
