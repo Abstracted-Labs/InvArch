@@ -142,15 +142,17 @@ pub mod pallet {
             T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
+            [u8; 32],
             OpaqueCall<T>,
         ),
         MultisigVoteAdded(
             T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
+            [u8; 32],
             OpaqueCall<T>,
         ),
-        MultisigExecuted(T::AccountId, OpaqueCall<T>),
+        MultisigExecuted(T::AccountId, OpaqueCall<T>, bool),
     }
 
     /// Errors for IPF pallet
@@ -164,6 +166,7 @@ pub mod pallet {
         MultisigOperationUninitialized,
         MaxMetadataExceeded,
         CouldntDecodeCall,
+        MultisigOperationAlreadyExists,
     }
 
     /// Dispatch functions
@@ -229,6 +232,13 @@ pub mod pallet {
 
             let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
+            let call_hash: [u8; 32] = blake2_256(&call.encode());
+
+            ensure!(
+                Multisig::<T>::get((ips_id, blake2_256(&call.encode()))).is_none(),
+                Error::<T>::MultisigOperationAlreadyExists
+            );
+
             if owner_balance > total_per_2 {
                 pallet_balances::Pallet::<T>::transfer(
                     caller,
@@ -241,7 +251,7 @@ pub mod pallet {
                     .into(),
                 )?;
 
-                call.dispatch(
+                let dispatch_result = call.dispatch(
                     RawOrigin::Signed(multi_account_id::<T, T::IptId>(
                         ips_id,
                         if include_caller {
@@ -251,7 +261,7 @@ pub mod pallet {
                         },
                     ))
                     .into(),
-                )?;
+                );
 
                 Self::deposit_event(Event::MultisigExecuted(
                     multi_account_id::<T, T::IptId>(
@@ -259,6 +269,7 @@ pub mod pallet {
                         if include_caller { Some(owner) } else { None },
                     ),
                     opaque_call,
+                    dispatch_result.is_ok(),
                 ));
             } else {
                 pallet_balances::Pallet::<T>::transfer(
@@ -275,7 +286,7 @@ pub mod pallet {
                 )?;
 
                 Multisig::<T>::insert(
-                    (ips_id, blake2_256(&call.encode())),
+                    (ips_id, call_hash),
                     MultisigOperation {
                         signers: vec![owner.clone()]
                             .try_into()
@@ -297,6 +308,7 @@ pub mod pallet {
                     ),
                     owner_balance,
                     ipt.supply,
+                    call_hash,
                     opaque_call,
                 ));
             }
@@ -351,7 +363,9 @@ pub mod pallet {
                             .into(),
                     )?;
 
-                    old_data
+                    *data = None;
+
+                    let dispatch_result = old_data
                         .actual_call
                         .try_decode()
                         .ok_or(Error::<T>::CouldntDecodeCall)?
@@ -361,11 +375,12 @@ pub mod pallet {
                                 old_data.include_original_caller.clone(),
                             ))
                             .into(),
-                        )?;
+                        );
 
                     Self::deposit_event(Event::MultisigExecuted(
                         multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
                         old_data.actual_call,
+                        dispatch_result.is_ok(),
                     ));
                 } else {
                     pallet_balances::Pallet::<T>::transfer(
@@ -392,6 +407,7 @@ pub mod pallet {
                         multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
                         voter_balance,
                         ipt.supply,
+                        call_hash,
                         old_data.actual_call,
                     ));
                 }
