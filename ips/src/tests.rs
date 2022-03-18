@@ -339,6 +339,19 @@ fn create_replica_should_fail() {
         );
 
         assert_eq!(Ips::next_ips_id(), 2);
+
+        // Case 4: Original Ips does not exist
+        assert_noop!(
+            Ips::create_replica(Origin::signed(BOB), 2),
+            Error::<Runtime>::IpsNotFound
+        );
+
+        // Case 5: IpsId Overflow
+        NextIpsId::<Runtime>::mutate(|id| *id = IpsId::max_value());
+        assert_noop!(
+            Ips::create_replica(Origin::signed(BOB), 0),
+            Error::<Runtime>::NoAvailableIpsId
+        );
     });
 }
 
