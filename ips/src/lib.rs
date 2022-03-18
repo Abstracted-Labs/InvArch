@@ -340,12 +340,19 @@ pub mod pallet {
                 for any_id in assets.clone().into_iter() {
                     if let AnyId::IpsId(ips_id) = any_id {
                         IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            let old = ips.take().ok_or(Error::<T>::IpsNotFound)?;
+
                             for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
                                 ipt::Pallet::<T>::internal_mint(account, parent_id.into(), amount)?
                             }
 
-                            ips.clone().unwrap().parentage =
-                                Parentage::Child(parent_id, ips_account.clone());
+                            *ips = Some(IpsInfo {
+                                parentage: Parentage::Child(parent_id, ips_account.clone()),
+                                metadata: old.metadata,
+                                data: old.data,
+                                ips_type: old.ips_type,
+                                allow_replica: old.allow_replica,
+                            });
 
                             Ok(())
                         })?;
