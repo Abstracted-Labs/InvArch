@@ -300,8 +300,6 @@ pub mod pallet {
                     Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
-                //   ensure!(ips_account == caller_account, Error::<T>::NoPermission);
-
                 for asset in assets.clone() {
                     match asset {
                         AnyId::IpsId(ips_id) => {
@@ -343,13 +341,11 @@ pub mod pallet {
                     if let AnyId::IpsId(ips_id) = any_id {
                         IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
                             for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
-                                ipt::Pallet::<T>::internal_mint(account, ips_id.into(), amount)?
+                                ipt::Pallet::<T>::internal_mint(account, parent_id.into(), amount)?
                             }
 
-                            ips.clone().unwrap().parentage = Parentage::Child(
-                                parent_id,
-                                multi_account_id::<T, T::IpsId>(ips_id, None),
-                            );
+                            ips.clone().unwrap().parentage =
+                                Parentage::Child(parent_id, ips_account.clone());
 
                             Ok(())
                         })?;
