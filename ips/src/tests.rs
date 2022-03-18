@@ -247,6 +247,17 @@ fn create_replica_should_work() {
         let ips_1 = IpsStorage::<Runtime>::get(1).unwrap();
 
         assert_eq!(
+            ips_0,
+            IpsInfo {
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(0, None)),
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Normal,
+                allow_replica: true,
+            }
+        );
+
+        assert_eq!(
             ips_1,
             IpsInfo {
                 parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(1, None)),
