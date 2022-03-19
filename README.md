@@ -3,11 +3,11 @@
 </div>
 
 <div align="Center">
-<h1>InvArch Pallet Library</h1>
-<h2> An IP Ownership, Utility, & Cross-Chain Authentication (XCA) Protocol for Web3 </h2>
+<h1>InvArch FRAME Pallet Library</h1>
+<h2> A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3 </h2>
 
 <br>
-Official Repository for the InvArch Pallet Library 💡
+Official Repository for the InvArch FRAME Pallet Library 💡
 Built on Substrate
 
 <br>  
@@ -29,15 +29,15 @@ Built on Substrate
 
 ## Intro
 
-This repository should contains the Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
+This repository should contains the Substrate FRAME Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
 
 ## Overview
 
-InvArch is the world's first truly composable IP ownership, utility, & cross-chain authentication (XCA) protocol.
+InvArch A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3
 
-InvArch features the INV4 (Invention, Involvement, Inventory, Investment) Standard for minting authenticated & interoperable files or NFTs as IP Files (IPFs), truly composable IP Sets, IP Replicas (IPRs), Bridged IP (BIPs), Wrapped IP (WIPs), & pegged IP Tokens (IPTs) featuring multi-purpose & multi-level utility to Web 3.0.
+InvArch features the INV4 (Invention, Involvement, Inventory, Investment), OCIF (On-Chain Innovation Funding), & XCA (Cross-Chain Authentication) Protocols.
 
-InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
+XCM features Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
 
 <div align="center">
 <img src="https://github.com/InvArch/brand/blob/main/architecture.png">
@@ -64,18 +64,22 @@ InvArch also introduces the Cross-Chain Authentication (XCA) Protocol, featuring
 
 - `Pallet_IPS` - W.I.P.
 - `Pallet_IPF` - W.I.P.
-- `Pallet_IPR` - W.I.P.
-- `Pallet_BridgeIP` - W.I.P.
-- `Pallet_BondIP` - W.I.P.
-- `Pallet_IPSynth` - W.I.P.
 - `Pallet_IPT` - W.I.P.
-- `Pallet_MultiSig` - W.I.P.
+- `Pallet_IPL` - W.I.P.
+- `Pallet_IPB` - W.I.P.
 - `Pallet_IPVM` - W.I.P.
+
+### XCA Protocol & Pallets
+
+- `Pallet_IPStaking` - W.I.P.
+- `Pallet_IPFarming` - W.I.P.
+- `Pallet_IPDonate` - W.I.P.
 
 ### XCA Protocol & Pallets
 
 - `Pallet_XCA` - W.I.P.
 - `Pallet_DisputeXCA` - W.I.P.
+- `Pallet_ManageXCA` - W.I.P.
 
 ## How to contribute
 

@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "ips",
-    "ipf",
-    "ipt",
-    "smartip",
+    "INV4/pallet-ips",
+    "INV4/pallet-ipf",
+    "INV4/pallet-ipt",
+    "INV4/pallet-ipvm",
 ]
