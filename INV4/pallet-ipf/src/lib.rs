@@ -98,8 +98,6 @@ pub mod pallet {
         NoPermission,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
-        /// Tried to amend an IPF without any changes
-        AmendWithoutChanging,
     }
 
     #[pallet::event]
@@ -107,7 +105,6 @@ pub mod pallet {
     //#[pallet::metadata(T::AccountId = "AccountId", T::IpfId = "IpfId", T::Hash = "Hash")]
     pub enum Event<T: Config> {
         Minted(T::AccountId, T::IpfId, T::Hash),
-        Amended(T::AccountId, T::IpfId, T::Hash),
         Burned(T::AccountId, T::IpfId),
     }
 
@@ -135,6 +132,7 @@ pub mod pallet {
                 let ipf_info = IpfInfo {
                     metadata: bounded_metadata,
                     owner: owner.clone(),
+                    author: owner.clone(),
                     data,
                 };
                 IpfStorage::<T>::insert(ipf_id, ipf_info);
@@ -161,38 +159,26 @@ pub mod pallet {
                 Ok(())
             })
         }
+    }
 
-        /// Amend the data stored inside an IP Token
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        pub fn amend(
-            owner: OriginFor<T>,
-            ipf_id: T::IpfId,
-            new_metadata: Vec<u8>,
-            data: T::Hash,
-        ) -> DispatchResultWithPostInfo {
-            IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResultWithPostInfo {
-                let owner = ensure_signed(owner)?;
-                let ipf = ipf_info.clone().ok_or(Error::<T>::IpfNotFound)?;
-                ensure!(ipf.owner == owner, Error::<T>::NoPermission);
-                let bounded_metadata: BoundedVec<u8, T::MaxIpfMetadata> =
-                    new_metadata
-                        .try_into()
-                        .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+    impl<T: Config> Pallet<T> {
+        pub fn send(owner: T::AccountId, ipf_id: T::IpfId, target: T::AccountId) -> DispatchResult {
+            IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResult {
+                let t = ipf_info.take().ok_or(Error::<T>::IpfNotFound)?;
 
-                ensure!(
-                    ((ipf.metadata != bounded_metadata) || (ipf.data != data)),
-                    Error::<T>::AmendWithoutChanging
-                );
+                ensure!(t.owner == owner, Error::<T>::NoPermission);
 
-                ipf_info.replace(IpfInfo {
-                    metadata: bounded_metadata,
-                    owner: owner.clone(),
-                    data,
+                *ipf_info = Some(IpfInfo {
+                    owner: target.clone(),
+                    author: t.author,
+                    metadata: t.metadata,
+                    data: t.data,
                 });
 
-                Self::deposit_event(Event::Amended(owner, ipf_id, data));
+                IpfByOwner::<T>::remove(owner, ipf_id);
+                IpfByOwner::<T>::insert(target, ipf_id, ());
 
-                Ok(().into())
+                Ok(())
             })
         }
     }

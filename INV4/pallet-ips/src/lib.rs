@@ -111,6 +111,11 @@ pub mod pallet {
         Vec<ipf::GenesisIpfData<T>>,            // Vector of IPFs belong to this IPS
     );
 
+    pub type AnyIdWithNewOwner<T> = (
+        AnyId<<T as pallet::Config>::IpsId, <T as ipf::Config>::IpfId>,
+        <T as frame_system::Config>::AccountId,
+    );
+
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
@@ -149,12 +154,7 @@ pub mod pallet {
             Vec<u8>,
             Vec<AnyId<T::IpsId, T::IpfId>>,
         ),
-        Removed(
-            T::AccountId,
-            T::IpsId,
-            Vec<u8>,
-            Vec<AnyId<T::IpsId, T::IpfId>>,
-        ),
+        Removed(T::AccountId, T::IpsId, Vec<u8>, Vec<AnyIdWithNewOwner<T>>),
         AllowedReplica(T::IpsId),
         DisallowedReplica(T::IpsId),
         ReplicaCreated(T::AccountId, T::IpsId, T::IpsId),
@@ -222,6 +222,10 @@ pub mod pallet {
                 let ips_account = primitives::utils::multi_account_id::<T, <T as Config>::IpsId>(
                     current_id, None,
                 );
+
+                for ipf in data.clone() {
+                    ipf::Pallet::<T>::send(creator.clone(), ipf, ips_account.clone())?
+                }
 
                 pallet_balances::Pallet::<T>::transfer_keep_alive(
                     owner.clone(),
@@ -300,8 +304,6 @@ pub mod pallet {
                     Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
-                //   ensure!(ips_account == caller_account, Error::<T>::NoPermission);
-
                 for asset in assets.clone() {
                     match asset {
                         AnyId::IpsId(ips_id) => {
@@ -319,11 +321,11 @@ pub mod pallet {
                             }
                         }
                         AnyId::IpfId(ipf_id) => {
+                            let this_ipf_owner = ipf::IpfStorage::<T>::get(ipf_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .owner;
                             ensure!(
-                                ipf::IpfStorage::<T>::get(ipf_id)
-                                    .ok_or(Error::<T>::IpfNotFound)?
-                                    .owner
-                                    == ips_account
+                                this_ipf_owner.clone() == ips_account
                                     || caller_account
                                         == multi_account_id::<T, T::IpsId>(
                                             parent_id,
@@ -335,6 +337,8 @@ pub mod pallet {
                                         ),
                                 Error::<T>::NoPermission
                             );
+
+                            ipf::Pallet::<T>::send(this_ipf_owner, ipf_id, ips_account.clone())?
                         }
                     }
                 }
@@ -343,13 +347,16 @@ pub mod pallet {
                     if let AnyId::IpsId(ips_id) = any_id {
                         IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
                             for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
-                                ipt::Pallet::<T>::internal_mint(account, ips_id.into(), amount)?
+                                ipt::Pallet::<T>::internal_mint(
+                                    account.clone(),
+                                    parent_id.into(),
+                                    amount,
+                                )?;
+                                ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?;
                             }
 
-                            ips.clone().unwrap().parentage = Parentage::Child(
-                                parent_id,
-                                multi_account_id::<T, T::IpsId>(ips_id, None),
-                            );
+                            ips.clone().unwrap().parentage =
+                                Parentage::Child(parent_id, ips_account.clone());
 
                             Ok(())
                         })?;
@@ -371,9 +378,9 @@ pub mod pallet {
                         .chain(assets.clone().into_iter())
                         .collect::<Vec<AnyId<<T as Config>::IpsId, <T as ipf::Config>::IpfId>>>()
                         .try_into()
-                        .unwrap(),
+                        .unwrap(), // TODO: Remove unwrap.
                     ips_type: info.ips_type,
-                    allow_replica: info.allow_replica, // TODO: Remove unwrap.
+                    allow_replica: info.allow_replica,
                 });
 
                 Self::deposit_event(Event::Appended(
@@ -396,7 +403,7 @@ pub mod pallet {
         pub fn remove(
             owner: OriginFor<T>,
             ips_id: T::IpsId,
-            assets: Vec<AnyId<T::IpsId, T::IpfId>>,
+            assets: Vec<AnyIdWithNewOwner<T>>,
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
             IpsStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
@@ -412,7 +419,7 @@ pub mod pallet {
 
                 ensure!(
                     !assets.clone().into_iter().any(|id| {
-                        match id {
+                        match id.0 {
                             AnyId::IpsId(ips_id) => {
                                 IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
                             }
@@ -427,21 +434,38 @@ pub mod pallet {
                 let mut old_assets = info.data.clone();
 
                 for any_id in assets.clone().into_iter() {
-                    if let AnyId::IpsId(ips_id) = any_id {
-                        IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
-                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
-                                ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?
-                            }
+                    match any_id {
+                        (AnyId::IpsId(this_ips_id), new_owner) => {
+                            IpsStorage::<T>::try_mutate_exists(
+                                this_ips_id,
+                                |ips| -> DispatchResult {
+                                    ipt::Pallet::<T>::internal_mint(
+                                        new_owner,
+                                        this_ips_id.into(),
+                                        <T as ipt::Config>::ExistentialDeposit::get(),
+                                    )?;
 
-                            ips.clone().unwrap().parentage =
-                                Parentage::Parent(multi_account_id::<T, T::IpsId>(ips_id, None));
+                                    ips.clone().unwrap().parentage = Parentage::Parent(
+                                        multi_account_id::<T, T::IpsId>(ips_id, None),
+                                    );
 
-                            Ok(())
-                        })?;
+                                    Ok(())
+                                },
+                            )?;
+                        }
+
+                        (AnyId::IpfId(this_ipf_id), new_owner) => {
+                            ipf::Pallet::<T>::send(ips_account.clone(), this_ipf_id, new_owner)?
+                        }
                     }
                 }
 
-                old_assets.retain(|x| !assets.clone().contains(x));
+                let just_ids = assets
+                    .clone()
+                    .into_iter()
+                    .map(|(x, _)| x)
+                    .collect::<Vec<AnyId<T::IpsId, T::IpfId>>>();
+                old_assets.retain(|x| !just_ids.clone().contains(x));
 
                 *ips_info = Some(IpsInfo {
                     parentage: info.parentage,
