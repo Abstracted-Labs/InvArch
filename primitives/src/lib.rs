@@ -34,14 +34,16 @@ pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
     pub allow_replica: bool,
 }
 
-/// IPT Info
+/// IPF Info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
-    /// IPT owner
+    /// IPF owner
     pub owner: AccountId,
-    /// IPT metadata
+    /// Original IPF author
+    pub author: AccountId,
+    /// IPF metadata
     pub metadata: IpfMetadataOf,
-    /// IPT data
+    /// IPF data
     pub data: Data,
 }
 
