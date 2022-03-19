@@ -20,9 +20,9 @@ pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "pol
 scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
 
 # InvArch dependencies
-primitives = { package = "invarch-primitives", path = "../primitives", default-features = false }
-ipf = { package = "pallet-ipf", path = "../ipf", default-features = false }
-ipt = { package = "pallet-ipt", path = "../ipt", default-features = false }
+primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
+ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
+ipt = { package = "pallet-ipt", path = "../pallet-ipt", default-features = false }
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
