@@ -552,12 +552,12 @@ pub mod pallet {
                     Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
                 }
 
-                ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
-
                 ensure!(
                     !matches!(info.ips_type, IpsType::Replica(_)),
                     Error::<T>::ReplicaCannotAllowReplicas
                 );
+
+                ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
 
                 *ips_info = Some(IpsInfo {
                     parentage: info.parentage,

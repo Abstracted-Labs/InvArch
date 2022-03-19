@@ -418,6 +418,46 @@ fn allow_replica_should_fail() {
             false,
         ));
 
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![1],
+            false,
+        ));
+
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0,
+                Some(multi_account_id::<Runtime, IpsId>(1, None))
+            )),
+            0,
+            vec![AnyId::IpsId(1)],
+            None
+        ));
+
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 2);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![2],
+            true,
+        ));
+
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 2));
+
         // Case 0: Extrinsic called in a non-multisig context:
         assert_noop!(
             Ips::allow_replica(Origin::signed(ALICE), 0),
@@ -430,7 +470,185 @@ fn allow_replica_should_fail() {
             DispatchError::BadOrigin,
         );
 
+        assert_noop!(
+            Ips::allow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(4, None)),
+                4
+            ),
+            Error::<Runtime>::IpsNotFound,
+        );
+
+        assert_noop!(
+            Ips::allow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+                1
+            ),
+            Error::<Runtime>::NotParent,
+        );
+
+        assert_noop!(
+            Ips::allow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(2, None)),
+                2
+            ),
+            Error::<Runtime>::ValueNotChanged,
+        );
+
+        assert_noop!(
+            Ips::allow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(3, None)),
+                3
+            ),
+            Error::<Runtime>::ReplicaCannotAllowReplicas,
+        );
+
         assert_eq!(IpsStorage::<Runtime>::get(0).unwrap().allow_replica, false);
+        assert_eq!(IpsStorage::<Runtime>::get(1).unwrap().allow_replica, false);
+        assert_eq!(IpsStorage::<Runtime>::get(2).unwrap().allow_replica, true);
+        assert_eq!(IpsStorage::<Runtime>::get(3).unwrap().allow_replica, false);
+    })
+}
+
+#[test]
+fn disallow_replica_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            true,
+        ));
+
+        assert_ok!(Ips::disallow_replica(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+            0
+        ));
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                allow_replica: false,
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(0, None)),
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Normal
+            })
+        )
+    })
+}
+
+#[test]
+fn disallow_replica_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 0);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            true,
+        ));
+
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 1);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![1],
+            true,
+        ));
+
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0,
+                Some(multi_account_id::<Runtime, IpsId>(1, None))
+            )),
+            0,
+            vec![AnyId::IpsId(1)],
+            None
+        ));
+
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+
+        assert_eq!(Ips::next_ips_id(), 2);
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![2],
+            false,
+        ));
+
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 1));
+
+        // Case 0: Extrinsic called in a non-multisig context:
+        assert_noop!(
+            Ips::disallow_replica(Origin::signed(ALICE), 0),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 1: An unknown origin tries to allow replica on IPS 0:
+        assert_noop!(
+            Ips::disallow_replica(Origin::none(), 0),
+            DispatchError::BadOrigin,
+        );
+
+        assert_noop!(
+            Ips::disallow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(4, None)),
+                4
+            ),
+            Error::<Runtime>::IpsNotFound,
+        );
+
+        assert_noop!(
+            Ips::disallow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+                1
+            ),
+            Error::<Runtime>::NotParent,
+        );
+
+        assert_noop!(
+            Ips::disallow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(2, None)),
+                2
+            ),
+            Error::<Runtime>::ValueNotChanged,
+        );
+
+        assert_noop!(
+            Ips::disallow_replica(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(3, None)),
+                3
+            ),
+            Error::<Runtime>::ReplicaCannotAllowReplicas,
+        );
+
+        assert_eq!(IpsStorage::<Runtime>::get(0).unwrap().allow_replica, true);
+        assert_eq!(IpsStorage::<Runtime>::get(1).unwrap().allow_replica, true);
+        assert_eq!(IpsStorage::<Runtime>::get(2).unwrap().allow_replica, false);
+        assert_eq!(IpsStorage::<Runtime>::get(3).unwrap().allow_replica, false);
     })
 }
 
