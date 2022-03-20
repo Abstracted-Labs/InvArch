@@ -2,6 +2,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
+use ipt::AssetDetails;
 use mock::*;
 use primitives::{utils::multi_account_id, AnyId, IpsType, Parentage};
 use sp_core::H256;
@@ -675,8 +676,33 @@ fn append_should_work() {
             true,
         ));
 
+        assert_ok!(Ipt::mint(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+            0,
+            1000,
+            ALICE
+        ));
+
+        assert_eq!(
+            ipt::Ipt::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                supply: 1000 + ExistentialDeposit::get(),
+                deposit: 0,
+            })
+        );
+
         assert_eq!(Ips::next_ips_id(), 1);
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        assert_eq!(
+            ipt::Ipt::<Runtime>::get(1),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(1, None),
+                supply: ExistentialDeposit::get(),
+                deposit: 0,
+            })
+        );
 
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, Some(ALICE))),
@@ -694,6 +720,15 @@ fn append_should_work() {
             vec![AnyId::IpsId(1)],
             None
         ));
+
+        assert_eq!(
+            ipt::Ipt::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                supply: 1000 + 2 * ExistentialDeposit::get(),
+                deposit: 0,
+            })
+        );
 
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
