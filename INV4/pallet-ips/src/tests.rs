@@ -936,13 +936,6 @@ fn remove_should_work() {
 
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
 
-        assert_ok!(Ipt::mint(
-            Origin::signed(multi_account_id::<Runtime, IpsId>(1, None)),
-            1,
-            1001,
-            ALICE
-        ));
-
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, Some(ALICE))),
             0,
