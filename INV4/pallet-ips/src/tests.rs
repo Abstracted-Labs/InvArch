@@ -949,6 +949,17 @@ fn remove_should_work() {
             vec![AnyId::IpfId(1)],
             None
         ));
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                author: ALICE,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY),
+            })
+        );
+
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(
                 0,
@@ -997,7 +1008,7 @@ fn remove_should_work() {
             IptStorage::<Runtime>::get(1),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
-                supply: 1001 + ExistentialDeposit::get(),
+                supply: ExistentialDeposit::get(),
                 deposit: 0,
             })
         )
