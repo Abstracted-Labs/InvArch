@@ -1003,3 +1003,139 @@ fn remove_should_work() {
         )
     });
 }
+
+#[test]
+fn remove_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY),
+        ));
+
+        assert_ok!(Ips::create_ips(
+            Origin::signed(ALICE),
+            MOCK_METADATA.to_vec(),
+            vec![0],
+            true,
+        ));
+
+        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(0, Some(ALICE))),
+            0,
+            vec![AnyId::IpfId(1)],
+            None
+        ));
+        assert_ok!(Ips::append(
+            Origin::signed(multi_account_id::<Runtime, IpsId>(
+                0,
+                Some(multi_account_id::<Runtime, IpsId>(1, None))
+            )),
+            0,
+            vec![AnyId::IpsId(1)],
+            None
+        ));
+
+        // Case 1: Unknown origin
+        assert_noop!(
+            Ips::remove(Origin::none(), 0, vec![(AnyId::IpfId(1), ALICE)], None),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Ips::remove(Origin::none(), 0, vec![(AnyId::IpsId(1), BOB)], None),
+            DispatchError::BadOrigin
+        );
+        assert_noop!(
+            Ips::remove(
+                Origin::none(),
+                0,
+                vec![(AnyId::IpfId(1), ALICE), (AnyId::IpsId(1), BOB)],
+                None
+            ),
+            DispatchError::BadOrigin
+        );
+
+        // Case 2: Non-multisig operation
+        assert_noop!(
+            Ips::remove(
+                Origin::signed(ALICE),
+                0,
+                vec![(AnyId::IpfId(1), ALICE)],
+                None
+            ),
+            Error::<Runtime>::NoPermission
+        );
+        assert_noop!(
+            Ips::remove(Origin::signed(BOB), 0, vec![(AnyId::IpfId(1), BOB)], None),
+            Error::<Runtime>::NoPermission
+        );
+
+        // Case 3: Asset does not exist
+        assert_noop!(
+            Ips::remove(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+                0,
+                vec![(AnyId::IpfId(32767), ALICE)],
+                None
+            ),
+            Error::<Runtime>::NoPermission
+        );
+        assert_noop!(
+            Ips::remove(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+                0,
+                vec![(AnyId::IpsId(65535), ALICE)],
+                None
+            ),
+            Error::<Runtime>::NoPermission
+        );
+
+        assert_eq!(
+            IpsStorage::<Runtime>::get(0),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(0, None)),
+                allow_replica: true,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0), AnyId::IpfId(1), AnyId::IpsId(1)]
+                    .try_into()
+                    .unwrap(),
+                ips_type: IpsType::Normal,
+            })
+        );
+        assert_eq!(
+            IpsStorage::<Runtime>::get(1),
+            Some(IpsInfoOf::<Runtime> {
+                parentage: Parentage::Child(0, multi_account_id::<Runtime, IpsId>(0, None)),
+                allow_replica: false,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: vec![AnyId::IpfId(0)].try_into().unwrap(),
+                ips_type: IpsType::Replica(0),
+            })
+        );
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                deposit: 0,
+                supply: 2 * ExistentialDeposit::get(),
+            })
+        );
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(1),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(1, None),
+                deposit: 0,
+                supply: 0,
+            })
+        );
+    });
+}
