@@ -3,7 +3,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use ipf::{IpfInfoOf, IpfStorage};
-use ipt::AssetDetails;
+use ipt::{AssetDetails, Ipt as IptStorage};
 use mock::*;
 use primitives::{utils::multi_account_id, AnyId, IpsType, Parentage};
 use sp_core::H256;
@@ -70,11 +70,11 @@ fn create_ips_should_work() {
         );
 
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(0).unwrap().supply,
+            IptStorage::<Runtime>::get(0).unwrap().supply,
             ExistentialDeposit::get()
         );
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(1).unwrap().supply,
+            IptStorage::<Runtime>::get(1).unwrap().supply,
             ExistentialDeposit::get()
         );
     });
@@ -705,7 +705,7 @@ fn append_should_work() {
         ));
 
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(0),
+            IptStorage::<Runtime>::get(0),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
                 supply: 1000 + ExistentialDeposit::get(),
@@ -717,7 +717,7 @@ fn append_should_work() {
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
 
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(1),
+            IptStorage::<Runtime>::get(1),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
                 supply: ExistentialDeposit::get(),
@@ -753,7 +753,7 @@ fn append_should_work() {
         ));
 
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(0),
+            IptStorage::<Runtime>::get(0),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
                 supply: 1000 + 2 * ExistentialDeposit::get(),
@@ -762,7 +762,7 @@ fn append_should_work() {
         );
 
         assert_eq!(
-            ipt::Ipt::<Runtime>::get(1),
+            IptStorage::<Runtime>::get(1),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
                 supply: 0,
@@ -792,7 +792,7 @@ fn append_should_work() {
                 data: vec![AnyId::IpfId(0)].try_into().unwrap(),
                 ips_type: IpsType::Replica(0)
             })
-        )
+        );
     })
 }
 
