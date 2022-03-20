@@ -346,7 +346,10 @@ pub mod pallet {
                     .into_iter()
                     .sum();
 
-                let total_per_2 = ipt.supply / 2u32.into();
+                let total_per_2 = ipt.supply / {
+                    let one: <T as Config>::Balance = One::one();
+                    one + one
+                };
 
                 let fee: <T as pallet::Config>::Balance =
                     T::WeightToFeePolynomial::calc(&old_data.call_weight).into();
@@ -357,9 +360,9 @@ pub mod pallet {
                         <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
                             multi_account_id::<T, T::IptId>(ips_id, None),
                         ),
-                        fee.checked_sub(&total_in_operation)
-                            .ok_or(Error::<T>::NotEnoughAmount)
-                            .unwrap()
+                        // Voter will pay the remainder of the fee after subtracting the total IPTs already in the operation converted to real fee value.
+                        fee.checked_sub(&(total_in_operation * (fee / total_per_2)))
+                            .ok_or(Error::<T>::NotEnoughAmount)?
                             .into(),
                     )?;
 
