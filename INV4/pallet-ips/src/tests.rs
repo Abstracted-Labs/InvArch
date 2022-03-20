@@ -762,6 +762,15 @@ fn append_should_work() {
         );
 
         assert_eq!(
+            ipt::Ipt::<Runtime>::get(1),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IpsId>(1, None),
+                supply: 0,
+                deposit: 0,
+            })
+        );
+
+        assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {
                 parentage: Parentage::Parent(multi_account_id::<Runtime, IpsId>(0, None)),
