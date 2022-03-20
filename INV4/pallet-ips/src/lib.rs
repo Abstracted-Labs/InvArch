@@ -425,16 +425,10 @@ pub mod pallet {
                 ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 ensure!(
-                    !assets.clone().into_iter().any(|id| {
-                        match id.0 {
-                            AnyId::IpsId(ips_id) => {
-                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
-                            }
-                            AnyId::IpfId(ipf_id) => {
-                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
-                            }
-                        }
-                    }),
+                    !assets
+                        .clone()
+                        .into_iter()
+                        .any(|id| { !info.data.contains(&id.0) }),
                     Error::<T>::NoPermission
                 );
 

@@ -992,7 +992,7 @@ fn remove_should_work() {
             IptStorage::<Runtime>::get(0),
             Some(AssetDetails {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
-                supply: ExistentialDeposit::get(),
+                supply: ExistentialDeposit::get() + ExistentialDeposit::get(), // We appended a child IPS to this one and then removed, that process doe not burn the migrated IPTs
                 deposit: 0,
             })
         );
