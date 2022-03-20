@@ -2,6 +2,7 @@
 
 use super::*;
 use frame_support::{assert_noop, assert_ok};
+use ipf::{IpfInfoOf, IpfStorage};
 use ipt::AssetDetails;
 use mock::*;
 use primitives::{utils::multi_account_id, AnyId, IpsType, Parentage};
@@ -668,6 +669,16 @@ fn append_should_work() {
             H256::from(MOCK_DATA_SECONDARY),
         ));
 
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                owner: ALICE,
+                author: ALICE,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA),
+            })
+        );
+
         assert_eq!(Ips::next_ips_id(), 0);
         assert_ok!(Ips::create_ips(
             Origin::signed(ALICE),
@@ -675,6 +686,16 @@ fn append_should_work() {
             vec![0],
             true,
         ));
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                author: ALICE,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA),
+            })
+        );
 
         assert_ok!(Ipt::mint(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
@@ -710,6 +731,16 @@ fn append_should_work() {
             vec![AnyId::IpfId(1)],
             None
         ));
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                owner: multi_account_id::<Runtime, IpsId>(0, None),
+                author: ALICE,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY),
+            })
+        );
 
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(
