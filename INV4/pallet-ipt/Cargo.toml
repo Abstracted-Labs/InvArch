@@ -29,8 +29,6 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch 
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
-ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
-ips = { package = "pallet-ips", path = "../pallet-ips", default-features = false }
 
 [features]
 default = ["std"]

@@ -72,30 +72,6 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIpfMetadata: u32 = 32;
-}
-
-impl ipf::Config for Runtime {
-    type IpfId = u64;
-    type MaxIpfMetadata = MaxIpfMetadata;
-    type Event = Event;
-}
-
-parameter_types! {
-    pub const MaxIpsMetadata: u32 = 32;
-}
-
-impl ips::Config for Runtime {
-    type Event = Event;
-    type IpsId = u64;
-    type MaxIpsMetadata = MaxIpsMetadata;
-    type Currency = Balances;
-    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
-    type ExistentialDeposit = ExistentialDeposit;
-    type Balance = Balance;
-}
-
-parameter_types! {
     pub const MaxCallers: u32 = 32;
 }
 
@@ -135,8 +111,6 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Ipf: ipf::{Pallet, Storage, Event<T>},
-        Ips: ips::{Pallet, Storage, Event<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
     }
 );
