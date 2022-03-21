@@ -15,6 +15,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+smallvec = "1.6.1"
 
 scale-info = { version = "1.0.0", features = ["derive"], default-features = false }
 
@@ -28,6 +29,8 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch 
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
+ips = { package = "pallet-ips", path = "../pallet-ips", default-features = false }
 
 [features]
 default = ["std"]

@@ -12,6 +12,11 @@ use sp_std::vec::Vec;
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct AssetDetails<Balance, AccountId> {
     pub owner: AccountId,
