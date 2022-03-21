@@ -39,6 +39,7 @@ use sp_core::{
     // H160, U256
 };
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use hex_literal::hex;
 // use std::{collections::BTreeMap, str::FromStr};
 
 // The URL for the telemetry server.
@@ -81,6 +82,8 @@ type AccountPublic = <Signature as Verify>::Signer;
 pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_public_from_seed::<AuraId>(seed)
 }
+
+// TODO: Update to AccountId32::new([..])
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
@@ -219,6 +222,10 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
+pub fn tinkernet_config() -> Result<ChainSpec, String> {
+    ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])   
+}
+
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
     root_key: AccountId,
@@ -307,3 +314,4 @@ fn testnet_genesis(
         // },
     }
 }
+

@@ -58,7 +58,9 @@
         ]
       },
       "aura": {
-        "authorities": []
+        "authorities": [
+          "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
+        ]
       },
       "auraExt": null,
       "polkadotXcm": {
