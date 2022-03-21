@@ -14,11 +14,11 @@ pub use pallet::*;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct AssetDetails<Balance, AccountId> {
-    owner: AccountId,
+    pub owner: AccountId,
     /// The total supply across all accounts.
-    supply: Balance,
+    pub supply: Balance,
     /// The balance deposited for this asset. This pays for the data stored here.
-    deposit: Balance,
+    pub deposit: Balance,
 }
 
 type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;

@@ -26,6 +26,7 @@ fn mint_should_work() {
         assert_eq!(
             IpfStorage::<Runtime>::get(0),
             Some(IpfInfoOf::<Runtime> {
+                author: BOB,
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)
@@ -35,6 +36,7 @@ fn mint_should_work() {
         assert_eq!(
             IpfStorage::<Runtime>::get(1),
             Some(IpfInfoOf::<Runtime> {
+                author: ALICE,
                 owner: ALICE,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA_SECONDARY)
@@ -116,9 +118,138 @@ fn burn_should_fail() {
         assert_eq!(
             IpfStorage::<Runtime>::get(0),
             Some(IpfInfoOf::<Runtime> {
+                author: BOB,
                 owner: BOB,
                 metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
                 data: H256::from(MOCK_DATA)
+            })
+        );
+    });
+}
+
+#[test]
+fn send_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_eq!(Ipf::next_ipf_id(), 0);
+        assert_ok!(Ipf::mint(
+            Origin::signed(BOB),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+        assert_eq!(Ipf::next_ipf_id(), 1);
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY)
+        ));
+        assert_eq!(Ipf::next_ipf_id(), 2);
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                author: BOB,
+                owner: BOB,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA)
+            })
+        );
+
+        assert_ok!(Ipf::send(BOB, 0, ALICE));
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                author: BOB,
+                owner: ALICE,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA)
+            })
+        );
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                author: ALICE,
+                owner: ALICE,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY)
+            })
+        );
+
+        assert_ok!(Ipf::send(ALICE, 1, BOB));
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                author: ALICE,
+                owner: BOB,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY)
+            })
+        );
+    });
+}
+
+#[test]
+fn send_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_eq!(Ipf::next_ipf_id(), 0);
+        assert_ok!(Ipf::mint(
+            Origin::signed(BOB),
+            MOCK_METADATA.to_vec(),
+            H256::from(MOCK_DATA)
+        ));
+        assert_eq!(Ipf::next_ipf_id(), 1);
+        assert_ok!(Ipf::mint(
+            Origin::signed(ALICE),
+            MOCK_METADATA_SECONDARY.to_vec(),
+            H256::from(MOCK_DATA_SECONDARY)
+        ));
+        assert_eq!(Ipf::next_ipf_id(), 2);
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                author: BOB,
+                owner: BOB,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA)
+            })
+        );
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                author: ALICE,
+                owner: ALICE,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY)
+            })
+        );
+
+        assert_noop!(Ipf::send(BOB, 2, ALICE), Error::<Runtime>::IpfNotFound);
+
+        assert_noop!(Ipf::send(BOB, 1, ALICE), Error::<Runtime>::NoPermission);
+
+        assert_noop!(Ipf::send(ALICE, 0, BOB), Error::<Runtime>::NoPermission);
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(0),
+            Some(IpfInfoOf::<Runtime> {
+                author: BOB,
+                owner: BOB,
+                metadata: MOCK_METADATA.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA)
+            })
+        );
+
+        assert_eq!(
+            IpfStorage::<Runtime>::get(1),
+            Some(IpfInfoOf::<Runtime> {
+                author: ALICE,
+                owner: ALICE,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap(),
+                data: H256::from(MOCK_DATA_SECONDARY)
             })
         );
     });

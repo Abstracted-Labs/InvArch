@@ -1,9 +1,17 @@
 //! Mocks for the gradually-update module.
 
-use frame_support::{construct_runtime, parameter_types, traits::Contains};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::Contains,
+    weights::{
+        constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+        WeightToFeePolynomial,
+    },
+};
 use pallet_balances::AccountData;
+use smallvec::smallvec;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup};
+use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use super::*;
 
@@ -42,6 +50,7 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -74,31 +83,22 @@ impl ipf::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIpsMetadata: u32 = 32;
+    pub const MaxCallers: u32 = 32;
+}
+
+impl ipt::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IptId = u64;
+    type MaxCallers = MaxCallers;
+    type ExistentialDeposit = ExistentialDeposit;
+    type Call = Call;
+    type WeightToFeePolynomial = WeightToFee;
 }
 
 parameter_types! {
-    pub const AssetDeposit: Balance = 100;
-    pub const ApprovalDeposit: Balance = 500;
-    pub const AssetsStringLimit: u32 = 50;
-    pub const MetadataDepositBase: Balance = 68;
-    pub const MetadataDepositPerByte: Balance = 1;
-}
-
-impl pallet_assets::Config for Runtime {
-    type Event = Event;
-    type Balance = Balance;
-    type AssetId = u64;
-    type Currency = Balances;
-    type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
-    type AssetDeposit = AssetDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = AssetsStringLimit;
-    type Freezer = ();
-    type Extra = ();
-    type WeightInfo = ();
+    pub const MaxIpsMetadata: u32 = 32;
 }
 
 impl Config for Runtime {
@@ -108,6 +108,7 @@ impl Config for Runtime {
     type Currency = Balances;
     type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     type ExistentialDeposit = ExistentialDeposit;
+    type Balance = Balance;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -137,7 +138,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
         Ipf: ipf::{Pallet, Storage, Event<T>},
         Ips: ips::{Pallet, Storage, Event<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+        Ipt: ipt::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -193,5 +194,24 @@ impl ExtBuilder {
         .build_storage()
         .unwrap()
         .into()
+    }
+}
+
+pub const MILLIUNIT: Balance = 1_000_000_000;
+
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+    type Balance = Balance;
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        // in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
+        // in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
+        let p = MILLIUNIT / 10;
+        let q = 100 * Balance::from(ExtrinsicBaseWeight::get());
+        smallvec![WeightToFeeCoefficient {
+            degree: 1,
+            negative: false,
+            coeff_frac: Perbill::from_rational(p % q, q),
+            coeff_integer: p / q,
+        }]
     }
 }

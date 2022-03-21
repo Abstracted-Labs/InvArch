@@ -1,6 +1,9 @@
 //! Mocks for the gradually-update module.
 
-use frame_support::{construct_runtime, parameter_types, traits::Contains};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::{ConstU32, Contains},
+};
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
 
@@ -39,6 +42,7 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {

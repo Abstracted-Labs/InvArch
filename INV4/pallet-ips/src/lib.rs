@@ -28,10 +28,10 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-//#[cfg(test)]
-//mod mock;
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 /// Import the primitives crate
 use primitives::IpsInfo;
@@ -346,6 +346,8 @@ pub mod pallet {
                 for any_id in assets.clone().into_iter() {
                     if let AnyId::IpsId(ips_id) = any_id {
                         IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+                            let old = ips.take().ok_or(Error::<T>::IpsNotFound)?;
+
                             for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
                                 ipt::Pallet::<T>::internal_mint(
                                     account.clone(),
@@ -355,8 +357,13 @@ pub mod pallet {
                                 ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?;
                             }
 
-                            ips.clone().unwrap().parentage =
-                                Parentage::Child(parent_id, ips_account.clone());
+                            *ips = Some(IpsInfo {
+                                parentage: Parentage::Child(parent_id, ips_account.clone()),
+                                metadata: old.metadata,
+                                data: old.data,
+                                ips_type: old.ips_type,
+                                allow_replica: old.allow_replica,
+                            });
 
                             Ok(())
                         })?;
@@ -418,16 +425,10 @@ pub mod pallet {
                 ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
                 ensure!(
-                    !assets.clone().into_iter().any(|id| {
-                        match id.0 {
-                            AnyId::IpsId(ips_id) => {
-                                IpsByOwner::<T>::get(ips_account.clone(), ips_id).is_none()
-                            }
-                            AnyId::IpfId(ipf_id) => {
-                                ipf::IpfByOwner::<T>::get(ips_account.clone(), ipf_id).is_none()
-                            }
-                        }
-                    }),
+                    !assets
+                        .clone()
+                        .into_iter()
+                        .any(|id| { !info.data.contains(&id.0) }),
                     Error::<T>::NoPermission
                 );
 
@@ -545,12 +546,12 @@ pub mod pallet {
                     Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
                 }
 
-                ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
-
                 ensure!(
                     !matches!(info.ips_type, IpsType::Replica(_)),
                     Error::<T>::ReplicaCannotAllowReplicas
                 );
+
+                ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
 
                 *ips_info = Some(IpsInfo {
                     parentage: info.parentage,
