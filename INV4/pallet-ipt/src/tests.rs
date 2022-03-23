@@ -89,3 +89,29 @@ fn mint_should_fail() {
         );
     });
 }
+#[test]
+fn burn_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(ALICE, 0, vec![(ALICE, ExistentialDeposit::get())]);
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: ALICE,
+                supply: ExistentialDeposit::get(),
+                deposit: 0,
+            })
+        );
+
+        assert_ok!(Ipt::burn(Origin::signed(ALICE), 0, 500, ALICE));
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: ALICE,
+                supply: 0,
+                deposit: 0,
+            })
+        );
+    });
+}
