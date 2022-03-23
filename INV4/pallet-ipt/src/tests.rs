@@ -172,13 +172,27 @@ fn burn_should_fail() {
 }
 
 #[test]
-fn as_multi_should_work() {
+fn operate_multisig_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Ipt::as_multi(
+        assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
             0,
-            todo!("call?")
+            Box::new(Call::System(frame_system::Call::remark {
+                remark: b"test".to_vec()
+            }))
+        ));
+
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            // crate in this case == ipt
+            Box::new(Call::Ipt(crate::Call::mint {
+                ips_id: 0u64,
+                amount: 1_000_000_000_000u128,
+                target: BOB
+            }))
         ));
     });
 }
