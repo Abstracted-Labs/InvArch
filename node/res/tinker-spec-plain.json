@@ -3,7 +3,12 @@
   "id": "invarch-tinkernet",
   "chainType": "Live",
   "bootNodes": [],
-  "telemetryEndpoints": null,
+  "telemetryEndpoints": [
+	[
+		"/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
+        0
+	]
+  ],
   "protocolId": "invarch-tinker",
   "properties": {
     "ss58Format": 42,
