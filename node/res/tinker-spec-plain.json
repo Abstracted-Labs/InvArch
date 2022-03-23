@@ -11,7 +11,7 @@
       "tokenSymbol": "TINK"
     },
   "relay_chain": "rococo",
-  "para_id": 1000,
+  "para_id": 2011,
   "consensusEngine": null,
   "codeSubstitutes": {},
   "genesis": {
@@ -33,8 +33,7 @@
       },
       "collatorSelection": {
         "invulnerables": [
-          "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-          "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+          "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1",
         ],
         "candidacyBond": 16000000000,
         "desiredCandidates": 0
@@ -42,17 +41,10 @@
       "session": {
         "keys": [
           [
-            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
-            "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+            "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1",
+            "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
             {
-              "aura": "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
-            }
-          ],
-          [
-            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
-            {
-              "aura": "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"
+              "aura": "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
             }
           ]
         ]
