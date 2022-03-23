@@ -258,9 +258,9 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8056f1455169ab86dd47b47391e4ab0cbd25410a70e9fe675544f49bafaf952"
+checksum = "52580991739c5cdb36cde8b2a516371c0a3b70dda36d916cc08b82372916808c"
 dependencies = [
  "async-attributes",
  "async-channel",
@@ -2725,9 +2725,9 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hyper"
-version = "0.14.17"
+version = "0.14.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "043f0e083e9901b6cc658a77d1eb86f4fc650bbb977a4337dd63192826aa85dd"
+checksum = "b26ae0a80afebe130861d90abf98e3814a4f28a4c6ffeb5ab8ebb2be311e0ef2"
 dependencies = [
  "bytes 1.1.0",
  "futures-channel",
@@ -2955,7 +2955,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bcc24e998e562dbf8b7c226c27d8eec253e3cb3c"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#94cec8266d4c57426dfffcabac39b319052cdb42"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4202,9 +4202,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if 1.0.0",
  "value-bag",
@@ -5266,7 +5266,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bcc24e998e562dbf8b7c226c27d8eec253e3cb3c"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#94cec8266d4c57426dfffcabac39b319052cdb42"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5283,7 +5283,7 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bcc24e998e562dbf8b7c226c27d8eec253e3cb3c"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#94cec8266d4c57426dfffcabac39b319052cdb42"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5295,6 +5295,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "smallvec",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5304,7 +5305,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bcc24e998e562dbf8b7c226c27d8eec253e3cb3c"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#94cec8266d4c57426dfffcabac39b319052cdb42"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5530,7 +5531,7 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bcc24e998e562dbf8b7c226c27d8eec253e3cb3c"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#94cec8266d4c57426dfffcabac39b319052cdb42"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5777,9 +5778,9 @@ dependencies = [
 
 [[package]]
 name = "parity-db"
-version = "0.3.8"
+version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "865edee5b792f537356d9e55cbc138e7f4718dc881a7ea45a18b37bf61c21e3d"
+checksum = "3d121a9af17a43efd0a38c6afa508b927ba07785bd4709efb2ac03bf77efef8d"
 dependencies = [
  "blake2-rfc",
  "crc32fast",

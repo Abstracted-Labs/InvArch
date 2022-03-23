@@ -31,7 +31,7 @@ use invarch_runtime::{
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 // use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use hex_literal::hex;
+// use hex_literal::hex;
 use serde::{Deserialize, Serialize};
 use sp_core::{
     sr25519,
@@ -222,9 +222,9 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
-pub fn tinkernet_config() -> Result<ChainSpec, String> {
-    ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])
-}
+// pub fn tinkernet_config() -> Result<ChainSpec, String> {
+//     ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])
+// }
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(

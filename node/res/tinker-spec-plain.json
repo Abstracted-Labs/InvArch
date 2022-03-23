@@ -6,10 +6,10 @@
   "telemetryEndpoints": null,
   "protocolId": "invarch-tinker",
   "properties": {
-      "ss58Format": 42,
-      "tokenDecimals": 12,
-      "tokenSymbol": "TINK"
-    },
+    "ss58Format": 42,
+    "tokenDecimals": 12,
+    "tokenSymbol": "TINK"
+  },
   "relay_chain": "rococo",
   "para_id": 2011,
   "consensusEngine": null,
@@ -21,7 +21,7 @@
       },
       "parachainSystem": null,
       "parachainInfo": {
-        "parachainId": 1000
+        "parachainId": 2011
       },
       "balances": {
         "balances": [
@@ -34,6 +34,7 @@
       "collatorSelection": {
         "invulnerables": [
           "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1",
+          "5Ew83pEVdPScrWZvYxPSzbMBXz8mJqVh2xt5P4DBmmpP47Ud"
         ],
         "candidacyBond": 16000000000,
         "desiredCandidates": 0
@@ -42,17 +43,22 @@
         "keys": [
           [
             "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1",
-            "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
+            "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1",
             {
               "aura": "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
+            }
+          ],
+          [
+            "5Ew83pEVdPScrWZvYxPSzbMBXz8mJqVh2xt5P4DBmmpP47Ud",
+            "5Ew83pEVdPScrWZvYxPSzbMBXz8mJqVh2xt5P4DBmmpP47Ud",
+            {
+              "aura": "5Ew83pEVdPScrWZvYxPSzbMBXz8mJqVh2xt5P4DBmmpP47Ud"
             }
           ]
         ]
       },
       "aura": {
-        "authorities": [
-          "5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"
-        ]
+        "authorities": ["5Gdz9D8BNR9tVTPmBmXXHncHPkpJtHaLnsjUFhFEfzCjVeD1"]
       },
       "auraExt": null,
       "polkadotXcm": {

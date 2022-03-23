@@ -2,9 +2,7 @@
   "name": "InvArch Tinkernet",
   "id": "invarch-tinkernet",
   "chainType": "Live",
-  "bootNodes": [
-    "/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWNjtcCuDtkqRf5LmqD1hoFTdft2BFcrrd9TsRCxqB7kFe"
-  ],
+  "bootNodes": [],
   "telemetryEndpoints": null,
   "protocolId": "invarch-tinker",
   "properties": {
@@ -13,7 +11,7 @@
     "tokenSymbol": "TINK"
   },
   "relay_chain": "rococo",
-  "para_id": 1000,
+  "para_id": 2011,
   "consensusEngine": null,
   "codeSubstitutes": {},
   "genesis": {
