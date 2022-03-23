@@ -31,7 +31,8 @@ type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct MultisigOperation<AccountId, Signers, Call> {
     signers: Signers,
-    include_original_caller: Option<AccountId>,
+    include_original_caller: bool,
+    original_caller: AccountId,
     actual_call: Call,
     call_weight: Weight,
 }
@@ -157,7 +158,15 @@ pub mod pallet {
             [u8; 32],
             OpaqueCall<T>,
         ),
+        MultisigVoteWithdrawn(
+            T::AccountId,
+            <T as pallet::Config>::Balance,
+            <T as pallet::Config>::Balance,
+            [u8; 32],
+            OpaqueCall<T>,
+        ),
         MultisigExecuted(T::AccountId, OpaqueCall<T>, bool),
+        MultisigCanceled(T::AccountId, [u8; 32]),
     }
 
     /// Errors for IPF pallet
@@ -172,6 +181,8 @@ pub mod pallet {
         MaxMetadataExceeded,
         CouldntDecodeCall,
         MultisigOperationAlreadyExists,
+        NotAVoter,
+        UnknownError,
     }
 
     /// Dispatch functions
@@ -218,7 +229,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000)]
-        pub fn as_multi(
+        pub fn operate_multisig(
             caller: OriginFor<T>,
             include_caller: bool,
             ips_id: T::IptId,
@@ -296,11 +307,8 @@ pub mod pallet {
                         signers: vec![owner.clone()]
                             .try_into()
                             .map_err(|_| Error::<T>::TooManySignatories)?,
-                        include_original_caller: if include_caller {
-                            Some(owner.clone())
-                        } else {
-                            None
-                        },
+                        include_original_caller: include_caller,
+                        original_caller: owner.clone(),
                         actual_call: opaque_call.clone(),
                         call_weight: call.get_dispatch_info().weight,
                     },
@@ -322,7 +330,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000)]
-        pub fn approve_as_multi(
+        pub fn vote_multisig(
             caller: OriginFor<T>,
             ips_id: T::IptId,
             call_hash: [u8; 32],
@@ -380,13 +388,24 @@ pub mod pallet {
                         .dispatch(
                             RawOrigin::Signed(multi_account_id::<T, T::IptId>(
                                 ips_id,
-                                old_data.include_original_caller.clone(),
+                                if old_data.include_original_caller {
+                                    Some(old_data.original_caller.clone())
+                                } else {
+                                    None
+                                },
                             ))
                             .into(),
                         );
 
                     Self::deposit_event(Event::MultisigExecuted(
-                        multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
+                        multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            if old_data.include_original_caller {
+                                Some(old_data.original_caller.clone())
+                            } else {
+                                None
+                            },
+                        ),
                         old_data.actual_call,
                         dispatch_result.is_ok(),
                     ));
@@ -412,7 +431,120 @@ pub mod pallet {
                     *data = Some(old_data.clone());
 
                     Self::deposit_event(Event::MultisigVoteAdded(
-                        multi_account_id::<T, T::IptId>(ips_id, old_data.include_original_caller),
+                        multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            if old_data.include_original_caller {
+                                Some(old_data.original_caller.clone())
+                            } else {
+                                None
+                            },
+                        ),
+                        voter_balance,
+                        ipt.supply,
+                        call_hash,
+                        old_data.actual_call,
+                    ));
+                }
+
+                Ok(().into())
+            })
+        }
+
+        #[pallet::weight(100_000)]
+        pub fn withdraw_vote_multisig(
+            caller: OriginFor<T>,
+            ips_id: T::IptId,
+            call_hash: [u8; 32],
+        ) -> DispatchResultWithPostInfo {
+            Multisig::<T>::try_mutate_exists((ips_id, call_hash), |data| {
+                let owner = ensure_signed(caller.clone())?;
+
+                let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+
+                let mut old_data = data
+                    .take()
+                    .ok_or(Error::<T>::MultisigOperationUninitialized)?;
+
+                ensure!(old_data.signers.contains(&owner), Error::<T>::NotAVoter);
+
+                if owner == old_data.original_caller {
+                    let total_per_2 = ipt.supply / {
+                        let one: <T as Config>::Balance = One::one();
+                        one + one
+                    };
+
+                    for signer in old_data.signers {
+                        pallet_balances::Pallet::<T>::transfer(
+                            <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
+                                multi_account_id::<T, T::IptId>(ips_id, None),
+                            )),
+                            <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                                signer.clone(),
+                            ),
+                            <T as pallet::Config>::Balance::from(
+                                (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                                    / total_per_2.into())
+                                    * Balance::<T>::get(ips_id, signer)
+                                        .ok_or(Error::<T>::UnknownError)?
+                                        .into(),
+                            )
+                            .into(),
+                        )?;
+                    }
+
+                    *data = None;
+                    Self::deposit_event(Event::MultisigCanceled(
+                        multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            if old_data.include_original_caller {
+                                Some(old_data.original_caller)
+                            } else {
+                                None
+                            },
+                        ),
+                        call_hash,
+                    ));
+                } else {
+                    let voter_balance =
+                        Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+
+                    let total_per_2 = ipt.supply / {
+                        let one: <T as Config>::Balance = One::one();
+                        one + one
+                    };
+
+                    old_data.signers = old_data
+                        .signers
+                        .into_iter()
+                        .filter(|signer| signer != &owner)
+                        .collect::<Vec<T::AccountId>>()
+                        .try_into()
+                        .map_err(|_| Error::<T>::TooManySignatories)?;
+
+                    pallet_balances::Pallet::<T>::transfer(
+                        <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
+                            multi_account_id::<T, T::IptId>(ips_id, None),
+                        )),
+                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner),
+                        <T as pallet::Config>::Balance::from(
+                            (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                                / total_per_2.into())
+                                * voter_balance.into(),
+                        )
+                        .into(),
+                    )?;
+
+                    *data = Some(old_data.clone());
+
+                    Self::deposit_event(Event::MultisigVoteWithdrawn(
+                        multi_account_id::<T, T::IptId>(
+                            ips_id,
+                            if old_data.include_original_caller {
+                                Some(old_data.original_caller.clone())
+                            } else {
+                                None
+                            },
+                        ),
                         voter_balance,
                         ipt.supply,
                         call_hash,
