@@ -3,8 +3,8 @@
 use frame_support::{assert_noop, assert_ok};
 
 use crate::{
-    mock::{ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB},
-    AssetDetails, Error, Ipt as IptStorage,
+    mock::{Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB},
+    pallet, AssetDetails, Config, Error, Ipt as IptStorage, MultisigOperation,
 };
 
 use sp_runtime::DispatchError;
@@ -116,6 +116,7 @@ fn burn_should_work() {
         );
     });
 }
+
 #[test]
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
@@ -167,5 +168,17 @@ fn burn_should_fail() {
                 deposit: 0,
             })
         );
+    });
+}
+
+#[test]
+fn as_multi_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(Ipt::as_multi(
+            Origin::signed(ALICE),
+            false,
+            0,
+            todo!("call?")
+        ));
     });
 }
