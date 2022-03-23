@@ -222,9 +222,9 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
-// pub fn tinkernet_config() -> Result<ChainSpec, String> {
-//     ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])
-// }
+pub fn tinkernet_config() -> Result<ChainSpec, String> {
+    ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])
+}
 
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
