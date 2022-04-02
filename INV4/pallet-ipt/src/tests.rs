@@ -242,3 +242,64 @@ fn operate_multisig_should_work() {
         )
     });
 }
+#[test]
+fn operate_multisig_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(
+            multi_account_id::<Runtime, IptId>(0, None),
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+            ],
+        );
+
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: ALICE,
+        });
+
+        // Case 0: Unknown origin
+        assert_noop!(
+            Ipt::operate_multisig(Origin::none(), true, 0, Box::new(call.clone())),
+            DispatchError::BadOrigin
+        );
+
+        // Case 1: Ipt doesn't exist
+        assert_noop!(
+            Ipt::operate_multisig(Origin::signed(ALICE), true, 32767, Box::new(call.clone())),
+            Error::<Runtime>::IptDoesntExist
+        );
+
+        // Case 2: Signer has no permission
+        assert_noop!(
+            Ipt::operate_multisig(Origin::signed(VADER), true, 0, Box::new(call.clone())),
+            Error::<Runtime>::NoPermission,
+        );
+
+        // Case 3: Multisig Operation Already Exists
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            true,
+            0,
+            Box::new(call.clone())
+        ),);
+
+        assert_noop!(
+            Ipt::operate_multisig(Origin::signed(ALICE), true, 0, Box::new(call.clone())),
+            Error::<Runtime>::MultisigOperationAlreadyExists
+        );
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, blake2_256(&call.encode()))),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE].try_into().unwrap(),
+                include_original_caller: true,
+                original_caller: ALICE,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_weight: call.get_dispatch_info().weight,
+            })
+        );
+    });
+}
