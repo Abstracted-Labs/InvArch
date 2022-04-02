@@ -303,3 +303,44 @@ fn operate_multisig_should_fail() {
         );
     });
 }
+// This test doesn't include a should_fail, since it's not meant to fail.
+#[test]
+fn create_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(ALICE, 0, vec![(ALICE, 3_000_000)]);
+        assert_eq!(
+            IptStorage::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: ALICE,
+                supply: 3_000_000,
+                deposit: 0,
+            })
+        );
+
+        assert_eq!(Balance::<Runtime>::get(0, ALICE), Some(3_000_000));
+
+        Ipt::create(BOB, 32767, vec![(ALICE, 300), (BOB, 400_000)]);
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(32767),
+            Some(AssetDetails {
+                owner: BOB,
+                supply: 400_300,
+                deposit: 0,
+            })
+        );
+        assert_eq!(Balance::<Runtime>::get(32767, ALICE), Some(300));
+        assert_eq!(Balance::<Runtime>::get(32767, BOB), Some(400_000));
+        Ipt::create(ALICE, IptId::max_value(), vec![(ALICE, 1), (BOB, 2)]);
+        assert_eq!(
+            IptStorage::<Runtime>::get(IptId::max_value()),
+            Some(AssetDetails {
+                owner: ALICE,
+                supply: 3,
+                deposit: 0,
+            })
+        );
+        assert_eq!(Balance::<Runtime>::get(IptId::max_value(), ALICE), Some(1));
+        assert_eq!(Balance::<Runtime>::get(IptId::max_value(), BOB), Some(2));
+    });
+}
