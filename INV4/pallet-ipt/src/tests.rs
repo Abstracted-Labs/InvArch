@@ -1,13 +1,23 @@
 //! Unit tests for the IPT pallet.
 
-use frame_support::{assert_noop, assert_ok};
+use codec::Encode;
+use frame_support::{assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::WrapperKeepOpaque};
+use primitives::utils::multi_account_id;
+use sp_core::blake2_256;
 
 use crate::{
-    mock::{Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB},
-    pallet, AssetDetails, Config, Error, Ipt as IptStorage, MultisigOperation,
+    mock::{
+        Balances, Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB, VADER,
+    },
+    AssetDetails, Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperation,
+    MultisigOperationOf,
 };
 
+use sp_std::convert::TryInto;
+
 use sp_runtime::DispatchError;
+
+type IptId = <Runtime as Config>::IptId;
 
 #[test]
 fn mint_should_work() {
@@ -174,25 +184,61 @@ fn burn_should_fail() {
 #[test]
 fn operate_multisig_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        // > total_per_2
+        Ipt::create(
+            multi_account_id::<Runtime, IptId>(0, None),
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+            ],
+        );
+
         assert_ok!(Ipt::operate_multisig(
-            Origin::signed(ALICE),
+            Origin::signed(BOB),
             false,
             0,
-            Box::new(Call::System(frame_system::Call::remark {
-                remark: b"test".to_vec()
+            Box::new(Call::Ipt(crate::Call::mint {
+                ips_id: 0,
+                amount: 1000,
+                target: BOB,
             }))
         ));
+
+        assert_eq!(
+            IptStorage::<Runtime>::get(0),
+            Some(AssetDetails {
+                owner: multi_account_id::<Runtime, IptId>(0, None),
+                supply: ExistentialDeposit::get() * 3 + 1001,
+                deposit: 0,
+            })
+        );
+
+        // < total_per_2
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: ALICE,
+        });
+
+        let call_hash = blake2_256(&call.encode());
 
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
             0,
-            // crate in this case == ipt
-            Box::new(Call::Ipt(crate::Call::mint {
-                ips_id: 0u64,
-                amount: 1_000_000_000_000u128,
-                target: BOB
-            }))
+            Box::new(call.clone())
         ));
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, call_hash)),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE].try_into().unwrap(),
+                include_original_caller: false,
+                original_caller: ALICE,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_weight: call.get_dispatch_info().weight,
+            })
+        )
     });
 }
