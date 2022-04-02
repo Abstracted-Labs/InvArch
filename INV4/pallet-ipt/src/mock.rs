@@ -98,7 +98,7 @@ impl Contains<Call> for BaseFilter {
             // Remark is used as a no-op call in the benchmarking
             Call::System(SystemCall::remark { .. }) => true,
             Call::System(_) => false,
-            _ => false,
+            _ => true,
         }
     }
 }
@@ -117,26 +117,7 @@ construct_runtime!(
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const MOCK_DATA: [u8; 32] = [
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
-];
-pub const MOCK_METADATA: &'static [u8] = &[
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
-];
-pub const MOCK_DATA_SECONDARY: [u8; 32] = [
-    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
-    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
-];
-pub const MOCK_METADATA_SECONDARY: &'static [u8] = &[
-    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
-    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
-];
-pub const MOCK_METADATA_PAST_MAX: &'static [u8] = &[
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 42,
-];
+pub const VADER: AccountId = 3;
 
 pub struct ExtBuilder;
 
