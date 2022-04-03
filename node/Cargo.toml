@@ -1,6 +1,6 @@
 [package]
 authors = ["InvArchitects <https://github.com/InvArch>"]
-edition = "2018"
+edition = "2021"
 homepage = "https://invarch.network"
 license = "Unlicense"
 name = "invarch-node"
@@ -51,6 +51,7 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate
 
 ## InvArch Dependencies
 pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
+pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
 
 ## Substrate Client Dependencies
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }

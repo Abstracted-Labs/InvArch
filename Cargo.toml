@@ -2,6 +2,9 @@
 members = [
     'node',
     'runtime',
+    'runtime-primitives',
 ]
+resolver = "2"
+
 [profile.release]
 panic = 'unwind'

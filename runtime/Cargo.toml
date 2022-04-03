@@ -1,6 +1,6 @@
 [package]
 authors = ["InvArchitect <https://github.com/InvArch>"]
-edition = "2018"
+edition = "2021"
 homepage = "https://invarch.network"
 license = "Unlicense"
 name = "invarch-runtime"
@@ -28,6 +28,16 @@ pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-featur
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
 pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
 pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
+
+#pallet-ipf = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
+#pallet-ips = { path = "../../InvArch-Pallet-Library/INV4/pallet-ips", default-features = false }
+#pallet-ipt = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipt", default-features = false }
+#pallet-smartip = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipvm", default-features = false }
+
+invarch-primitives = { path = "../../InvArch-Pallet-Library/primitives", default-features = false }
+
+invarch-runtime-primitives = { path = "../runtime-primitives", default-features = false }
+
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.17" }

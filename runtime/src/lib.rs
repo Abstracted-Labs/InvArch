@@ -28,8 +28,11 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod chain_extensions;
 pub mod xcm_config;
 
+use codec::Encode;
+use frame_support::BoundedVec;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -44,7 +47,8 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
+    ApplyExtrinsicResult, DispatchError, FixedPointNumber, ModuleError, MultiSignature,
+    Perquintill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -52,7 +56,9 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 pub use frame_support::{
-    construct_runtime, match_type, parameter_types,
+    construct_runtime,
+    log::{error, trace},
+    match_type, parameter_types,
     traits::{
         Contains, Currency, Everything, FindAuthor, KeyOwnerProofSystem, Nothing, Randomness,
         StorageInfo,
@@ -67,7 +73,7 @@ pub use frame_support::{
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot,
+    EnsureRoot, RawOrigin,
 };
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{Perbill, Permill};
@@ -94,7 +100,11 @@ use xcm_executor::XcmExecutor;
 
 // use fp_rpc::TransactionStatus; TODO
 
-use pallet_contracts::{weights::WeightInfo, AddressGenerator};
+use pallet_contracts::{
+    chain_extension::{ChainExtension, Environment, Ext, InitState, RetVal},
+    weights::WeightInfo,
+    AddressGenerator,
+};
 
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
@@ -116,6 +126,8 @@ pub use pallet_contracts;
 
 use sp_core::crypto::ByteArray;
 
+use invarch_runtime_primitives::CommonId;
+
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     fn find_author<'a, I>(digests: I) -> Option<H160>
@@ -129,9 +141,6 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
         None
     }
 }
-
-/// The IpsId + AssetId
-type CommonId = u64;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -347,13 +356,7 @@ parameter_types! {
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
-        match c {
-            Call::Assets(method) => match method {
-                pallet_assets::Call::create { .. } => false,
-                _ => true,
-            },
-            _ => true,
-        }
+        true
     }
 }
 
@@ -573,7 +576,7 @@ impl ipf::Config for Runtime {
     // The maximum size of an IPF's metadata
     type MaxIpfMetadata = MaxIpfMetadata;
     // The IPF ID type
-    type IpfId = u64;
+    type IpfId = CommonId;
     // Th IPF pallet events
     type Event = Event;
 }
@@ -635,23 +638,23 @@ parameter_types! {
 //    EnsureXcm<IsMajorityOfBody<DotLocation, ExecutiveBody>>,
 //>;
 
-impl pallet_assets::Config for Runtime {
-    type Event = Event;
-    type Balance = Balance;
-    type AssetId = CommonId;
-    type Currency = Balances;
-    type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
-    type AssetDeposit = AssetDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = AssetsStringLimit;
-    type Freezer = ();
-    type Extra = ();
-    type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+// impl pallet_assets::Config for Runtime {
+//     type Event = Event;
+//     type Balance = Balance;
+//     type AssetId = CommonId;
+//     type Currency = Balances;
+//     type ForceOrigin = frame_system::EnsureSigned<AccountId>; //AssetsForceOrigin
+//     type AssetDeposit = AssetDeposit;
+//     type MetadataDepositBase = MetadataDepositBase;
+//     type MetadataDepositPerByte = MetadataDepositPerByte;
+//     type ApprovalDeposit = ApprovalDeposit;
+//     type StringLimit = AssetsStringLimit;
+//     type Freezer = ();
+//     type Extra = ();
+//     type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 
-    type AssetAccountDeposit = ();
-}
+//     type AssetAccountDeposit = ();
+// }
 
 // parameter_types! {
 //     pub const ChainId: u64 = 42;
@@ -717,7 +720,7 @@ impl pallet_contracts::Config for Runtime {
     type CallFilter = frame_support::traits::Nothing;
     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-    type ChainExtension = ();
+    type ChainExtension = chain_extensions::InvarchExtension;
     type DeletionQueueDepth = DeletionQueueDepth;
     type DeletionWeightLimit = DeletionWeightLimit;
     type Schedule = Schedule;
@@ -770,7 +773,7 @@ construct_runtime!(
 
         // FRAME
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 40,
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 41,
+        // Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 41,
         // EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 42,
         Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>} = 43,
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 44,

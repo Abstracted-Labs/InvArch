@@ -7,8 +7,9 @@
 
 use std::sync::Arc;
 
-use invarch_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use invarch_runtime::{opaque::Block, AccountId, Balance, BlockNumber, Hash, Index as Nonce};
 
+use pallet_contracts_rpc::{Contracts, ContractsApi};
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
 use sc_transaction_pool_api::TransactionPool;
@@ -42,6 +43,7 @@ where
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
     C::Api: BlockBuilder<Block>,
+    C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber, Hash>,
     P: TransactionPool + Sync + Send + 'static,
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -60,8 +62,9 @@ where
         deny_unsafe,
     )));
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
-        client,
+        client.clone(),
     )));
+    io.extend_with(ContractsApi::to_delegate(Contracts::new(client)));
 
     io
 }

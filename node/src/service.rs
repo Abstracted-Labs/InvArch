@@ -4,7 +4,9 @@
 use std::{sync::Arc, time::Duration};
 
 // Local Runtime Types
-use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+use invarch_runtime::{
+    opaque::Block, AccountId, Balance, BlockNumber, Hash, Index as Nonce, RuntimeApi,
+};
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
@@ -196,6 +198,7 @@ where
         + sp_block_builder::BlockBuilder<Block>
         + cumulus_primitives_core::CollectCollationInfo<Block>
         + pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
+        + pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber, Hash>
         + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
     sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
     Executor: sc_executor::NativeExecutionDispatch + 'static,

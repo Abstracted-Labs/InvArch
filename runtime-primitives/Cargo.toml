@@ -1,0 +1,14 @@
+[package]
+authors = ["InvArchitect <https://github.com/InvArch>"]
+edition = "2021"
+homepage = "https://invarch.network"
+license = "Unlicense"
+name = "invarch-runtime-primitives"
+publish = false
+repository = "https://github.com/InvArch/InvArch-node/"
+version = "0.1.0"
+
+[dependencies]
+#invarch-pallet-primitives = { package = "invarch-primitives", path = "../../InvArch-Pallet-Library/primitives", default-features = false }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2", default-features = false, features = ["derive"] }
