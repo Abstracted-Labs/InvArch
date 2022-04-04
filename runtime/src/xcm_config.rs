@@ -1,5 +1,5 @@
 use super::{
-    AccountId, Balances, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm,
+    AccountId, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm,
     Runtime, WeightToFee, XcmpQueue,
 };
 use frame_support::{
