@@ -1,6 +1,6 @@
 use super::{
-    AccountId, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm,
-    Runtime, WeightToFee, XcmpQueue,
+    AccountId, Balances, Call, Event, Origin, ParachainInfo, ParachainSystem, PolkadotXcm, Runtime,
+    WeightToFee, XcmpQueue,
 };
 use frame_support::{
     match_type, parameter_types,
@@ -106,7 +106,8 @@ impl xcm_executor::Config for XcmConfig {
     type LocationInverter = LocationInverter<Ancestry>;
     type Barrier = Barrier;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-    type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+    type Trader =
+        UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
     type ResponseHandler = PolkadotXcm;
     type AssetTrap = PolkadotXcm;
     type AssetClaims = PolkadotXcm;
