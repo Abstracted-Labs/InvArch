@@ -3308,6 +3308,7 @@ dependencies = [
  "invarch-runtime",
  "jsonrpc-core",
  "log",
+ "pallet-contracts",
  "pallet-contracts-rpc",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
@@ -3354,7 +3355,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bd67d5802857f70623a6bca8f4b9fec7450cc1e4"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3388,6 +3388,8 @@ dependencies = [
  "frame-try-runtime",
  "getrandom 0.2.6",
  "hex-literal",
+ "invarch-primitives",
+ "invarch-runtime-primitives",
  "log",
  "pallet-assets",
  "pallet-aura",
@@ -3431,6 +3433,15 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "invarch-runtime-primitives"
+version = "0.1.0"
+dependencies = [
+ "invarch-primitives",
+ "parity-scale-codec",
+ "scale-info",
 ]
 
 [[package]]
@@ -5847,7 +5858,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bd67d5802857f70623a6bca8f4b9fec7450cc1e4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5864,7 +5874,6 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bd67d5802857f70623a6bca8f4b9fec7450cc1e4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5886,7 +5895,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bd67d5802857f70623a6bca8f4b9fec7450cc1e4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6153,7 +6161,6 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=development#bd67d5802857f70623a6bca8f4b9fec7450cc1e4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6423,9 +6430,9 @@ dependencies = [
 
 [[package]]
 name = "parity-db"
-version = "0.3.9"
+version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d121a9af17a43efd0a38c6afa508b927ba07785bd4709efb2ac03bf77efef8d"
+checksum = "b3e7f385d61562f5834282b90aa50b41f38a35cf64d5209b8b05487b50553dbe"
 dependencies = [
  "blake2-rfc",
  "crc32fast",
@@ -7987,9 +7994,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.36"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7342d5883fbccae1cc37a2353b09c87c9b0f3afd73f5fb9bba687a1f733b029"
+checksum = "ec757218438d5fda206afc041538b2f6d889286160d649a86a24d37e1235afd1"
 dependencies = [
  "unicode-xid",
 ]
@@ -10998,9 +11005,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"
-version = "1.0.90"
+version = "1.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704df27628939572cd88d33f171cd6f896f4eaca85252c6e0a72d8d8287ee86f"
+checksum = "b683b2b825c8eef438b77c36a06dc262294da3d5a5813fac20da149241dcd44d"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -1,7 +1,7 @@
 use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
 use frame_support::log::{error, trace};
-use invarch_runtime_primitives::CommonId;
+use invarch_runtime_primitives::{AnyId, CommonId};
 use log::debug;
 use pallet_contracts::chain_extension::{
     ChainExtension, Environment, Ext, InitState, RetVal, SysConfig, UncheckedFrom,
@@ -114,7 +114,7 @@ impl ChainExtension<Runtime> for InvarchExtension {
                 let (ips_id, assets, new_metadata): (
                     CommonId,
                     Vec<
-                        invarch_primitives::AnyId<
+                        AnyId<
                             <Runtime as pallet_ipf::Config>::IpfId,
                             <Runtime as pallet_ips::Config>::IpsId,
                         >,
@@ -142,7 +142,7 @@ impl ChainExtension<Runtime> for InvarchExtension {
                 let (ips_id, assets, new_metadata): (
                     CommonId,
                     Vec<(
-                        invarch_primitives::AnyId<
+                        AnyId<
                             <Runtime as pallet_ipf::Config>::IpfId,
                             <Runtime as pallet_ips::Config>::IpsId,
                         >,

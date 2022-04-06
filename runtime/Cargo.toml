@@ -25,15 +25,15 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-#pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
-#pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
-#pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
-#pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
+pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
+pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
+pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "development" }
 
-pallet-ipf = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
-pallet-ips = { path = "../../InvArch-Pallet-Library/INV4/pallet-ips", default-features = false }
-pallet-ipt = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipt", default-features = false }
-pallet-smartip = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipvm", default-features = false }
+#pallet-ipf = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
+#pallet-ips = { path = "../../InvArch-Pallet-Library/INV4/pallet-ips", default-features = false }
+#pallet-ipt = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipt", default-features = false }
+#pallet-smartip = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipvm", default-features = false }
 
 invarch-primitives = { path = "../../InvArch-Pallet-Library/primitives", default-features = false }
 

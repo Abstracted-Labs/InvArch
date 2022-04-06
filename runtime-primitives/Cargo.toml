@@ -9,6 +9,14 @@ repository = "https://github.com/InvArch/InvArch-node/"
 version = "0.1.0"
 
 [dependencies]
-#invarch-pallet-primitives = { package = "invarch-primitives", path = "../../InvArch-Pallet-Library/primitives", default-features = false }
+invarch-pallet-primitives = { package = "invarch-primitives", git = "https://github.com/InvArch/InvArch-Frames", branch = "development", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"] }
+
+[features]
+default = ["std"]
+std = [
+    "invarch-pallet-primitives/std",
+    "codec/std",
+    "scale-info/std",
+]
