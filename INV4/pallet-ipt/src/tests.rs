@@ -499,6 +499,7 @@ fn withdraw_vote_should_fail() {
         );
     });
 }
+
 #[test]
 fn vote_should_work() {
     ExtBuilder::default().build().execute_with(|| {
@@ -511,6 +512,7 @@ fn vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
         );
+
         let call = Call::Ipt(crate::Call::mint {
             ips_id: 0,
             amount: 1000,
@@ -591,5 +593,74 @@ fn vote_should_work() {
 
         assert_eq!(Multisig::<Runtime>::get((0, call_hash)), None);
         assert_eq!(Balance::<Runtime>::get(0, BOB), Some(1000));
+    });
+}
+
+#[test]
+fn vote_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(
+            multi_account_id::<Runtime, IptId>(0, None),
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+                (VADER, ExistentialDeposit::get()),
+            ],
+        );
+
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: BOB,
+        });
+
+        let call_hash = blake2_256(&call.encode());
+
+        assert_ok!(Balances::set_balance(
+            Origin::root(),
+            multi_account_id::<Runtime, IptId>(0, None),
+            ExistentialDeposit::get(),
+            0
+        ));
+
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            Box::new(call.clone())
+        ));
+
+        // Case 0: Unknown origin
+        assert_noop!(
+            Ipt::vote_multisig(Origin::none(), 0, call_hash),
+            DispatchError::BadOrigin
+        );
+
+        // Case 1: Ipt doesn't exist
+        assert_noop!(
+            Ipt::vote_multisig(Origin::signed(BOB), 32767, call_hash),
+            Error::<Runtime>::IptDoesntExist,
+        );
+
+        // Case 2: Multisig operation uninitialized
+        let uninitialized_call_hash = blake2_256(
+            &Call::Ipt(crate::Call::burn {
+                ips_id: 0,
+                amount: 1000,
+                target: BOB,
+            })
+            .encode(),
+        );
+        assert_noop!(
+            Ipt::vote_multisig(Origin::signed(BOB), 0, uninitialized_call_hash),
+            Error::<Runtime>::MultisigOperationUninitialized
+        );
+
+        // Case 3: No permission
+        assert_noop!(
+            Ipt::vote_multisig(Origin::signed(32767), 0, call_hash),
+            Error::<Runtime>::NoPermission,
+        );
     });
 }
