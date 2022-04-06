@@ -9,8 +9,7 @@ use crate::{
     mock::{
         Balances, Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB, VADER,
     },
-    AssetDetails, Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperation,
-    MultisigOperationOf,
+    AssetDetails, Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperationOf,
 };
 
 use sp_std::convert::TryInto;
@@ -242,6 +241,7 @@ fn operate_multisig_should_work() {
         )
     });
 }
+
 #[test]
 fn operate_multisig_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
@@ -303,11 +303,13 @@ fn operate_multisig_should_fail() {
         );
     });
 }
+
 // This test doesn't include a should_fail, since it's not meant to fail.
 #[test]
 fn create_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         Ipt::create(ALICE, 0, vec![(ALICE, 3_000_000)]);
+
         assert_eq!(
             IptStorage::<Runtime>::get(0),
             Some(AssetDetails {
@@ -329,9 +331,12 @@ fn create_should_work() {
                 deposit: 0,
             })
         );
+
         assert_eq!(Balance::<Runtime>::get(32767, ALICE), Some(300));
         assert_eq!(Balance::<Runtime>::get(32767, BOB), Some(400_000));
+
         Ipt::create(ALICE, IptId::max_value(), vec![(ALICE, 1), (BOB, 2)]);
+
         assert_eq!(
             IptStorage::<Runtime>::get(IptId::max_value()),
             Some(AssetDetails {
@@ -340,7 +345,73 @@ fn create_should_work() {
                 deposit: 0,
             })
         );
+
         assert_eq!(Balance::<Runtime>::get(IptId::max_value(), ALICE), Some(1));
         assert_eq!(Balance::<Runtime>::get(IptId::max_value(), BOB), Some(2));
+    });
+}
+
+#[test]
+fn withdraw_vote_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(
+            ALICE,
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+                (VADER, ExistentialDeposit::get()),
+            ],
+        );
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: BOB,
+        });
+
+        let call_hash = blake2_256(&call.encode());
+
+        assert_ok!(Balances::set_balance(
+            Origin::root(),
+            multi_account_id::<Runtime, IptId>(0, None),
+            ExistentialDeposit::get(),
+            0
+        ));
+
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            Box::new(call.clone())
+        ));
+        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, call_hash)),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE, VADER].try_into().unwrap(),
+                include_original_caller: false,
+                original_caller: ALICE,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_weight: call.get_dispatch_info().weight,
+            })
+        );
+
+        assert_ok!(Ipt::withdraw_vote_multisig(
+            Origin::signed(VADER),
+            0,
+            call_hash
+        ));
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, call_hash)),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE].try_into().unwrap(),
+                include_original_caller: false,
+                original_caller: ALICE,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_weight: call.get_dispatch_info().weight,
+            })
+        );
     });
 }
