@@ -416,6 +416,7 @@ fn withdraw_vote_should_work() {
         );
     });
 }
+
 #[test]
 fn withdraw_vote_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
@@ -428,6 +429,7 @@ fn withdraw_vote_should_fail() {
                 (VADER, ExistentialDeposit::get()),
             ],
         );
+
         let call = Call::Ipt(crate::Call::mint {
             ips_id: 0,
             amount: 1000,
@@ -495,5 +497,99 @@ fn withdraw_vote_should_fail() {
             Ipt::withdraw_vote_multisig(Origin::signed(BOB), 0, call_hash),
             Error::<Runtime>::NotAVoter,
         );
+    });
+}
+#[test]
+fn vote_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(
+            multi_account_id::<Runtime, IptId>(0, None),
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+                (VADER, ExistentialDeposit::get()),
+            ],
+        );
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: BOB,
+        });
+
+        let call_hash = blake2_256(&call.encode());
+
+        assert_ok!(Balances::set_balance(
+            Origin::root(),
+            multi_account_id::<Runtime, IptId>(0, None),
+            ExistentialDeposit::get(),
+            0
+        ));
+
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            Box::new(call.clone())
+        ));
+
+        // Shouldn't execute yet
+        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, call_hash)),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE, VADER].try_into().unwrap(),
+                include_original_caller: false,
+                original_caller: ALICE,
+                call_weight: call.get_dispatch_info().weight,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+            })
+        );
+
+        // Should execute
+        assert_ok!(Ipt::vote_multisig(Origin::signed(BOB), 0, call_hash));
+
+        assert_eq!(Multisig::<Runtime>::get((0, call_hash)), None);
+        assert_eq!(
+            (
+                Balance::<Runtime>::get(0, BOB),
+                IptStorage::<Runtime>::get(0)
+            ),
+            (
+                Some(ExistentialDeposit::get() * 2 + 1001),
+                Some(AssetDetails {
+                    owner: multi_account_id::<Runtime, IptId>(0, None),
+                    supply: ExistentialDeposit::get() * 4 + 1001,
+                    deposit: 0
+                })
+            )
+        );
+
+        // Special case: ipts are minted/burned while a multisig is in storage
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            Box::new(call.clone())
+        ));
+
+        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+
+        // This multisig call now has a bit less than 50% of ipt votes and
+        // may get stuck if tokens are burned.
+        assert_ok!(Ipt::burn(
+            Origin::signed(multi_account_id::<Runtime, IptId>(0, None)),
+            0,
+            ExistentialDeposit::get() * 2 + 1001, /*Burning BOB's tokens*/
+            BOB
+        ));
+
+        // Call won't be rechecked until ALICE or VADER tries voting again,
+        // this should work even if they are already voters.
+        assert_ok!(Ipt::vote_multisig(Origin::signed(ALICE), 0, call_hash)); // fails: NotEnoughAmount
+
+        assert_eq!(Multisig::<Runtime>::get((0, call_hash)), None);
+        assert_eq!(Balance::<Runtime>::get(0, BOB), Some(1000));
     });
 }
