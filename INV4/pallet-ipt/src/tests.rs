@@ -363,6 +363,7 @@ fn withdraw_vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
         );
+
         let call = Call::Ipt(crate::Call::mint {
             ips_id: 0,
             amount: 1000,
@@ -412,6 +413,87 @@ fn withdraw_vote_should_work() {
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
             })
+        );
+    });
+}
+#[test]
+fn withdraw_vote_should_fail() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipt::create(
+            multi_account_id::<Runtime, IptId>(0, None),
+            0,
+            vec![
+                (ALICE, ExistentialDeposit::get()),
+                (BOB, ExistentialDeposit::get() * 2 + 1),
+                (VADER, ExistentialDeposit::get()),
+            ],
+        );
+        let call = Call::Ipt(crate::Call::mint {
+            ips_id: 0,
+            amount: 1000,
+            target: BOB,
+        });
+
+        let call_hash = blake2_256(&call.encode());
+
+        assert_ok!(Balances::set_balance(
+            Origin::root(),
+            multi_account_id::<Runtime, IptId>(0, None),
+            ExistentialDeposit::get(),
+            0
+        ));
+
+        assert_ok!(Ipt::operate_multisig(
+            Origin::signed(ALICE),
+            false,
+            0,
+            Box::new(call.clone())
+        ));
+
+        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+
+        assert_eq!(
+            Multisig::<Runtime>::get((0, call_hash)),
+            Some(MultisigOperationOf::<Runtime> {
+                signers: vec![ALICE, VADER].try_into().unwrap(),
+                include_original_caller: false,
+                original_caller: ALICE,
+                actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_weight: call.get_dispatch_info().weight,
+            })
+        );
+
+        // Case 0: Unknown origin
+        assert_noop!(
+            Ipt::withdraw_vote_multisig(Origin::none(), 0, call_hash),
+            DispatchError::BadOrigin
+        );
+
+        // Case 1: Ipt does not exist
+        assert_noop!(
+            Ipt::withdraw_vote_multisig(Origin::signed(VADER), 32767, call_hash),
+            Error::<Runtime>::IptDoesntExist,
+        );
+
+        // Case 2: Multisig operation uninitialized
+        let uninitialized_call_hash = blake2_256(
+            &Call::Ipt(crate::Call::burn {
+                ips_id: 0,
+                amount: 1000,
+                target: BOB,
+            })
+            .encode(),
+        );
+
+        assert_noop!(
+            Ipt::withdraw_vote_multisig(Origin::signed(VADER), 0, uninitialized_call_hash),
+            Error::<Runtime>::MultisigOperationUninitialized
+        );
+
+        // Case 3: Not a voter
+        assert_noop!(
+            Ipt::withdraw_vote_multisig(Origin::signed(BOB), 0, call_hash),
+            Error::<Runtime>::NotAVoter,
         );
     });
 }
