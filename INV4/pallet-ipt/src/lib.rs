@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::type_complexity)]
 
 use frame_support::{
     pallet_prelude::*,
@@ -22,6 +23,8 @@ pub struct MultisigOperation<AccountId, Signers, Call> {
     actual_call: Call,
     call_weight: Weight,
 }
+
+type SubAssetsWithEndowment<IptId, AccountId, Balance> = Vec<(IptId, (AccountId, Balance))>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -570,7 +573,11 @@ pub mod pallet {
         pub fn create_sub_asset(
             caller: OriginFor<T>,
             ipt_id: T::IptId,
-            sub_assets: Vec<(T::IptId, (T::AccountId, <T as pallet::Config>::Balance))>,
+            sub_assets: SubAssetsWithEndowment<
+                T::IptId,
+                T::AccountId,
+                <T as pallet::Config>::Balance,
+            >,
         ) -> DispatchResultWithPostInfo {
             Ipt::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
                 let caller = ensure_signed(caller.clone())?;
@@ -644,7 +651,7 @@ pub mod pallet {
 
                     let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
 
-                    if let None = ipt_id.1 {
+                    if ipt_id.1.is_none() {
                         old_ipt.supply += amount;
                     }
 
@@ -671,7 +678,7 @@ pub mod pallet {
 
                     let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
 
-                    if let None = ipt_id.1 {
+                    if ipt_id.1.is_none() {
                         old_ipt.supply = old_ipt
                             .supply
                             .checked_sub(&amount)
