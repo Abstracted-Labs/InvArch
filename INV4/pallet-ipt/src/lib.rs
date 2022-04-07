@@ -12,15 +12,6 @@ use sp_std::vec::Vec;
 
 pub use pallet::*;
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct AssetDetails<Balance, AccountId> {
-    pub owner: AccountId,
-    /// The total supply across all accounts.
-    pub supply: Balance,
-    /// The balance deposited for this asset. This pays for the data stored here.
-    pub deposit: Balance,
-}
-
 type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -38,10 +29,11 @@ pub mod pallet {
     use core::iter::Sum;
     use frame_support::{
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        storage::bounded_btree_map::BoundedBTreeMap,
         weights::WeightToFeePolynomial,
     };
     use frame_system::RawOrigin;
-    use primitives::utils::multi_account_id;
+    use primitives::{utils::multi_account_id, IptInfo, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
     use sp_runtime::traits::{CheckedSub, One, StaticLookup};
@@ -90,6 +82,9 @@ pub mod pallet {
         type MaxCallers: Get<u32>;
 
         #[pallet::constant]
+        type MaxSubAssets: Get<u32>;
+
+        #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
     }
 
@@ -119,7 +114,12 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         T::IptId,
-        AssetDetails<<T as pallet::Config>::Balance, T::AccountId>,
+        IptInfo<
+            <T as pallet::Config>::Balance,
+            T::AccountId,
+            T::IptId,
+            BoundedBTreeMap<T::IptId, SubIptInfo<T::IptId>, <T as Config>::MaxSubAssets>,
+        >,
     >;
 
     #[pallet::storage]
@@ -128,7 +128,7 @@ pub mod pallet {
     pub type Balance<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::IptId,
+        (T::IptId, Option<T::IptId>),
         Blake2_128Concat,
         T::AccountId,
         <T as pallet::Config>::Balance,
@@ -137,8 +137,16 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
-        Minted(T::IptId, T::AccountId, <T as pallet::Config>::Balance),
-        Burned(T::IptId, T::AccountId, <T as pallet::Config>::Balance),
+        Minted(
+            (T::IptId, Option<T::IptId>),
+            T::AccountId,
+            <T as pallet::Config>::Balance,
+        ),
+        Burned(
+            (T::IptId, Option<T::IptId>),
+            T::AccountId,
+            <T as pallet::Config>::Balance,
+        ),
         MultisigVoteStarted(
             T::AccountId,
             <T as pallet::Config>::Balance,
@@ -162,6 +170,7 @@ pub mod pallet {
         ),
         MultisigExecuted(T::AccountId, OpaqueCall<T>, bool),
         MultisigCanceled(T::AccountId, [u8; 32]),
+        SubAssetCreated(Vec<(T::IptId, T::IptId)>),
     }
 
     /// Errors for IPF pallet
@@ -178,6 +187,9 @@ pub mod pallet {
         MultisigOperationAlreadyExists,
         NotAVoter,
         UnknownError,
+        SubAssetNotFound,
+        SubAssetAlreadyExists,
+        TooManySubAssets,
     }
 
     /// Dispatch functions
@@ -186,17 +198,17 @@ pub mod pallet {
         #[pallet::weight(100_000)] // TODO: Set correct weight
         pub fn mint(
             owner: OriginFor<T>,
-            ips_id: T::IptId,
+            ips_id: (T::IptId, Option<T::IptId>),
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
             let owner = ensure_signed(owner)?;
 
-            let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+            let ipt = Ipt::<T>::get(ips_id.0).ok_or(Error::<T>::IptDoesntExist)?;
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
-            Pallet::<T>::internal_mint(target.clone(), ips_id, amount)?;
+            Pallet::<T>::internal_mint(ips_id, target.clone(), amount)?;
 
             Self::deposit_event(Event::Minted(ips_id, target, amount));
 
@@ -206,13 +218,13 @@ pub mod pallet {
         #[pallet::weight(100_000)] // TODO: Set correct weight
         pub fn burn(
             owner: OriginFor<T>,
-            ips_id: T::IptId,
+            ips_id: (T::IptId, Option<T::IptId>),
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
             let owner = ensure_signed(owner)?;
 
-            let ipt = Ipt::<T>::get(ips_id).ok_or(Error::<T>::IptDoesntExist)?;
+            let ipt = Ipt::<T>::get(ips_id.0).ok_or(Error::<T>::IptDoesntExist)?;
 
             ensure!(owner == ipt.owner, Error::<T>::NoPermission);
 
@@ -238,8 +250,9 @@ pub mod pallet {
                 one + one
             };
 
+            let id: (T::IptId, Option<T::IptId>) = (ips_id, None);
             let owner_balance =
-                Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+                Balance::<T>::get(id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
             let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
@@ -339,15 +352,16 @@ pub mod pallet {
                     .take()
                     .ok_or(Error::<T>::MultisigOperationUninitialized)?;
 
+                let id: (T::IptId, Option<T::IptId>) = (ips_id, None);
                 let voter_balance =
-                    Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+                    Balance::<T>::get(id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
                 let total_in_operation: <T as pallet::Config>::Balance = old_data
                     .signers
                     .clone()
                     .into_iter()
                     .map(|voter| -> Option<<T as pallet::Config>::Balance> {
-                        Balance::<T>::get(ips_id, voter)
+                        Balance::<T>::get(id, voter)
                     })
                     .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
                     .ok_or(Error::<T>::NoPermission)?
@@ -462,6 +476,7 @@ pub mod pallet {
 
                 ensure!(old_data.signers.contains(&owner), Error::<T>::NotAVoter);
 
+                let id: (T::IptId, Option<T::IptId>) = (ips_id, None);
                 if owner == old_data.original_caller {
                     let total_per_2 = ipt.supply / {
                         let one: <T as Config>::Balance = One::one();
@@ -479,7 +494,7 @@ pub mod pallet {
                             <T as pallet::Config>::Balance::from(
                                 (T::WeightToFeePolynomial::calc(&old_data.call_weight)
                                     / total_per_2.into())
-                                    * Balance::<T>::get(ips_id, signer)
+                                    * Balance::<T>::get(id, signer)
                                         .ok_or(Error::<T>::UnknownError)?
                                         .into(),
                             )
@@ -501,7 +516,7 @@ pub mod pallet {
                     ));
                 } else {
                     let voter_balance =
-                        Balance::<T>::get(ips_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+                        Balance::<T>::get(id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
 
                     let total_per_2 = ipt.supply / {
                         let one: <T as Config>::Balance = One::one();
@@ -550,6 +565,42 @@ pub mod pallet {
                 Ok(().into())
             })
         }
+
+        #[pallet::weight(100_000)]
+        pub fn create_sub_asset(
+            caller: OriginFor<T>,
+            ipt_id: T::IptId,
+            sub_assets: Vec<(T::IptId, (T::AccountId, <T as pallet::Config>::Balance))>,
+        ) -> DispatchResultWithPostInfo {
+            Ipt::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
+                let caller = ensure_signed(caller.clone())?;
+
+                let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
+
+                ensure!(caller == old_ipt.owner, Error::<T>::NoPermission);
+
+                for sub in sub_assets.clone() {
+                    ensure!(
+                        old_ipt.sub_assets.get(&sub.0).is_none(),
+                        Error::<T>::SubAssetAlreadyExists
+                    );
+
+                    old_ipt
+                        .sub_assets
+                        .try_insert(sub.0, SubIptInfo { id: sub.0 })
+                        .map_err(|_| Error::<T>::TooManySubAssets)?;
+                    Balance::<T>::insert((ipt_id, Some(sub.0)), sub.1 .0, sub.1 .1);
+                }
+
+                *ipt = Some(old_ipt);
+
+                Self::deposit_event(Event::SubAssetCreated(
+                    sub_assets.into_iter().map(|sub| (ipt_id, sub.0)).collect(),
+                ));
+
+                Ok(().into())
+            })
+        }
     }
 
     #[pallet::hooks]
@@ -558,39 +609,45 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn create(
             owner: T::AccountId,
-            ips_id: T::IptId,
+            ipt_id: T::IptId,
             endowed_accounts: Vec<(T::AccountId, <T as pallet::Config>::Balance)>,
+            sub_assets: BoundedBTreeMap<T::IptId, SubIptInfo<T::IptId>, T::MaxSubAssets>,
         ) {
             Ipt::<T>::insert(
-                ips_id,
-                AssetDetails {
+                ipt_id,
+                IptInfo {
                     owner,
                     supply: endowed_accounts
                         .clone()
                         .into_iter()
                         .map(|(_, balance)| balance)
                         .sum(),
-                    deposit: Default::default(),
+                    sub_assets,
                 },
             );
 
+            let id: (T::IptId, Option<T::IptId>) = (ipt_id, None);
             endowed_accounts
                 .iter()
-                .for_each(|(account, balance)| Balance::<T>::insert(ips_id, account, balance));
+                .for_each(|(account, balance)| Balance::<T>::insert(id, account, balance));
         }
 
         pub fn internal_mint(
+            ipt_id: (T::IptId, Option<T::IptId>),
             target: T::AccountId,
-            ips_id: T::IptId,
             amount: <T as pallet::Config>::Balance,
         ) -> DispatchResult {
-            Ipt::<T>::try_mutate(ips_id, |ipt| -> DispatchResult {
-                Balance::<T>::try_mutate(ips_id, target, |balance| -> DispatchResult {
+            Ipt::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
+                Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                     let old_balance = balance.take().unwrap_or_default();
                     *balance = Some(old_balance + amount);
 
                     let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
-                    old_ipt.supply += amount;
+
+                    if let None = ipt_id.1 {
+                        old_ipt.supply += amount;
+                    }
+
                     *ipt = Some(old_ipt);
 
                     Ok(())
@@ -600,11 +657,11 @@ pub mod pallet {
 
         pub fn internal_burn(
             target: T::AccountId,
-            ips_id: T::IptId,
+            ipt_id: (T::IptId, Option<T::IptId>),
             amount: <T as pallet::Config>::Balance,
         ) -> DispatchResult {
-            Ipt::<T>::try_mutate(ips_id, |ipt| -> DispatchResult {
-                Balance::<T>::try_mutate(ips_id, target, |balance| -> DispatchResult {
+            Ipt::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
+                Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                     let old_balance = balance.take().ok_or(Error::<T>::IptDoesntExist)?;
                     *balance = Some(
                         old_balance
@@ -613,10 +670,14 @@ pub mod pallet {
                     );
 
                     let mut old_ipt = ipt.take().ok_or(Error::<T>::IptDoesntExist)?;
-                    old_ipt.supply = old_ipt
-                        .supply
-                        .checked_sub(&amount)
-                        .ok_or(Error::<T>::NotEnoughAmount)?;
+
+                    if let None = ipt_id.1 {
+                        old_ipt.supply = old_ipt
+                            .supply
+                            .checked_sub(&amount)
+                            .ok_or(Error::<T>::NotEnoughAmount)?;
+                    }
+
                     *ipt = Some(old_ipt);
 
                     Ok(())

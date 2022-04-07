@@ -41,8 +41,9 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
     use primitives::utils::multi_account_id;
-    use primitives::{AnyId, IpsType, Parentage};
+    use primitives::{AnyId, IpsType, Parentage, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
     use sp_std::iter::Sum;
@@ -199,6 +200,7 @@ pub mod pallet {
             metadata: Vec<u8>,
             data: Vec<<T as ipf::Config>::IpfId>,
             allow_replica: bool,
+            sub_assets: Option<Vec<<T as ipt::Config>::IptId>>,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -237,6 +239,14 @@ pub mod pallet {
                     ips_account.clone(),
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
+                    {
+                        let mut btree = BoundedBTreeMap::new();
+                        sub_assets.unwrap_or_default().into_iter().for_each(|id| {
+                            btree.try_insert(id, SubIptInfo { id }).unwrap(); // TODO: Remove unwrap.
+                        });
+
+                        btree
+                    },
                 );
 
                 let info = IpsInfo {
@@ -348,13 +358,17 @@ pub mod pallet {
                         IpsStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
                             let old = ips.take().ok_or(Error::<T>::IpsNotFound)?;
 
-                            for (account, amount) in ipt::Balance::<T>::iter_prefix(ips_id.into()) {
-                                ipt::Pallet::<T>::internal_mint(
-                                    account.clone(),
-                                    parent_id.into(),
-                                    amount,
-                                )?;
-                                ipt::Pallet::<T>::internal_burn(account, ips_id.into(), amount)?;
+                            let prefix: (
+                                <T as ipt::Config>::IptId,
+                                Option<<T as ipt::Config>::IptId>,
+                            ) = (ips_id.into(), None);
+                            for (account, amount) in ipt::Balance::<T>::iter_prefix(prefix) {
+                                let id: (
+                                    <T as ipt::Config>::IptId,
+                                    Option<<T as ipt::Config>::IptId>,
+                                ) = (parent_id.into(), None);
+                                ipt::Pallet::<T>::internal_mint(id, account.clone(), amount)?;
+                                ipt::Pallet::<T>::internal_burn(account, prefix, amount)?;
                             }
 
                             *ips = Some(IpsInfo {
@@ -440,9 +454,13 @@ pub mod pallet {
                             IpsStorage::<T>::try_mutate_exists(
                                 this_ips_id,
                                 |ips| -> DispatchResult {
+                                    let id: (
+                                        <T as ipt::Config>::IptId,
+                                        Option<<T as ipt::Config>::IptId>,
+                                    ) = (this_ips_id.into(), None);
                                     ipt::Pallet::<T>::internal_mint(
+                                        id,
                                         new_owner,
-                                        this_ips_id.into(),
                                         <T as ipt::Config>::ExistentialDeposit::get(),
                                     )?;
 
@@ -599,6 +617,7 @@ pub mod pallet {
                     ips_account.clone(),
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
+                    BoundedBTreeMap::default(),
                 );
 
                 let info = IpsInfo {
