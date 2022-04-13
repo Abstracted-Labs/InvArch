@@ -3,9 +3,9 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use ipf::{IpfInfoOf, IpfStorage};
-use ipt::{AssetDetails, Ipt as IptStorage};
+use ipt::{Ipt as IptStorage, SubAssets};
 use mock::*;
-use primitives::{utils::multi_account_id, AnyId, IpsType, Parentage};
+use primitives::{utils::multi_account_id, AnyId, IpsType, IptInfo, Parentage, SubIptInfo};
 use sp_core::H256;
 use sp_runtime::DispatchError;
 
@@ -35,6 +35,7 @@ fn create_ips_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0, 1],
             true,
+            None,
         ));
 
         assert_eq!(Ips::next_ips_id(), 1);
@@ -42,7 +43,11 @@ fn create_ips_should_work() {
             Origin::signed(ALICE),
             MOCK_METADATA_SECONDARY.to_vec(),
             vec![2],
-            false
+            false,
+            Some(vec![SubIptInfo {
+                id: 0,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap()
+            }])
         ));
 
         assert_eq!(Ips::next_ips_id(), 2);
@@ -73,9 +78,20 @@ fn create_ips_should_work() {
             IptStorage::<Runtime>::get(0).unwrap().supply,
             ExistentialDeposit::get()
         );
+
+        assert_eq!(SubAssets::<Runtime>::get(0, 0), None);
+
         assert_eq!(
             IptStorage::<Runtime>::get(1).unwrap().supply,
             ExistentialDeposit::get()
+        );
+
+        assert_eq!(
+            SubAssets::<Runtime>::get(1, 0),
+            Some(SubIptInfo {
+                id: 0,
+                metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap()
+            })
         );
     });
 }
@@ -95,7 +111,7 @@ fn create_ips_should_fail() {
         ));
 
         assert_noop!(
-            Ips::create_ips(Origin::none(), MOCK_METADATA.to_vec(), vec![0], true),
+            Ips::create_ips(Origin::none(), MOCK_METADATA.to_vec(), vec![0], true, None),
             DispatchError::BadOrigin
         );
         assert_noop!(
@@ -104,21 +120,40 @@ fn create_ips_should_fail() {
                 MOCK_METADATA_PAST_MAX.to_vec(),
                 vec![0],
                 true,
+                None
             ),
             Error::<Runtime>::MaxMetadataExceeded,
         );
         assert_noop!(
-            Ips::create_ips(Origin::signed(BOB), MOCK_METADATA.to_vec(), vec![1], true),
+            Ips::create_ips(
+                Origin::signed(BOB),
+                MOCK_METADATA.to_vec(),
+                vec![1],
+                true,
+                None
+            ),
             Error::<Runtime>::NoPermission,
         );
         assert_noop!(
-            Ips::create_ips(Origin::signed(BOB), MOCK_METADATA.to_vec(), vec![2], true),
+            Ips::create_ips(
+                Origin::signed(BOB),
+                MOCK_METADATA.to_vec(),
+                vec![2],
+                true,
+                None
+            ),
             Error::<Runtime>::NoPermission, // BOB doesn't own that IPF because it doesn't exist, so he has no permission to use it
         );
 
         NextIpsId::<Runtime>::mutate(|id| *id = IpsId::max_value());
         assert_noop!(
-            Ips::create_ips(Origin::signed(BOB), MOCK_METADATA.to_vec(), vec![0], true),
+            Ips::create_ips(
+                Origin::signed(BOB),
+                MOCK_METADATA.to_vec(),
+                vec![0],
+                true,
+                None
+            ),
             Error::<Runtime>::NoAvailableIpsId
         );
 
@@ -139,6 +174,7 @@ fn destroy_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None,
         ));
 
         assert_eq!(
@@ -174,6 +210,7 @@ fn destroy_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None,
         ));
 
         assert_eq!(
@@ -235,6 +272,7 @@ fn create_replica_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None,
         ));
 
         // Case 0: Alice replicates her own IPS
@@ -287,6 +325,7 @@ fn create_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             false,
+            None,
         ));
 
         // Case 0: An unknown origin tries to replicate a non-replicable IPS
@@ -383,6 +422,7 @@ fn allow_replica_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             false,
+            None,
         ));
 
         assert_ok!(Ips::allow_replica(
@@ -418,6 +458,7 @@ fn allow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             false,
+            None,
         ));
 
         assert_ok!(Ipf::mint(
@@ -432,6 +473,7 @@ fn allow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![1],
             false,
+            None,
         ));
 
         assert_ok!(Ips::append(
@@ -456,6 +498,7 @@ fn allow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![2],
             true,
+            None,
         ));
 
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 2));
@@ -526,6 +569,7 @@ fn disallow_replica_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None,
         ));
 
         assert_ok!(Ips::disallow_replica(
@@ -561,6 +605,7 @@ fn disallow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None
         ));
 
         assert_ok!(Ipf::mint(
@@ -575,6 +620,7 @@ fn disallow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![1],
             true,
+            None
         ));
 
         assert_ok!(Ips::append(
@@ -599,6 +645,7 @@ fn disallow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![2],
             false,
+            None,
         ));
 
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 1));
@@ -685,6 +732,7 @@ fn append_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None,
         ));
 
         assert_eq!(
@@ -699,17 +747,16 @@ fn append_should_work() {
 
         assert_ok!(Ipt::mint(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
-            0,
+            (0, None),
             1000,
             ALICE
         ));
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
                 supply: 1000 + ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
@@ -718,10 +765,9 @@ fn append_should_work() {
 
         assert_eq!(
             IptStorage::<Runtime>::get(1),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
@@ -754,19 +800,17 @@ fn append_should_work() {
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
                 supply: 1000 + 2 * ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
         assert_eq!(
             IptStorage::<Runtime>::get(1),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
                 supply: 0,
-                deposit: 0,
             })
         );
 
@@ -822,6 +866,7 @@ fn append_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             false,
+            None
         ));
 
         assert_eq!(Ips::next_ips_id(), 1);
@@ -830,6 +875,7 @@ fn append_should_fail() {
             MOCK_METADATA_SECONDARY.to_vec(),
             vec![2],
             false,
+            None
         ));
 
         // Case 0: Alice tries to append an IPF to an IPS in a non-multisig context
@@ -932,6 +978,7 @@ fn remove_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None
         ));
 
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
@@ -990,19 +1037,17 @@ fn remove_should_work() {
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
                 supply: ExistentialDeposit::get() + ExistentialDeposit::get(), // We appended a child IPS to this one and then removed, that process doe not burn the migrated IPTs
-                deposit: 0,
             })
         );
 
         assert_eq!(
             IptStorage::<Runtime>::get(1),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         )
     });
@@ -1027,6 +1072,7 @@ fn remove_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
+            None
         ));
 
         assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
@@ -1126,18 +1172,16 @@ fn remove_should_fail() {
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(0, None),
-                deposit: 0,
                 supply: 2 * ExistentialDeposit::get(),
             })
         );
 
         assert_eq!(
             IptStorage::<Runtime>::get(1),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IpsId>(1, None),
-                deposit: 0,
                 supply: 0,
             })
         );

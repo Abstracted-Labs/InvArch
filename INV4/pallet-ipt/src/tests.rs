@@ -2,14 +2,14 @@
 
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok, dispatch::GetDispatchInfo, traits::WrapperKeepOpaque};
-use primitives::utils::multi_account_id;
+use primitives::{utils::multi_account_id, IptInfo, SubIptInfo};
 use sp_core::blake2_256;
 
 use crate::{
     mock::{
         Balances, Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB, VADER,
     },
-    AssetDetails, Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperationOf,
+    Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperationOf, SubAssets,
 };
 
 use sp_std::convert::TryInto;
@@ -21,25 +21,48 @@ type IptId = <Runtime as Config>::IptId;
 #[test]
 fn mint_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, ExistentialDeposit::get())]);
+        Ipt::create(
+            ALICE,
+            0,
+            vec![(ALICE, ExistentialDeposit::get())],
+            vec![SubIptInfo {
+                id: 0,
+                metadata: b"test".to_vec().try_into().unwrap(),
+            }]
+            .try_into()
+            .unwrap(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
-        assert_ok!(Ipt::mint(Origin::signed(ALICE), 0, 1000, ALICE));
+        assert_ok!(Ipt::mint(Origin::signed(ALICE), (0, None), 1000, ALICE));
+        assert_ok!(Ipt::mint(Origin::signed(ALICE), (0, Some(0)), 1000, ALICE));
+
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (0, None);
+        assert_eq!(
+            Balance::<Runtime>::get(id, ALICE),
+            Some(ExistentialDeposit::get() + 1000)
+        );
+
+        assert_eq!(
+            Balance::<Runtime>::get((0, Some(0)), ALICE),
+            Some(1000u32.into())
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get() + 1000,
-                deposit: 0,
             })
         );
     });
@@ -48,52 +71,60 @@ fn mint_should_work() {
 #[test]
 fn mint_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, ExistentialDeposit::get())]);
+        Ipt::create(
+            ALICE,
+            0,
+            vec![(ALICE, ExistentialDeposit::get())],
+            Default::default(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
         // Case 0: Unknown origin
         assert_noop!(
-            Ipt::mint(Origin::none(), 0, 1000, ALICE),
+            Ipt::mint(Origin::none(), (0, None), 1000, ALICE),
             DispatchError::BadOrigin
         );
 
         assert_ne!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get() + 1000,
-                deposit: 0,
             })
         );
 
-        // Case 1: Ipt Does not exist
+        // Case 1: Ipt does not exist
         assert_noop!(
-            Ipt::mint(Origin::signed(ALICE), 32, 1000, ALICE),
+            Ipt::mint(Origin::signed(ALICE), (32, None), 1000, ALICE),
             Error::<Runtime>::IptDoesntExist
+        );
+
+        // Case 1.5: SubAsset does not exist
+        assert_noop!(
+            Ipt::mint(Origin::signed(ALICE), (0, Some(0)), 1000, ALICE),
+            Error::<Runtime>::SubAssetNotFound
         );
 
         assert_eq!(IptStorage::<Runtime>::get(32), None);
 
         // Case 2: Caller has no permission
         assert_noop!(
-            Ipt::mint(Origin::signed(BOB), 0, 1000, ALICE),
+            Ipt::mint(Origin::signed(BOB), (0, None), 1000, ALICE),
             Error::<Runtime>::NoPermission,
         );
 
         assert_ne!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get() + 1000,
-                deposit: 0,
             })
         );
     });
@@ -102,25 +133,53 @@ fn mint_should_fail() {
 #[test]
 fn burn_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, ExistentialDeposit::get())]);
+        Ipt::create(
+            ALICE,
+            0,
+            vec![(ALICE, ExistentialDeposit::get())],
+            vec![SubIptInfo {
+                id: 0,
+                metadata: b"test".to_vec().try_into().unwrap(),
+            }]
+            .try_into()
+            .unwrap(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
-        assert_ok!(Ipt::burn(Origin::signed(ALICE), 0, 500, ALICE));
+        assert_ok!(Ipt::internal_mint((0, Some(0)), ALICE, 1000));
+
+        assert_eq!(
+            Balance::<Runtime>::get((0, Some(0)), ALICE),
+            Some(1000u32.into())
+        );
+
+        assert_ok!(Ipt::burn(Origin::signed(ALICE), (0, None), 500, ALICE));
+
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (0, None);
+        assert_eq!(Balance::<Runtime>::get(id, ALICE), Some(0u32.into()));
+
+        assert_ok!(Ipt::burn(Origin::signed(ALICE), (0, Some(0)), 500, ALICE));
+
+        assert_eq!(
+            Balance::<Runtime>::get((0, Some(0)), ALICE),
+            Some(500u32.into())
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: 0,
-                deposit: 0,
             })
         );
     });
@@ -129,52 +188,60 @@ fn burn_should_work() {
 #[test]
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, ExistentialDeposit::get())]);
+        Ipt::create(
+            ALICE,
+            0,
+            vec![(ALICE, ExistentialDeposit::get())],
+            Default::default(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: ExistentialDeposit::get(),
-                deposit: 0,
             })
         );
 
         // Case 0: Unknown origin
         assert_noop!(
-            Ipt::burn(Origin::none(), 0, 500, ALICE),
+            Ipt::burn(Origin::none(), (0, None), 500, ALICE),
             DispatchError::BadOrigin
         );
 
         assert_ne!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: 0,
-                deposit: 0,
             })
         );
 
         // Case 1: Ipt does not exist
         assert_noop!(
-            Ipt::burn(Origin::signed(ALICE), 32, 500, ALICE),
+            Ipt::burn(Origin::signed(ALICE), (32, None), 500, ALICE),
             Error::<Runtime>::IptDoesntExist
         );
 
         assert_eq!(IptStorage::<Runtime>::get(32), None);
 
+        // Case 1: Sub asset does not exist
+        assert_noop!(
+            Ipt::burn(Origin::signed(ALICE), (0, Some(0)), 500, ALICE),
+            Error::<Runtime>::SubAssetNotFound
+        );
+
         // Case 2: Caller has no permission
         assert_noop!(
-            Ipt::burn(Origin::signed(BOB), 0, 500, ALICE),
+            Ipt::burn(Origin::signed(BOB), (0, None), 500, ALICE),
             Error::<Runtime>::NoPermission
         );
 
         assert_ne!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: 0,
-                deposit: 0,
             })
         );
     });
@@ -191,14 +258,15 @@ fn operate_multisig_should_work() {
                 (ALICE, ExistentialDeposit::get()),
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
+            Default::default(),
         );
 
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(BOB),
             false,
-            0,
+            (0, None),
             Box::new(Call::Ipt(crate::Call::mint {
-                ips_id: 0,
+                ipt_id: (0, None),
                 amount: 1000,
                 target: BOB,
             }))
@@ -206,16 +274,15 @@ fn operate_multisig_should_work() {
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: multi_account_id::<Runtime, IptId>(0, None),
                 supply: ExistentialDeposit::get() * 3 + 1001,
-                deposit: 0,
             })
         );
 
         // < total_per_2
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: ALICE,
         });
@@ -225,14 +292,14 @@ fn operate_multisig_should_work() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
 
         assert_eq!(
             Multisig::<Runtime>::get((0, call_hash)),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE].try_into().unwrap(),
+                signers: vec![(ALICE, None)].try_into().unwrap(),
                 include_original_caller: false,
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
@@ -252,29 +319,40 @@ fn operate_multisig_should_fail() {
                 (ALICE, ExistentialDeposit::get()),
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
+            Default::default(),
         );
 
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: ALICE,
         });
 
         // Case 0: Unknown origin
         assert_noop!(
-            Ipt::operate_multisig(Origin::none(), true, 0, Box::new(call.clone())),
+            Ipt::operate_multisig(Origin::none(), true, (0, None), Box::new(call.clone())),
             DispatchError::BadOrigin
         );
 
         // Case 1: Ipt doesn't exist
         assert_noop!(
-            Ipt::operate_multisig(Origin::signed(ALICE), true, 32767, Box::new(call.clone())),
+            Ipt::operate_multisig(
+                Origin::signed(ALICE),
+                true,
+                (32767, None),
+                Box::new(call.clone())
+            ),
             Error::<Runtime>::IptDoesntExist
         );
 
         // Case 2: Signer has no permission
         assert_noop!(
-            Ipt::operate_multisig(Origin::signed(VADER), true, 0, Box::new(call.clone())),
+            Ipt::operate_multisig(
+                Origin::signed(VADER),
+                true,
+                (0, None),
+                Box::new(call.clone())
+            ),
             Error::<Runtime>::NoPermission,
         );
 
@@ -282,19 +360,24 @@ fn operate_multisig_should_fail() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             true,
-            0,
+            (0, None),
             Box::new(call.clone())
         ),);
 
         assert_noop!(
-            Ipt::operate_multisig(Origin::signed(ALICE), true, 0, Box::new(call.clone())),
+            Ipt::operate_multisig(
+                Origin::signed(ALICE),
+                true,
+                (0, None),
+                Box::new(call.clone())
+            ),
             Error::<Runtime>::MultisigOperationAlreadyExists
         );
 
         assert_eq!(
             Multisig::<Runtime>::get((0, blake2_256(&call.encode()))),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE].try_into().unwrap(),
+                signers: vec![(ALICE, None)].try_into().unwrap(),
                 include_original_caller: true,
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
@@ -308,46 +391,78 @@ fn operate_multisig_should_fail() {
 #[test]
 fn create_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, 3_000_000)]);
+        Ipt::create(ALICE, 0, vec![(ALICE, 3_000_000)], Default::default());
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: 3_000_000,
-                deposit: 0,
             })
         );
 
-        assert_eq!(Balance::<Runtime>::get(0, ALICE), Some(3_000_000));
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (0, None);
+        assert_eq!(Balance::<Runtime>::get(id, ALICE), Some(3_000_000));
 
-        Ipt::create(BOB, 32767, vec![(ALICE, 300), (BOB, 400_000)]);
+        Ipt::create(
+            BOB,
+            32767,
+            vec![(ALICE, 300), (BOB, 400_000)],
+            vec![SubIptInfo {
+                id: 0,
+                metadata: b"test".to_vec().try_into().unwrap(),
+            }]
+            .try_into()
+            .unwrap(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(32767),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: BOB,
                 supply: 400_300,
-                deposit: 0,
             })
         );
 
-        assert_eq!(Balance::<Runtime>::get(32767, ALICE), Some(300));
-        assert_eq!(Balance::<Runtime>::get(32767, BOB), Some(400_000));
+        assert_eq!(
+            SubAssets::<Runtime>::get(32767, 0),
+            Some(SubIptInfo {
+                id: 0,
+                metadata: b"test".to_vec().try_into().unwrap(),
+            })
+        );
 
-        Ipt::create(ALICE, IptId::max_value(), vec![(ALICE, 1), (BOB, 2)]);
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (32767, None);
+        assert_eq!(Balance::<Runtime>::get(id, ALICE), Some(300));
+        assert_eq!(Balance::<Runtime>::get(id, BOB), Some(400_000));
+
+        Ipt::create(
+            ALICE,
+            IptId::max_value(),
+            vec![(ALICE, 1), (BOB, 2)],
+            Default::default(),
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(IptId::max_value()),
-            Some(AssetDetails {
+            Some(IptInfo {
                 owner: ALICE,
                 supply: 3,
-                deposit: 0,
             })
         );
 
-        assert_eq!(Balance::<Runtime>::get(IptId::max_value(), ALICE), Some(1));
-        assert_eq!(Balance::<Runtime>::get(IptId::max_value(), BOB), Some(2));
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (IptId::max_value(), None);
+        assert_eq!(Balance::<Runtime>::get(id, ALICE), Some(1));
+        assert_eq!(Balance::<Runtime>::get(id, BOB), Some(2));
     });
 }
 
@@ -362,10 +477,11 @@ fn withdraw_vote_should_work() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
                 (VADER, ExistentialDeposit::get()),
             ],
+            Default::default(),
         );
 
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: BOB,
         });
@@ -382,15 +498,19 @@ fn withdraw_vote_should_work() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
-        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+        assert_ok!(Ipt::vote_multisig(
+            Origin::signed(VADER),
+            (0, None),
+            call_hash
+        ));
 
         assert_eq!(
             Multisig::<Runtime>::get((0, call_hash)),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE, VADER].try_into().unwrap(),
+                signers: vec![(ALICE, None), (VADER, None)].try_into().unwrap(),
                 include_original_caller: false,
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
@@ -400,14 +520,14 @@ fn withdraw_vote_should_work() {
 
         assert_ok!(Ipt::withdraw_vote_multisig(
             Origin::signed(VADER),
-            0,
+            (0, None),
             call_hash
         ));
 
         assert_eq!(
             Multisig::<Runtime>::get((0, call_hash)),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE].try_into().unwrap(),
+                signers: vec![(ALICE, None)].try_into().unwrap(),
                 include_original_caller: false,
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
@@ -428,10 +548,11 @@ fn withdraw_vote_should_fail() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
                 (VADER, ExistentialDeposit::get()),
             ],
+            Default::default(),
         );
 
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: BOB,
         });
@@ -448,16 +569,20 @@ fn withdraw_vote_should_fail() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
 
-        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+        assert_ok!(Ipt::vote_multisig(
+            Origin::signed(VADER),
+            (0, None),
+            call_hash
+        ));
 
         assert_eq!(
             Multisig::<Runtime>::get((0, call_hash)),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE, VADER].try_into().unwrap(),
+                signers: vec![(ALICE, None), (VADER, None)].try_into().unwrap(),
                 include_original_caller: false,
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
@@ -467,20 +592,20 @@ fn withdraw_vote_should_fail() {
 
         // Case 0: Unknown origin
         assert_noop!(
-            Ipt::withdraw_vote_multisig(Origin::none(), 0, call_hash),
+            Ipt::withdraw_vote_multisig(Origin::none(), (0, None), call_hash),
             DispatchError::BadOrigin
         );
 
         // Case 1: Ipt does not exist
         assert_noop!(
-            Ipt::withdraw_vote_multisig(Origin::signed(VADER), 32767, call_hash),
+            Ipt::withdraw_vote_multisig(Origin::signed(VADER), (32767, None), call_hash),
             Error::<Runtime>::IptDoesntExist,
         );
 
         // Case 2: Multisig operation uninitialized
         let uninitialized_call_hash = blake2_256(
             &Call::Ipt(crate::Call::burn {
-                ips_id: 0,
+                ipt_id: (0, None),
                 amount: 1000,
                 target: BOB,
             })
@@ -488,13 +613,13 @@ fn withdraw_vote_should_fail() {
         );
 
         assert_noop!(
-            Ipt::withdraw_vote_multisig(Origin::signed(VADER), 0, uninitialized_call_hash),
+            Ipt::withdraw_vote_multisig(Origin::signed(VADER), (0, None), uninitialized_call_hash),
             Error::<Runtime>::MultisigOperationUninitialized
         );
 
         // Case 3: Not a voter
         assert_noop!(
-            Ipt::withdraw_vote_multisig(Origin::signed(BOB), 0, call_hash),
+            Ipt::withdraw_vote_multisig(Origin::signed(BOB), (0, None), call_hash),
             Error::<Runtime>::NotAVoter,
         );
     });
@@ -511,10 +636,11 @@ fn vote_should_work() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
                 (VADER, ExistentialDeposit::get()),
             ],
+            Default::default(),
         );
 
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: BOB,
         });
@@ -531,17 +657,21 @@ fn vote_should_work() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
 
         // Shouldn't execute yet
-        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+        assert_ok!(Ipt::vote_multisig(
+            Origin::signed(VADER),
+            (0, None),
+            call_hash
+        ));
 
         assert_eq!(
             Multisig::<Runtime>::get((0, call_hash)),
             Some(MultisigOperationOf::<Runtime> {
-                signers: vec![ALICE, VADER].try_into().unwrap(),
+                signers: vec![(ALICE, None), (VADER, None)].try_into().unwrap(),
                 include_original_caller: false,
                 original_caller: ALICE,
                 call_weight: call.get_dispatch_info().weight,
@@ -550,20 +680,28 @@ fn vote_should_work() {
         );
 
         // Should execute
-        assert_ok!(Ipt::vote_multisig(Origin::signed(BOB), 0, call_hash));
+        assert_ok!(Ipt::vote_multisig(
+            Origin::signed(BOB),
+            (0, None),
+            call_hash
+        ));
 
         assert_eq!(Multisig::<Runtime>::get((0, call_hash)), None);
+
+        let id: (
+            <Runtime as Config>::IptId,
+            Option<<Runtime as Config>::IptId>,
+        ) = (0, None);
         assert_eq!(
             (
-                Balance::<Runtime>::get(0, BOB),
+                Balance::<Runtime>::get(id, BOB),
                 IptStorage::<Runtime>::get(0)
             ),
             (
                 Some(ExistentialDeposit::get() * 2 + 1001),
-                Some(AssetDetails {
+                Some(IptInfo {
                     owner: multi_account_id::<Runtime, IptId>(0, None),
                     supply: ExistentialDeposit::get() * 4 + 1001,
-                    deposit: 0
                 })
             )
         );
@@ -572,17 +710,21 @@ fn vote_should_work() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
 
-        assert_ok!(Ipt::vote_multisig(Origin::signed(VADER), 0, call_hash));
+        assert_ok!(Ipt::vote_multisig(
+            Origin::signed(VADER),
+            (0, None),
+            call_hash
+        ));
 
         // This multisig call now has a bit less than 50% of ipt votes and
         // may get stuck if tokens are burned.
         assert_ok!(Ipt::burn(
             Origin::signed(multi_account_id::<Runtime, IptId>(0, None)),
-            0,
+            (0, None),
             ExistentialDeposit::get() * 2 + 1001, /*Burning BOB's tokens*/
             BOB
         ));
@@ -607,10 +749,11 @@ fn vote_should_fail() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
                 (VADER, ExistentialDeposit::get()),
             ],
+            Default::default(),
         );
 
         let call = Call::Ipt(crate::Call::mint {
-            ips_id: 0,
+            ipt_id: (0, None),
             amount: 1000,
             target: BOB,
         });
@@ -627,39 +770,39 @@ fn vote_should_fail() {
         assert_ok!(Ipt::operate_multisig(
             Origin::signed(ALICE),
             false,
-            0,
+            (0, None),
             Box::new(call.clone())
         ));
 
         // Case 0: Unknown origin
         assert_noop!(
-            Ipt::vote_multisig(Origin::none(), 0, call_hash),
+            Ipt::vote_multisig(Origin::none(), (0, None), call_hash),
             DispatchError::BadOrigin
         );
 
         // Case 1: Ipt doesn't exist
         assert_noop!(
-            Ipt::vote_multisig(Origin::signed(BOB), 32767, call_hash),
+            Ipt::vote_multisig(Origin::signed(BOB), (32767, None), call_hash),
             Error::<Runtime>::IptDoesntExist,
         );
 
         // Case 2: Multisig operation uninitialized
         let uninitialized_call_hash = blake2_256(
             &Call::Ipt(crate::Call::burn {
-                ips_id: 0,
+                ipt_id: (0, None),
                 amount: 1000,
                 target: BOB,
             })
             .encode(),
         );
         assert_noop!(
-            Ipt::vote_multisig(Origin::signed(BOB), 0, uninitialized_call_hash),
+            Ipt::vote_multisig(Origin::signed(BOB), (0, None), uninitialized_call_hash),
             Error::<Runtime>::MultisigOperationUninitialized
         );
 
         // Case 3: No permission
         assert_noop!(
-            Ipt::vote_multisig(Origin::signed(32767), 0, call_hash),
+            Ipt::vote_multisig(Origin::signed(32767), (0, None), call_hash),
             Error::<Runtime>::NoPermission,
         );
     });
