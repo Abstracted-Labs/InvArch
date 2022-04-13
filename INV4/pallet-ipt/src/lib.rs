@@ -13,6 +13,11 @@ use sp_std::vec::Vec;
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
