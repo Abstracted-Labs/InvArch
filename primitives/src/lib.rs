@@ -48,18 +48,17 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
 }
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IptInfo<Balance, AccountId, IptId, S: IntoIterator<Item = (IptId, SubIptInfo<IptId>)>> {
+pub struct IptInfo<AccountId, Balance> {
     pub owner: AccountId,
     /// The total supply across all accounts.
     pub supply: Balance,
-
-    pub sub_assets: S,
 }
 
 // This is a struct in preparation for having more fields in the future.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct SubIptInfo<IptId> {
+pub struct SubIptInfo<IptId, SubAssetMetadata> {
     pub id: IptId,
+    pub metadata: SubAssetMetadata,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]

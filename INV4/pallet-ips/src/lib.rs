@@ -18,6 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::type_complexity)]
 
 use frame_support::{
     pallet_prelude::*,
@@ -41,7 +42,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::storage::bounded_btree_map::BoundedBTreeMap;
     use primitives::utils::multi_account_id;
     use primitives::{AnyId, IpsType, Parentage, SubIptInfo};
     use scale_info::prelude::fmt::Display;
@@ -200,7 +200,14 @@ pub mod pallet {
             metadata: Vec<u8>,
             data: Vec<<T as ipf::Config>::IpfId>,
             allow_replica: bool,
-            sub_assets: Option<Vec<<T as ipt::Config>::IptId>>,
+            sub_assets: Option<
+                Vec<
+                    SubIptInfo<
+                        <T as ipt::Config>::IptId,
+                        BoundedVec<u8, <T as ipt::Config>::MaxIptMetadata>,
+                    >,
+                >,
+            >,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -239,14 +246,10 @@ pub mod pallet {
                     ips_account.clone(),
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
-                    {
-                        let mut btree = BoundedBTreeMap::new();
-                        sub_assets.unwrap_or_default().into_iter().for_each(|id| {
-                            btree.try_insert(id, SubIptInfo { id }).unwrap(); // TODO: Remove unwrap.
-                        });
-
-                        btree
-                    },
+                    sub_assets
+                        .unwrap_or_default()
+                        .try_into()
+                        .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
                 );
 
                 let info = IpsInfo {
@@ -617,7 +620,7 @@ pub mod pallet {
                     ips_account.clone(),
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
-                    BoundedBTreeMap::default(),
+                    Default::default(),
                 );
 
                 let info = IpsInfo {
