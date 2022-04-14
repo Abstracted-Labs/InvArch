@@ -61,6 +61,21 @@ pub struct SubIptInfo<IptId, SubAssetMetadata> {
     pub metadata: SubAssetMetadata,
 }
 
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct IplInfo<AccountId, IplId, Balance> {
+    pub owner: AccountId,
+    pub id: IplId,
+    pub execution_threshold: Balance,
+    pub default_asset_weight: Balance,
+    pub default_permission: bool,
+}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct CallInfo<Data> {
+    pub pallet: Data,
+    pub function: Data,
+}
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum AnyId<IpsId, IpfId> {
     IpsId(IpsId),
