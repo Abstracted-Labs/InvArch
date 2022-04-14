@@ -120,7 +120,7 @@ pub mod pallet {
             let ips_account: <T as frame_system::Config>::AccountId =
                 primitives::utils::multi_account_id::<T, <T as ips::Config>::IpsId>(ips_id, None);
 
-            ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id], allow_replica)?;
+            ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id], allow_replica, None)?;
 
             pallet_balances::Pallet::<T>::transfer(
                 owner,

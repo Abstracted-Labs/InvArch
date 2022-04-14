@@ -47,6 +47,20 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
     pub data: Data,
 }
 
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct IptInfo<AccountId, Balance> {
+    pub owner: AccountId,
+    /// The total supply across all accounts.
+    pub supply: Balance,
+}
+
+// This is a struct in preparation for having more fields in the future.
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct SubIptInfo<IptId, SubAssetMetadata> {
+    pub id: IptId,
+    pub metadata: SubAssetMetadata,
+}
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum AnyId<IpsId, IpfId> {
     IpsId(IpsId),

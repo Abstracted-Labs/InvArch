@@ -95,6 +95,8 @@ impl ipt::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type Call = Call;
     type WeightToFeePolynomial = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type MaxIptMetadata = MaxIpfMetadata;
 }
 
 parameter_types! {

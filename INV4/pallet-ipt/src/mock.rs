@@ -73,6 +73,7 @@ impl pallet_balances::Config for Runtime {
 
 parameter_types! {
     pub const MaxCallers: u32 = 32;
+    pub const MaxIptMetadata: u32 = 32;
 }
 
 impl Config for Runtime {
@@ -84,6 +85,8 @@ impl Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type Call = Call;
     type WeightToFeePolynomial = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type MaxIptMetadata = MaxIptMetadata;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
