@@ -26,6 +26,7 @@ pub struct MultisigOperation<AccountId, Signers, Call> {
     include_original_caller: bool,
     original_caller: AccountId,
     actual_call: Call,
+    call_metadata: [u8; 2],
     call_weight: Weight,
 }
 
@@ -41,7 +42,7 @@ pub mod pallet {
     use primitives::{utils::multi_account_id, IptInfo, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
-    use sp_runtime::traits::{CheckedSub, One, StaticLookup};
+    use sp_runtime::traits::{CheckedDiv, CheckedSub, One, StaticLookup};
     use sp_std::{boxed::Box, convert::TryInto, vec};
 
     #[pallet::config]
@@ -80,7 +81,8 @@ pub mod pallet {
             + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
             + GetDispatchInfo
             + From<frame_system::Call<Self>>
-            + GetCallMetadata;
+            + GetCallMetadata
+            + Encode;
 
         type WeightToFeePolynomial: WeightToFeePolynomial;
 
@@ -205,6 +207,7 @@ pub mod pallet {
         MultisigExecuted(T::AccountId, OpaqueCall<T>, bool),
         MultisigCanceled(T::AccountId, [u8; 32]),
         SubAssetCreated(Vec<(T::IptId, T::IptId)>),
+        Debug([u8; 2]),
     }
 
     /// Errors for IPF pallet
@@ -226,6 +229,7 @@ pub mod pallet {
         TooManySubAssets,
         SubAssetHasNoPermission,
         IplDoesntExist,
+        FailedDivision,
     }
 
     /// Dispatch functions
@@ -296,29 +300,20 @@ pub mod pallet {
             let ipt = Ipt::<T>::get(ipt_id.0).ok_or(Error::<T>::IptDoesntExist)?;
 
             let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
-                let one: <T as pallet_balances::Config>::Balance = One::one();
-                one * {
-                    pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                        .unwrap()
-                        .into()
-
-                    // TODO: Replace unwrap.
-                }
+                pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                    .unwrap()
+                    .into()
+                // TODO: Replace unwrap.
             }
             .into();
 
-            let owner_balance =
-                Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)? * {
+            let call_metadata: [u8; 2] = call.encode().split_at(2).0.try_into().unwrap(); // TODO: Replace unwrap.
+            Self::deposit_event(Event::Debug(call_metadata));
+
+            let owner_balance = Balance::<T>::get(ipt_id, owner.clone())
+                .ok_or(Error::<T>::NoPermission)?
+                .checked_div(&{
                     if let Some(sub_asset) = ipt_id.1 {
-                        let call_metadata = {
-                            let m = call.get_call_metadata();
-
-                            primitives::CallInfo {
-                                pallet: m.pallet_name.encode(),
-                                function: m.function_name.encode(),
-                            }
-                        };
-
                         ensure!(
                             pallet_ipl::Pallet::<T>::has_permission(
                                 ipt_id.0.into(),
@@ -340,7 +335,8 @@ pub mod pallet {
                     } else {
                         One::one()
                     }
-                };
+                })
+                .ok_or(Error::<T>::FailedDivision)?;
 
             let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
@@ -406,6 +402,7 @@ pub mod pallet {
                         include_original_caller: include_caller,
                         original_caller: owner.clone(),
                         actual_call: opaque_call.clone(),
+                        call_metadata,
                         call_weight: call.get_dispatch_info().weight,
                     },
                 );
@@ -440,27 +437,15 @@ pub mod pallet {
                     .take()
                     .ok_or(Error::<T>::MultisigOperationUninitialized)?;
 
-                let voter_balance =
-                    Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)? * {
+                let voter_balance = Balance::<T>::get(ipt_id, owner.clone())
+                    .ok_or(Error::<T>::NoPermission)?
+                    .checked_div(&{
                         if let Some(sub_asset) = ipt_id.1 {
-                            let call_metadata = {
-                                let m = old_data
-                                    .actual_call
-                                    .try_decode()
-                                    .ok_or(Error::<T>::CouldntDecodeCall)?
-                                    .get_call_metadata();
-
-                                primitives::CallInfo {
-                                    pallet: m.pallet_name.encode(),
-                                    function: m.function_name.encode(),
-                                }
-                            };
-
                             ensure!(
                                 pallet_ipl::Pallet::<T>::has_permission(
                                     ipt_id.0.into(),
                                     sub_asset.into(),
-                                    call_metadata
+                                    old_data.call_metadata
                                 )
                                 .unwrap(), // TODO: Replace unwrap.
                                 Error::<T>::SubAssetHasNoPermission
@@ -477,14 +462,15 @@ pub mod pallet {
                         } else {
                             One::one()
                         }
-                    };
+                    })
+                    .ok_or(Error::<T>::FailedDivision)?;
 
                 let total_in_operation: <T as pallet::Config>::Balance = old_data
                     .signers
                     .clone()
                     .into_iter()
-                    .map(|(voter, sub_asset): (T::AccountId, Option<T::IptId>)| -> Option<<T as pallet::Config>::Balance> {
-                        Balance::<T>::get((ipt_id.0, sub_asset), voter).map(|balance| balance * {
+                    .map(|(voter, sub_asset): (T::AccountId, Option<T::IptId>)| -> Option<Option<<T as pallet::Config>::Balance>> {
+                        Balance::<T>::get((ipt_id.0, sub_asset), voter).map(|balance| balance.checked_div(&{
                             if let Some(sub_asset) = ipt_id.1 {
                                 let b: <T as pallet_balances::Config>::Balance =
                                     pallet_ipl::Pallet::<T>::asset_weight(
@@ -495,22 +481,19 @@ pub mod pallet {
                                     .into();
                                 b.into()
                             } else {One::one()}
-                        })
+                        }))
                     })
-                    .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                    .collect::<Option<Option<Vec<<T as pallet::Config>::Balance>>>>()
                     .ok_or(Error::<T>::NoPermission)?
+                    .ok_or(Error::<T>::FailedDivision)?
                     .into_iter()
                     .sum();
 
                 let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
-                    let one: <T as pallet_balances::Config>::Balance = One::one();
-                    one * {
-                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                            .unwrap()
-                            .into()
-
-                        // TODO: Replace unwrap.
-                    }
+                    pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                        .unwrap()
+                        .into()
+                    // TODO: Replace unwrap.
                 }
                 .into();
 
@@ -622,14 +605,10 @@ pub mod pallet {
 
                 if owner == old_data.original_caller {
                     let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
-                        let one: <T as pallet_balances::Config>::Balance = One::one();
-                        one * {
-                            pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                                .unwrap()
-                                .into()
-
-                            // TODO: Replace unwrap.
-                        }
+                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                            .unwrap()
+                            .into()
+                        // TODO: Replace unwrap.
                     }
                     .into();
 
@@ -667,7 +646,7 @@ pub mod pallet {
                 } else {
                     let voter_balance = Balance::<T>::get(ipt_id, owner.clone())
                         .ok_or(Error::<T>::NoPermission)?
-                        * {
+                        .checked_div(&{
                             if let Some(sub_asset) = ipt_id.1 {
                                 let b: <T as pallet_balances::Config>::Balance =
                                     pallet_ipl::Pallet::<T>::asset_weight(
@@ -680,17 +659,15 @@ pub mod pallet {
                             } else {
                                 One::one()
                             }
-                        };
+                        })
+                        .ok_or(Error::<T>::FailedDivision)?;
 
                     let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
-                        let one: <T as pallet_balances::Config>::Balance = One::one();
-                        one * {
-                            pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                                .unwrap()
-                                .into()
+                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                            .unwrap()
+                            .into()
 
-                            // TODO: Replace unwrap.
-                        }
+                        // TODO: Replace unwrap.
                     }
                     .into();
 
@@ -785,6 +762,9 @@ pub mod pallet {
                 SubIptInfo<T::IptId, BoundedVec<u8, T::MaxIptMetadata>>,
                 T::MaxSubAssets,
             >,
+            ipl_execution_threshold: <T as pallet::Config>::Balance,
+            ipl_default_asset_weight: <T as pallet::Config>::Balance,
+            ipl_default_permission: bool,
         ) {
             Ipt::<T>::insert(
                 ipt_id,
@@ -806,6 +786,13 @@ pub mod pallet {
             endowed_accounts
                 .iter()
                 .for_each(|(account, balance)| Balance::<T>::insert(id, account, balance));
+
+            pallet_ipl::Pallet::<T>::create(
+                ipt_id.into(),
+                ipl_execution_threshold.into(),
+                ipl_default_asset_weight.into(),
+                ipl_default_permission,
+            )
         }
 
         pub fn internal_mint(

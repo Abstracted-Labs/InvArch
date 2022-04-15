@@ -79,7 +79,8 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + MaxEncodedLen
             + TypeInfo
-            + Sum<<Self as pallet::Config>::Balance>;
+            + Sum<<Self as pallet::Config>::Balance>
+            + IsType<<Self as ipt::Config>::Balance>;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
@@ -208,6 +209,9 @@ pub mod pallet {
                     >,
                 >,
             >,
+            ipl_execution_threshold: <T as pallet::Config>::Balance,
+            ipl_default_asset_weight: <T as pallet::Config>::Balance,
+            ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -250,6 +254,9 @@ pub mod pallet {
                         .unwrap_or_default()
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+                    ipl_execution_threshold.into(),
+                    ipl_default_asset_weight.into(),
+                    ipl_default_permission,
                 );
 
                 let info = IpsInfo {
@@ -592,6 +599,9 @@ pub mod pallet {
         pub fn create_replica(
             owner: OriginFor<T>,
             original_ips_id: T::IpsId,
+            ipl_execution_threshold: <T as pallet::Config>::Balance,
+            ipl_default_asset_weight: <T as pallet::Config>::Balance,
+            ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -621,6 +631,9 @@ pub mod pallet {
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                     Default::default(),
+                    ipl_execution_threshold.into(),
+                    ipl_default_asset_weight.into(),
+                    ipl_default_permission,
                 );
 
                 let info = IpsInfo {

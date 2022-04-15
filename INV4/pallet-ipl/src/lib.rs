@@ -5,7 +5,6 @@
 use frame_support::{pallet_prelude::*, traits::Currency as FSCurrency, Parameter};
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
-use sp_std::vec::Vec;
 
 pub use pallet::*;
 
@@ -13,7 +12,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use core::iter::Sum;
-    use primitives::{utils::multi_account_id, CallInfo, IplInfo};
+    use primitives::{utils::multi_account_id, IplInfo};
     use scale_info::prelude::fmt::Display;
 
     #[pallet::config]
@@ -82,14 +81,14 @@ pub mod pallet {
         Blake2_128Concat,
         (T::IplId, T::IplId),
         Blake2_128Concat,
-        CallInfo<Vec<u8>>,
+        [u8; 2],
         bool,
     >;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
-        PermissionSet(T::IplId, T::IplId, CallInfo<Vec<u8>>, bool),
+        PermissionSet(T::IplId, T::IplId, [u8; 2], bool),
         WeightSet(T::IplId, T::IplId, <T as pallet::Config>::Balance),
     }
 
@@ -109,7 +108,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipl_id: T::IplId,
             sub_asset: T::IplId,
-            call_metadata: CallInfo<Vec<u8>>,
+            call_metadata: [u8; 2],
             permission: bool,
         ) -> DispatchResult {
             let owner = ensure_signed(owner)?;
@@ -193,7 +192,7 @@ pub mod pallet {
         pub fn has_permission(
             ipl_id: T::IplId,
             sub_asset: T::IplId,
-            call_metadata: CallInfo<Vec<u8>>,
+            call_metadata: [u8; 2],
         ) -> Result<bool, Error<T>> {
             Ok(
                 Permissions::<T>::get((ipl_id, sub_asset), call_metadata).unwrap_or(
