@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::too_many_arguments)]
 
 use frame_support::{pallet_prelude::*, traits::Currency as FSCurrency};
 use frame_system::pallet_prelude::*;

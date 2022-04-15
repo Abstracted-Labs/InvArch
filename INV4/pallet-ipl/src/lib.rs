@@ -117,7 +117,7 @@ pub mod pallet {
 
             ensure!(owner == ipl.owner, Error::<T>::NoPermission);
 
-            Permissions::<T>::insert((ipl_id, sub_asset), call_metadata.clone(), permission);
+            Permissions::<T>::insert((ipl_id, sub_asset), call_metadata, permission);
 
             Self::deposit_event(Event::PermissionSet(
                 ipl_id,
@@ -172,35 +172,25 @@ pub mod pallet {
             );
         }
 
-        pub fn execution_threshold(ipl_id: T::IplId) -> Result<<T as Config>::Balance, Error<T>> {
-            Ok(Ipl::<T>::get(ipl_id)
-                .ok_or(Error::<T>::IplDoesntExist)?
-                .execution_threshold)
+        pub fn execution_threshold(ipl_id: T::IplId) -> Option<<T as Config>::Balance> {
+            Ipl::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
         }
 
         pub fn asset_weight(
             ipl_id: T::IplId,
             sub_asset: T::IplId,
-        ) -> Result<<T as Config>::Balance, Error<T>> {
-            Ok(AssetWeight::<T>::get(ipl_id, sub_asset).unwrap_or(
-                Ipl::<T>::get(ipl_id)
-                    .ok_or(Error::<T>::IplDoesntExist)?
-                    .default_asset_weight,
-            ))
+        ) -> Option<<T as Config>::Balance> {
+            AssetWeight::<T>::get(ipl_id, sub_asset)
+                .or_else(|| Ipl::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
         }
 
         pub fn has_permission(
             ipl_id: T::IplId,
             sub_asset: T::IplId,
             call_metadata: [u8; 2],
-        ) -> Result<bool, Error<T>> {
-            Ok(
-                Permissions::<T>::get((ipl_id, sub_asset), call_metadata).unwrap_or(
-                    Ipl::<T>::get(ipl_id)
-                        .ok_or(Error::<T>::IplDoesntExist)?
-                        .default_permission,
-                ),
-            )
+        ) -> Option<bool> {
+            Permissions::<T>::get((ipl_id, sub_asset), call_metadata)
+                .or_else(|| Ipl::<T>::get(ipl_id).map(|ipl| ipl.default_permission))
         }
     }
 }

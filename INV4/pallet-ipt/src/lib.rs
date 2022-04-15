@@ -230,6 +230,7 @@ pub mod pallet {
         SubAssetHasNoPermission,
         IplDoesntExist,
         FailedDivision,
+        CallHasTooFewBytes,
     }
 
     /// Dispatch functions
@@ -307,8 +308,12 @@ pub mod pallet {
             }
             .into();
 
-            let call_metadata: [u8; 2] = call.encode().split_at(2).0.try_into().unwrap(); // TODO: Replace unwrap.
-            Self::deposit_event(Event::Debug(call_metadata));
+            let call_metadata: [u8; 2] = call
+                .encode()
+                .split_at(2)
+                .0
+                .try_into()
+                .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
             let owner_balance = Balance::<T>::get(ipt_id, owner.clone())
                 .ok_or(Error::<T>::NoPermission)?
@@ -320,7 +325,7 @@ pub mod pallet {
                                 sub_asset.into(),
                                 call_metadata
                             )
-                            .unwrap(), // TODO: Replace unwrap.
+                            .ok_or(Error::<T>::IplDoesntExist)?,
                             Error::<T>::SubAssetHasNoPermission
                         );
 
@@ -329,7 +334,7 @@ pub mod pallet {
                                 ipt_id.0.into(),
                                 sub_asset.into(),
                             )
-                            .unwrap() // TODO: Replace unwrap.
+                            .ok_or(Error::<T>::IplDoesntExist)?
                             .into();
                         b.into()
                     } else {
@@ -447,7 +452,7 @@ pub mod pallet {
                                     sub_asset.into(),
                                     old_data.call_metadata
                                 )
-                                .unwrap(), // TODO: Replace unwrap.
+                                .ok_or(Error::<T>::IplDoesntExist)?,
                                 Error::<T>::SubAssetHasNoPermission
                             );
 
@@ -456,7 +461,7 @@ pub mod pallet {
                                     ipt_id.0.into(),
                                     sub_asset.into(),
                                 )
-                                .unwrap() // TODO: Replace unwrap.
+                                .ok_or(Error::<T>::IplDoesntExist)?
                                 .into();
                             b.into()
                         } else {
@@ -476,8 +481,7 @@ pub mod pallet {
                                     pallet_ipl::Pallet::<T>::asset_weight(
                                         ipt_id.0.into(),
                                         sub_asset.into(),
-                                    )
-                                    .unwrap() // TODO: Replace unwrap.
+                                        )?
                                     .into();
                                 b.into()
                             } else {One::one()}
@@ -491,9 +495,8 @@ pub mod pallet {
 
                 let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
                     pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                        .unwrap()
+                        .ok_or(Error::<T>::IplDoesntExist)?
                         .into()
-                    // TODO: Replace unwrap.
                 }
                 .into();
 
@@ -606,9 +609,8 @@ pub mod pallet {
                 if owner == old_data.original_caller {
                     let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
                         pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                            .unwrap()
+                            .ok_or(Error::<T>::IplDoesntExist)?
                             .into()
-                        // TODO: Replace unwrap.
                     }
                     .into();
 
@@ -653,7 +655,7 @@ pub mod pallet {
                                         ipt_id.0.into(),
                                         sub_asset.into(),
                                     )
-                                    .unwrap() // TODO: Replace unwrap.
+                                    .ok_or(Error::<T>::IplDoesntExist)?
                                     .into();
                                 b.into()
                             } else {
@@ -664,10 +666,8 @@ pub mod pallet {
 
                     let total_per_threshold: <T as pallet::Config>::Balance = ipt.supply / {
                         pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                            .unwrap()
+                            .ok_or(Error::<T>::IplDoesntExist)?
                             .into()
-
-                        // TODO: Replace unwrap.
                     }
                     .into();
 
