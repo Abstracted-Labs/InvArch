@@ -32,6 +32,7 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch 
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+ipl = { package = "pallet-ipl", path = "../pallet-ipl", default-features = false }
 
 [features]
 default = ["std"]

@@ -16,6 +16,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use super::*;
 
 use crate as ipt;
+use pallet_ipl as ipl;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -71,6 +72,16 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_ipl::Config for Runtime {
+    type Event = Event;
+
+    type Currency = Balances;
+
+    type Balance = Balance;
+
+    type IplId = u64;
+}
+
 parameter_types! {
     pub const MaxCallers: u32 = 32;
     pub const MaxIptMetadata: u32 = 32;
@@ -115,6 +126,7 @@ construct_runtime!(
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
+        Ipl: ipl::{Pallet, Call, Storage, Event<T>},
     }
 );
 

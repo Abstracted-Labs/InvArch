@@ -14,13 +14,14 @@ use crate::{
 
 use sp_std::convert::TryInto;
 
-use sp_runtime::DispatchError;
+use sp_runtime::{traits::One, DispatchError};
 
 type IptId = <Runtime as Config>::IptId;
 
 #[test]
 fn mint_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -31,6 +32,9 @@ fn mint_should_work() {
             }]
             .try_into()
             .unwrap(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_eq!(
@@ -71,11 +75,15 @@ fn mint_should_work() {
 #[test]
 fn mint_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
             vec![(ALICE, ExistentialDeposit::get())],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_eq!(
@@ -133,6 +141,7 @@ fn mint_should_fail() {
 #[test]
 fn burn_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -143,6 +152,9 @@ fn burn_should_work() {
             }]
             .try_into()
             .unwrap(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_eq!(
@@ -188,11 +200,15 @@ fn burn_should_work() {
 #[test]
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
             vec![(ALICE, ExistentialDeposit::get())],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_eq!(
@@ -251,6 +267,7 @@ fn burn_should_fail() {
 fn operate_multisig_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         // > total_per_2
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -259,6 +276,9 @@ fn operate_multisig_should_work() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_ok!(Ipt::operate_multisig(
@@ -304,6 +324,7 @@ fn operate_multisig_should_work() {
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap()
             })
         )
     });
@@ -312,6 +333,7 @@ fn operate_multisig_should_work() {
 #[test]
 fn operate_multisig_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -320,6 +342,9 @@ fn operate_multisig_should_fail() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         let call = Call::Ipt(crate::Call::mint {
@@ -382,6 +407,7 @@ fn operate_multisig_should_fail() {
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap()
             })
         );
     });
@@ -391,7 +417,16 @@ fn operate_multisig_should_fail() {
 #[test]
 fn create_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        Ipt::create(ALICE, 0, vec![(ALICE, 3_000_000)], Default::default());
+        let one: crate::mock::Balance = One::one();
+        Ipt::create(
+            ALICE,
+            0,
+            vec![(ALICE, 3_000_000)],
+            Default::default(),
+            one * 2,
+            one,
+            false,
+        );
 
         assert_eq!(
             IptStorage::<Runtime>::get(0),
@@ -417,6 +452,9 @@ fn create_should_work() {
             }]
             .try_into()
             .unwrap(),
+            one * 2,
+            one,
+            false,
         );
 
         assert_eq!(
@@ -447,6 +485,9 @@ fn create_should_work() {
             IptId::max_value(),
             vec![(ALICE, 1), (BOB, 2)],
             Default::default(),
+            one * 2,
+            one,
+            true,
         );
 
         assert_eq!(
@@ -469,6 +510,7 @@ fn create_should_work() {
 #[test]
 fn withdraw_vote_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -478,6 +520,9 @@ fn withdraw_vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         let call = Call::Ipt(crate::Call::mint {
@@ -515,6 +560,7 @@ fn withdraw_vote_should_work() {
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap(),
             })
         );
 
@@ -532,6 +578,7 @@ fn withdraw_vote_should_work() {
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap(),
             })
         );
     });
@@ -540,6 +587,7 @@ fn withdraw_vote_should_work() {
 #[test]
 fn withdraw_vote_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -549,6 +597,9 @@ fn withdraw_vote_should_fail() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         let call = Call::Ipt(crate::Call::mint {
@@ -587,6 +638,7 @@ fn withdraw_vote_should_fail() {
                 original_caller: ALICE,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
                 call_weight: call.get_dispatch_info().weight,
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap(),
             })
         );
 
@@ -628,6 +680,7 @@ fn withdraw_vote_should_fail() {
 #[test]
 fn vote_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -637,6 +690,9 @@ fn vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         let call = Call::Ipt(crate::Call::mint {
@@ -676,6 +732,7 @@ fn vote_should_work() {
                 original_caller: ALICE,
                 call_weight: call.get_dispatch_info().weight,
                 actual_call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call_metadata: call.encode().split_at(2).0.try_into().unwrap(),
             })
         );
 
@@ -741,6 +798,7 @@ fn vote_should_work() {
 #[test]
 fn vote_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -750,6 +808,9 @@ fn vote_should_fail() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
+            one * 2,
+            one,
+            false,
         );
 
         let call = Call::Ipt(crate::Call::mint {
