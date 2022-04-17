@@ -105,6 +105,9 @@ pub use pallet_ips as ips;
 /// Import the ipt pallet.
 pub use pallet_ipt as ipt;
 
+/// Import the ipl pallet.
+pub use pallet_ipl as ipl;
+
 // Runtime Constants
 mod constants;
 // Weights
@@ -581,6 +584,7 @@ impl ipf::Config for Runtime {
 
 parameter_types! {
     pub const MaxCallers: u32 = 10000;
+    pub const MaxIptMetadata: u32 = 10000;
 }
 
 impl pallet_ipt::Config for Runtime {
@@ -592,6 +596,15 @@ impl pallet_ipt::Config for Runtime {
     type Call = Call;
     type MaxCallers = MaxCallers;
     type WeightToFeePolynomial = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type MaxIptMetadata = MaxIptMetadata;
+}
+
+impl pallet_ipl::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IplId = CommonId;
 }
 
 parameter_types! {
@@ -781,6 +794,7 @@ construct_runtime!(
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
         Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 52,
         Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 53,
+        Ipl: ipl::{Pallet, Call, Storage, Event<T>} = 54,
     }
 );
 
