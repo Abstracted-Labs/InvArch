@@ -21,3 +21,6 @@ storage
 *.wasm
 *.json
 *.txt
+
+# Local testing
+**/testing/
