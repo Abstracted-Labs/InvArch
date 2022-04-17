@@ -16,7 +16,6 @@ use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 use super::*;
 
 use crate as ips;
-use ipf;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -82,6 +81,13 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
+impl ipl::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IplId = u64;
+}
+
 parameter_types! {
     pub const MaxCallers: u32 = 32;
 }
@@ -141,6 +147,7 @@ construct_runtime!(
         Ipf: ipf::{Pallet, Storage, Event<T>},
         Ips: ips::{Pallet, Storage, Event<T>},
         Ipt: ipt::{Pallet, Call, Storage, Event<T>},
+        Ipl: ipl::{Pallet, Call, Storage, Event<T>},
     }
 );
 
