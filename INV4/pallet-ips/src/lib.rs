@@ -47,6 +47,7 @@ pub mod pallet {
     use primitives::{AnyId, IpsType, Parentage, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
+    use sp_runtime::Percent;
     use sp_std::iter::Sum;
     use sp_std::vec;
 
@@ -210,8 +211,8 @@ pub mod pallet {
                     >,
                 >,
             >,
-            ipl_execution_threshold: <T as pallet::Config>::Balance,
-            ipl_default_asset_weight: <T as pallet::Config>::Balance,
+            ipl_execution_threshold: Percent,
+            ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
@@ -255,8 +256,8 @@ pub mod pallet {
                         .unwrap_or_default()
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
-                    ipl_execution_threshold.into(),
-                    ipl_default_asset_weight.into(),
+                    ipl_execution_threshold,
+                    ipl_default_asset_weight,
                     ipl_default_permission,
                 );
 
@@ -600,8 +601,8 @@ pub mod pallet {
         pub fn create_replica(
             owner: OriginFor<T>,
             original_ips_id: T::IpsId,
-            ipl_execution_threshold: <T as pallet::Config>::Balance,
-            ipl_default_asset_weight: <T as pallet::Config>::Balance,
+            ipl_execution_threshold: Percent,
+            ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
@@ -632,8 +633,8 @@ pub mod pallet {
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                     Default::default(),
-                    ipl_execution_threshold.into(),
-                    ipl_default_asset_weight.into(),
+                    ipl_execution_threshold,
+                    ipl_default_asset_weight,
                     ipl_default_permission,
                 );
 

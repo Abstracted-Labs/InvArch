@@ -2,6 +2,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::Percent;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parentage<AccountId, IpsId> {
@@ -62,11 +63,11 @@ pub struct SubIptInfo<IptId, SubAssetMetadata> {
 }
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IplInfo<AccountId, IplId, Balance> {
+pub struct IplInfo<AccountId, IplId> {
     pub owner: AccountId,
     pub id: IplId,
-    pub execution_threshold: Balance,
-    pub default_asset_weight: Balance,
+    pub execution_threshold: Percent,
+    pub default_asset_weight: Percent,
     pub default_permission: bool,
 }
 

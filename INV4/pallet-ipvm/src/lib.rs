@@ -18,6 +18,7 @@ pub mod pallet {
     use super::*;
     use sp_core::crypto::UncheckedFrom;
     use sp_runtime::traits::{CheckedAdd, Hash, StaticLookup};
+    use sp_runtime::Percent;
     use sp_std::vec;
 
     #[pallet::config]
@@ -95,8 +96,8 @@ pub mod pallet {
             endowment: BalanceOf<T>,
             gas_limit: Weight,
             allow_replica: bool,
-            ipl_execution_threshold: <T as ips::Config>::Balance,
-            ipl_default_asset_weight: <T as ips::Config>::Balance,
+            ipl_execution_threshold: Percent,
+            ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo
         where

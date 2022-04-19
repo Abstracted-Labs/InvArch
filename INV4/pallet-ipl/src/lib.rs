@@ -14,10 +14,11 @@ pub mod pallet {
     use core::iter::Sum;
     use primitives::{utils::multi_account_id, IplInfo};
     use scale_info::prelude::fmt::Display;
+    use sp_runtime::Percent;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
-        /// The IPS Pallet Events
+        /// The IPL Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Currency
         type Currency: FSCurrency<Self::AccountId>;
@@ -33,7 +34,7 @@ pub mod pallet {
             + Sum<<Self as pallet::Config>::Balance>
             + IsType<<Self as pallet_balances::Config>::Balance>;
 
-        /// The IPS ID type
+        /// The IPL ID type
         type IplId: Parameter
             + Member
             + AtLeast32BitUnsigned
@@ -46,11 +47,7 @@ pub mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    pub type IplInfoOf<T> = IplInfo<
-        <T as frame_system::Config>::AccountId,
-        <T as Config>::IplId,
-        <T as Config>::Balance,
-    >;
+    pub type IplInfoOf<T> = IplInfo<<T as frame_system::Config>::AccountId, <T as Config>::IplId>;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -64,14 +61,8 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn asset_weight_storage)]
     /// Details of a multisig call.
-    pub type AssetWeight<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        T::IplId,
-        Blake2_128Concat,
-        T::IplId,
-        <T as Config>::Balance,
-    >;
+    pub type AssetWeight<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::IplId, Blake2_128Concat, T::IplId, Percent>;
 
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
@@ -89,7 +80,7 @@ pub mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
         PermissionSet(T::IplId, T::IplId, [u8; 2], bool),
-        WeightSet(T::IplId, T::IplId, <T as pallet::Config>::Balance),
+        WeightSet(T::IplId, T::IplId, Percent),
     }
 
     /// Errors for IPF pallet
@@ -130,11 +121,11 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000)] // TODO: Set correct weight
-        pub fn set_weight(
+        pub fn set_asset_weight(
             owner: OriginFor<T>,
             ipl_id: T::IplId,
             sub_asset: T::IplId,
-            asset_weight: <T as pallet::Config>::Balance,
+            asset_weight: Percent,
         ) -> DispatchResult {
             let owner = ensure_signed(owner)?;
 
@@ -156,8 +147,8 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn create(
             ipl_id: T::IplId,
-            execution_threshold: <T as Config>::Balance,
-            default_asset_weight: <T as Config>::Balance,
+            execution_threshold: Percent,
+            default_asset_weight: Percent,
             default_permission: bool,
         ) {
             Ipl::<T>::insert(
@@ -172,14 +163,11 @@ pub mod pallet {
             );
         }
 
-        pub fn execution_threshold(ipl_id: T::IplId) -> Option<<T as Config>::Balance> {
+        pub fn execution_threshold(ipl_id: T::IplId) -> Option<Percent> {
             Ipl::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
         }
 
-        pub fn asset_weight(
-            ipl_id: T::IplId,
-            sub_asset: T::IplId,
-        ) -> Option<<T as Config>::Balance> {
+        pub fn asset_weight(ipl_id: T::IplId, sub_asset: T::IplId) -> Option<Percent> {
             AssetWeight::<T>::get(ipl_id, sub_asset)
                 .or_else(|| Ipl::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
         }
