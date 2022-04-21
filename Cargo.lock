@@ -389,16 +389,16 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.64"
+version = "0.3.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e121dee8023ce33ab248d9ce1493df03c3b38a659b240096fcbd7048ff9c31f"
+checksum = "11a17d453482a265fd5f8479f2a3f405566e6ca627837aaddb85af8b1ab8ef61"
 dependencies = [
  "addr2line",
  "cc",
  "cfg-if 1.0.0",
  "libc",
- "miniz_oxide 0.4.4",
- "object",
+ "miniz_oxide",
+ "object 0.28.3",
  "rustc-demangle",
 ]
 
@@ -1093,9 +1093,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.1.9"
+version = "3.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aad2534fad53df1cc12519c5cda696dd3e20e6118a027e24054aea14a0bdcbe"
+checksum = "3124f3f75ce09e22d1410043e1e24f2ecc44fad3afe4f08408f1f7663d68da2b"
 dependencies = [
  "atty",
  "bitflags",
@@ -2384,7 +2384,7 @@ dependencies = [
  "crc32fast",
  "libc",
  "libz-sys",
- "miniz_oxide 0.5.1",
+ "miniz_oxide",
 ]
 
 [[package]]
@@ -3363,7 +3363,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4104,9 +4104,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.123"
+version = "0.2.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb691a747a7ab48abc15c5b42066eaafde10dc427e3b6ee2a1cf43db04c763bd"
+checksum = "21a41fed9d98f27ab1c6d161da622a4fa35e8a54a8adc24bbf3ddd0ef70b0e50"
 
 [[package]]
 name = "libloading"
@@ -4926,16 +4926,6 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a92518e98c078586bc6c934028adcca4c92a53d6a958196de835170a01d84e4b"
-dependencies = [
- "adler",
- "autocfg",
-]
-
-[[package]]
-name = "miniz_oxide"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2b29bd4bc3f33391105ebee3589c19197c4271e3e5a9ec9bfe8127eeff8f082"
@@ -5279,6 +5269,15 @@ checksum = "67ac1d3f9a1d3616fd9a60c8d74296f22406a238b6a72f5cc1e6f314df4ffbf9"
 dependencies = [
  "crc32fast",
  "indexmap",
+ "memchr",
+]
+
+[[package]]
+name = "object"
+version = "0.28.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40bec70ba014595f99f7aa110b84331ffe1ee9aece7fe6f387cc7e3ecda4d456"
+dependencies = [
  "memchr",
 ]
 
@@ -5863,7 +5862,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5880,7 +5879,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5898,7 +5897,7 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5906,6 +5905,7 @@ dependencies = [
  "pallet-assets",
  "pallet-balances",
  "pallet-ipf",
+ "pallet-ipl",
  "pallet-ipt",
  "parity-scale-codec",
  "scale-info",
@@ -5920,7 +5920,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6189,7 +6189,7 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#7afb261959637b05688d0257c3440ce6d5efe98a"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-ipl#253d08763f51486fd2c3e0baf3f544010f9bc51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6198,6 +6198,7 @@ dependencies = [
  "pallet-contracts",
  "pallet-contracts-primitives",
  "pallet-ipf",
+ "pallet-ipl",
  "pallet-ips",
  "parity-scale-codec",
  "scale-info",
@@ -11866,7 +11867,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
- "object",
+ "object 0.27.1",
  "paste",
  "psm",
  "rayon",
@@ -11918,7 +11919,7 @@ dependencies = [
  "gimli",
  "log",
  "more-asserts",
- "object",
+ "object 0.27.1",
  "target-lexicon",
  "thiserror",
  "wasmparser",
@@ -11937,7 +11938,7 @@ dependencies = [
  "indexmap",
  "log",
  "more-asserts",
- "object",
+ "object 0.27.1",
  "serde",
  "target-lexicon",
  "thiserror",
@@ -11956,7 +11957,7 @@ dependencies = [
  "bincode",
  "cfg-if 1.0.0",
  "gimli",
- "object",
+ "object 0.27.1",
  "region",
  "rustix",
  "serde",
