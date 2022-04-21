@@ -8,6 +8,13 @@ use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
 
 pub use pallet::*;
 
+pub trait LicenseList {
+    type IpfsHash: core::hash::Hash;
+    type LicenseMetadata;
+
+    fn get_hash_and_metadata(&self) -> (Self::LicenseMetadata, Self::IpfsHash);
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -15,6 +22,8 @@ pub mod pallet {
     use primitives::{utils::multi_account_id, IplInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::Percent;
+    use sp_std::convert::TryInto;
+    use sp_std::vec::Vec;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
@@ -42,12 +51,23 @@ pub mod pallet {
             + Copy
             + Display
             + MaxEncodedLen;
+
+        type Licenses: Parameter
+            + LicenseList<IpfsHash = <Self as frame_system::Config>::Hash, LicenseMetadata = Vec<u8>>;
+
+        #[pallet::constant]
+        type MaxLicenseMetadata: Get<u32>;
     }
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    pub type IplInfoOf<T> = IplInfo<<T as frame_system::Config>::AccountId, <T as Config>::IplId>;
+    pub type IplInfoOf<T> = IplInfo<
+        <T as frame_system::Config>::AccountId,
+        <T as Config>::IplId,
+        BoundedVec<u8, <T as Config>::MaxLicenseMetadata>,
+        <T as frame_system::Config>::Hash,
+    >;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -147,6 +167,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn create(
             ipl_id: T::IplId,
+            license: T::Licenses,
             execution_threshold: Percent,
             default_asset_weight: Percent,
             default_permission: bool,
@@ -156,6 +177,16 @@ pub mod pallet {
                 IplInfo {
                     owner: multi_account_id::<T, T::IplId>(ipl_id, None),
                     id: ipl_id,
+                    license: {
+                        let (metadata, hash) = license.get_hash_and_metadata();
+                        (
+                            metadata
+                                .try_into()
+                                .map_err(|_| Error::<T>::MaxMetadataExceeded)
+                                .unwrap(), // TODO: Remove unwrap.
+                            hash,
+                        )
+                    },
                     execution_threshold,
                     default_asset_weight,
                     default_permission,

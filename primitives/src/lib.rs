@@ -63,9 +63,10 @@ pub struct SubIptInfo<IptId, SubAssetMetadata> {
 }
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IplInfo<AccountId, IplId> {
+pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
     pub owner: AccountId,
     pub id: IplId,
+    pub license: (LicenseMetadata, Hash),
     pub execution_threshold: Percent,
     pub default_asset_weight: Percent,
     pub default_permission: bool,

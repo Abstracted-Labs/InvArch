@@ -53,7 +53,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config
+        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config + ipl::Config
     {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -211,6 +211,7 @@ pub mod pallet {
                     >,
                 >,
             >,
+            ipl_license: <T as ipl::Config>::Licenses,
             ipl_execution_threshold: Percent,
             ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
@@ -256,6 +257,7 @@ pub mod pallet {
                         .unwrap_or_default()
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+                    ipl_license,
                     ipl_execution_threshold,
                     ipl_default_asset_weight,
                     ipl_default_permission,
@@ -601,6 +603,7 @@ pub mod pallet {
         pub fn create_replica(
             owner: OriginFor<T>,
             original_ips_id: T::IpsId,
+            ipl_license: <T as ipl::Config>::Licenses,
             ipl_execution_threshold: Percent,
             ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
@@ -633,6 +636,7 @@ pub mod pallet {
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                     Default::default(),
+                    ipl_license,
                     ipl_execution_threshold,
                     ipl_default_asset_weight,
                     ipl_default_permission,

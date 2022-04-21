@@ -26,6 +26,7 @@ pub mod pallet {
         frame_system::Config
         + ips::Config
         + ipf::Config
+        + ipl::Config
         + pallet_contracts::Config
         + pallet_balances::Config
     {
@@ -96,6 +97,7 @@ pub mod pallet {
             endowment: BalanceOf<T>,
             gas_limit: Weight,
             allow_replica: bool,
+            ipl_license: <T as ipl::Config>::Licenses,
             ipl_execution_threshold: Percent,
             ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
@@ -131,6 +133,7 @@ pub mod pallet {
                 vec![ipf_id],
                 allow_replica,
                 None,
+                ipl_license,
                 ipl_execution_threshold,
                 ipl_default_asset_weight,
                 ipl_default_permission,

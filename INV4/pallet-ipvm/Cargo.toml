@@ -24,6 +24,7 @@ scale-info = { version = "2.0.0", features = ["derive"], default-features = fals
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 ips = { package = "pallet-ips", path = "../pallet-ips", default-features = false }
 ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
+ipl = { package = "pallet-ipl", path = "../pallet-ipl", default-features = false }
 
 
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }

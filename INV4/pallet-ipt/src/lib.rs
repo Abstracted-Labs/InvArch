@@ -726,6 +726,7 @@ pub mod pallet {
                 SubIptInfo<T::IptId, BoundedVec<u8, T::MaxIptMetadata>>,
                 T::MaxSubAssets,
             >,
+            ipl_license: <T as pallet_ipl::Config>::Licenses,
             ipl_execution_threshold: Percent,
             ipl_default_asset_weight: Percent,
             ipl_default_permission: bool,
@@ -753,6 +754,7 @@ pub mod pallet {
 
             pallet_ipl::Pallet::<T>::create(
                 ipt_id.into(),
+                ipl_license,
                 ipl_execution_threshold,
                 ipl_default_asset_weight,
                 ipl_default_permission,
