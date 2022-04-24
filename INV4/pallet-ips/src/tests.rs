@@ -1055,6 +1055,27 @@ fn append_should_fail() {
             Error::<Runtime>::NoPermission
         );
 
+        // Case 6: Empty Appending
+        assert_noop!(
+            Ips::append(
+                Origin::signed(multi_account_id::<Runtime, IpsId>(0, None)),
+                0,
+                Default::default(), // Empty vec
+                None
+            ),
+            Error::<Runtime>::ValueNotChanged
+        );
+        // Issue #134: empty append successful when not the owner but empty append list
+        assert_noop!(
+            Ips::append(
+                Origin::signed(ALICE),
+                0,
+                Default::default(), // Empty vec
+                None
+            ),
+            Error::<Runtime>::ValueNotChanged
+        );
+
         assert_eq!(
             IpsStorage::<Runtime>::get(0),
             Some(IpsInfoOf::<Runtime> {

@@ -327,6 +327,11 @@ pub mod pallet {
                     Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
                 };
 
+                ensure!(
+                    !assets.is_empty() || new_metadata.is_some(),
+                    Error::<T>::ValueNotChanged
+                );
+
                 for asset in assets.clone() {
                     match asset {
                         AnyId::IpsId(ips_id) => {
