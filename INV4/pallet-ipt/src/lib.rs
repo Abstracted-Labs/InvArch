@@ -40,13 +40,10 @@ pub mod pallet {
         weights::WeightToFeePolynomial,
     };
     use frame_system::RawOrigin;
-    use primitives::{utils::multi_account_id, IptInfo, SubIptInfo};
+    use primitives::{utils::multi_account_id, IptInfo, OneOrPercent, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_io::hashing::blake2_256;
-    use sp_runtime::{
-        traits::{CheckedSub, StaticLookup},
-        Percent,
-    };
+    use sp_runtime::traits::{CheckedSub, StaticLookup};
     use sp_std::{boxed::Box, convert::TryInto, vec};
 
     #[pallet::config]
@@ -304,9 +301,14 @@ pub mod pallet {
             let ipt = Ipt::<T>::get(ipt_id.0).ok_or(Error::<T>::IptDoesntExist)?;
 
             let total_per_threshold: <T as pallet::Config>::Balance =
-                pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                    .ok_or(Error::<T>::IplDoesntExist)?
-                    * ipt.supply;
+                if let OneOrPercent::ZeroPoint(percent) =
+                    pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                        .ok_or(Error::<T>::IplDoesntExist)?
+                {
+                    percent * ipt.supply
+                } else {
+                    ipt.supply
+                };
 
             let call_metadata: [u8; 2] = call
                 .encode()
@@ -315,25 +317,29 @@ pub mod pallet {
                 .try_into()
                 .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
-            let owner_balance: <T as Config>::Balance =
-                {
-                    if let Some(sub_asset) = ipt_id.1 {
-                        ensure!(
-                            pallet_ipl::Pallet::<T>::has_permission(
-                                ipt_id.0.into(),
-                                sub_asset.into(),
-                                call_metadata
-                            )
-                            .ok_or(Error::<T>::IplDoesntExist)?,
-                            Error::<T>::SubAssetHasNoPermission
-                        );
+            let owner_balance: <T as Config>::Balance = if let OneOrPercent::ZeroPoint(percent) = {
+                if let Some(sub_asset) = ipt_id.1 {
+                    ensure!(
+                        pallet_ipl::Pallet::<T>::has_permission(
+                            ipt_id.0.into(),
+                            sub_asset.into(),
+                            call_metadata
+                        )
+                        .ok_or(Error::<T>::IplDoesntExist)?,
+                        Error::<T>::SubAssetHasNoPermission
+                    );
 
-                        pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
-                            .ok_or(Error::<T>::IplDoesntExist)?
-                    } else {
-                        Percent::one()
-                    }
-                } * Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?;
+                    pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
+                        .ok_or(Error::<T>::IplDoesntExist)?
+                } else {
+                    OneOrPercent::One
+                }
+            } {
+                percent
+                    * Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
+            } else {
+                Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
+            };
 
             let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
@@ -434,23 +440,30 @@ pub mod pallet {
                     .take()
                     .ok_or(Error::<T>::MultisigOperationUninitialized)?;
 
-                let voter_balance = if let Some(sub_asset) = ipt_id.1 {
-                    ensure!(
-                        pallet_ipl::Pallet::<T>::has_permission(
-                            ipt_id.0.into(),
-                            sub_asset.into(),
-                            old_data.call_metadata
-                        )
-                        .ok_or(Error::<T>::IplDoesntExist)?,
-                        Error::<T>::SubAssetHasNoPermission
-                    );
+                let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
+                    if let Some(sub_asset) = ipt_id.1 {
+                        ensure!(
+                            pallet_ipl::Pallet::<T>::has_permission(
+                                ipt_id.0.into(),
+                                sub_asset.into(),
+                                old_data.call_metadata
+                            )
+                            .ok_or(Error::<T>::IplDoesntExist)?,
+                            Error::<T>::SubAssetHasNoPermission
+                        );
 
-                    pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
-                        .ok_or(Error::<T>::IplDoesntExist)?
+                        pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
+                            .ok_or(Error::<T>::IplDoesntExist)?
+                    } else {
+                        OneOrPercent::One
+                    }
+                } {
+                    percent
+                        * Balance::<T>::get(ipt_id, owner.clone())
+                            .ok_or(Error::<T>::NoPermission)?
                 } else {
-                    Percent::one()
-                } * Balance::<T>::get(ipt_id, owner.clone())
-                    .ok_or(Error::<T>::NoPermission)?;
+                    Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
+                };
 
                 let total_in_operation: <T as pallet::Config>::Balance = old_data
                     .signers
@@ -458,15 +471,21 @@ pub mod pallet {
                     .into_iter()
                     .map(|(voter, sub_asset): (T::AccountId, Option<T::IptId>)| {
                         Balance::<T>::get((ipt_id.0, sub_asset), voter).map(|balance| {
-                            (if let Some(sub_asset) = ipt_id.1 {
-                                pallet_ipl::Pallet::<T>::asset_weight(
-                                    ipt_id.0.into(),
-                                    sub_asset.into(),
-                                )
-                                .unwrap()
+                            if let OneOrPercent::ZeroPoint(percent) =
+                                if let Some(sub_asset) = ipt_id.1 {
+                                    pallet_ipl::Pallet::<T>::asset_weight(
+                                        ipt_id.0.into(),
+                                        sub_asset.into(),
+                                    )
+                                    .unwrap()
+                                } else {
+                                    OneOrPercent::One
+                                }
+                            {
+                                percent * balance
                             } else {
-                                Percent::one()
-                            }) * balance
+                                balance
+                            }
                         })
                     })
                     .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
@@ -475,9 +494,14 @@ pub mod pallet {
                     .sum();
 
                 let total_per_threshold: <T as pallet::Config>::Balance =
-                    pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                        .ok_or(Error::<T>::IplDoesntExist)?
-                        * ipt.supply;
+                    if let OneOrPercent::ZeroPoint(percent) =
+                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                            .ok_or(Error::<T>::IplDoesntExist)?
+                    {
+                        percent * ipt.supply
+                    } else {
+                        ipt.supply
+                    };
 
                 let fee: <T as pallet::Config>::Balance =
                     T::WeightToFeePolynomial::calc(&old_data.call_weight).into();
@@ -587,9 +611,14 @@ pub mod pallet {
 
                 if owner == old_data.original_caller {
                     let total_per_threshold: <T as pallet::Config>::Balance =
-                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                            .ok_or(Error::<T>::IplDoesntExist)?
-                            * ipt.supply;
+                        if let OneOrPercent::ZeroPoint(percent) =
+                            pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                                .ok_or(Error::<T>::IplDoesntExist)?
+                        {
+                            percent * ipt.supply
+                        } else {
+                            ipt.supply
+                        };
 
                     for signer in old_data.signers {
                         pallet_balances::Pallet::<T>::transfer(
@@ -623,18 +652,30 @@ pub mod pallet {
                         call_hash,
                     ));
                 } else {
-                    let voter_balance = if let Some(sub_asset) = ipt_id.1 {
-                        pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
-                            .ok_or(Error::<T>::IplDoesntExist)?
+                    let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
+                        if let Some(sub_asset) = ipt_id.1 {
+                            pallet_ipl::Pallet::<T>::asset_weight(ipt_id.0.into(), sub_asset.into())
+                                .ok_or(Error::<T>::IplDoesntExist)?
+                        } else {
+                            OneOrPercent::One
+                        }
+                    } {
+                        percent
+                            * Balance::<T>::get(ipt_id, owner.clone())
+                                .ok_or(Error::<T>::NoPermission)?
                     } else {
-                        Percent::one()
-                    } * Balance::<T>::get(ipt_id, owner.clone())
-                        .ok_or(Error::<T>::NoPermission)?;
+                        Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
+                    };
 
                     let total_per_threshold: <T as pallet::Config>::Balance =
-                        pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
-                            .ok_or(Error::<T>::IplDoesntExist)?
-                            * ipt.supply;
+                        if let OneOrPercent::ZeroPoint(percent) =
+                            pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
+                                .ok_or(Error::<T>::IplDoesntExist)?
+                        {
+                            percent * ipt.supply
+                        } else {
+                            ipt.supply
+                        };
 
                     old_data.signers = old_data
                         .signers
@@ -728,8 +769,8 @@ pub mod pallet {
                 T::MaxSubAssets,
             >,
             ipl_license: <T as pallet_ipl::Config>::Licenses,
-            ipl_execution_threshold: Percent,
-            ipl_default_asset_weight: Percent,
+            ipl_execution_threshold: OneOrPercent,
+            ipl_default_asset_weight: OneOrPercent,
             ipl_default_permission: bool,
         ) {
             Ipt::<T>::insert(

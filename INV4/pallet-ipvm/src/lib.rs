@@ -16,9 +16,9 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use primitives::OneOrPercent;
     use sp_core::crypto::UncheckedFrom;
     use sp_runtime::traits::{CheckedAdd, Hash, StaticLookup};
-    use sp_runtime::Percent;
     use sp_std::vec;
 
     #[pallet::config]
@@ -98,8 +98,8 @@ pub mod pallet {
             gas_limit: Weight,
             allow_replica: bool,
             ipl_license: <T as ipl::Config>::Licenses,
-            ipl_execution_threshold: Percent,
-            ipl_default_asset_weight: Percent,
+            ipl_execution_threshold: OneOrPercent,
+            ipl_default_asset_weight: OneOrPercent,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo
         where
