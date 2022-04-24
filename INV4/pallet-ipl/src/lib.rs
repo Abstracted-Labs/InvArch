@@ -19,7 +19,7 @@ pub trait LicenseList {
 pub mod pallet {
     use super::*;
     use core::iter::Sum;
-    use primitives::Percentage;
+    use primitives::OneOrPercent;
     use primitives::{utils::multi_account_id, IplInfo};
     use scale_info::prelude::fmt::Display;
     use sp_std::convert::TryInto;
@@ -82,7 +82,7 @@ pub mod pallet {
     #[pallet::getter(fn asset_weight_storage)]
     /// Details of a multisig call.
     pub type AssetWeight<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::IplId, Blake2_128Concat, T::IplId, Percentage>;
+        StorageDoubleMap<_, Blake2_128Concat, T::IplId, Blake2_128Concat, T::IplId, OneOrPercent>;
 
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
@@ -100,7 +100,7 @@ pub mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
         PermissionSet(T::IplId, T::IplId, [u8; 2], bool),
-        WeightSet(T::IplId, T::IplId, Percentage),
+        WeightSet(T::IplId, T::IplId, OneOrPercent),
     }
 
     /// Errors for IPF pallet
@@ -145,7 +145,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipl_id: T::IplId,
             sub_asset: T::IplId,
-            asset_weight: Percentage,
+            asset_weight: OneOrPercent,
         ) -> DispatchResult {
             let owner = ensure_signed(owner)?;
 
@@ -168,8 +168,8 @@ pub mod pallet {
         pub fn create(
             ipl_id: T::IplId,
             license: T::Licenses,
-            execution_threshold: Percentage,
-            default_asset_weight: Percentage,
+            execution_threshold: OneOrPercent,
+            default_asset_weight: OneOrPercent,
             default_permission: bool,
         ) {
             Ipl::<T>::insert(
@@ -194,11 +194,11 @@ pub mod pallet {
             );
         }
 
-        pub fn execution_threshold(ipl_id: T::IplId) -> Option<Percentage> {
+        pub fn execution_threshold(ipl_id: T::IplId) -> Option<OneOrPercent> {
             Ipl::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
         }
 
-        pub fn asset_weight(ipl_id: T::IplId, sub_asset: T::IplId) -> Option<Percentage> {
+        pub fn asset_weight(ipl_id: T::IplId, sub_asset: T::IplId) -> Option<OneOrPercent> {
             AssetWeight::<T>::get(ipl_id, sub_asset)
                 .or_else(|| Ipl::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
         }

@@ -5,7 +5,7 @@ use scale_info::TypeInfo;
 use sp_runtime::Percent;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub enum Percentage {
+pub enum OneOrPercent {
     One,
     ZeroPoint(Percent),
 }
@@ -73,8 +73,8 @@ pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
     pub owner: AccountId,
     pub id: IplId,
     pub license: (LicenseMetadata, Hash),
-    pub execution_threshold: Percentage,
-    pub default_asset_weight: Percentage,
+    pub execution_threshold: OneOrPercent,
+    pub default_asset_weight: OneOrPercent,
     pub default_permission: bool,
 }
 
