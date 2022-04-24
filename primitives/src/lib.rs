@@ -4,6 +4,12 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::Percent;
 
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum Percentage {
+    One,
+    ZeroPoint(Percent),
+}
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parentage<AccountId, IpsId> {
     /// Parent IP (Account Id of itself)
@@ -67,8 +73,8 @@ pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
     pub owner: AccountId,
     pub id: IplId,
     pub license: (LicenseMetadata, Hash),
-    pub execution_threshold: Percent,
-    pub default_asset_weight: Percent,
+    pub execution_threshold: Percentage,
+    pub default_asset_weight: Percentage,
     pub default_permission: bool,
 }
 

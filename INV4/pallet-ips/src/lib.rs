@@ -44,10 +44,9 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use primitives::utils::multi_account_id;
-    use primitives::{AnyId, IpsType, Parentage, SubIptInfo};
+    use primitives::{AnyId, IpsType, Parentage, Percentage, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
-    use sp_runtime::Percent;
     use sp_std::iter::Sum;
     use sp_std::vec;
 
@@ -212,8 +211,8 @@ pub mod pallet {
                 >,
             >,
             ipl_license: <T as ipl::Config>::Licenses,
-            ipl_execution_threshold: Percent,
-            ipl_default_asset_weight: Percent,
+            ipl_execution_threshold: Percentage,
+            ipl_default_asset_weight: Percentage,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
@@ -604,8 +603,8 @@ pub mod pallet {
             owner: OriginFor<T>,
             original_ips_id: T::IpsId,
             ipl_license: <T as ipl::Config>::Licenses,
-            ipl_execution_threshold: Percent,
-            ipl_default_asset_weight: Percent,
+            ipl_execution_threshold: Percentage,
+            ipl_default_asset_weight: Percentage,
             ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
