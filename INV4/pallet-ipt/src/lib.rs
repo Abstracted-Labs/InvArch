@@ -300,14 +300,35 @@ pub mod pallet {
             let owner = ensure_signed(caller.clone())?;
             let ipt = Ipt::<T>::get(ipt_id.0).ok_or(Error::<T>::IptDoesntExist)?;
 
+            let total_issuance = ipt.supply
+                + SubAssets::<T>::iter_prefix_values(ipt_id.0)
+                    .map(|sub_asset| {
+                        let supply = Ipt::<T>::get(sub_asset.id)?.supply;
+
+                        if let OneOrPercent::ZeroPoint(weight) =
+                            pallet_ipl::Pallet::<T>::asset_weight(
+                                ipt_id.0.into(),
+                                sub_asset.id.into(),
+                            )?
+                        {
+                            Some(weight * supply)
+                        } else {
+                            Some(supply)
+                        }
+                    })
+                    .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                    .ok_or(Error::<T>::IplDoesntExist)?
+                    .into_iter()
+                    .sum();
+
             let total_per_threshold: <T as pallet::Config>::Balance =
                 if let OneOrPercent::ZeroPoint(percent) =
                     pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
                         .ok_or(Error::<T>::IplDoesntExist)?
                 {
-                    percent * ipt.supply
+                    percent * total_issuance
                 } else {
-                    ipt.supply
+                    total_issuance
                 };
 
             let call_metadata: [u8; 2] = call
@@ -493,14 +514,35 @@ pub mod pallet {
                     .into_iter()
                     .sum();
 
+                let total_issuance = ipt.supply
+                    + SubAssets::<T>::iter_prefix_values(ipt_id.0)
+                        .map(|sub_asset| {
+                            let supply = Ipt::<T>::get(sub_asset.id)?.supply;
+
+                            if let OneOrPercent::ZeroPoint(weight) =
+                                pallet_ipl::Pallet::<T>::asset_weight(
+                                    ipt_id.0.into(),
+                                    sub_asset.id.into(),
+                                )?
+                            {
+                                Some(weight * supply)
+                            } else {
+                                Some(supply)
+                            }
+                        })
+                        .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                        .ok_or(Error::<T>::IplDoesntExist)?
+                        .into_iter()
+                        .sum();
+
                 let total_per_threshold: <T as pallet::Config>::Balance =
                     if let OneOrPercent::ZeroPoint(percent) =
                         pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
                             .ok_or(Error::<T>::IplDoesntExist)?
                     {
-                        percent * ipt.supply
+                        percent * total_issuance
                     } else {
-                        ipt.supply
+                        total_issuance
                     };
 
                 let fee: <T as pallet::Config>::Balance =
@@ -610,14 +652,35 @@ pub mod pallet {
                 );
 
                 if owner == old_data.original_caller {
+                    let total_issuance = ipt.supply
+                        + SubAssets::<T>::iter_prefix_values(ipt_id.0)
+                            .map(|sub_asset| {
+                                let supply = Ipt::<T>::get(sub_asset.id)?.supply;
+
+                                if let OneOrPercent::ZeroPoint(weight) =
+                                    pallet_ipl::Pallet::<T>::asset_weight(
+                                        ipt_id.0.into(),
+                                        sub_asset.id.into(),
+                                    )?
+                                {
+                                    Some(weight * supply)
+                                } else {
+                                    Some(supply)
+                                }
+                            })
+                            .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                            .ok_or(Error::<T>::IplDoesntExist)?
+                            .into_iter()
+                            .sum();
+
                     let total_per_threshold: <T as pallet::Config>::Balance =
                         if let OneOrPercent::ZeroPoint(percent) =
                             pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
                                 .ok_or(Error::<T>::IplDoesntExist)?
                         {
-                            percent * ipt.supply
+                            percent * total_issuance
                         } else {
-                            ipt.supply
+                            total_issuance
                         };
 
                     for signer in old_data.signers {
@@ -667,14 +730,35 @@ pub mod pallet {
                         Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
                     };
 
+                    let total_issuance = ipt.supply
+                        + SubAssets::<T>::iter_prefix_values(ipt_id.0)
+                            .map(|sub_asset| {
+                                let supply = Ipt::<T>::get(sub_asset.id)?.supply;
+
+                                if let OneOrPercent::ZeroPoint(weight) =
+                                    pallet_ipl::Pallet::<T>::asset_weight(
+                                        ipt_id.0.into(),
+                                        sub_asset.id.into(),
+                                    )?
+                                {
+                                    Some(weight * supply)
+                                } else {
+                                    Some(supply)
+                                }
+                            })
+                            .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                            .ok_or(Error::<T>::IplDoesntExist)?
+                            .into_iter()
+                            .sum();
+
                     let total_per_threshold: <T as pallet::Config>::Balance =
                         if let OneOrPercent::ZeroPoint(percent) =
                             pallet_ipl::Pallet::<T>::execution_threshold(ipt_id.0.into())
                                 .ok_or(Error::<T>::IplDoesntExist)?
                         {
-                            percent * ipt.supply
+                            percent * total_issuance
                         } else {
-                            ipt.supply
+                            total_issuance
                         };
 
                     old_data.signers = old_data
