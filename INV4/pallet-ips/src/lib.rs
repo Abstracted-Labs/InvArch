@@ -19,6 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 
 use frame_support::{
     pallet_prelude::*,
@@ -29,10 +30,10 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod mock;
+// #[cfg(test)]
+// mod tests;
 
 /// Import the primitives crate
 use primitives::IpsInfo;
@@ -43,7 +44,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use primitives::utils::multi_account_id;
-    use primitives::{AnyId, IpsType, Parentage, SubIptInfo};
+    use primitives::{AnyId, IpsType, OneOrPercent, Parentage, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::StaticLookup;
     use sp_std::iter::Sum;
@@ -51,7 +52,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config:
-        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config
+        frame_system::Config + ipf::Config + ipt::Config + pallet_balances::Config + ipl::Config
     {
         /// The IPS Pallet Events
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -79,7 +80,8 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + MaxEncodedLen
             + TypeInfo
-            + Sum<<Self as pallet::Config>::Balance>;
+            + Sum<<Self as pallet::Config>::Balance>
+            + IsType<<Self as ipt::Config>::Balance>;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
@@ -208,6 +210,10 @@ pub mod pallet {
                     >,
                 >,
             >,
+            ipl_license: <T as ipl::Config>::Licenses,
+            ipl_execution_threshold: OneOrPercent,
+            ipl_default_asset_weight: OneOrPercent,
+            ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -250,6 +256,10 @@ pub mod pallet {
                         .unwrap_or_default()
                         .try_into()
                         .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+                    ipl_license,
+                    ipl_execution_threshold,
+                    ipl_default_asset_weight,
+                    ipl_default_permission,
                 );
 
                 let info = IpsInfo {
@@ -597,6 +607,10 @@ pub mod pallet {
         pub fn create_replica(
             owner: OriginFor<T>,
             original_ips_id: T::IpsId,
+            ipl_license: <T as ipl::Config>::Licenses,
+            ipl_execution_threshold: OneOrPercent,
+            ipl_default_asset_weight: OneOrPercent,
+            ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo {
             NextIpsId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
                 let creator = ensure_signed(owner.clone())?;
@@ -626,6 +640,10 @@ pub mod pallet {
                     current_id.into(),
                     vec![(creator, <T as ipt::Config>::ExistentialDeposit::get())],
                     Default::default(),
+                    ipl_license,
+                    ipl_execution_threshold,
+                    ipl_default_asset_weight,
+                    ipl_default_permission,
                 );
 
                 let info = IpsInfo {

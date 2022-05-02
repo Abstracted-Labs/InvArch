@@ -13,6 +13,7 @@ pub type IpsId = <Runtime as Config>::IpsId;
 #[test]
 fn create_ips_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -36,6 +37,9 @@ fn create_ips_should_work() {
             vec![0, 1],
             true,
             None,
+            one * 2,
+            one,
+            false,
         ));
 
         assert_eq!(Ips::next_ips_id(), 1);
@@ -47,7 +51,10 @@ fn create_ips_should_work() {
             Some(vec![SubIptInfo {
                 id: 0,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap()
-            }])
+            }]),
+            one * 2,
+            one,
+            false,
         ));
 
         assert_eq!(Ips::next_ips_id(), 2);
@@ -99,6 +106,7 @@ fn create_ips_should_work() {
 #[test]
 fn create_ips_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -111,7 +119,16 @@ fn create_ips_should_fail() {
         ));
 
         assert_noop!(
-            Ips::create_ips(Origin::none(), MOCK_METADATA.to_vec(), vec![0], true, None),
+            Ips::create_ips(
+                Origin::none(),
+                MOCK_METADATA.to_vec(),
+                vec![0],
+                true,
+                None,
+                one * 2,
+                one,
+                false
+            ),
             DispatchError::BadOrigin
         );
         assert_noop!(
@@ -120,7 +137,10 @@ fn create_ips_should_fail() {
                 MOCK_METADATA_PAST_MAX.to_vec(),
                 vec![0],
                 true,
-                None
+                None,
+                one * 2,
+                one,
+                false
             ),
             Error::<Runtime>::MaxMetadataExceeded,
         );
@@ -130,7 +150,10 @@ fn create_ips_should_fail() {
                 MOCK_METADATA.to_vec(),
                 vec![1],
                 true,
-                None
+                None,
+                one * 2,
+                one,
+                false
             ),
             Error::<Runtime>::NoPermission,
         );
@@ -140,7 +163,10 @@ fn create_ips_should_fail() {
                 MOCK_METADATA.to_vec(),
                 vec![2],
                 true,
-                None
+                None,
+                one * 2,
+                one,
+                false
             ),
             Error::<Runtime>::NoPermission, // BOB doesn't own that IPF because it doesn't exist, so he has no permission to use it
         );
@@ -152,7 +178,10 @@ fn create_ips_should_fail() {
                 MOCK_METADATA.to_vec(),
                 vec![0],
                 true,
-                None
+                None,
+                one * 2,
+                one,
+                false
             ),
             Error::<Runtime>::NoAvailableIpsId
         );
@@ -164,6 +193,7 @@ fn create_ips_should_fail() {
 #[test]
 fn destroy_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -175,6 +205,9 @@ fn destroy_should_work() {
             vec![0],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_eq!(
@@ -200,6 +233,7 @@ fn destroy_should_work() {
 #[test]
 fn destroy_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -211,6 +245,9 @@ fn destroy_should_fail() {
             vec![0],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_eq!(
@@ -260,6 +297,7 @@ fn destroy_should_fail() {
 #[test]
 fn create_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -273,15 +311,30 @@ fn create_replica_should_work() {
             vec![0],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         // Case 0: Alice replicates her own IPS
         assert_eq!(Ips::next_ips_id(), 1);
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         // Case 1: Bob replicates Alice's IPS
         assert_eq!(Ips::next_ips_id(), 2);
-        assert_ok!(Ips::create_replica(Origin::signed(BOB), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(BOB),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         let ips_0 = IpsStorage::<Runtime>::get(0).unwrap();
         let ips_1 = IpsStorage::<Runtime>::get(1).unwrap();
@@ -313,6 +366,7 @@ fn create_replica_should_work() {
 #[test]
 fn create_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -326,25 +380,28 @@ fn create_replica_should_fail() {
             vec![0],
             false,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         // Case 0: An unknown origin tries to replicate a non-replicable IPS
         assert_noop!(
-            Ips::create_replica(Origin::none(), 0),
+            Ips::create_replica(Origin::none(), 0, one * 2, one, false),
             DispatchError::BadOrigin,
         );
 
         // Case 1: Alice didn't allow replicas and tried to replicate her own IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_noop!(
-            Ips::create_replica(Origin::signed(ALICE), 0),
+            Ips::create_replica(Origin::signed(ALICE), 0, one * 2, one, false),
             Error::<Runtime>::ReplicaNotAllowed
         );
 
         // Case 2: Bob tried to replicate Alice's IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 0),
+            Ips::create_replica(Origin::signed(BOB), 0, one * 2, one, false),
             Error::<Runtime>::ReplicaNotAllowed,
         );
 
@@ -368,11 +425,17 @@ fn create_replica_should_fail() {
 
         // Subcase 0: An unknown origin tries to replicate a replicable IPS
         assert_noop!(
-            Ips::create_replica(Origin::none(), 0),
+            Ips::create_replica(Origin::none(), 0, one * 2, one, false),
             DispatchError::BadOrigin
         );
 
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         assert_eq!(
             IpsStorage::<Runtime>::get(1),
@@ -386,7 +449,7 @@ fn create_replica_should_fail() {
         );
 
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 1),
+            Ips::create_replica(Origin::signed(BOB), 1, one * 2, one, false),
             Error::<Runtime>::ReplicaNotAllowed
         );
 
@@ -394,14 +457,14 @@ fn create_replica_should_fail() {
 
         // Case 4: Original Ips does not exist
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 2),
+            Ips::create_replica(Origin::signed(BOB), 2, one * 2, one, false),
             Error::<Runtime>::IpsNotFound
         );
 
         // Case 5: IpsId Overflow
         NextIpsId::<Runtime>::mutate(|id| *id = IpsId::max_value());
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 0),
+            Ips::create_replica(Origin::signed(BOB), 0, one * 2, one, false),
             Error::<Runtime>::NoAvailableIpsId
         );
     });
@@ -410,6 +473,7 @@ fn create_replica_should_fail() {
 #[test]
 fn allow_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -423,6 +487,9 @@ fn allow_replica_should_work() {
             vec![0],
             false,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ips::allow_replica(
@@ -446,6 +513,7 @@ fn allow_replica_should_work() {
 #[test]
 fn allow_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -459,6 +527,9 @@ fn allow_replica_should_fail() {
             vec![0],
             false,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ipf::mint(
@@ -474,6 +545,9 @@ fn allow_replica_should_fail() {
             vec![1],
             false,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ips::append(
@@ -499,9 +573,18 @@ fn allow_replica_should_fail() {
             vec![2],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 2));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            2,
+            one * 2,
+            one,
+            false
+        ));
 
         // Case 0: Extrinsic called in a non-multisig context:
         assert_noop!(
@@ -557,6 +640,7 @@ fn allow_replica_should_fail() {
 #[test]
 fn disallow_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -570,6 +654,9 @@ fn disallow_replica_should_work() {
             vec![0],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ips::disallow_replica(
@@ -593,6 +680,7 @@ fn disallow_replica_should_work() {
 #[test]
 fn disallow_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -605,7 +693,10 @@ fn disallow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ipf::mint(
@@ -620,7 +711,10 @@ fn disallow_replica_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![1],
             true,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_ok!(Ips::append(
@@ -646,9 +740,18 @@ fn disallow_replica_should_fail() {
             vec![2],
             false,
             None,
+            one * 2,
+            one,
+            false
         ));
 
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 1));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            1,
+            one * 2,
+            one,
+            false
+        ));
 
         // Case 0: Extrinsic called in a non-multisig context:
         assert_noop!(
@@ -704,6 +807,7 @@ fn disallow_replica_should_fail() {
 #[test]
 fn append_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -733,6 +837,9 @@ fn append_should_work() {
             vec![0],
             true,
             None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_eq!(
@@ -761,7 +868,13 @@ fn append_should_work() {
         );
 
         assert_eq!(Ips::next_ips_id(), 1);
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         assert_eq!(
             IptStorage::<Runtime>::get(1),
@@ -843,6 +956,7 @@ fn append_should_work() {
 #[test]
 fn append_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -866,7 +980,10 @@ fn append_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             false,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
         assert_eq!(Ips::next_ips_id(), 1);
@@ -875,7 +992,10 @@ fn append_should_fail() {
             MOCK_METADATA_SECONDARY.to_vec(),
             vec![2],
             false,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
         // Case 0: Alice tries to append an IPF to an IPS in a non-multisig context
@@ -983,6 +1103,7 @@ fn append_should_fail() {
 #[test]
 fn remove_should_work() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -999,10 +1120,19 @@ fn remove_should_work() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, Some(ALICE))),
@@ -1077,6 +1207,7 @@ fn remove_should_work() {
 #[test]
 fn remove_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
+        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -1093,10 +1224,19 @@ fn remove_should_fail() {
             MOCK_METADATA.to_vec(),
             vec![0],
             true,
-            None
+            None,
+            one * 2,
+            one,
+            false
         ));
 
-        assert_ok!(Ips::create_replica(Origin::signed(ALICE), 0));
+        assert_ok!(Ips::create_replica(
+            Origin::signed(ALICE),
+            0,
+            one * 2,
+            one,
+            false
+        ));
 
         assert_ok!(Ips::append(
             Origin::signed(multi_account_id::<Runtime, IpsId>(0, Some(ALICE))),

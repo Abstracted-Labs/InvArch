@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#![allow(clippy::too_many_arguments)]
 
 use frame_support::{pallet_prelude::*, traits::Currency as FSCurrency};
 use frame_system::pallet_prelude::*;
@@ -15,6 +16,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use primitives::OneOrPercent;
     use sp_core::crypto::UncheckedFrom;
     use sp_runtime::traits::{CheckedAdd, Hash, StaticLookup};
     use sp_std::vec;
@@ -24,6 +26,7 @@ pub mod pallet {
         frame_system::Config
         + ips::Config
         + ipf::Config
+        + ipl::Config
         + pallet_contracts::Config
         + pallet_balances::Config
     {
@@ -94,6 +97,10 @@ pub mod pallet {
             endowment: BalanceOf<T>,
             gas_limit: Weight,
             allow_replica: bool,
+            ipl_license: <T as ipl::Config>::Licenses,
+            ipl_execution_threshold: OneOrPercent,
+            ipl_default_asset_weight: OneOrPercent,
+            ipl_default_permission: bool,
         ) -> DispatchResultWithPostInfo
         where
             <T as pallet_balances::Config>::Balance: From<
@@ -120,7 +127,17 @@ pub mod pallet {
             let ips_account: <T as frame_system::Config>::AccountId =
                 primitives::utils::multi_account_id::<T, <T as ips::Config>::IpsId>(ips_id, None);
 
-            ips::Pallet::<T>::create_ips(owner.clone(), vec![], vec![ipf_id], allow_replica, None)?;
+            ips::Pallet::<T>::create_ips(
+                owner.clone(),
+                vec![],
+                vec![ipf_id],
+                allow_replica,
+                None,
+                ipl_license,
+                ipl_execution_threshold,
+                ipl_default_asset_weight,
+                ipl_default_permission,
+            )?;
 
             pallet_balances::Pallet::<T>::transfer(
                 owner,

@@ -2,6 +2,13 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
+use sp_runtime::Percent;
+
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum OneOrPercent {
+    One,
+    ZeroPoint(Percent),
+}
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parentage<AccountId, IpsId> {
@@ -59,6 +66,22 @@ pub struct IptInfo<AccountId, Balance> {
 pub struct SubIptInfo<IptId, SubAssetMetadata> {
     pub id: IptId,
     pub metadata: SubAssetMetadata,
+}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
+    pub owner: AccountId,
+    pub id: IplId,
+    pub license: (LicenseMetadata, Hash),
+    pub execution_threshold: OneOrPercent,
+    pub default_asset_weight: OneOrPercent,
+    pub default_permission: bool,
+}
+
+#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
+pub struct CallInfo<Data> {
+    pub pallet: Data,
+    pub function: Data,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
