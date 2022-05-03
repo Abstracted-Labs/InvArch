@@ -16,3 +16,11 @@
 
 # Local testnet nodes storage
 storage
+
+# Important!
+*.wasm
+*.json
+*.txt
+
+# Local testing
+**/testing/
