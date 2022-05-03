@@ -30,7 +30,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod xcm_config;
 
+use codec::{Decode, Encode};
+use ipl::LicenseList;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{
@@ -105,6 +108,9 @@ pub use pallet_ips as ips;
 /// Import the ipt pallet.
 pub use pallet_ipt as ipt;
 
+/// Import the ipl pallet.
+pub use pallet_ipl as ipl;
+
 // Runtime Constants
 mod constants;
 // Weights
@@ -127,6 +133,40 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
             return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
         }
         None
+    }
+}
+
+#[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
+pub enum InvArchLicenses {
+    Apache2,
+    GPLv3,
+    Custom(Vec<u8>, Hash),
+}
+
+impl LicenseList for InvArchLicenses {
+    type IpfsHash = Hash; // License IPFS hash.
+    type LicenseMetadata = Vec<u8>; // License name.
+
+    fn get_hash_and_metadata(&self) -> (Self::LicenseMetadata, Self::IpfsHash) {
+        match self {
+            InvArchLicenses::Apache2 => (
+                vec![65, 112, 97, 99, 104, 97, 32, 118, 50, 46, 48],
+                [
+                    7, 57, 92, 251, 234, 183, 217, 144, 220, 196, 201, 132, 176, 249, 18, 224, 237,
+                    201, 2, 113, 146, 78, 111, 152, 92, 71, 16, 228, 87, 39, 81, 142,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::GPLv3 => (
+                vec![71, 78, 85, 32, 71, 80, 76, 32, 118, 51],
+                [
+                    72, 7, 169, 24, 30, 7, 200, 69, 232, 27, 10, 138, 130, 253, 91, 158, 210, 95,
+                    127, 37, 85, 41, 106, 136, 66, 116, 64, 35, 252, 195, 69, 253,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::Custom(metadata, hash) => (metadata.clone(), *hash),
+        }
     }
 }
 
@@ -581,6 +621,7 @@ impl ipf::Config for Runtime {
 
 parameter_types! {
     pub const MaxCallers: u32 = 10000;
+    pub const MaxIptMetadata: u32 = 10000;
 }
 
 impl pallet_ipt::Config for Runtime {
@@ -592,6 +633,21 @@ impl pallet_ipt::Config for Runtime {
     type Call = Call;
     type MaxCallers = MaxCallers;
     type WeightToFeePolynomial = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type MaxIptMetadata = MaxIptMetadata;
+}
+
+parameter_types! {
+    pub const MaxLicenseMetadata: u32 = 10000;
+}
+
+impl pallet_ipl::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Balance = Balance;
+    type IplId = CommonId;
+    type Licenses = InvArchLicenses;
+    type MaxLicenseMetadata = MaxLicenseMetadata;
 }
 
 parameter_types! {
@@ -781,6 +837,7 @@ construct_runtime!(
         Ips: ips::{Pallet, Call, Storage, Event<T>} = 51,
         Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 52,
         Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 53,
+        Ipl: ipl::{Pallet, Call, Storage, Event<T>} = 54,
     }
 );
 
