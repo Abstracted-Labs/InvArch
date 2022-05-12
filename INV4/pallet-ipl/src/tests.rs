@@ -173,6 +173,7 @@ fn create_should_work() {
         );
     });
 }
+
 // Not meant to fail
 #[test]
 fn execution_threshold_should_work() {
@@ -187,5 +188,30 @@ fn execution_threshold_should_work() {
 
         assert_eq!(Ipl::execution_threshold(0), Some(percent!(35)));
         assert_eq!(Ipl::execution_threshold(32767), None);
+    });
+}
+// Not meant to fail
+#[test]
+fn asset_weight_should_work() {
+    ExtBuilder::default().build().execute_with(|| {
+        Ipl::create(
+            0,
+            InvArchLicenses::GPLv3,
+            percent!(35),
+            OneOrPercent::One,
+            false,
+        );
+
+        assert_eq!(
+            Ipl::asset_weight(0, 0),
+            Some(OneOrPercent::One) // Default asset weight would be used
+        );
+        assert_ok!(Ipl::set_asset_weight(
+            Origin::signed(multi_account_id::<Runtime, IplId>(0, None)),
+            0,
+            0,
+            percent!(9)
+        ));
+        assert_eq!(Ipl::asset_weight(0, 0), Some(percent!(9)));
     });
 }
