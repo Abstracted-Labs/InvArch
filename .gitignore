@@ -24,3 +24,6 @@ storage
 
 # Local testing
 **/testing/
+
+# The cache for local vscode data
+.vscode/
