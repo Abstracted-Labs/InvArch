@@ -4,16 +4,28 @@ use super::*;
 use frame_support::{assert_noop, assert_ok};
 use ipf::{IpfInfoOf, IpfStorage};
 use ipt::{Ipt as IptStorage, SubAssets};
+use mock::InvArchLicenses::*;
 use mock::*;
-use primitives::{utils::multi_account_id, AnyId, IpsType, IptInfo, Parentage, SubIptInfo};
+use primitives::{
+    utils::multi_account_id,
+    AnyId, IpsType, IptInfo,
+    OneOrPercent::{One, ZeroPoint},
+    Parentage, SubIptInfo,
+};
 use sp_core::H256;
-use sp_runtime::DispatchError;
+use sp_runtime::{DispatchError, Percent};
 
 pub type IpsId = <Runtime as Config>::IpsId;
+
+macro_rules! percent {
+    ($x:expr) => {
+        ZeroPoint(Percent::from_percent($x))
+    };
+}
+
 #[test]
 fn create_ips_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -37,8 +49,9 @@ fn create_ips_should_work() {
             vec![0, 1],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         ));
 
@@ -52,8 +65,9 @@ fn create_ips_should_work() {
                 id: 0,
                 metadata: MOCK_METADATA_SECONDARY.to_vec().try_into().unwrap()
             }]),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         ));
 
@@ -106,7 +120,6 @@ fn create_ips_should_work() {
 #[test]
 fn create_ips_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -125,8 +138,9 @@ fn create_ips_should_fail() {
                 vec![0],
                 true,
                 None,
-                one * 2,
-                one,
+                GPLv3,
+                percent!(50),
+                One,
                 false
             ),
             DispatchError::BadOrigin
@@ -138,8 +152,9 @@ fn create_ips_should_fail() {
                 vec![0],
                 true,
                 None,
-                one * 2,
-                one,
+                GPLv3,
+                percent!(50),
+                One,
                 false
             ),
             Error::<Runtime>::MaxMetadataExceeded,
@@ -151,8 +166,9 @@ fn create_ips_should_fail() {
                 vec![1],
                 true,
                 None,
-                one * 2,
-                one,
+                GPLv3,
+                percent!(50),
+                One,
                 false
             ),
             Error::<Runtime>::NoPermission,
@@ -164,8 +180,9 @@ fn create_ips_should_fail() {
                 vec![2],
                 true,
                 None,
-                one * 2,
-                one,
+                GPLv3,
+                percent!(50),
+                One,
                 false
             ),
             Error::<Runtime>::NoPermission, // BOB doesn't own that IPF because it doesn't exist, so he has no permission to use it
@@ -179,8 +196,9 @@ fn create_ips_should_fail() {
                 vec![0],
                 true,
                 None,
-                one * 2,
-                one,
+                GPLv3,
+                percent!(50),
+                One,
                 false
             ),
             Error::<Runtime>::NoAvailableIpsId
@@ -193,7 +211,6 @@ fn create_ips_should_fail() {
 #[test]
 fn destroy_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -205,8 +222,9 @@ fn destroy_should_work() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -233,7 +251,6 @@ fn destroy_should_work() {
 #[test]
 fn destroy_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(BOB),
             MOCK_METADATA.to_vec(),
@@ -245,8 +262,9 @@ fn destroy_should_fail() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -297,7 +315,6 @@ fn destroy_should_fail() {
 #[test]
 fn create_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -311,8 +328,9 @@ fn create_replica_should_work() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -321,8 +339,9 @@ fn create_replica_should_work() {
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -331,8 +350,9 @@ fn create_replica_should_work() {
         assert_ok!(Ips::create_replica(
             Origin::signed(BOB),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -366,7 +386,6 @@ fn create_replica_should_work() {
 #[test]
 fn create_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -380,28 +399,29 @@ fn create_replica_should_fail() {
             vec![0],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
         // Case 0: An unknown origin tries to replicate a non-replicable IPS
         assert_noop!(
-            Ips::create_replica(Origin::none(), 0, one * 2, one, false),
+            Ips::create_replica(Origin::none(), 0, GPLv3, percent!(50), One, false),
             DispatchError::BadOrigin,
         );
 
         // Case 1: Alice didn't allow replicas and tried to replicate her own IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_noop!(
-            Ips::create_replica(Origin::signed(ALICE), 0, one * 2, one, false),
+            Ips::create_replica(Origin::signed(ALICE), 0, GPLv3, percent!(50), One, false),
             Error::<Runtime>::ReplicaNotAllowed
         );
 
         // Case 2: Bob tried to replicate Alice's IPS
         assert_eq!(Ips::next_ips_id(), 1);
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 0, one * 2, one, false),
+            Ips::create_replica(Origin::signed(BOB), 0, GPLv3, percent!(50), One, false),
             Error::<Runtime>::ReplicaNotAllowed,
         );
 
@@ -425,15 +445,16 @@ fn create_replica_should_fail() {
 
         // Subcase 0: An unknown origin tries to replicate a replicable IPS
         assert_noop!(
-            Ips::create_replica(Origin::none(), 0, one * 2, one, false),
+            Ips::create_replica(Origin::none(), 0, GPLv3, percent!(50), One, false),
             DispatchError::BadOrigin
         );
 
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(5),
+            One,
             false
         ));
 
@@ -449,7 +470,7 @@ fn create_replica_should_fail() {
         );
 
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 1, one * 2, one, false),
+            Ips::create_replica(Origin::signed(BOB), 1, GPLv3, percent!(50), One, false),
             Error::<Runtime>::ReplicaNotAllowed
         );
 
@@ -457,14 +478,14 @@ fn create_replica_should_fail() {
 
         // Case 4: Original Ips does not exist
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 2, one * 2, one, false),
+            Ips::create_replica(Origin::signed(BOB), 2, GPLv3, percent!(50), One, false),
             Error::<Runtime>::IpsNotFound
         );
 
         // Case 5: IpsId Overflow
         NextIpsId::<Runtime>::mutate(|id| *id = IpsId::max_value());
         assert_noop!(
-            Ips::create_replica(Origin::signed(BOB), 0, one * 2, one, false),
+            Ips::create_replica(Origin::signed(BOB), 0, GPLv3, percent!(50), One, false),
             Error::<Runtime>::NoAvailableIpsId
         );
     });
@@ -473,7 +494,6 @@ fn create_replica_should_fail() {
 #[test]
 fn allow_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -487,8 +507,9 @@ fn allow_replica_should_work() {
             vec![0],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -513,7 +534,6 @@ fn allow_replica_should_work() {
 #[test]
 fn allow_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -527,8 +547,9 @@ fn allow_replica_should_fail() {
             vec![0],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -545,8 +566,9 @@ fn allow_replica_should_fail() {
             vec![1],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -573,16 +595,18 @@ fn allow_replica_should_fail() {
             vec![2],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             2,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -640,7 +664,6 @@ fn allow_replica_should_fail() {
 #[test]
 fn disallow_replica_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -654,8 +677,9 @@ fn disallow_replica_should_work() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(5),
+            One,
             false
         ));
 
@@ -680,7 +704,6 @@ fn disallow_replica_should_work() {
 #[test]
 fn disallow_replica_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -694,8 +717,9 @@ fn disallow_replica_should_fail() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -712,8 +736,9 @@ fn disallow_replica_should_fail() {
             vec![1],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -740,16 +765,18 @@ fn disallow_replica_should_fail() {
             vec![2],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             1,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -807,7 +834,6 @@ fn disallow_replica_should_fail() {
 #[test]
 fn append_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -837,8 +863,9 @@ fn append_should_work() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -871,8 +898,9 @@ fn append_should_work() {
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -956,7 +984,6 @@ fn append_should_work() {
 #[test]
 fn append_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -981,8 +1008,9 @@ fn append_should_fail() {
             vec![0],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -993,8 +1021,9 @@ fn append_should_fail() {
             vec![2],
             false,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -1103,7 +1132,6 @@ fn append_should_fail() {
 #[test]
 fn remove_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -1121,16 +1149,18 @@ fn remove_should_work() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
@@ -1207,7 +1237,6 @@ fn remove_should_work() {
 #[test]
 fn remove_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: Balance = One::one();
         assert_ok!(Ipf::mint(
             Origin::signed(ALICE),
             MOCK_METADATA.to_vec(),
@@ -1225,16 +1254,18 @@ fn remove_should_fail() {
             vec![0],
             true,
             None,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
         assert_ok!(Ips::create_replica(
             Origin::signed(ALICE),
             0,
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false
         ));
 
