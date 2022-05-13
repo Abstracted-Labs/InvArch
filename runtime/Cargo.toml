@@ -199,7 +199,7 @@ runtime-benchmarks = [
     "pallet-ipf/runtime-benchmarks",
     "pallet-ips/runtime-benchmarks",
     "pallet-ipt/runtime-benchmarks",
-    "pallet-smartip/runtime-benchmarks"
+    "pallet-ipl/runtime-benchmarks",
 ]
 
 try-runtime = [

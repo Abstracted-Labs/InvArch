@@ -1033,12 +1033,24 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
+            // INV4 Pallets
+            use pallet_ipf::benchmarking::Pallet as IpfBench;
+            use pallet_ips::benchmarking::Pallet as IpsBench;
+            use pallet_ipt::benchmarking::Pallet as IptBench;
+            use pallet_ipl::benchmarking::Pallet as IplBench;
+
             let mut list = Vec::<BenchmarkList>::new();
+
+            // INV4 Pallets
+            list_benchmark!(list, extra, pallet_ipf, IpfBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_ips, IpsBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_ipt, IptBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_ipl, IplBench::<Runtime>);
 
             list_benchmarks!(list, extra);
 
@@ -1049,17 +1061,20 @@ impl_runtime_apis! {
 
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<(
-            Vec<frame_benchmarking::BenchmarkBatch>,
-            Vec<StorageInfo>), 
-            sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
             use frame_system_benchmarking::Pallet as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
 
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
             impl cumulus_pallet_session_benchmarking::Config for Runtime {}
+
+            // INV4 Pallets
+            use pallet_ipf::benchmarking::Pallet as IpfBench;
+            use pallet_ips::benchmarking::Pallet as IpsBench;
+            use pallet_ipt::benchmarking::Pallet as IptBench;
+            use pallet_ipl::benchmarking::Pallet as IplBench;
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 // Block Number
@@ -1073,20 +1088,20 @@ impl_runtime_apis! {
                 // System Events
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
             ];
-            let storage_info = AllPalletsWithSystem::storage_info();
+
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
+            // INV4 Pallets
+            add_benchmark!(params, batches, pallet_ipf, IpfBench::<Runtime>);
+            add_benchmark!(params, batches, pallet_ips, IpsBench::<Runtime>);
+            add_benchmark!(params, batches, pallet_ipt, IptBench::<Runtime>);
+            add_benchmark!(params, batches, pallet_ipl, IplBench::<Runtime>);
+
             add_benchmarks!(params, batches);
 
-            // INV4 Pallets
-            add_benchmarks!(params, batches, pallet_ipf, Ipf::<Runtime>);
-            add_benchmarks!(params, batches, pallet_ips, Ips::<Runtime>);
-            add_benchmarks!(params, batches, pallet_ipt, Ipt::<Runtime>);
-            add_benchmarks!(params, batches, pallet_smartip, SmartIp::<Runtime>);
-
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-            Ok(batches, storage_info)
+            Ok(batches)
         }
     }
 }

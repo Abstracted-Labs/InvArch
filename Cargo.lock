@@ -5882,6 +5882,7 @@ name = "pallet-ipl"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
