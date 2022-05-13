@@ -25,11 +25,11 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
-pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
-pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
-pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
-pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
@@ -195,6 +195,11 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
+
+    "pallet-ipf/runtime-benchmarks",
+    "pallet-ips/runtime-benchmarks",
+    "pallet-ipt/runtime-benchmarks",
+    "pallet-smartip/runtime-benchmarks"
 ]
 
 try-runtime = [

@@ -1049,7 +1049,10 @@ impl_runtime_apis! {
 
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
-        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+        ) -> Result<(
+            Vec<frame_benchmarking::BenchmarkBatch>,
+            Vec<StorageInfo>), 
+            sp_runtime::RuntimeString> {
             use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
             use frame_system_benchmarking::Pallet as SystemBench;
@@ -1070,14 +1073,20 @@ impl_runtime_apis! {
                 // System Events
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
             ];
-
+            let storage_info = AllPalletsWithSystem::storage_info();
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
             add_benchmarks!(params, batches);
 
+            // INV4 Pallets
+            add_benchmarks!(params, batches, pallet_ipf, Ipf::<Runtime>);
+            add_benchmarks!(params, batches, pallet_ips, Ips::<Runtime>);
+            add_benchmarks!(params, batches, pallet_ipt, Ipt::<Runtime>);
+            add_benchmarks!(params, batches, pallet_smartip, SmartIp::<Runtime>);
+
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-            Ok(batches)
+            Ok(batches, storage_info)
         }
     }
 }

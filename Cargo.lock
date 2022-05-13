@@ -3363,7 +3363,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5862,8 +5862,9 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
@@ -5879,7 +5880,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5897,8 +5898,9 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
@@ -5920,8 +5922,9 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
@@ -6189,7 +6192,7 @@ dependencies = [
 [[package]]
 name = "pallet-smartip"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#8ff623a6e372bcb4d875075aadfe7de44d650e07"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-support",
  "frame-system",
