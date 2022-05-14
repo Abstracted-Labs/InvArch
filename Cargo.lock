@@ -3363,6 +3363,20 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "invarch-primitives"
+version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-system",
@@ -3406,10 +3420,10 @@ dependencies = [
  "pallet-contracts",
  "pallet-contracts-primitives",
  "pallet-contracts-rpc-runtime-api",
- "pallet-ipf",
- "pallet-ipl",
- "pallet-ips",
- "pallet-ipt",
+ "pallet-ipf 0.1.0-dev",
+ "pallet-ipl 0.1.0-dev",
+ "pallet-ips 0.1.0-dev",
+ "pallet-ipt 0.1.0-dev",
  "pallet-randomness-collective-flip",
  "pallet-session",
  "pallet-smartip",
@@ -5862,12 +5876,29 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipf"
+version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5880,15 +5911,55 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "smallvec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipl"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "smallvec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ips"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-ipf 0.1.0-dev",
+ "pallet-ipl 0.1.0-dev",
+ "pallet-ipt 0.1.0-dev",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
  "smallvec",
  "sp-core",
  "sp-io",
@@ -5904,12 +5975,32 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "pallet-assets",
  "pallet-balances",
- "pallet-ipf",
- "pallet-ipl",
- "pallet-ipt",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "pallet-ipl 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "pallet-ipt 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipt"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev",
+ "pallet-balances",
+ "pallet-ipl 0.1.0-dev",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5925,15 +6016,13 @@ name = "pallet-ipt"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#4d26894ecf5d4671e567d94fab43ac5b07d16f1f"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "pallet-balances",
- "pallet-ipl",
+ "pallet-ipl 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "smallvec",
  "sp-core",
  "sp-io",
@@ -6197,13 +6286,13 @@ source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-
 dependencies = [
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "pallet-balances",
  "pallet-contracts",
  "pallet-contracts-primitives",
- "pallet-ipf",
- "pallet-ipl",
- "pallet-ips",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "pallet-ipl 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
+ "pallet-ips 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3)",
  "parity-scale-codec",
  "scale-info",
  "serde",
