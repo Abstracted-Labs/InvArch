@@ -161,6 +161,67 @@ pub fn development_config() -> ChainSpec {
     )
 }
 
+pub fn solo_dev_config() -> ChainSpec {
+    // Give your base currency a unit name and decimal places
+    let mut properties = sc_chain_spec::Properties::new();
+    properties.insert("tokenSymbol".into(), "UNIT".into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 42u32.into());
+
+    ChainSpec::from_genesis(
+        // Name
+        "InvArch Solo Dev Net",
+        // ID
+        "invarch-solo-dev",
+        ChainType::Development,
+        move || {
+            testnet_genesis(
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // initial collators.
+                vec![
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_collator_keys_from_seed("Alice"),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob"),
+                        get_collator_keys_from_seed("Bob"),
+                    ),
+                ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ],
+                1000.into(),
+            )
+        },
+        // Bootnodes
+        Vec::new(),
+        // Telemetry
+        None,
+        // Protocol ID
+        None,
+        // Properties
+        None,
+        None,
+        // Extensions
+        Extensions {
+            relay_chain: "dev".into(), // TODO: You MUST set this to the correct network!
+            para_id: 1000,
+        },
+    )
+}
+
 pub fn local_testnet_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
