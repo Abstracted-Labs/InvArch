@@ -25,15 +25,10 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-# pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-# pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-# pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-# pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-
-pallet-ipf = { package = "pallet-ipf", path = "/home/sha888/invarch/InvArch-Frames/INV4/pallet-ipf", default-features = false }
-pallet-ips = { package = "pallet-ips", path = "/home/sha888/invarch/InvArch-Frames/INV4/pallet-ips", default-features = false }
-pallet-ipt = { package = "pallet-ipt", path = "/home/sha888/invarch/InvArch-Frames/INV4/pallet-ipt", default-features = false }
-pallet-ipl = { package = "pallet-ipl", path = "/home/sha888/invarch/InvArch-Frames/INV4/pallet-ipl", default-features = false }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 
 pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
