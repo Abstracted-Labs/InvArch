@@ -15,6 +15,11 @@ pub trait LicenseList {
     fn get_hash_and_metadata(&self) -> (Self::LicenseMetadata, Self::IpfsHash);
 }
 
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
