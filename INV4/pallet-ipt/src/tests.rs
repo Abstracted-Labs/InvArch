@@ -7,21 +7,28 @@ use sp_core::blake2_256;
 
 use crate::{
     mock::{
-        Balances, Call, ExistentialDeposit, ExtBuilder, Ipt, Origin, Runtime, ALICE, BOB, VADER,
+        Balances, Call, ExistentialDeposit, ExtBuilder, InvArchLicenses::*, Ipt, Origin, Runtime,
+        ALICE, BOB, VADER,
     },
     Balance, Config, Error, Ipt as IptStorage, Multisig, MultisigOperationOf, SubAssets,
 };
 
 use sp_std::convert::TryInto;
 
-use sp_runtime::{traits::One, DispatchError};
+use primitives::OneOrPercent::*;
+use sp_runtime::{DispatchError, Percent};
 
 type IptId = <Runtime as Config>::IptId;
+
+macro_rules! percent {
+    ($x:expr) => {
+        ZeroPoint(Percent::from_percent($x))
+    };
+}
 
 #[test]
 fn mint_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -32,8 +39,9 @@ fn mint_should_work() {
             }]
             .try_into()
             .unwrap(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -75,14 +83,14 @@ fn mint_should_work() {
 #[test]
 fn mint_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
             vec![(ALICE, ExistentialDeposit::get())],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -141,7 +149,6 @@ fn mint_should_fail() {
 #[test]
 fn burn_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -152,8 +159,9 @@ fn burn_should_work() {
             }]
             .try_into()
             .unwrap(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -200,14 +208,14 @@ fn burn_should_work() {
 #[test]
 fn burn_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
             vec![(ALICE, ExistentialDeposit::get())],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -267,7 +275,6 @@ fn burn_should_fail() {
 fn operate_multisig_should_work() {
     ExtBuilder::default().build().execute_with(|| {
         // > total_per_2
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -276,8 +283,9 @@ fn operate_multisig_should_work() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -333,7 +341,6 @@ fn operate_multisig_should_work() {
 #[test]
 fn operate_multisig_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -342,8 +349,9 @@ fn operate_multisig_should_fail() {
                 (BOB, ExistentialDeposit::get() * 2 + 1),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -417,14 +425,14 @@ fn operate_multisig_should_fail() {
 #[test]
 fn create_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
             vec![(ALICE, 3_000_000)],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -452,8 +460,9 @@ fn create_should_work() {
             }]
             .try_into()
             .unwrap(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -485,8 +494,9 @@ fn create_should_work() {
             IptId::max_value(),
             vec![(ALICE, 1), (BOB, 2)],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             true,
         );
 
@@ -510,7 +520,6 @@ fn create_should_work() {
 #[test]
 fn withdraw_vote_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             ALICE,
             0,
@@ -520,8 +529,9 @@ fn withdraw_vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -587,7 +597,6 @@ fn withdraw_vote_should_work() {
 #[test]
 fn withdraw_vote_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -597,8 +606,9 @@ fn withdraw_vote_should_fail() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -680,7 +690,6 @@ fn withdraw_vote_should_fail() {
 #[test]
 fn vote_should_work() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -690,8 +699,9 @@ fn vote_should_work() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 
@@ -798,7 +808,6 @@ fn vote_should_work() {
 #[test]
 fn vote_should_fail() {
     ExtBuilder::default().build().execute_with(|| {
-        let one: crate::mock::Balance = One::one();
         Ipt::create(
             multi_account_id::<Runtime, IptId>(0, None),
             0,
@@ -808,8 +817,9 @@ fn vote_should_fail() {
                 (VADER, ExistentialDeposit::get()),
             ],
             Default::default(),
-            one * 2,
-            one,
+            GPLv3,
+            percent!(50),
+            One,
             false,
         );
 

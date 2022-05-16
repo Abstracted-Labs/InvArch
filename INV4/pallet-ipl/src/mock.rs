@@ -1,5 +1,4 @@
-//! Mocks for the gradually-update module.
-
+use super::LicenseList;
 use frame_support::{
     construct_runtime, parameter_types,
     traits::Contains,
@@ -8,7 +7,6 @@ use frame_support::{
         WeightToFeePolynomial,
     },
 };
-use ipl::LicenseList;
 use pallet_balances::AccountData;
 use smallvec::smallvec;
 use sp_core::H256;
@@ -16,7 +14,7 @@ use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 use super::*;
 
-use crate as ips;
+use crate as ipl;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -73,57 +71,16 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxIpfMetadata: u32 = 32;
-}
-
-impl ipf::Config for Runtime {
-    type IpfId = u64;
-    type MaxIpfMetadata = MaxIpfMetadata;
-    type Event = Event;
-}
-
-parameter_types! {
     pub const MaxLicenseMetadata: u32 = 32;
 }
 
-impl ipl::Config for Runtime {
+impl Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Balance = Balance;
     type IplId = u64;
     type Licenses = InvArchLicenses;
     type MaxLicenseMetadata = MaxLicenseMetadata;
-}
-
-parameter_types! {
-    pub const MaxCallers: u32 = 32;
-}
-
-impl ipt::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type Balance = Balance;
-    type IptId = u64;
-    type MaxCallers = MaxCallers;
-    type ExistentialDeposit = ExistentialDeposit;
-    type Call = Call;
-    type WeightToFeePolynomial = WeightToFee;
-    type MaxSubAssets = MaxCallers;
-    type MaxIptMetadata = MaxIpfMetadata;
-}
-
-parameter_types! {
-    pub const MaxIpsMetadata: u32 = 32;
-}
-
-impl Config for Runtime {
-    type Event = Event;
-    type IpsId = u64;
-    type MaxIpsMetadata = MaxIpsMetadata;
-    type Currency = Balances;
-    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
-    type ExistentialDeposit = ExistentialDeposit;
-    type Balance = Balance;
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -138,7 +95,7 @@ impl Contains<Call> for BaseFilter {
             // Remark is used as a no-op call in the benchmarking
             Call::System(SystemCall::remark { .. }) => true,
             Call::System(_) => false,
-            _ => false,
+            _ => true,
         }
     }
 }
@@ -151,35 +108,12 @@ construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Ipf: ipf::{Pallet, Storage, Event<T>},
-        Ips: ips::{Pallet, Storage, Event<T>},
-        Ipt: ipt::{Pallet, Call, Storage, Event<T>},
         Ipl: ipl::{Pallet, Call, Storage, Event<T>},
     }
 );
 
 pub const ALICE: AccountId = 1;
 pub const BOB: AccountId = 2;
-pub const MOCK_DATA: [u8; 32] = [
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
-];
-pub const MOCK_METADATA: &'static [u8] = &[
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95,
-];
-pub const MOCK_DATA_SECONDARY: [u8; 32] = [
-    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
-    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
-];
-pub const MOCK_METADATA_SECONDARY: &'static [u8] = &[
-    47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218, 0,
-    230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 12,
-];
-pub const MOCK_METADATA_PAST_MAX: &'static [u8] = &[
-    12, 47, 182, 72, 140, 51, 139, 219, 171, 74, 247, 18, 123, 28, 200, 236, 221, 85, 25, 12, 218,
-    0, 230, 247, 32, 73, 152, 66, 243, 27, 92, 95, 42,
-];
 
 pub struct ExtBuilder;
 
