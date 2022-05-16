@@ -1,17 +1,37 @@
-version: "3.2"
+version: "3.7"
 
 services:
-  dev:
-    container_name: invarch-node
-    image: paritytech/ci-linux:974ba3ac-20201006
-    working_dir: /var/www/invarch-node
+  invarch-alice:
+    container_name: invarch-alice
+    image: invarch/inv4:latest
+    build:
+      dockerfile: dockerfile
+    networks:
+      - internet
     ports:
       - "9944:9944"
-    environment:
-      - CARGO_HOME=/var/www/invarch-node/.cargo
-    volumes:
-      - .:/var/www/invarch-node
-      - type: bind
-        source: ./.local
-        target: /root/.local
-    command: bash -c "cargo build --release && ./target/release/invarch-node --dev --ws-external"
+    command:
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      - "--chain=solo-dev"
+      - "--tmp"
+      - "--alice"
+
+  invarch-bob:
+    container_name: invarch-bob
+    image: invarch/inv4:latest
+    build:
+      dockerfile: dockerfile
+    networks:
+      - internet
+    ports:
+      - "9945:9944"
+    command:
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      - "--chain=solo-dev"
+      - "--tmp"
+      - "--bob"
+
+networks:
+  internet:
