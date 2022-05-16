@@ -1,24 +1,21 @@
 FROM ubuntu as builder
 RUN apt-get update --fix-missing
-RUN apt-get install -y git && apt-get install -y curl
-RUN git clone -b development https://github.com/InvArch/InvArch-node
-RUN apt-get install -y build-essential && \
-    apt-get install -y clang && \
-    apt-get install -y jq && \
-	curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+RUN apt-get install -y git && apt-get install -y curl && apt-get install -y build-essential && apt-get install -y clang && apt-get install -y jq
+RUN git clone -b development https://github.com/InvArch/InvArch-Node
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH="$PATH:$HOME/.cargo/bin" && \
-    cd InvArch-node && \
+    cd InvArch-Node && \
     rustup toolchain install $(cat rust-toolchain.toml | grep -o -P '(?<=").*(?=")') && \
     rustup default stable && \
     rustup target add wasm32-unknown-unknown --toolchain $(cat rust-toolchain.toml | grep -o -P '(?<=").*(?=")') && \
     cargo build --release
 
 # ↑ Build Stage | Final Stage ↓
-FROM docker.io/library/ubuntu:20.04
-COPY --from=builder /InvArch-node/target/release/invarch-collator /usr/local/bin
+FROM docker.io/library/ubuntu:latest
+COPY --from=builder /InvArch-Node/target/release/invarch-collator /usr/local/bin
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=builder /InvArch-node/node/res/tinker-spec-raw.json /data/tinker-spec-raw.json
-COPY --from=builder /InvArch-node/node/res/rococo.json /data/rococo.json
+COPY --from=builder /InvArch-Node/node/res/tinker-spec-raw.json /data/tinker-spec-raw.json
+COPY --from=builder /InvArch-Node/node/res/rococo.json /data/rococo.json
 
 
 RUN useradd -m -u 1000 -U -s /bin/sh -d /invarch-collator invarch-collator && \
