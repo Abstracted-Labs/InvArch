@@ -5,11 +5,12 @@
 This is a [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
 to create and manage [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token)
 
-# IPFiles : Non-fungible components that define an idea
+# IP Files : Immutable records of ownership [(CIDs)](https://wiki.crust.network/docs/en/buildIntegrationNFTDataStorage.html) over digital assets that can be interchangeably stored & organized in an various IP Sets.
+Their IP Sets are embedded with with flexible on-chain licensing, copyright, and collaboration (IP License) structures that can conform to satisfy international & domain-specific compliance standards.
 
 The following **components** are defined:
 
-* `IPFile` + Metadata
+* `IP File` + Metadata
 
 The following **callable functions** are possible:
 
