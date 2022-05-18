@@ -109,5 +109,5 @@ runtime-benchmarks = [
     "invarch-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks"
     ]
-contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
+#contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
 try-runtime = ["invarch-runtime/try-runtime"]
