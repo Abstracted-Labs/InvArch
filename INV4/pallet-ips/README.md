@@ -8,14 +8,19 @@ to create and manage sets of [intellectual property (IP)](https://en.wikipedia.o
 # IP Set : Non-Fungible Folders of IP Files & other IP Sets
 
 The following **components** are defined:
+
 * `IPSet` + Metadata
 
-The following **functions** are possible:
-* `create` - Create a new IP Set
-* `send` - Transfer IP Set owner account address
-* `list` - List an IP Set for sale
-* `buy` - Buy an IP Set
+The following **callab efunctions** are possible:
+
+* `create_ips` - Create a new IP Set
 * `destroy` - Delete an IP Set and all of its contents
+* `append` - Append an IP Set with other assets / subassets
+* `remove` - Remove assets / subassets from an IP Set
+* `allow_replica` - Allow an IP Set to be replicated
+* `disallow_replica` - Disallow an IP Set to be replicated
+* `create_replica` - Replicate a replica from an IP Set
+
 
 # IP Set
 
@@ -38,26 +43,18 @@ An IP Set MUST adhere to the following standard.
     "type": "string",
     "description": "Name of the IP Set. Name must be limited to alphanumeric characters. Underscore is allowed as word separator. E.g. HOVER-CRAFT is NOT allowed. HOVER_CRAFT is allowed."
   },
-  "account": {
-    "type": "string",
-    "description": "Account's address, e.g. CpjsLDC1JFydhtd64jn2ThY7qnd28UhwTwqjqGTRegbeaq1. Can be address different from minter."
+  "ipsId": {
+    "type": "u64",
+    "description": "The ID of an existing IPS owned by the current caller, can be found in events after minting or in storage"
+  }, 
+  "metadata": {
+    "type": "Vec<u8>",
+    "description": "Free to use any value as this won't affect logic and is intended to be used by dApp developers"
   },
-  "symbol": {
-    "type": "string",
-    "description": "Ticker symbol by which to represent the IPO token in wallets and UIs, e.g. HOVER"
-  },
-  "id": {
-    "type": "string",
-    "description": "An IP Set is uniquely identified by at least the first four and last four bytes of the original issuer's pubkey, combined with the symbol. This prevents anyone but the issuer from reusing the symbol, Example ID: 0aff6865bed5g76b-HOVER."
-  },
-  "metadata?": {
-    "type": "string",
-    "description": "HTTP(s) or IPFS URI. If IPFS, MUST be in the format of ipfs://ipfs/HASH"
-  },
-  "data?": {
-    "type": "object",
-    "description": "See Data"
-  }
+  "data": {
+    "type": "H256",
+    "description": "An IPFS CID hash, intended to be the content identifier of the actual file, can be taken from CID here: https://cid.ipfs.io by copying the Digest (Hex) field"
+  },  
 }
 ```
 
@@ -121,3 +118,7 @@ A collection SHOULD have metadata to describe it and help visualization on vario
   }
 }
 ```
+
+## Testing Documentation
+
+[IPS Testing Documentation](https://gist.github.com/arrudagates/877d6d7b56d06ea1a941b73573a28d3f#file-ips-md)
