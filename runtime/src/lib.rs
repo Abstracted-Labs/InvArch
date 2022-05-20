@@ -1076,8 +1076,8 @@ impl_runtime_apis! {
 
             // INV4 Pallets
             add_benchmark!(params, batches, pallet_ipf, Ipf);
-            add_benchmark!(params, batches, pallet_ips, Ips);
-            add_benchmark!(params, batches, pallet_ipt, Ipt);
+            // add_benchmark!(params, batches, pallet_ips, Ips);
+            // add_benchmark!(params, batches, pallet_ipt, Ipt);
             add_benchmark!(params, batches, pallet_ipl, Ipl);
 
             add_benchmarks!(params, batches);
