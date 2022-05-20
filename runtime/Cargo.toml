@@ -179,6 +179,7 @@ std = [
     "pallet-ipf/std",
     "pallet-ips/std",
     "pallet-ipt/std",
+    "pallet-ipl/std",
     "pallet-smartip/std",
 ]
 
