@@ -159,6 +159,7 @@ pub fn run() -> Result<()> {
     let cli = Cli::from_args();
 
     match &cli.subcommand {
+        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -289,7 +290,12 @@ pub fn run() -> Result<()> {
             }
         }
         None => {
-            let runner = cli.create_runner(&cli.run.normalize())?;
+            let mut runner = cli.create_runner(&cli.run.normalize())?;
+
+            if runner.config().chain_spec.name() == "InvArch Brainstorm Testnet" {
+                runner.config_mut().impl_name = String::from("InvArch Brainstorm Node");
+            }
+
             let chain_spec = &runner.config().chain_spec;
             let is_solo_dev = chain_spec.is_solo_dev();
             let collator_options = cli.run.collator_options();
