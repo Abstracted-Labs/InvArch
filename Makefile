@@ -2,7 +2,7 @@ check:
 	cargo check
 
 build:
-	cargo build --release
+	cargo build --release --features runtime-benchmarks
 
 test:
 	cargo test
