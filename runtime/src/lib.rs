@@ -1040,6 +1040,12 @@ impl_runtime_apis! {
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            // INV4 Pallets
+            list_benchmarks!(list, extra, pallet_ipf, Ipf);
+            // add_benchmark!(list, extra, pallet_ips, Ips);
+            // add_benchmark!(list, extra, pallet_ipt, Ipt);
+            list_benchmarks!(list, extra, pallet_ipl, Ipl);
+
             list_benchmarks!(list, extra);
 
             let storage_info = AllPalletsWithSystem::storage_info();
