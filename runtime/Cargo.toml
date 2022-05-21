@@ -178,6 +178,7 @@ std = [
     "pallet-ipf/std",
     "pallet-ips/std",
     "pallet-ipt/std",
+    "pallet-ipl/std",
     #"pallet-smartip/std",
 ]
 
@@ -198,6 +199,11 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
+
+    "pallet-ipf/runtime-benchmarks",
+    "pallet-ips/runtime-benchmarks",
+    "pallet-ipt/runtime-benchmarks",
+    "pallet-ipl/runtime-benchmarks",
 ]
 
 try-runtime = [
