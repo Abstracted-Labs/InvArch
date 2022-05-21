@@ -34,6 +34,11 @@ use substrate_prometheus_endpoint::Registry;
 
 use polkadot_service::CollatorPair;
 
+use cumulus_primitives_parachain_inherent::{
+    MockValidationDataInherentDataProvider, MockXcmConfig,
+};
+use sc_service::ChainSpec;
+
 // Our native executor instance.
 pub struct TemplateRuntimeExecutor;
 
@@ -53,6 +58,18 @@ impl sc_executor::NativeExecutionDispatch for TemplateRuntimeExecutor {
         invarch_runtime::native_version()
     }
 }
+
+pub trait ChainIdentify {
+    fn is_solo_dev(&self) -> bool;
+}
+
+impl ChainIdentify for Box<dyn ChainSpec> {
+    fn is_solo_dev(&self) -> bool {
+        self.id().starts_with("invarch-solo-dev")
+    }
+}
+
+//type Executor = sp_io::SubstrateHostFunctions;
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
@@ -318,6 +335,7 @@ where
                 client: client.clone(),
                 pool: transaction_pool.clone(),
                 deny_unsafe,
+                command_sink: None,
             };
 
             Ok(crate::rpc::create_full(deps))
@@ -393,6 +411,8 @@ where
 
     Ok((task_manager, client))
 }
+
+use sc_client_api::HeaderBackend;
 
 /// Build the import queue for the parachain runtime.
 #[allow(clippy::type_complexity)]
@@ -528,4 +548,373 @@ pub async fn start_parachain_node(
         },
     )
     .await
+}
+
+pub fn start_solo_dev<RuntimeApi, Executor>(
+    config: Configuration,
+) -> Result<TaskManager, sc_service::error::Error>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
+        + Send
+        + Sync
+        + 'static,
+    RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+        + sp_api::Metadata<Block>
+        + sp_session::SessionKeys<Block>
+        + sp_api::ApiExt<
+            Block,
+            StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+        > + sp_offchain::OffchainWorkerApi<Block>
+        + sp_block_builder::BlockBuilder<Block>
+        + cumulus_primitives_core::CollectCollationInfo<Block>
+        + pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
+        + substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+
+    RuntimeApi::RuntimeApi:
+        sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>,
+
+    sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+    Executor: sc_executor::NativeExecutionDispatch + 'static,
+{
+    let sc_service::PartialComponents {
+        client,
+        backend,
+        mut task_manager,
+        import_queue,
+        keystore_container,
+        select_chain,
+        transaction_pool,
+        other: (mut telemetry, _),
+    } = new_solo_partial::<RuntimeApi, Executor>(&config)?;
+
+    let (network, system_rpc_tx, network_starter) =
+        sc_service::build_network(sc_service::BuildNetworkParams {
+            config: &config,
+            client: client.clone(),
+            transaction_pool: transaction_pool.clone(),
+            spawn_handle: task_manager.spawn_handle(),
+            import_queue,
+            block_announce_validator_builder: None,
+            warp_sync: None,
+        })?;
+
+    let prometheus_registry = config.prometheus_registry().cloned();
+
+    let role = config.role.clone();
+    let force_authoring = config.force_authoring;
+    let backoff_authoring_blocks: Option<()> = None;
+
+    let command_sink = if role.is_authority() {
+        let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+            task_manager.spawn_handle(),
+            client.clone(),
+            transaction_pool.clone(),
+            prometheus_registry.as_ref(),
+            telemetry.as_ref().map(|x| x.handle()),
+        );
+
+        let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+        let client_for_cidp = client.clone();
+
+        let aura = sc_consensus_aura::start_aura::<
+            sp_consensus_aura::sr25519::AuthorityPair,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+        >(sc_consensus_aura::StartAuraParams {
+            slot_duration: sc_consensus_aura::slot_duration(&*client)?,
+            client: client.clone(),
+            select_chain,
+            block_import: instant_finalize::InstantFinalizeBlockImport::new(client.clone()),
+            proposer_factory,
+            create_inherent_data_providers: move |block: Hash, ()| {
+                let current_para_block = client_for_cidp
+                    .number(block)
+                    .expect("Header lookup should succeed")
+                    .expect("Header passed in as parent should be present in backend.");
+                let client_for_xcm = client_for_cidp.clone();
+
+                async move {
+                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+                    let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
+
+                    let mocked_parachain = MockValidationDataInherentDataProvider {
+                        current_para_block,
+                        relay_offset: 1000,
+                        relay_blocks_per_para_block: 2,
+                        xcm_config: MockXcmConfig::new(
+                            &*client_for_xcm,
+                            block,
+                            Default::default(),
+                            Default::default(),
+                        ),
+                        raw_downward_messages: vec![],
+                        raw_horizontal_messages: vec![],
+                    };
+
+                    Ok((timestamp, slot, mocked_parachain))
+                }
+            },
+            force_authoring,
+            backoff_authoring_blocks,
+            keystore: keystore_container.sync_keystore(),
+            can_author_with: sp_consensus::AlwaysCanAuthor,
+            sync_oracle: network.clone(),
+            justification_sync_link: network.clone(),
+            // We got around 500ms for proposing
+            block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+            // And a maximum of 750ms if slots are skipped
+            max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+            telemetry: telemetry.as_ref().map(|x| x.handle()),
+        })?;
+
+        // the AURA authoring task is considered essential, i.e. if it
+        // fails we take down the service with it.
+        task_manager
+            .spawn_essential_handle()
+            .spawn_blocking("aura", Some("block-authoring"), aura);
+
+        None
+    } else {
+        None
+    };
+
+    let rpc_extensions_builder = {
+        let client = client.clone();
+        let transaction_pool = transaction_pool.clone();
+
+        Box::new(move |deny_unsafe, _| {
+            let deps = crate::rpc::FullDeps {
+                client: client.clone(),
+                pool: transaction_pool.clone(),
+                deny_unsafe,
+                command_sink: command_sink.clone(),
+            };
+
+            Ok(crate::rpc::create_full(deps))
+        })
+    };
+
+    sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+        rpc_extensions_builder,
+        client,
+        transaction_pool,
+        task_manager: &mut task_manager,
+        config,
+        keystore: keystore_container.sync_keystore(),
+        backend,
+        network,
+        system_rpc_tx,
+        telemetry: telemetry.as_mut(),
+    })?;
+
+    network_starter.start_network();
+
+    Ok(task_manager)
+}
+
+#[allow(clippy::type_complexity)]
+pub fn new_solo_partial<RuntimeApi, Executor>(
+    config: &Configuration,
+) -> Result<
+    PartialComponents<
+        TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+        TFullBackend<Block>,
+        sc_consensus::LongestChain<TFullBackend<Block>, Block>,
+        sc_consensus::DefaultImportQueue<
+            Block,
+            TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+        >,
+        sc_transaction_pool::FullPool<
+            Block,
+            TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>,
+        >,
+        (Option<Telemetry>, Option<TelemetryWorkerHandle>),
+    >,
+    sc_service::Error,
+>
+where
+    RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>
+        + Send
+        + Sync
+        + 'static,
+
+    RuntimeApi::RuntimeApi:
+        sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>,
+
+    RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+        + sp_api::Metadata<Block>
+        + sp_session::SessionKeys<Block>
+        + sp_api::ApiExt<
+            Block,
+            StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+        > + sp_offchain::OffchainWorkerApi<Block>
+        + sp_block_builder::BlockBuilder<Block>,
+    sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
+    Executor: sc_executor::NativeExecutionDispatch + 'static,
+{
+    let telemetry = config
+        .telemetry_endpoints
+        .clone()
+        .filter(|x| !x.is_empty())
+        .map(|endpoints| -> Result<_, sc_telemetry::Error> {
+            let worker = TelemetryWorker::new(16)?;
+            let telemetry = worker.handle().new_telemetry(endpoints);
+            Ok((worker, telemetry))
+        })
+        .transpose()?;
+
+    let executor = NativeElseWasmExecutor::<Executor>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+        config.runtime_cache_size,
+    );
+
+    let (client, backend, keystore_container, task_manager) =
+        sc_service::new_full_parts::<Block, RuntimeApi, _>(
+            config,
+            telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor,
+        )?;
+    let client = Arc::new(client);
+
+    let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
+
+    let telemetry = telemetry.map(|(worker, telemetry)| {
+        task_manager
+            .spawn_handle()
+            .spawn("telemetry", None, worker.run());
+        telemetry
+    });
+
+    let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+        config.transaction_pool.clone(),
+        config.role.is_authority().into(),
+        config.prometheus_registry(),
+        task_manager.spawn_essential_handle(),
+        client.clone(),
+    );
+
+    let import_queue = {
+        // aura import queue
+        let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
+        let client_for_cidp = client.clone();
+
+        sc_consensus_aura::import_queue::<
+            sp_consensus_aura::sr25519::AuthorityPair,
+            _,
+            _,
+            _,
+            _,
+            _,
+            _,
+        >(sc_consensus_aura::ImportQueueParams {
+            block_import: client.clone(),
+            justification_import: None,
+            client: client.clone(),
+            create_inherent_data_providers: move |block: Hash, ()| {
+                let current_para_block = client_for_cidp
+                    .number(block)
+                    .expect("Header lookup should succeed")
+                    .expect("Header passed in as parent should be present in backend.");
+                let client_for_xcm = client_for_cidp.clone();
+
+                async move {
+                    let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+                    let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                        *timestamp,
+                        slot_duration,
+                    );
+
+                    let mocked_parachain = MockValidationDataInherentDataProvider {
+                        current_para_block,
+                        relay_offset: 1000,
+                        relay_blocks_per_para_block: 1,
+                        xcm_config: MockXcmConfig::new(
+                            &*client_for_xcm,
+                            block,
+                            Default::default(),
+                            Default::default(),
+                        ),
+                        raw_downward_messages: vec![],
+                        raw_horizontal_messages: vec![],
+                    };
+
+                    Ok((timestamp, slot, mocked_parachain))
+                }
+            },
+            spawner: &task_manager.spawn_essential_handle(),
+            registry: config.prometheus_registry(),
+            can_author_with: sp_consensus::AlwaysCanAuthor,
+            check_for_equivocation: Default::default(),
+            telemetry: telemetry.as_ref().map(|x| x.handle()),
+        })?
+    };
+
+    let params = PartialComponents {
+        backend: backend.clone(),
+        client,
+        import_queue,
+        keystore_container,
+        task_manager,
+        transaction_pool,
+        select_chain: sc_consensus::LongestChain::new(backend.clone()),
+        other: (telemetry, telemetry_worker_handle),
+    };
+
+    Ok(params)
+}
+
+mod instant_finalize {
+    use sc_consensus::BlockImport;
+    use sp_runtime::traits::Block as BlockT;
+
+    pub struct InstantFinalizeBlockImport<I>(I);
+
+    impl<I> InstantFinalizeBlockImport<I> {
+        /// Create a new instance.
+        pub fn new(inner: I) -> Self {
+            Self(inner)
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl<Block, I> BlockImport<Block> for InstantFinalizeBlockImport<I>
+    where
+        Block: BlockT,
+        I: BlockImport<Block> + Send,
+    {
+        type Error = I::Error;
+        type Transaction = I::Transaction;
+
+        async fn check_block(
+            &mut self,
+            block: sc_consensus::BlockCheckParams<Block>,
+        ) -> Result<sc_consensus::ImportResult, Self::Error> {
+            self.0.check_block(block).await
+        }
+
+        async fn import_block(
+            &mut self,
+            mut block_import_params: sc_consensus::BlockImportParams<Block, Self::Transaction>,
+            cache: std::collections::HashMap<sp_consensus::CacheKeyId, Vec<u8>>,
+        ) -> Result<sc_consensus::ImportResult, Self::Error> {
+            block_import_params.finalized = true;
+            self.0.import_block(block_import_params, cache).await
+        }
+    }
 }

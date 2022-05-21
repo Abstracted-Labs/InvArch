@@ -24,6 +24,7 @@ log = "0.4.14"
 codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.132", features = ["derive"] }
 hex-literal = "0.3.4"
+async-trait = { version = "0.1.48" }
 
 ## RPC related Dependencies
 jsonrpc-core = "18.0.0"
@@ -42,6 +43,8 @@ sc-chain-spec = { git = "https://github.com/paritytech/substrate", branch = "pol
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", features = ["wasmtime"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sc-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sc-consensus-manual-seal = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", features = ["wasmtime"] }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
@@ -55,6 +58,7 @@ sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", bra
 
 ## Substrate Primitive
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
@@ -105,5 +109,5 @@ runtime-benchmarks = [
     "invarch-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks"
     ]
-contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
+#contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
 try-runtime = ["invarch-runtime/try-runtime"]

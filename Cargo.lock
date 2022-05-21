@@ -951,6 +951,7 @@ name = "camino"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "869119e97797867fd90f5e22af7d0bd274bd4635ebb9eb68c04f3f513ae6c412"
+
 dependencies = [
  "serde",
 ]
@@ -3298,6 +3299,7 @@ dependencies = [
 name = "invarch-node"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "cumulus-client-cli",
  "cumulus-client-collator",
@@ -3329,6 +3331,8 @@ dependencies = [
  "sc-cli",
  "sc-client-api",
  "sc-consensus",
+ "sc-consensus-aura",
+ "sc-consensus-manual-seal",
  "sc-executor",
  "sc-keystore",
  "sc-network",
@@ -3347,6 +3351,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-inherents",
+ "sp-io",
  "sp-keystore",
  "sp-offchain",
  "sp-runtime",
@@ -3364,6 +3369,7 @@ dependencies = [
 name = "invarch-primitives"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
+
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3399,25 +3405,21 @@ dependencies = [
  "hex-literal",
  "invarch-primitives",
  "log",
- "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-contracts",
- "pallet-contracts-primitives",
- "pallet-contracts-rpc-runtime-api",
  "pallet-ipf",
  "pallet-ipl",
  "pallet-ips",
  "pallet-ipt",
  "pallet-randomness-collective-flip",
  "pallet-session",
- "pallet-smartip",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-utility",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -5610,32 +5612,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-contracts"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
-dependencies = [
- "bitflags",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-contracts-primitives",
- "pallet-contracts-proc-macro",
- "parity-scale-codec",
- "rand 0.8.5",
- "scale-info",
- "serde",
- "smallvec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-sandbox",
- "sp-std",
- "wasm-instrument",
- "wasmi-validation",
-]
-
-[[package]]
 name = "pallet-contracts-primitives"
 version = "6.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
@@ -5648,16 +5624,6 @@ dependencies = [
  "sp-rpc",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "pallet-contracts-proc-macro"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -5844,6 +5810,7 @@ dependencies = [
 name = "pallet-ipf"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
+
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5861,7 +5828,9 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
+
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
+
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5882,6 +5851,7 @@ dependencies = [
 name = "pallet-ips"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
+
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5906,6 +5876,7 @@ dependencies = [
 name = "pallet-ipt"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
+
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6169,29 +6140,6 @@ dependencies = [
  "rand 0.7.3",
  "sp-runtime",
  "sp-session",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-smartip"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#d9c22dbe101f095de97a97363482a94feeb71886"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "pallet-balances",
- "pallet-contracts",
- "pallet-contracts-primitives",
- "pallet-ipf",
- "pallet-ipl",
- "pallet-ips",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
  "sp-std",
 ]
 
@@ -9009,6 +8957,42 @@ dependencies = [
 ]
 
 [[package]]
+name = "sc-consensus-manual-seal"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
+dependencies = [
+ "assert_matches",
+ "async-trait",
+ "futures 0.3.21",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "log",
+ "parity-scale-codec",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-aura",
+ "sc-consensus-babe",
+ "sc-consensus-epochs",
+ "sc-transaction-pool",
+ "sc-transaction-pool-api",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-inherents",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-timestamp",
+ "substrate-prometheus-endpoint",
+ "thiserror",
+]
+
+[[package]]
 name = "sc-consensus-slots"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
@@ -10592,20 +10576,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp-sandbox"
-version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
-dependencies = [
- "log",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-std",
- "sp-wasm-interface",
- "wasmi",
-]
-
-[[package]]
 name = "sp-serializer"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
@@ -11815,7 +11785,6 @@ checksum = "ca00c5147c319a8ec91ec1a0edbec31e566ce2c9cc93b3f9bb86a9efd0eb795d"
 dependencies = [
  "downcast-rs",
  "libc",
- "libm",
  "memory_units",
  "num-rational 0.2.4",
  "num-traits",

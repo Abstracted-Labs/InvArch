@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use invarch_runtime::{opaque::Block, AccountId, Balance, Index as Nonce};
+use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
@@ -15,6 +15,8 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+
+use sc_consensus_manual_seal::rpc::EngineCommand;
 
 /// A type representing all RPC extensions.
 pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
@@ -27,6 +29,8 @@ pub struct FullDeps<C, P> {
     pub pool: Arc<P>,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
+    /// Manual seal command sink
+    pub command_sink: Option<jsonrpc_core::futures::channel::mpsc::Sender<EngineCommand<Hash>>>,
 }
 
 /// Instantiate all RPC extensions.
@@ -52,6 +56,7 @@ where
         client,
         pool,
         deny_unsafe,
+        command_sink: _,
     } = deps;
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(

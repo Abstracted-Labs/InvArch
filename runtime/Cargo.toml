@@ -25,6 +25,7 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
+
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
@@ -37,8 +38,9 @@ invarch-primitives = { git = "https://github.com/InvArch/InvArch-Frames", defaul
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
+
 # pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
+#pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 
 # Substrate Dependencies
 ## Substrate FRAME Dependencies
@@ -60,6 +62,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", default-fe
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
+pallet-utility = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 
 ## Substrate Primitive Dependencies
 sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
@@ -142,6 +145,7 @@ std = [
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
     "pallet-transaction-payment/std",
+    "pallet-utility/std",
     "pallet-xcm/std",
     # "pallet-ethereum/std",
     # "pallet-evm/std",
@@ -150,10 +154,10 @@ std = [
     # "pallet-evm-precompile-dispatch/std",
     # "pallet-evm-precompile-modexp/std",
     # "pallet-evm-precompile-sha3fips/std",
-    "pallet-contracts/std",
-    "pallet-contracts-primitives/std",
+    #"pallet-contracts/std",
+    #"pallet-contracts-primitives/std",
     # "pallet-contracts-rpc/std",
-    "pallet-contracts-rpc-runtime-api/std",
+    #"pallet-contracts-rpc-runtime-api/std",
 
 	"parachain-info/std",
 	"polkadot-parachain/std",
@@ -180,7 +184,7 @@ std = [
     "pallet-ips/std",
     "pallet-ipt/std",
     "pallet-ipl/std",
-    "pallet-smartip/std",
+    #"pallet-smartip/std",
 ]
 
 runtime-benchmarks = [
@@ -214,6 +218,6 @@ try-runtime = [
 
 # Make contract callable functions marked as __unstable__ available. Do not enable
 # on live chains as those are subject to change.
-contracts-unstable-interface = [
-	"pallet-contracts/unstable-interface"
-]
+#contracts-unstable-interface = [
+#	"pallet-contracts/unstable-interface"
+#]

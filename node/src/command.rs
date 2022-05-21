@@ -18,7 +18,7 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, TemplateRuntimeExecutor},
+    service::{new_partial, ChainIdentify, TemplateRuntimeExecutor},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -40,6 +40,7 @@ use std::{io::Write, net::SocketAddr};
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
+        "solo-dev" => Box::new(chain_spec::solo_dev_config()),
         "dev" => Box::new(chain_spec::development_config()),
         "template-rococo" => Box::new(chain_spec::local_testnet_config()),
         "" | "local" => Box::new(chain_spec::local_testnet_config()),
@@ -158,6 +159,7 @@ pub fn run() -> Result<()> {
     let cli = Cli::from_args();
 
     match &cli.subcommand {
+        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -288,13 +290,27 @@ pub fn run() -> Result<()> {
             }
         }
         None => {
-            let runner = cli.create_runner(&cli.run.normalize())?;
+            let mut runner = cli.create_runner(&cli.run.normalize())?;
+
+            if runner.config().chain_spec.name() == "InvArch Brainstorm Testnet" {
+                runner.config_mut().impl_name = String::from("InvArch Brainstorm Node");
+            }
+
+            let chain_spec = &runner.config().chain_spec;
+            let is_solo_dev = chain_spec.is_solo_dev();
             let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
                 let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
                     .map(|e| e.para_id)
                     .ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
+
+                if is_solo_dev {
+                    return crate::service::start_solo_dev::<RuntimeApi, TemplateRuntimeExecutor>(
+                        config,
+                    )
+                    .map_err(Into::into);
+                }
 
                 let polkadot_cli = RelayChainCli::new(
                     &config,
