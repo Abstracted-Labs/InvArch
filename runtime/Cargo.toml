@@ -25,20 +25,15 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
 pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-
-pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-
 invarch-primitives = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-
-pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
-pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
-
+#pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
+#pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
+#pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
+#pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 # pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 #pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 
@@ -183,18 +178,17 @@ std = [
     "pallet-ipf/std",
     "pallet-ips/std",
     "pallet-ipt/std",
-    "pallet-ipl/std",
     #"pallet-smartip/std",
 ]
 
 runtime-benchmarks = [
     "hex-literal",
-
+    
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
-
+    
     "pallet-balances/runtime-benchmarks",
     "pallet-collator-selection/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
@@ -204,11 +198,6 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
-
-    "pallet-ipf/runtime-benchmarks",
-    "pallet-ips/runtime-benchmarks",
-    "pallet-ipt/runtime-benchmarks",
-    "pallet-ipl/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -221,3 +210,4 @@ try-runtime = [
 #contracts-unstable-interface = [
 #	"pallet-contracts/unstable-interface"
 #]
+
