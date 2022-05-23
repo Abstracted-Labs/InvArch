@@ -56,8 +56,8 @@ use sp_version::RuntimeVersion;
 pub use frame_support::{
     construct_runtime, match_type, parameter_types,
     traits::{
-        Contains, Currency, Everything, FindAuthor, KeyOwnerProofSystem, Nothing, Randomness,
-        StorageInfo,
+        Contains, Currency, Everything, FindAuthor, Imbalance, KeyOwnerProofSystem, Nothing,
+        OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
         constants::RocksDbWeight,
@@ -484,8 +484,23 @@ parameter_types! {
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+pub struct DealWithFees;
+impl OnUnbalanced<NegativeImbalance> for DealWithFees {
+    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+        if let Some(mut fees) = fees_then_tips.next() {
+            if let Some(tips) = fees_then_tips.next() {
+                // Merge with fee, for now we send everything to the treasury
+                tips.merge_into(&mut fees);
+            }
+            Treasury::on_unbalanced(fees);
+        }
+    }
+}
+
 impl pallet_transaction_payment::Config for Runtime {
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = WeightToFee;
     // type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -726,6 +741,33 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(1);
+    pub const ProposalBondMinimum: Balance = 100 * UNIT;
+    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const Burn: Permill = Permill::from_percent(1);
+    pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
+    pub const MaxApprovals: u32 = 100;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type PalletId = TreasuryPalletId;
+    type Currency = Balances;
+    type ApproveOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = EnsureRoot<AccountId>;
+    type Event = Event;
+    type OnSlash = ();
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type SpendPeriod = SpendPeriod;
+    type Burn = ();
+    type BurnDestination = ();
+    type SpendFunds = ();
+    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type MaxApprovals = MaxApprovals;
+    type ProposalBondMaximum = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -745,6 +787,7 @@ construct_runtime!(
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+            Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
 
         // Collator support. The order of there 4 are important and shale not change.
         Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,
