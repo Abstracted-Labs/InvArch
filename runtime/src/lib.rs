@@ -930,13 +930,17 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark as frame_list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            frame_list_benchmark!(list, extra, pallet_ipf, Ipf);
+            frame_list_benchmark!(list, extra, pallet_ips, Ips);
+            frame_list_benchmark!(list, extra, pallet_ipt, Ipt);
+            frame_list_benchmark!(list, extra, pallet_ipl, Ipl);
             list_benchmarks!(list, extra);
 
             let storage_info = AllPalletsWithSystem::storage_info();
