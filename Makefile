@@ -140,7 +140,7 @@ run-benchmark-ips:
 		--execution wasm \
 		--wasm-execution compiled \
 		--pallet pallet-ips \
-		--extrinsic 'create_ips' \
+		--extrinsic 'destroy' \
 		--steps 20 \
 		--repeat 10 \
 		--json-file=./weights/ips/ips.json \

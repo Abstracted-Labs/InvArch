@@ -3367,7 +3367,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#f3acec2e63f5afeb6ff78c374eb04a1ce3017970"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5264,9 +5264,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.11.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b10983b38c53aebdf33f542c6275b0f58a238129d00c4ae0e6fb59738d783ca"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 
 [[package]]
 name = "opaque-debug"
@@ -5807,7 +5807,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#f3acec2e63f5afeb6ff78c374eb04a1ce3017970"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5825,7 +5825,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#f3acec2e63f5afeb6ff78c374eb04a1ce3017970"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5845,7 +5845,7 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#f3acec2e63f5afeb6ff78c374eb04a1ce3017970"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5869,7 +5869,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#f3acec2e63f5afeb6ff78c374eb04a1ce3017970"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10784,9 +10784,9 @@ dependencies = [
 
 [[package]]
 name = "ss58-registry"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceb8b72a924ccfe7882d0e26144c114503760a4d1248bb5cd06c8ab2d55404cc"
+checksum = "70850dd1812f04824cd78912213e56e616cb5225af02da94080c2ef5669ed718"
 dependencies = [
  "Inflector",
  "num-format",
@@ -11006,9 +11006,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "target-lexicon"
-version = "0.12.3"
+version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7fa7e55043acb85fca6b3c01485a2eeb6b69c5d21002e273c79e465f43b7ac1"
+checksum = "c02424087780c9b71cc96799eaeddff35af2bc513278cda5c99fc1f5d026d3c1"
 
 [[package]]
 name = "tempfile"
