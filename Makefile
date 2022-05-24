@@ -124,7 +124,7 @@ run-solo-bob:
 
 run-benchmark-ipf:
 	./target/release/invarch-collator benchmark \
-		--chain dev \
+		--chain solo-dev \
 		--execution wasm \
     --wasm-execution compiled \
 		--pallet pallet-ipf \
@@ -136,7 +136,7 @@ run-benchmark-ipf:
 
 run-benchmark-ips:
 	./target/release/invarch-collator benchmark \
-		--chain dev \
+		--chain solo-dev \
 		--execution wasm \
 		--wasm-execution compiled \
 		--pallet pallet-ips \
@@ -148,7 +148,7 @@ run-benchmark-ips:
 
 run-benchmark-ipt:
 	./target/release/invarch-collator benchmark \
-		--chain dev \
+		--chain solo-dev \
 		--execution wasm \
 		--wasm-execution compiled \
 		--pallet pallet-ipt \
@@ -160,7 +160,7 @@ run-benchmark-ipt:
 
 run-benchmark-ipl:
 	./target/release/invarch-collator benchmark \
-		--chain dev \
+		--chain solo-dev \
 		--execution wasm \
 		--wasm-execution compiled \
 		--pallet pallet-ipl \
