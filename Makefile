@@ -147,7 +147,7 @@ run-benchmark-ips:
 		--output ../InvArch-Frames/INV4/pallet-ips/src/weights.rs
 
 run-benchmark-ipt:
-./target/release/invarch-collator benchmark \
+	./target/release/invarch-collator benchmark \
 		--chain dev \
 		--execution wasm \
 		--wasm-execution compiled \
@@ -159,7 +159,7 @@ run-benchmark-ipt:
 		--output ../InvArch-Frames/INV4/pallet-ipt/src/weights.rs
 
 run-benchmark-ipl:
-./target/release/invarch-collator benchmark \
+	./target/release/invarch-collator benchmark \
 		--chain dev \
 		--execution wasm \
 		--wasm-execution compiled \
