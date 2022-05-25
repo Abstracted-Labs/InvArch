@@ -25,11 +25,18 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # Local dependencies
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
-invarch-primitives = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+# pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+# pallet-ips = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+# pallet-ipt = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+# pallet-ipl = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+# invarch-primitives = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "kresna-benchmark-ips3" }
+
+pallet-ipf = { path = "../../InvArch-Frames/INV4/pallet-ipf/", default-features = false }
+pallet-ips = { path = "../../InvArch-Frames/INV4/pallet-ips/", default-features = false }
+pallet-ipt = { path = "../../InvArch-Frames/INV4/pallet-ipt/", default-features = false }
+pallet-ipl = { path = "../../InvArch-Frames/INV4/pallet-ipl/", default-features = false }
+invarch-primitives = { path = "../../InvArch-Frames/primitives/", default-features = false }
+
 #pallet-smartip = { git = "https://github.com/InvArch/InvArch-Frames", default-features = false, branch = "main" }
 #pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }
 #pallet-contracts = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.18" }

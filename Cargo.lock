@@ -3367,7 +3367,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -3929,9 +3928,9 @@ dependencies = [
 
 [[package]]
 name = "keccak"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
+checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 
 [[package]]
 name = "kernel32-sys"
@@ -5807,7 +5806,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5825,7 +5823,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipl"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5845,7 +5842,6 @@ dependencies = [
 [[package]]
 name = "pallet-ips"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5869,7 +5865,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipt"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=kresna-benchmark-ips3#c2bf868dcc3e849ff2a044c55e0bee0ecab584a8"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
