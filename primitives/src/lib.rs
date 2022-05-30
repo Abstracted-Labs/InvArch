@@ -26,6 +26,27 @@ pub enum IpsType<IpsId> {
     Replica(IpsId),
 }
 
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
+    /// IPS parentage
+    pub parentage: Parentage<AccountId, IpId>,
+    /// IPS metadata
+    pub metadata: IpsMetadataOf,
+    /// IPS Properties
+    pub data: Data,
+    /// IPS Type
+    pub ips_type: IpsType<IpId>,
+    /// If this IPS allows replicas
+    pub allow_replica: bool,
+
+    pub supply: Balance,
+
+    pub license: (LicenseMetadata, Hash),
+    pub execution_threshold: OneOrPercent,
+    pub default_asset_weight: OneOrPercent,
+    pub default_permission: bool,
+}
+
 /// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
