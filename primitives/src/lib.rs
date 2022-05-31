@@ -105,12 +105,6 @@ pub struct CallInfo<Data> {
     pub function: Data,
 }
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub enum AnyId<IpsId, IpfId> {
-    IpsId(IpsId),
-    IpfId(IpfId),
-}
-
 pub mod utils {
     use codec::{Decode, Encode};
     use sp_io::hashing::blake2_256;
