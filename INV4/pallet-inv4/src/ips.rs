@@ -41,16 +41,14 @@ impl<T: Config> Pallet<T> {
                 .checked_add(&One::one())
                 .ok_or(Error::<T>::NoAvailableIpId)?;
 
-            ensure!(
-                !data.clone().into_iter().any(|ipf_id| {
-                    pallet_rmrk_core::NftsByOwner::<T>::get(creator.clone())
-                        .unwrap()
-                        .into_iter()
-                        .find(|nft| *nft == ipf_id)
-                        .is_none()
-                }),
-                Error::<T>::NoPermission
-            );
+            for nft_id in &data {
+                ensure!(
+                    pallet_rmrk_core::Pallet::<T>::lookup_root_owner(nft_id.0, nft_id.1)
+                        .map_err(|_| Error::<T>::NoPermission)?
+                        == (creator.clone(), *nft_id),
+                    Error::<T>::NoPermission
+                );
+            }
 
             let ips_account =
                 primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);

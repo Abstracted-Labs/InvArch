@@ -30,6 +30,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
+use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 
 /// Import the primitives crate
@@ -311,7 +312,6 @@ pub mod pallet {
         SubAssetAlreadyExists,
         TooManySubAssets,
         SubAssetHasNoPermission,
-        IplDoesntExist,
         FailedDivision,
         CallHasTooFewBytes,
     }

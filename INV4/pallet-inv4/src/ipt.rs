@@ -132,13 +132,13 @@ impl<T: Config> Pallet<T> {
                     }
                 })
                 .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                .ok_or(Error::<T>::IplDoesntExist)?
+                .ok_or(Error::<T>::IpDoesntExist)?
                 .into_iter()
                 .sum();
 
         let total_per_threshold: <T as pallet::Config>::Balance =
             if let OneOrPercent::ZeroPoint(percent) =
-                Pallet::<T>::execution_threshold(ipt_id.0).ok_or(Error::<T>::IplDoesntExist)?
+                Pallet::<T>::execution_threshold(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?
             {
                 percent * total_issuance
             } else {
@@ -156,11 +156,11 @@ impl<T: Config> Pallet<T> {
             if let Some(sub_asset) = ipt_id.1 {
                 ensure!(
                     Pallet::<T>::has_permission(ipt_id.0, sub_asset, call_metadata)
-                        .ok_or(Error::<T>::IplDoesntExist)?,
+                        .ok_or(Error::<T>::IpDoesntExist)?,
                     Error::<T>::SubAssetHasNoPermission
                 );
 
-                Pallet::<T>::asset_weight(ipt_id.0, sub_asset).ok_or(Error::<T>::IplDoesntExist)?
+                Pallet::<T>::asset_weight(ipt_id.0, sub_asset).ok_or(Error::<T>::IpDoesntExist)?
             } else {
                 OneOrPercent::One
             }
@@ -272,12 +272,12 @@ impl<T: Config> Pallet<T> {
                 if let Some(sub_asset) = ipt_id.1 {
                     ensure!(
                         Pallet::<T>::has_permission(ipt_id.0, sub_asset, old_data.call_metadata)
-                            .ok_or(Error::<T>::IplDoesntExist)?,
+                            .ok_or(Error::<T>::IpDoesntExist)?,
                         Error::<T>::SubAssetHasNoPermission
                     );
 
                     Pallet::<T>::asset_weight(ipt_id.0, sub_asset)
-                        .ok_or(Error::<T>::IplDoesntExist)?
+                        .ok_or(Error::<T>::IpDoesntExist)?
                 } else {
                     OneOrPercent::One
                 }
@@ -325,13 +325,13 @@ impl<T: Config> Pallet<T> {
                         }
                     })
                     .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                    .ok_or(Error::<T>::IplDoesntExist)?
+                    .ok_or(Error::<T>::IpDoesntExist)?
                     .into_iter()
                     .sum();
 
             let total_per_threshold: <T as pallet::Config>::Balance =
                 if let OneOrPercent::ZeroPoint(percent) =
-                    Pallet::<T>::execution_threshold(ipt_id.0).ok_or(Error::<T>::IplDoesntExist)?
+                    Pallet::<T>::execution_threshold(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?
                 {
                     percent * total_issuance
                 } else {
@@ -458,14 +458,14 @@ impl<T: Config> Pallet<T> {
                             }
                         })
                         .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                        .ok_or(Error::<T>::IplDoesntExist)?
+                        .ok_or(Error::<T>::IpDoesntExist)?
                         .into_iter()
                         .sum();
 
                 let total_per_threshold: <T as pallet::Config>::Balance =
                     if let OneOrPercent::ZeroPoint(percent) =
                         Pallet::<T>::execution_threshold(ipt_id.0)
-                            .ok_or(Error::<T>::IplDoesntExist)?
+                            .ok_or(Error::<T>::IpDoesntExist)?
                     {
                         percent * total_issuance
                     } else {
@@ -507,7 +507,7 @@ impl<T: Config> Pallet<T> {
                 let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
                     if let Some(sub_asset) = ipt_id.1 {
                         Pallet::<T>::asset_weight(ipt_id.0, sub_asset)
-                            .ok_or(Error::<T>::IplDoesntExist)?
+                            .ok_or(Error::<T>::IpDoesntExist)?
                     } else {
                         OneOrPercent::One
                     }
@@ -533,14 +533,14 @@ impl<T: Config> Pallet<T> {
                             }
                         })
                         .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                        .ok_or(Error::<T>::IplDoesntExist)?
+                        .ok_or(Error::<T>::IpDoesntExist)?
                         .into_iter()
                         .sum();
 
                 let total_per_threshold: <T as pallet::Config>::Balance =
                     if let OneOrPercent::ZeroPoint(percent) =
                         Pallet::<T>::execution_threshold(ipt_id.0)
-                            .ok_or(Error::<T>::IplDoesntExist)?
+                            .ok_or(Error::<T>::IpDoesntExist)?
                     {
                         percent * total_issuance
                     } else {
