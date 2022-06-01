@@ -139,9 +139,9 @@ pub mod pallet {
 
     #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
     pub enum AnyId<IpsId, IpfId, RmrkId> {
-        IpsId(IpsId),
         IpfId(IpfId),
         RmrkId(RmrkId),
+        IpsId(IpsId),
     }
 
     pub type AnyIdOf<T> =
