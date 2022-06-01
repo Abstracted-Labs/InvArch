@@ -54,7 +54,7 @@ impl<T: Config> Pallet<T> {
         owner: OriginFor<T>,
         ipt_id: (T::IpId, Option<T::IpId>),
         amount: <T as pallet::Config>::Balance,
-        target: <T as frame_system::Config>::AccountId,
+        target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
@@ -85,7 +85,7 @@ impl<T: Config> Pallet<T> {
         owner: OriginFor<T>,
         ipt_id: (T::IpId, Option<T::IpId>),
         amount: <T as pallet::Config>::Balance,
-        target: <T as frame_system::Config>::AccountId,
+        target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
@@ -295,26 +295,20 @@ impl<T: Config> Pallet<T> {
                 .signers
                 .clone()
                 .into_iter()
-                .map(
-                    |(voter, sub_asset): (
-                        <T as frame_system::Config>::AccountId,
-                        Option<T::IpId>,
-                    )| {
-                        Balance::<T>::get((ipt_id.0, sub_asset), voter).map(|balance| {
-                            if let OneOrPercent::ZeroPoint(percent) =
-                                if let Some(sub_asset) = ipt_id.1 {
-                                    Pallet::<T>::asset_weight(ipt_id.0, sub_asset).unwrap()
-                                } else {
-                                    OneOrPercent::One
-                                }
-                            {
-                                percent * balance
-                            } else {
-                                balance
-                            }
-                        })
-                    },
-                )
+                .map(|(voter, sub_asset): (T::AccountId, Option<T::IpId>)| {
+                    Balance::<T>::get((ipt_id.0, sub_asset), voter).map(|balance| {
+                        if let OneOrPercent::ZeroPoint(percent) = if let Some(sub_asset) = ipt_id.1
+                        {
+                            Pallet::<T>::asset_weight(ipt_id.0, sub_asset).unwrap()
+                        } else {
+                            OneOrPercent::One
+                        } {
+                            percent * balance
+                        } else {
+                            balance
+                        }
+                    })
+                })
                 .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
                 .ok_or(Error::<T>::NoPermission)?
                 .into_iter()
@@ -560,7 +554,7 @@ impl<T: Config> Pallet<T> {
                     .signers
                     .into_iter()
                     .filter(|signer| signer.0 != owner)
-                    .collect::<Vec<(<T as frame_system::Config>::AccountId, Option<T::IpId>)>>()
+                    .collect::<Vec<(T::AccountId, Option<T::IpId>)>>()
                     .try_into()
                     .map_err(|_| Error::<T>::TooManySignatories)?;
 
@@ -640,7 +634,7 @@ impl<T: Config> Pallet<T> {
 
     pub fn internal_mint(
         ipt_id: (T::IpId, Option<T::IpId>),
-        target: <T as frame_system::Config>::AccountId,
+        target: T::AccountId,
         amount: <T as pallet::Config>::Balance,
     ) -> DispatchResult {
         IpStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
@@ -662,7 +656,7 @@ impl<T: Config> Pallet<T> {
     }
 
     pub fn internal_burn(
-        target: <T as frame_system::Config>::AccountId,
+        target: T::AccountId,
         ipt_id: (T::IpId, Option<T::IpId>),
         amount: <T as pallet::Config>::Balance,
     ) -> DispatchResult {

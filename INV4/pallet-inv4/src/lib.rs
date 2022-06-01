@@ -82,7 +82,7 @@ pub mod pallet {
             + Clone;
 
         /// Currency
-        type Currency: FSCurrency<<Self as frame_system::Config>::AccountId>;
+        type Currency: FSCurrency<Self::AccountId>;
 
         type Balance: Member
             + Parameter
@@ -105,10 +105,8 @@ pub mod pallet {
 
         /// The overarching call type.
         type Call: Parameter
-            + Dispatchable<
-                Origin = <Self as frame_system::Config>::Origin,
-                PostInfo = PostDispatchInfo,
-            > + GetDispatchInfo
+            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
             + Encode;
@@ -173,7 +171,7 @@ pub mod pallet {
     pub type IpsByOwner<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        <T as frame_system::Config>::AccountId, // owner
+        T::AccountId, // owner
         Blake2_128Concat,
         T::IpId,
         (),
@@ -205,7 +203,7 @@ pub mod pallet {
         Blake2_128Concat,
         (T::IpId, Option<T::IpId>),
         Blake2_128Concat,
-        <T as frame_system::Config>::AccountId,
+        T::AccountId,
         <T as pallet::Config>::Balance,
     >;
 
@@ -224,61 +222,47 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        Created(<T as frame_system::Config>::AccountId, T::IpId),
-        Destroyed(<T as frame_system::Config>::AccountId, T::IpId),
-        Appended(
-            <T as frame_system::Config>::AccountId,
-            T::IpId,
-            Vec<u8>,
-            Vec<AnyIdOf<T>>,
-        ),
-        Removed(
-            <T as frame_system::Config>::AccountId,
-            T::IpId,
-            Vec<u8>,
-            Vec<AnyIdWithNewOwner<T>>,
-        ),
+        Created(T::AccountId, T::IpId),
+        Destroyed(T::AccountId, T::IpId),
+        Appended(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdOf<T>>),
+        Removed(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdWithNewOwner<T>>),
         AllowedReplica(T::IpId),
         DisallowedReplica(T::IpId),
-        ReplicaCreated(<T as frame_system::Config>::AccountId, T::IpId, T::IpId),
+        ReplicaCreated(T::AccountId, T::IpId, T::IpId),
 
         Minted(
             (T::IpId, Option<T::IpId>),
-            <T as frame_system::Config>::AccountId,
+            T::AccountId,
             <T as pallet::Config>::Balance,
         ),
         Burned(
             (T::IpId, Option<T::IpId>),
-            <T as frame_system::Config>::AccountId,
+            T::AccountId,
             <T as pallet::Config>::Balance,
         ),
         MultisigVoteStarted(
-            <T as frame_system::Config>::AccountId,
+            T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
         MultisigVoteAdded(
-            <T as frame_system::Config>::AccountId,
+            T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
         MultisigVoteWithdrawn(
-            <T as frame_system::Config>::AccountId,
+            T::AccountId,
             <T as pallet::Config>::Balance,
             <T as pallet::Config>::Balance,
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
-        MultisigExecuted(
-            <T as frame_system::Config>::AccountId,
-            crate::ipt::OpaqueCall<T>,
-            bool,
-        ),
-        MultisigCanceled(<T as frame_system::Config>::AccountId, [u8; 32]),
+        MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
+        MultisigCanceled(T::AccountId, [u8; 32]),
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
         PermissionSet(T::IpId, T::IpId, [u8; 2], bool),
         WeightSet(T::IpId, T::IpId, OneOrPercent),
@@ -437,7 +421,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
             amount: <T as pallet::Config>::Balance,
-            target: <T as frame_system::Config>::AccountId,
+            target: T::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
@@ -447,7 +431,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
             amount: <T as pallet::Config>::Balance,
-            target: <T as frame_system::Config>::AccountId,
+            target: T::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
@@ -510,4 +494,7 @@ pub mod pallet {
             Pallet::<T>::inner_set_asset_weight(owner, ipl_id, sub_asset, asset_weight)
         }
     }
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }

@@ -104,7 +104,7 @@ impl<T: Config> Pallet<T> {
 
             Balance::<T>::insert::<
                 (<T as Config>::IpId, Option<<T as Config>::IpId>),
-                <T as frame_system::Config>::AccountId,
+                T::AccountId,
                 <T as Config>::Balance,
             >((current_id, None), creator, One::one());
 
