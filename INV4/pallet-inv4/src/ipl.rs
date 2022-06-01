@@ -25,7 +25,7 @@ impl<T: Config> Pallet<T> {
 
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
-        match ip.parentage.clone() {
+        match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
             }
@@ -54,7 +54,7 @@ impl<T: Config> Pallet<T> {
 
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
-        match ip.parentage.clone() {
+        match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
             }

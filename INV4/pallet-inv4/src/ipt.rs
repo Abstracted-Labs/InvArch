@@ -603,7 +603,7 @@ impl<T: Config> Pallet<T> {
 
             let old_ipt = ipt.clone().ok_or(Error::<T>::IpDoesntExist)?;
 
-            match old_ipt.parentage.clone() {
+            match old_ipt.parentage {
                 Parentage::Parent(ips_account) => {
                     ensure!(ips_account == caller, Error::<T>::NoPermission)
                 }

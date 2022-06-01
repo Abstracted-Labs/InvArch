@@ -20,16 +20,22 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_create_ips(
         owner: OriginFor<T>,
         metadata: Vec<u8>,
-        data: Vec<(
-            rmrk_traits::primitives::CollectionId,
-            rmrk_traits::primitives::NftId,
-        )>,
+        assets: Vec<AnyIdOf<T>>,
         allow_replica: bool,
         ipl_license: <T as Config>::Licenses,
         ipl_execution_threshold: OneOrPercent,
         ipl_default_asset_weight: OneOrPercent,
         ipl_default_permission: bool,
     ) -> DispatchResultWithPostInfo {
+        // IPS inside IPS disabled for now. Needs rewrite.
+        ensure!(
+            !assets
+                .clone()
+                .into_iter()
+                .any(|id| { matches!(id, AnyId::IpsId(_)) }),
+            Error::<T>::IpsInsideIpsDisabled
+        );
+
         NextIpId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
             let creator = ensure_signed(owner.clone())?;
 
@@ -42,25 +48,52 @@ impl<T: Config> Pallet<T> {
                 .checked_add(&One::one())
                 .ok_or(Error::<T>::NoAvailableIpId)?;
 
-            for nft_id in &data {
-                ensure!(
-                    pallet_rmrk_core::Pallet::<T>::lookup_root_owner(nft_id.0, nft_id.1)
-                        .map_err(|_| Error::<T>::NoPermission)?
-                        == (creator.clone(), *nft_id),
-                    Error::<T>::NoPermission
-                );
+            for asset in assets.clone() {
+                match asset {
+                    AnyId::IpsId(_) => (),
+                    AnyId::IpfId(ipf_id) => {
+                        ensure!(
+                            ipf::IpfStorage::<T>::get(ipf_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .owner
+                                == creator,
+                            Error::<T>::NoPermission
+                        );
+                    }
+                    AnyId::RmrkId((collection_id, nft_id)) => {
+                        ensure!(
+                            pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .owner
+                                == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
+                                    creator.clone()
+                                ),
+                            Error::<T>::NoPermission
+                        );
+                    }
+                }
             }
 
             let ips_account =
                 primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);
 
-            for ipf in data.clone() {
-                pallet_rmrk_core::Pallet::<T>::nft_send(
-                    creator.clone(),
-                    ipf.0,
-                    ipf.1,
-                    rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(ips_account.clone()),
-                )?;
+            for asset in assets.clone() {
+                match asset {
+                    AnyId::IpsId(_) => (),
+                    AnyId::IpfId(ipf_id) => {
+                        ipf::Pallet::<T>::send(creator.clone(), ipf_id, ips_account.clone())?
+                    }
+                    AnyId::RmrkId((collection_id, nft_id)) => {
+                        pallet_rmrk_core::Pallet::<T>::nft_send(
+                            creator.clone(),
+                            collection_id,
+                            nft_id,
+                            rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
+                                ips_account.clone(),
+                            ),
+                        )?;
+                    }
+                }
             }
 
             pallet_balances::Pallet::<T>::transfer_keep_alive(
@@ -78,12 +111,9 @@ impl<T: Config> Pallet<T> {
             let info = IpInfo {
                 parentage: Parentage::Parent(ips_account.clone()),
                 metadata: bounded_metadata,
-                data: data
-                    .into_iter()
-                    .map(AnyId::RmrkId)
-                    .collect::<Vec<AnyIdOf<T>>>()
+                data: assets
                     .try_into()
-                    .unwrap(),
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
                 ips_type: IpsType::Normal,
                 allow_replica,
 
@@ -112,6 +142,16 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
             let caller_account = ensure_signed(owner.clone())?;
+
+            // IPS inside IPS disabled for now. Needs rewrite.
+            ensure!(
+                !assets
+                    .clone()
+                    .into_iter()
+                    .any(|id| { matches!(id, AnyId::IpsId(_)) }),
+                Error::<T>::IpsInsideIpsDisabled
+            );
+
             let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
 
             let parent_id = ips_id;
@@ -128,20 +168,21 @@ impl<T: Config> Pallet<T> {
 
             for asset in assets.clone() {
                 match asset {
-                    AnyId::IpsId(ips_id) => {
-                        if let Parentage::Parent(acc) = IpStorage::<T>::get(ips_id)
-                            .ok_or(Error::<T>::IpsNotFound)?
-                            .parentage
-                        {
-                            ensure!(
-                                caller_account
-                                    == multi_account_id::<T, T::IpId>(parent_id, Some(acc)),
-                                Error::<T>::NoPermission
-                            );
-                        } else {
-                            return Err(Error::<T>::NotParent.into());
-                        }
-                    }
+                    AnyId::IpsId(_) => (),
+                    // {
+                    //     if let Parentage::Parent(acc) = IpStorage::<T>::get(ips_id)
+                    //         .ok_or(Error::<T>::IpsNotFound)?
+                    //         .parentage
+                    //     {
+                    //         ensure!(
+                    //             caller_account
+                    //                 == multi_account_id::<T, T::IpId>(parent_id, Some(acc)),
+                    //             Error::<T>::NoPermission
+                    //         );
+                    //     } else {
+                    //         return Err(Error::<T>::NotParent.into());
+                    //     }
+                    // }
                     AnyId::IpfId(ipf_id) => {
                         let this_ipf_owner = ipf::IpfStorage::<T>::get(ipf_id)
                             .ok_or(Error::<T>::IpfNotFound)?
@@ -156,13 +197,12 @@ impl<T: Config> Pallet<T> {
                                     ),
                             Error::<T>::NoPermission
                         );
-
-                        ipf::Pallet::<T>::send(this_ipf_owner, ipf_id, ips_account.clone())?
                     }
-                    AnyId::RmrkId(ipf_id) => {
-                        let this_rmrk_owner = pallet_rmrk_core::Nfts::<T>::get(ipf_id.0, ipf_id.1)
-                            .ok_or(Error::<T>::IpfNotFound)?
-                            .owner;
+                    AnyId::RmrkId((collection_id, nft_id)) => {
+                        let this_rmrk_owner =
+                            pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .owner;
                         ensure!(
                             this_rmrk_owner.clone()
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
@@ -182,58 +222,73 @@ impl<T: Config> Pallet<T> {
                                 },
                             Error::<T>::NoPermission
                         );
+                    }
+                }
+            }
 
-                        if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(acc) =
-                            this_rmrk_owner
+            for asset in assets.clone() {
+                match asset {
+                    AnyId::IpsId(_) => (),
+                    AnyId::IpfId(ipf_id) => ipf::Pallet::<T>::send(
+                        ipf::IpfStorage::<T>::get(ipf_id)
+                            .ok_or(Error::<T>::IpfNotFound)?
+                            .owner,
+                        ipf_id,
+                        ips_account.clone(),
+                    )?,
+                    AnyId::RmrkId((collection_id, nft_id)) => {
+                        if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
+                            rmrk_owner_account,
+                        ) = pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
+                            .ok_or(Error::<T>::IpfNotFound)?
+                            .owner
                         {
                             pallet_rmrk_core::Pallet::<T>::nft_send(
-                                acc,
-                                ipf_id.0,
-                                ipf_id.1,
+                                rmrk_owner_account,
+                                collection_id,
+                                nft_id,
                                 rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                                     ips_account.clone(),
                                 ),
                             )?;
-                        } else {
-                            panic!()
                         }
                     }
                 }
             }
 
-            for any_id in assets.clone().into_iter() {
-                if let AnyId::IpsId(ips_id) = any_id {
-                    IpStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
-                        let old = ips.take().ok_or(Error::<T>::IpsNotFound)?;
+            // for any_id in assets.clone().into_iter() {
+            //     if let AnyId::IpsId(ips_id) = any_id {
+            //         IpStorage::<T>::try_mutate_exists(ips_id, |ips| -> DispatchResult {
+            //             let old = ips.take().ok_or(Error::<T>::IpsNotFound)?;
 
-                        let prefix: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
-                            (ips_id.into(), None);
-                        for (account, amount) in Balance::<T>::iter_prefix(prefix) {
-                            let id: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
-                                (parent_id.into(), None);
-                            Pallet::<T>::internal_mint(id, account.clone(), amount)?;
-                            Pallet::<T>::internal_burn(account, prefix, amount)?;
-                        }
+            //             let prefix: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
+            //                 (ips_id.into(), None);
+            //             for (account, amount) in Balance::<T>::iter_prefix(prefix) {
+            //                 let id: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
+            //                     (parent_id.into(), None);
+            //                 Pallet::<T>::internal_mint(id, account.clone(), amount)?;
+            //                 Pallet::<T>::internal_burn(account, prefix, amount)?;
+            //             }
 
-                        *ips = Some(IpInfo {
-                            parentage: Parentage::Child(parent_id, ips_account.clone()),
-                            metadata: old.metadata,
-                            data: old.data,
-                            ips_type: old.ips_type,
-                            allow_replica: old.allow_replica,
+            //             *ips = Some(IpInfo {
+            //                 parentage: Parentage::Child(parent_id, ips_account.clone()),
+            //                 metadata: old.metadata,
+            //                 data: old.data,
+            //                 ips_type: old.ips_type,
+            //                 allow_replica: old.allow_replica,
 
-                            supply: old.supply,
+            //                 supply: old.supply,
 
-                            license: old.license,
-                            execution_threshold: old.execution_threshold,
-                            default_asset_weight: old.default_asset_weight,
-                            default_permission: old.default_permission,
-                        });
+            //                 license: old.license,
+            //                 execution_threshold: old.execution_threshold,
+            //                 default_asset_weight: old.default_asset_weight,
+            //                 default_permission: old.default_permission,
+            //             });
 
-                        Ok(())
-                    })?;
-                }
-            }
+            //             Ok(())
+            //         })?;
+            //     }
+            // }
 
             *ips_info = Some(IpInfo {
                 parentage: info.parentage,
@@ -250,7 +305,7 @@ impl<T: Config> Pallet<T> {
                     .chain(assets.clone().into_iter())
                     .collect::<Vec<AnyIdOf<T>>>()
                     .try_into()
-                    .unwrap(), // TODO: Remove unwrap.
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
                 ips_type: info.ips_type,
                 allow_replica: info.allow_replica,
 
@@ -285,6 +340,16 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
             let caller_account = ensure_signed(owner.clone())?;
+
+            // IPS inside IPS disabled for now. Needs rewrite.
+            ensure!(
+                !assets
+                    .clone()
+                    .into_iter()
+                    .any(|id| { matches!(id.0, AnyId::IpsId(_)) }),
+                Error::<T>::IpsInsideIpsDisabled
+            );
+
             let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
 
             let ips_account = match info.parentage.clone() {
@@ -306,35 +371,35 @@ impl<T: Config> Pallet<T> {
 
             for any_id in assets.clone().into_iter() {
                 match any_id {
-                    (AnyId::IpsId(this_ips_id), new_owner) => {
-                        IpStorage::<T>::try_mutate_exists(this_ips_id, |ips| -> DispatchResult {
-                            let id: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
-                                (this_ips_id.into(), None);
-                            Pallet::<T>::internal_mint(
-                                id,
-                                new_owner,
-                                <T as Config>::ExistentialDeposit::get(),
-                            )?;
+                    (AnyId::IpsId(_this_ips_id), _new_owner) => (),
+                    // {
+                    //     IpStorage::<T>::try_mutate_exists(this_ips_id, |ips| -> DispatchResult {
+                    //         let id: (<T as Config>::IpId, Option<<T as Config>::IpId>) =
+                    //             (this_ips_id.into(), None);
+                    //         Pallet::<T>::internal_mint(
+                    //             id,
+                    //             new_owner,
+                    //             <T as Config>::ExistentialDeposit::get(),
+                    //         )?;
 
-                            ips.clone().unwrap().parentage =
-                                Parentage::Parent(multi_account_id::<T, T::IpId>(
-                                    this_ips_id,
-                                    None,
-                                ));
+                    //         ips.clone().unwrap().parentage =
+                    //             Parentage::Parent(multi_account_id::<T, T::IpId>(
+                    //                 this_ips_id,
+                    //                 None,
+                    //             ));
 
-                            Ok(())
-                        })?;
-                    }
-
+                    //         Ok(())
+                    //     })?;
+                    // }
                     (AnyId::IpfId(this_ipf_id), new_owner) => {
                         ipf::Pallet::<T>::send(ips_account.clone(), this_ipf_id, new_owner)?
                     }
 
-                    (AnyId::RmrkId(this_ipf_id), new_owner) => {
+                    (AnyId::RmrkId((collection_id, nft_id)), new_owner) => {
                         pallet_rmrk_core::Pallet::<T>::nft_send(
                             ips_account.clone(),
-                            this_ipf_id.0,
-                            this_ipf_id.1,
+                            collection_id,
+                            nft_id,
                             rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(new_owner),
                         )?;
                     }

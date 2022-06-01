@@ -309,6 +309,8 @@ pub mod pallet {
         SubAssetHasNoPermission,
         FailedDivision,
         CallHasTooFewBytes,
+
+        IpsInsideIpsDisabled,
     }
 
     /// Dispatch functions
@@ -319,10 +321,7 @@ pub mod pallet {
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            data: Vec<(
-                rmrk_traits::primitives::CollectionId,
-                rmrk_traits::primitives::NftId,
-            )>,
+            assets: Vec<AnyIdOf<T>>,
             allow_replica: bool,
             ipl_license: <T as Config>::Licenses,
             ipl_execution_threshold: OneOrPercent,
@@ -332,7 +331,7 @@ pub mod pallet {
             Pallet::<T>::inner_create_ips(
                 owner,
                 metadata,
-                data,
+                assets,
                 allow_replica,
                 ipl_license,
                 ipl_execution_threshold,
