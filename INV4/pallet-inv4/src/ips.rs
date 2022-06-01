@@ -10,6 +10,7 @@ use rmrk_traits::Nft;
 use sp_arithmetic::traits::{CheckedAdd, One, Zero};
 use sp_runtime::traits::StaticLookup;
 use sp_std::convert::TryInto;
+use sp_std::vec::Vec;
 
 pub type IpsIndexOf<T> = <T as Config>::IpId;
 
@@ -68,6 +69,12 @@ impl<T: Config> Pallet<T> {
                 <T as pallet_balances::Config>::ExistentialDeposit::get(),
             )?;
 
+            Balance::<T>::insert::<
+                (<T as Config>::IpId, Option<<T as Config>::IpId>),
+                T::AccountId,
+                <T as Config>::Balance,
+            >((current_id, None), creator, One::one());
+
             let info = IpInfo {
                 parentage: Parentage::Parent(ips_account.clone()),
                 metadata: bounded_metadata,
@@ -80,7 +87,7 @@ impl<T: Config> Pallet<T> {
                 ips_type: IpsType::Normal,
                 allow_replica,
 
-                supply: Zero::zero(),
+                supply: One::one(),
 
                 license: ipl_license.get_hash_and_metadata(),
                 execution_threshold: ipl_execution_threshold,
@@ -139,16 +146,13 @@ impl<T: Config> Pallet<T> {
                         let this_ipf_owner = ipf::IpfStorage::<T>::get(ipf_id)
                             .ok_or(Error::<T>::IpfNotFound)?
                             .owner;
+
                         ensure!(
                             this_ipf_owner.clone() == ips_account
                                 || caller_account
                                     == multi_account_id::<T, T::IpId>(
                                         parent_id,
-                                        Some(
-                                            ipf::IpfStorage::<T>::get(ipf_id)
-                                                .ok_or(Error::<T>::IpfNotFound)?
-                                                .owner
-                                        )
+                                        Some(this_ipf_owner.clone())
                                     ),
                             Error::<T>::NoPermission
                         );
@@ -156,21 +160,23 @@ impl<T: Config> Pallet<T> {
                         ipf::Pallet::<T>::send(this_ipf_owner, ipf_id, ips_account.clone())?
                     }
                     AnyId::RmrkId(ipf_id) => {
-                        let this_ipf_owner = pallet_rmrk_core::Nfts::<T>::get(ipf_id.0, ipf_id.1)
+                        let this_rmrk_owner = pallet_rmrk_core::Nfts::<T>::get(ipf_id.0, ipf_id.1)
                             .ok_or(Error::<T>::IpfNotFound)?
                             .owner;
                         ensure!(
-                            this_ipf_owner.clone()
+                            this_rmrk_owner.clone()
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                                     ips_account.clone()
                                 )
-                                || if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(a) =
-                                    pallet_rmrk_core::Nfts::<T>::get(ipf_id.0, ipf_id.1)
-                                        .ok_or(Error::<T>::IpfNotFound)?
-                                        .owner
+                                || if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
+                                    rmrk_owner_account,
+                                ) = this_rmrk_owner.clone()
                                 {
                                     caller_account
-                                        == multi_account_id::<T, T::IpId>(parent_id, Some(a))
+                                        == multi_account_id::<T, T::IpId>(
+                                            parent_id,
+                                            Some(rmrk_owner_account),
+                                        )
                                 } else {
                                     false
                                 },
@@ -178,7 +184,7 @@ impl<T: Config> Pallet<T> {
                         );
 
                         if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(acc) =
-                            this_ipf_owner
+                            this_rmrk_owner
                         {
                             pallet_rmrk_core::Pallet::<T>::nft_send(
                                 acc,

@@ -4,11 +4,13 @@ use frame_system::ensure_signed;
 use frame_system::pallet_prelude::*;
 use primitives::{OneOrPercent, Parentage};
 
-pub trait LicenseList {
-    type IpfsHash: core::hash::Hash;
-    type MaxLicenseMetadata;
-
-    fn get_hash_and_metadata(&self) -> (BoundedVec<u8, Self::MaxLicenseMetadata>, Self::IpfsHash);
+pub trait LicenseList<T: Config> {
+    fn get_hash_and_metadata(
+        &self,
+    ) -> (
+        BoundedVec<u8, <T as Config>::MaxMetadata>,
+        <T as frame_system::Config>::Hash,
+    );
 }
 
 impl<T: Config> Pallet<T> {

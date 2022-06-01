@@ -30,6 +30,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
+use sp_std::boxed::Box;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 
@@ -100,11 +101,7 @@ pub mod pallet {
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
 
-        type Licenses: Parameter
-            + LicenseList<
-                IpfsHash = <Self as frame_system::Config>::Hash,
-                MaxLicenseMetadata = <Self as Config>::MaxMetadata,
-            >;
+        type Licenses: Parameter + LicenseList<Self>;
 
         /// The overarching call type.
         type Call: Parameter
@@ -274,15 +271,13 @@ pub mod pallet {
     /// Errors for IPF pallet
     #[pallet::error]
     pub enum Error<T> {
-        /// No available IPS ID
+        /// No available IP ID
         NoAvailableIpId,
-        /// No available IPF ID
-        NoAvailableIpfId,
         /// IPF (IpId, IpfId) not found
         IpfNotFound,
         /// IPS not found
         IpsNotFound,
-        /// The operator is not the owner of the IPF and has no permission
+        /// The operator has no permission
         NoPermission,
         /// The IPS is already owned
         AlreadyOwned,
