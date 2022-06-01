@@ -171,7 +171,7 @@ pub mod pallet {
     pub type IpsByOwner<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::AccountId, // owner
+        <T as frame_system::Config>::AccountId, // owner
         Blake2_128Concat,
         T::IpId,
         (),
@@ -203,7 +203,7 @@ pub mod pallet {
         Blake2_128Concat,
         (T::IpId, Option<T::IpId>),
         Blake2_128Concat,
-        T::AccountId,
+        <T as frame_system::Config>::AccountId,
         <T as pallet::Config>::Balance,
     >;
 
@@ -435,7 +435,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
             amount: <T as pallet::Config>::Balance,
-            target: T::AccountId,
+            target: <T as frame_system::Config>::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
@@ -445,7 +445,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
             amount: <T as pallet::Config>::Balance,
-            target: T::AccountId,
+            target: <T as frame_system::Config>::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
