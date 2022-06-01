@@ -121,3 +121,5 @@ run-solo-alice:
 
 run-solo-bob:
 	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334
+
+run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make

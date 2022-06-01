@@ -1,14 +1,9 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-// std
-use std::{sync::Arc, time::Duration};
-
-use cumulus_client_cli::CollatorOptions;
-
 // Local Runtime Types
 use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
 
-// Cumulus Imports
+use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
@@ -16,28 +11,25 @@ use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
-use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
-use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
-
-// Substrate Imports
-use sc_client_api::ExecutorProvider;
-use sc_executor::NativeElseWasmExecutor;
-use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
-use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sp_api::ConstructRuntimeApi;
-
-use sp_keystore::SyncCryptoStorePtr;
-use sp_runtime::traits::BlakeTwo256;
-use substrate_prometheus_endpoint::Registry;
-
-use polkadot_service::CollatorPair;
-
 use cumulus_primitives_parachain_inherent::{
     MockValidationDataInherentDataProvider, MockXcmConfig,
 };
+use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
+use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
+use jsonrpsee::RpcModule;
+use polkadot_service::CollatorPair;
+use sc_client_api::ExecutorProvider;
+use sc_executor::NativeElseWasmExecutor;
+use sc_network::NetworkService;
 use sc_service::ChainSpec;
+use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+use sp_api::ConstructRuntimeApi;
+use sp_keystore::SyncCryptoStorePtr;
+use sp_runtime::traits::BlakeTwo256;
+use std::{sync::Arc, time::Duration};
+use substrate_prometheus_endpoint::Registry;
 
 // Our native executor instance.
 pub struct TemplateRuntimeExecutor;
@@ -194,6 +186,7 @@ async fn build_relay_chain_interface(
     telemetry_worker_handle: Option<TelemetryWorkerHandle>,
     task_manager: &mut TaskManager,
     collator_options: CollatorOptions,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> RelayChainResult<(
     Arc<(dyn RelayChainInterface + 'static)>,
     Option<CollatorPair>,
@@ -208,6 +201,7 @@ async fn build_relay_chain_interface(
             parachain_config,
             telemetry_worker_handle,
             task_manager,
+            hwbench,
         ),
     }
 }
@@ -224,6 +218,7 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
     _rpc_ext_builder: RB,
     build_import_queue: BIQ,
     build_consensus: BIC,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
     TaskManager,
     Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>>,
@@ -248,7 +243,7 @@ where
     Executor: sc_executor::NativeExecutionDispatch + 'static,
     RB: Fn(
             Arc<TFullClient<Block, RuntimeApi, Executor>>,
-        ) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
+        ) -> Result<RpcModule<()>, sc_service::Error>
         + Send
         + 'static,
     BIQ: FnOnce(
@@ -299,6 +294,7 @@ where
         telemetry_worker_handle,
         &mut task_manager,
         collator_options.clone(),
+        hwbench,
     )
     .await
     .map_err(|e| match e {
@@ -326,7 +322,7 @@ where
             warp_sync: None,
         })?;
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let transaction_pool = transaction_pool.clone();
 
@@ -338,12 +334,12 @@ where
                 command_sink: None,
             };
 
-            Ok(crate::rpc::create_full(deps))
+            crate::rpc::create_full(deps).map_err(Into::into)
         })
     };
 
     sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-        rpc_extensions_builder,
+        rpc_builder,
         client: client.clone(),
         transaction_pool: transaction_pool.clone(),
         task_manager: &mut task_manager,
@@ -466,6 +462,7 @@ pub async fn start_parachain_node(
     polkadot_config: Configuration,
     collator_options: CollatorOptions,
     id: ParaId,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(
     TaskManager,
     Arc<TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<TemplateRuntimeExecutor>>>,
@@ -475,7 +472,7 @@ pub async fn start_parachain_node(
         polkadot_config,
         collator_options,
         id,
-        |_| Ok(Default::default()),
+        |_| Ok(RpcModule::new(())),
         parachain_build_import_queue,
         |client,
          prometheus_registry,
@@ -545,7 +542,7 @@ pub async fn start_parachain_node(
                 max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
                 telemetry,
             }))
-        },
+        }, hwbench
     )
     .await
 }
@@ -691,7 +688,7 @@ where
         None
     };
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let transaction_pool = transaction_pool.clone();
 
@@ -703,12 +700,12 @@ where
                 command_sink: command_sink.clone(),
             };
 
-            Ok(crate::rpc::create_full(deps))
+            crate::rpc::create_full(deps).map_err(Into::into)
         })
     };
 
     sc_service::spawn_tasks(sc_service::SpawnTasksParams {
-        rpc_extensions_builder,
+        rpc_builder,
         client,
         transaction_pool,
         task_manager: &mut task_manager,
