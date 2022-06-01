@@ -82,7 +82,7 @@ pub mod pallet {
             + Clone;
 
         /// Currency
-        type Currency: FSCurrency<Self::AccountId>;
+        type Currency: FSCurrency<<Self as frame_system::Config>::AccountId>;
 
         type Balance: Member
             + Parameter
@@ -105,8 +105,10 @@ pub mod pallet {
 
         /// The overarching call type.
         type Call: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
-            + GetDispatchInfo
+            + Dispatchable<
+                Origin = <Self as frame_system::Config>::Origin,
+                PostInfo = PostDispatchInfo,
+            > + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
             + Encode;
@@ -508,7 +510,4 @@ pub mod pallet {
             Pallet::<T>::inner_set_asset_weight(owner, ipl_id, sub_asset, asset_weight)
         }
     }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }
