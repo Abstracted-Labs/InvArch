@@ -45,41 +45,45 @@ XCM features Cross-Consensus Messaging (XCM) to index, cross-reference, & certif
 
 ## Features
 
-| Term                                  | Abbreviation(s)   | Description                                                                                                                  |
-| ------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Intellectual Property File            | IP File, IPF      | Intellectual Property (IP) stored as non-fungible & authenticated files                                                      |
-| Intellectual Property Set             | IP Set            | Root collections of bonded & interchangeable IP Files and/or Subsets                                                         |
-| Intellectual Property Subset          | IP Subset, Subset | Child collections of bonded & interchangeable IP Files and/or additional IP Subsets                                          |
-| Intellectual Property Replica         | IP Replica, IPR   | Authorized clones, or forks, of IP Sets, Subsets, and/or Files                                                               |
-| Bridged Intellectual Property         | Bridged IP, BIP   | EVM or other outer-consensus-native NFTs bridged to the INV4 standard as IP Files                                            |
-| Bonded Intellectual Property          | Bonded IP         | Two (2) or more bonded IP Files, Subsets, and/or Sets representating a new single IP Set and/or Subset                       |
-| Intellectual Property Tokens          | IP Tokens, IPTs   | Fungible & programmable tokens that are pegged to an IP Set and/or Subset                                                    |
-| Intellectual Property Sub-Tokens      | Sub-IPTs          | Multi-leveled or tiered IP Tokens representing distinctive functionality from each other                                     |
-| Smart Intellectual Property           | SmartIP           | IP Sets that own themselves or are decentrally owned, and trustlessly execute functions within their IP Files and/or Subsets |
-| Intellectual Property Virtual Machine | IPVM              | A distributed state machine & trustless environment for executing SmartIP contracts and maintaining canonical state          |
+| Term                                 | Abbreviation(s)   | Description                                                                                                                            |
+| ------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Intellectual Property Set            | IP Set, IPS       | On-Chain Repositories & Folders. Consist of interchangeable IP Files & feature various IP Tokens.                                      |
+| Intellectual Property File           | IP File, IPF      | Omni-Composable & Cross-Chain Authenticated Assets. Powered With RMRK NFTs & Piracy-Proof Files.                                       |
+| Intellectual Property Tokens         | IP Tokens, IPT    | Multi-Tiered Fungible Assets Pegged To IP Sets. Realize Re-Fungible Ownership, Join Copyright, & Various Multi-Utility Purposes.       |
+| Intellectual Property Licenses       | IP Licenses, IPL  | On-Chain Copyright, Licensing, & Version Control Management. Customizable, Internationally Compliant, & Attached To Every Root IP Set. |
+|                                      |                   |                                                                                                                                        |
+| Intellectual Property Staking        | IP Staking        | On-Chain Staking For dApps, DAOs, Smart Contracts, & Other IP Set Based Assets.                                                        |
+| Intellectual Property Farming        | IP Farming        | Built-In Liquidity Tools For dApps, DAOs, & IP Tokens.                                                                                 |
+| Intellectual Property Donations      | IP Donations      | Full Or Partial Donations Of Staking Rewards For dApps, DAOs, Smart Contracts, & Other IP Set Based Assets.                            |
+|                                      |                   |                                                                                                                                        |
+| Intellectual Property Authentication | IP Authentication | Cross-Chain Indexing, Cross-Referencing, & Authenticating For INV4 Files & NFTs.                                                       |
+| Intellectual Property Disputes       | IP Disputes       | On-Chain Governance Provides A Decentralized Process For Retroactive IP Ownership Disputes.                                            |
 
 ## Components
 
 ### INV4 Protocol & Pallets
 
-- `Pallet_IPS` - W.I.P.
-- `Pallet_IPF` - W.I.P.
-- `Pallet_IPT` - W.I.P.
-- `Pallet_IPL` - W.I.P.
-- `Pallet_IPB` - W.I.P.
-- `Pallet_IPVM` - W.I.P.
+- `Pallet_IPS` - [IP Sets (IPS) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ips)
+- `Pallet_IPF` - [IP Files (IPF) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipf)
+- `Pallet_IPT` - [IP Tokens (IPT) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipt)
+- `Pallet_IPL` - [IP Licenses (IPL) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipl)
+
+### OCIF Protocol & Pallets
+
+- `Pallet_IPStaking` - IP Staking (W.I.P.)
+- `Pallet_IPFarming` - IP Farming Pallet (W.I.P.)
+- `Pallet_IPDonations` - IP Donations Pallet (W.I.P.)
 
 ### XCA Protocol & Pallets
 
-- `Pallet_IPStaking` - W.I.P.
-- `Pallet_IPFarming` - W.I.P.
-- `Pallet_IPDonate` - W.I.P.
+- `Pallet_XCA` - Cross-chain IP Authentication Pallet (W.I.P.)
+- `Pallet_DisputeXCA` - IP Disputes Pallet (W.I.P.)
 
-### XCA Protocol & Pallets
+## Testing Documentation
 
-- `Pallet_XCA` - W.I.P.
-- `Pallet_DisputeXCA` - W.I.P.
-- `Pallet_ManageXCA` - W.I.P.
+- [INV4 Testing Documentation](https://gist.github.com/arrudagates/877d6d7b56d06ea1a941b73573a28d3f)
+- [OCIF Testing Documentation](https://github.com/InvArch/InvArch-Frames)
+- [XCA Protocol Testing Documentation](https://github.com/InvArch/InvArch-Frames)
 
 ## How to contribute
 
@@ -104,8 +108,8 @@ Dakota Barnett, Founder
 
 ### License
 
-[GPL](https://github.com/InvArch/InvArch/blob/main/LICENSE)
+[GPLv3.0](https://github.com/InvArch/InvArch/blob/main/LICENSE)
 
 ### Substrate Node
 
-Substrate Node Template [README.md](https://github.com/substrate-developer-hub/substrate-node-template/blob/tutorials/solutions/build-a-dapp-v3%2B1/README.md)
+Substrate Node Template [README.md](https://github.com/substrate-developer-hub/substrate-node-template)

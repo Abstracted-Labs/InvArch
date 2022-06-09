@@ -3,17 +3,20 @@
 # IPF Pallet: IP Files for Substrate
 
 This is a [Pallet](https://substrate.dev/docs/en/knowledgebase/runtime/pallets) that defines basic functions
-to create and manage [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token). 
+to create and manage [intellectual property (IP)](https://en.wikipedia.org/wiki/Intellectual_property) stored as [non-fungible tokens (NFTs)](https://en.wikipedia.org/wiki/Non-fungible_token)
 
-# IPFiles : Non-fungible components that define an idea.
+# IP Files : Immutable records of ownership [(CIDs)](https://wiki.crust.network/docs/en/buildIntegrationNFTDataStorage.html) over digital assets that can be interchangeably stored & organized in an various IP Sets.
+Their IP Sets are embedded with with flexible on-chain licensing, copyright, and collaboration (IP License) structures that can conform to satisfy international & domain-specific compliance standards.
 
 The following **components** are defined:
-* `IPFile` + Metadata
 
-The following **functions** are possible:
+* `IP File` + Metadata
+
+The following **callable functions** are possible:
+
 * `mint` - Create a new IP File and add to an IP Set
 * `burn` - Burn an IP File from an IP Set
-* `amend` - Amend the data stored inside an IP File
+* `send` - Send an IP File to other address
 
 
 # IP File
@@ -24,25 +27,21 @@ An IP File (IPF) is a part of a set, and can be thought of as a component of an 
 
 ```json
 {
-  "ips": {
-    "type": "string",
-    "description": "Collection ID, e.g. 0aff6865bed3a66b-HOVER"
-  },
   "name": {
     "type": "string",
-    "description": "Name of the IPF. E.g. Hover Craft Schematics, Hover Craft PoC."
+    "description": "Name of the IPT. E.g. IPT0, IPT1"
   },
-  "sn": {
-    "type": "string",
-    "description": "Serial number or issuance number of the IPF, padded so that its total length is 16, e.g. 0000000000000123"
+  "ipfId": {
+    "type": "u64",
+    "description": "The ID of an existing IPF owned by the current caller, can be found in events after minting or in storage"
   },
   "metadata?": {
-    "type": "string",
-    "description": "HTTP(s) or IPFS URI. If IPFS, MUST be in the format of ipfs://ipfs/HASH"
+    "type": "Vec<u8>",
+    "description": "Free to use any value as this won't affect logic and is intended to be used by dApp developers"
   },
   "data?": {
-    "type": "object",
-    "description": "See Data"
+    "type": "H256",
+    "description": "An IPFS CID hash, intended to be the content identifier of the actual file, can be taken from CID here: https://cid.ipfs.io by copying the Digest (Hex) field"
   }
 }
 ```
@@ -160,3 +159,7 @@ Metadata:
   "attributes": [],
 }
 ```
+
+## Testing Documentation
+
+[IPF Testing Documentation](https://gist.github.com/arrudagates/877d6d7b56d06ea1a941b73573a28d3f#file-ipf-md)
