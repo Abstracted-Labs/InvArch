@@ -19,7 +19,7 @@ impl<T: Config> Pallet<T> {
         ipl_id: T::IpId,
         sub_asset: T::IpId,
         call_metadata: [u8; 2],
-        permission: bool,
+        permission: BoolOrWasm<T>,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
@@ -32,7 +32,7 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        Permissions::<T>::insert((ipl_id, sub_asset), call_metadata, permission);
+        Permissions::<T>::insert((ipl_id, sub_asset), call_metadata, permission.clone());
 
         Self::deposit_event(Event::PermissionSet(
             ipl_id,
@@ -81,8 +81,19 @@ impl<T: Config> Pallet<T> {
         ipl_id: T::IpId,
         sub_asset: T::IpId,
         call_metadata: [u8; 2],
+        _call_arguments: BoundedVec<u8, T::MaxWasmPermissionBytes>,
     ) -> Option<bool> {
         Permissions::<T>::get((ipl_id, sub_asset), call_metadata)
+            .map(|bool_or_wasm| {
+                if let BoolOrWasm::<T>::Bool(b) = bool_or_wasm {
+                    b
+                } else {
+                    // Execute wasm, return bool result
+                    // Pass call_arguments to wasm function
+                    // False as placeholder
+                    false
+                }
+            })
             .or_else(|| IpStorage::<T>::get(ipl_id).map(|ipl| ipl.default_permission))
     }
 }

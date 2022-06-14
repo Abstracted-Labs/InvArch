@@ -27,6 +27,12 @@ pub enum IpsType<IpsId> {
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum BoolOrWasm<Wasm> {
+    Bool(bool),
+    Wasm(Wasm),
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
     /// IPS parentage
     pub parentage: Parentage<AccountId, IpId>,
