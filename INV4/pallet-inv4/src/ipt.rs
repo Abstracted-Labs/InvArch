@@ -125,16 +125,16 @@ impl<T: Config> Pallet<T> {
         let owner = ensure_signed(caller.clone())?;
 
         ensure!(
-            if let CallMetadata {
-                pallet_name: "RmrkCore",
-                function_name:
-                    "send" | "burn_nft" | "destroy_collection" | "change_collection_issuer",
-            } = call.get_call_metadata()
-            {
-                false
-            } else {
-                true
-            },
+            !matches!(
+                call.get_call_metadata(),
+                CallMetadata {
+                    pallet_name: "RmrkCore",
+                    function_name: "send"
+                        | "burn_nft"
+                        | "destroy_collection"
+                        | "change_collection_issuer",
+                }
+            ),
             Error::<T>::CantExecuteThisCall
         );
 

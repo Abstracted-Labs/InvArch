@@ -6,7 +6,7 @@ use frame_system::pallet_prelude::*;
 use primitives::utils::multi_account_id;
 use primitives::IpInfo;
 use primitives::{IpsType, OneOrPercent, Parentage};
-use rmrk_traits::Nft;
+use rmrk_traits::{Collection, Nft};
 use sp_arithmetic::traits::{CheckedAdd, One, Zero};
 use sp_runtime::traits::StaticLookup;
 use sp_std::convert::TryInto;
@@ -60,7 +60,7 @@ impl<T: Config> Pallet<T> {
                             Error::<T>::NoPermission
                         );
                     }
-                    AnyId::RmrkId((collection_id, nft_id)) => {
+                    AnyId::RmrkNft((collection_id, nft_id)) => {
                         ensure!(
                             pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
                                 .ok_or(Error::<T>::IpfNotFound)?
@@ -68,6 +68,15 @@ impl<T: Config> Pallet<T> {
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                                     creator.clone()
                                 ),
+                            Error::<T>::NoPermission
+                        );
+                    }
+                    AnyId::RmrkCollection(collection_id) => {
+                        ensure!(
+                            pallet_rmrk_core::Collections::<T>::get(collection_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .issuer
+                                == creator.clone(),
                             Error::<T>::NoPermission
                         );
                     }
@@ -83,7 +92,7 @@ impl<T: Config> Pallet<T> {
                     AnyId::IpfId(ipf_id) => {
                         ipf::Pallet::<T>::send(creator.clone(), ipf_id, ips_account.clone())?
                     }
-                    AnyId::RmrkId((collection_id, nft_id)) => {
+                    AnyId::RmrkNft((collection_id, nft_id)) => {
                         pallet_rmrk_core::Pallet::<T>::nft_send(
                             creator.clone(),
                             collection_id,
@@ -91,6 +100,12 @@ impl<T: Config> Pallet<T> {
                             rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                                 ips_account.clone(),
                             ),
+                        )?;
+                    }
+                    AnyId::RmrkCollection(collection_id) => {
+                        pallet_rmrk_core::Pallet::<T>::collection_change_issuer(
+                            collection_id,
+                            ips_account.clone(),
                         )?;
                     }
                 }
@@ -198,7 +213,7 @@ impl<T: Config> Pallet<T> {
                             Error::<T>::NoPermission
                         );
                     }
-                    AnyId::RmrkId((collection_id, nft_id)) => {
+                    AnyId::RmrkNft((collection_id, nft_id)) => {
                         let this_rmrk_owner =
                             pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
                                 .ok_or(Error::<T>::IpfNotFound)?
@@ -223,6 +238,21 @@ impl<T: Config> Pallet<T> {
                             Error::<T>::NoPermission
                         );
                     }
+                    AnyId::RmrkCollection(collection_id) => {
+                        let this_rmrk_issuer =
+                            pallet_rmrk_core::Collections::<T>::get(collection_id)
+                                .ok_or(Error::<T>::IpfNotFound)?
+                                .issuer;
+                        ensure!(
+                            this_rmrk_issuer.clone() == ips_account.clone()
+                                || caller_account
+                                    == multi_account_id::<T, T::IpId>(
+                                        parent_id,
+                                        Some(this_rmrk_issuer),
+                                    ),
+                            Error::<T>::NoPermission
+                        );
+                    }
                 }
             }
 
@@ -236,7 +266,7 @@ impl<T: Config> Pallet<T> {
                         ipf_id,
                         ips_account.clone(),
                     )?,
-                    AnyId::RmrkId((collection_id, nft_id)) => {
+                    AnyId::RmrkNft((collection_id, nft_id)) => {
                         if let rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                             rmrk_owner_account,
                         ) = pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
@@ -252,6 +282,12 @@ impl<T: Config> Pallet<T> {
                                 ),
                             )?;
                         }
+                    }
+                    AnyId::RmrkCollection(collection_id) => {
+                        pallet_rmrk_core::Pallet::<T>::collection_change_issuer(
+                            collection_id,
+                            ips_account.clone(),
+                        )?;
                     }
                 }
             }
@@ -395,12 +431,18 @@ impl<T: Config> Pallet<T> {
                         ipf::Pallet::<T>::send(ips_account.clone(), this_ipf_id, new_owner)?
                     }
 
-                    (AnyId::RmrkId((collection_id, nft_id)), new_owner) => {
+                    (AnyId::RmrkNft((collection_id, nft_id)), new_owner) => {
                         pallet_rmrk_core::Pallet::<T>::nft_send(
                             ips_account.clone(),
                             collection_id,
                             nft_id,
                             rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(new_owner),
+                        )?;
+                    }
+                    (AnyId::RmrkCollection(collection_id), new_owner) => {
+                        pallet_rmrk_core::Pallet::<T>::collection_change_issuer(
+                            collection_id,
+                            new_owner.clone(),
                         )?;
                     }
                 }
@@ -529,7 +571,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    pub(crate) fn inner_create_replica(
+    pub(crate) fn _inner_create_replica(
         owner: OriginFor<T>,
         original_ips_id: T::IpId,
         ipl_license: <T as Config>::Licenses,

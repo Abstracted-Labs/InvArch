@@ -4,7 +4,7 @@ use frame_system::ensure_signed;
 use frame_system::pallet_prelude::*;
 use primitives::{OneOrPercent, Parentage};
 
-use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue};
+use wasmi::{Module, ModuleInstance, NopExternals};
 
 pub trait LicenseList<T: Config> {
     fn get_hash_and_metadata(
@@ -86,28 +86,35 @@ impl<T: Config> Pallet<T> {
         call_arguments: BoundedVec<u8, T::MaxWasmPermissionBytes>,
     ) -> Option<bool> {
         Permissions::<T>::get((ipl_id, sub_asset), call_metadata)
-            .map(|bool_or_wasm| {
-                match bool_or_wasm {
-                    BoolOrWasm::<T>::Bool(b) => b,
-                    BoolOrWasm::<T>::Wasm(wasm) => {
+            .map(|bool_or_wasm| match bool_or_wasm {
+                BoolOrWasm::<T>::Bool(b) => b,
+                BoolOrWasm::<T>::Wasm(wasm) => {
+                    let module = Module::from_buffer(wasm).unwrap();
 
-                        let module = Module::from_buffer(wasm).unwrap();
+                    let mem = wasmi::MemoryInstance::alloc(
+                        wasmi::memory_units::Pages(T::MaxWasmPermissionBytes::get() as usize),
+                        None,
+                    )
+                    .unwrap();
 
-                        let mut mem = wasmi::MemoryInstance::alloc(wasmi::memory_units::Pages(T::MaxWasmPermissionBytes::get() as usize), None).unwrap();
+                    mem.set(0, call_arguments.as_slice()).unwrap();
 
-                        mem.set(0, call_arguments.as_slice()).unwrap();
+                    let main = ModuleInstance::with_externvals(
+                        &module,
+                        vec![&wasmi::ExternVal::Memory(mem)].into_iter(),
+                    )
+                    .expect("Failed to instantiate module")
+                    .assert_no_start();
 
-                    let main = ModuleInstance::with_externvals(&module, vec![&wasmi::ExternVal::Memory(mem)].into_iter())
-                        .expect("Failed to instantiate module")
-                        .assert_no_start();
-
-                        if let wasmi::RuntimeValue::I32(integer) =  main.invoke_export("_call", &[], &mut NopExternals).unwrap().unwrap() {
-                            match integer {
-                                0 => false,
-                                _ => true,
-                            }
-                        } else {false}
-                }
+                    if let wasmi::RuntimeValue::I32(integer) = main
+                        .invoke_export("_call", &[], &mut NopExternals)
+                        .unwrap()
+                        .unwrap()
+                    {
+                        !matches!(integer, 0)
+                    } else {
+                        false
+                    }
                 }
             })
             .or_else(|| IpStorage::<T>::get(ipl_id).map(|ipl| ipl.default_permission))
