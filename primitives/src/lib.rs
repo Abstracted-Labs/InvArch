@@ -27,6 +27,12 @@ pub enum IpsType<IpsId> {
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum BoolOrWasm<Wasm> {
+    Bool(bool),
+    Wasm(Wasm),
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
     /// IPS parentage
     pub parentage: Parentage<AccountId, IpId>,
@@ -47,21 +53,6 @@ pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata
     pub default_permission: bool,
 }
 
-/// IPS info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
-    /// IPS parentage
-    pub parentage: Parentage<AccountId, IpsId>,
-    /// IPS metadata
-    pub metadata: IpsMetadataOf,
-    /// IPS Properties
-    pub data: Data,
-    /// IPS Type
-    pub ips_type: IpsType<IpsId>,
-    /// If this IPS allows replicas
-    pub allow_replica: bool,
-}
-
 /// IPF Info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
@@ -75,28 +66,11 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
     pub data: Data,
 }
 
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IptInfo<AccountId, Balance> {
-    pub owner: AccountId,
-    /// The total supply across all accounts.
-    pub supply: Balance,
-}
-
 // This is a struct in preparation for having more fields in the future.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
 pub struct SubIptInfo<IptId, SubAssetMetadata> {
     pub id: IptId,
     pub metadata: SubAssetMetadata,
-}
-
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
-    pub owner: AccountId,
-    pub id: IplId,
-    pub license: (LicenseMetadata, Hash),
-    pub execution_threshold: OneOrPercent,
-    pub default_asset_weight: OneOrPercent,
-    pub default_permission: bool,
 }
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
