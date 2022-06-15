@@ -1,6 +1,8 @@
 use super::pallet::{self, *};
 use core::convert::TryInto;
+use frame_support::dispatch::CallMetadata;
 use frame_support::dispatch::Dispatchable;
+use frame_support::dispatch::GetCallMetadata;
 use frame_support::dispatch::GetDispatchInfo;
 use frame_support::dispatch::RawOrigin;
 use frame_support::pallet_prelude::*;
@@ -119,6 +121,21 @@ impl<T: Config> Pallet<T> {
         call: Box<<T as pallet::Config>::Call>,
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller.clone())?;
+
+        ensure!(
+            if let CallMetadata {
+                pallet_name: "RmrkCore",
+                function_name:
+                    "send" | "burn_nft" | "destroy_collection" | "change_collection_issuer",
+            } = call.get_call_metadata()
+            {
+                false
+            } else {
+                true
+            },
+            Error::<T>::CantExecuteThisCall
+        );
+
         let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
         let total_issuance = ipt.supply

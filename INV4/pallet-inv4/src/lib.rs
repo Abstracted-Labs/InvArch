@@ -138,14 +138,15 @@ pub mod pallet {
     >;
 
     #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-    pub enum AnyId<IpsId, IpfId, RmrkId> {
+    pub enum AnyId<IpsId, IpfId, RmrkNftTuple, RmrkCollectionId> {
         IpfId(IpfId),
-        RmrkId(RmrkId),
+        RmrkNft(RmrkNftTuple),
+        RmrkCollection(RmrkCollectionId),
         IpsId(IpsId),
     }
 
     pub type AnyIdOf<T> =
-        AnyId<<T as Config>::IpId, <T as ipf::Config>::IpfId, (CollectionId, NftId)>;
+        AnyId<<T as Config>::IpId, <T as ipf::Config>::IpfId, (CollectionId, NftId), CollectionId>;
 
     pub type AnyIdWithNewOwner<T> = (AnyIdOf<T>, <T as frame_system::Config>::AccountId);
 
@@ -311,6 +312,8 @@ pub mod pallet {
         CallHasTooFewBytes,
 
         IpsInsideIpsDisabled,
+
+        CantExecuteThisCall,
     }
 
     /// Dispatch functions
@@ -397,24 +400,24 @@ pub mod pallet {
             Pallet::<T>::inner_disallow_replica(owner, ips_id)
         }
 
-        #[pallet::weight(100_000)]
-        pub fn create_replica(
-            owner: OriginFor<T>,
-            original_ips_id: T::IpId,
-            ipl_license: <T as Config>::Licenses,
-            ipl_execution_threshold: OneOrPercent,
-            ipl_default_asset_weight: OneOrPercent,
-            ipl_default_permission: bool,
-        ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_create_replica(
-                owner,
-                original_ips_id,
-                ipl_license,
-                ipl_execution_threshold,
-                ipl_default_asset_weight,
-                ipl_default_permission,
-            )
-        }
+        // #[pallet::weight(100_000)]
+        // pub fn create_replica(
+        //     owner: OriginFor<T>,
+        //     original_ips_id: T::IpId,
+        //     ipl_license: <T as Config>::Licenses,
+        //     ipl_execution_threshold: OneOrPercent,
+        //     ipl_default_asset_weight: OneOrPercent,
+        //     ipl_default_permission: bool,
+        // ) -> DispatchResultWithPostInfo {
+        //     Pallet::<T>::inner_create_replica(
+        //         owner,
+        //         original_ips_id,
+        //         ipl_license,
+        //         ipl_execution_threshold,
+        //         ipl_default_asset_weight,
+        //         ipl_default_permission,
+        //     )
+        // }
 
         #[pallet::weight(100_000)] // TODO: Set correct weight
         pub fn ipt_mint(
