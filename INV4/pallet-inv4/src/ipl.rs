@@ -4,7 +4,7 @@ use frame_system::ensure_signed;
 use frame_system::pallet_prelude::*;
 use primitives::{OneOrPercent, Parentage};
 
-use wasmi::{Module, ModuleInstance, NopExternals};
+use sp_sandbox::{SandboxEnvironmentBuilder, SandboxInstance, SandboxMemory};
 
 pub trait LicenseList<T: Config> {
     fn get_hash_and_metadata(
@@ -89,27 +89,24 @@ impl<T: Config> Pallet<T> {
             .map(|bool_or_wasm| match bool_or_wasm {
                 BoolOrWasm::<T>::Bool(b) => b,
                 BoolOrWasm::<T>::Wasm(wasm) => {
-                    let module = Module::from_buffer(wasm).unwrap();
+                    let args = call_arguments.as_slice();
 
-                    let mem = wasmi::MemoryInstance::alloc(
-                        wasmi::memory_units::Pages(T::MaxWasmPermissionBytes::get() as usize),
-                        None,
-                    )
-                    .unwrap();
+                    let mut env = sp_sandbox::default_executor::EnvironmentDefinitionBuilder::new();
+                    let mem = sp_sandbox::default_executor::Memory::new(1u32, Some(1u32)).unwrap();
+                    mem.set(1u32, args).unwrap();
+                    env.add_memory("env", "memory", mem);
 
-                    mem.set(0, call_arguments.as_slice()).unwrap();
+                    let mut instance =
+                        sp_sandbox::default_executor::Instance::new(&wasm, &env, &mut ()).unwrap();
 
-                    let main = ModuleInstance::with_externvals(
-                        &module,
-                        vec![&wasmi::ExternVal::Memory(mem)].into_iter(),
-                    )
-                    .expect("Failed to instantiate module")
-                    .assert_no_start();
-
-                    if let wasmi::RuntimeValue::I32(integer) = main
-                        .invoke_export("_call", &[], &mut NopExternals)
-                        .unwrap()
-                        .unwrap()
+                    if let sp_sandbox::ReturnValue::Value(sp_sandbox::Value::I32(integer)) =
+                        instance
+                            .invoke(
+                                "_call",
+                                &[sp_sandbox::Value::I32(args.len() as i32)],
+                                &mut (),
+                            )
+                            .unwrap()
                     {
                         !matches!(integer, 0)
                     } else {

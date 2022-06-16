@@ -124,7 +124,7 @@ pub mod pallet {
         type MaxMetadata: Get<u32>;
 
         #[pallet::constant]
-        type MaxWasmPermissionBytes: Get<u32> + Clone;
+        type MaxWasmPermissionBytes: Get<u32>;
     }
 
     pub type BalanceOf<T> =
@@ -282,6 +282,8 @@ pub mod pallet {
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
         PermissionSet(T::IpId, T::IpId, [u8; 2], BoolOrWasm<T>),
         WeightSet(T::IpId, T::IpId, OneOrPercent),
+
+        Debug(Vec<u8>, u32, u32),
     }
 
     /// Errors for IPF pallet

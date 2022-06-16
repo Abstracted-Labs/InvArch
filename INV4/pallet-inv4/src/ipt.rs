@@ -12,6 +12,7 @@ use frame_system::ensure_signed;
 use frame_system::pallet_prelude::*;
 use primitives::utils::multi_account_id;
 use primitives::{OneOrPercent, Parentage, SubIptInfo};
+use sp_arithmetic::traits::Zero;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::CheckedSub;
 use sp_runtime::traits::StaticLookup;
@@ -242,18 +243,20 @@ impl<T: Config> Pallet<T> {
                 dispatch_result.is_ok(),
             ));
         } else {
-            pallet_balances::Pallet::<T>::transfer(
-                caller,
-                <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                    multi_account_id::<T, T::IpId>(ipt_id.0, None),
-                ),
-                <T as pallet::Config>::Balance::from(
-                    (T::WeightToFeePolynomial::calc(&call.get_dispatch_info().weight)
-                        / total_per_threshold.into())
-                        * owner_balance.into(),
-                )
-                .into(),
-            )?;
+            if owner_balance > Zero::zero() {
+                pallet_balances::Pallet::<T>::transfer(
+                    caller,
+                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                        multi_account_id::<T, T::IpId>(ipt_id.0, None),
+                    ),
+                    <T as pallet::Config>::Balance::from(
+                        (T::WeightToFeePolynomial::calc(&call.get_dispatch_info().weight)
+                            / total_per_threshold.into())
+                            * owner_balance.into(),
+                    )
+                    .into(),
+                )?;
+            }
 
             Multisig::<T>::insert(
                 (ipt_id.0, call_hash),
@@ -420,18 +423,20 @@ impl<T: Config> Pallet<T> {
                     dispatch_result.is_ok(),
                 ));
             } else {
-                pallet_balances::Pallet::<T>::transfer(
-                    caller,
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        multi_account_id::<T, T::IpId>(ipt_id.0, None),
-                    ),
-                    <T as pallet::Config>::Balance::from(
-                        (T::WeightToFeePolynomial::calc(&old_data.call_weight)
-                            / total_per_threshold.into())
-                            * voter_balance.into(),
-                    )
-                    .into(),
-                )?;
+                if voter_balance > Zero::zero() {
+                    pallet_balances::Pallet::<T>::transfer(
+                        caller,
+                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
+                            multi_account_id::<T, T::IpId>(ipt_id.0, None),
+                        ),
+                        <T as pallet::Config>::Balance::from(
+                            (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                                / total_per_threshold.into())
+                                * voter_balance.into(),
+                        )
+                        .into(),
+                    )?;
+                }
 
                 old_data.signers = {
                     let mut v = old_data.signers.to_vec();
