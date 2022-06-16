@@ -857,9 +857,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.9.1"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
+checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 
 [[package]]
 name = "byte-slice-cast"
@@ -5637,6 +5637,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-sandbox",
  "sp-std",
 ]
 
@@ -5872,7 +5873,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate#0b6b25f00a8ae33d0f78ca7133c22020f0f51d19"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=446081dd9d536162c2b4ac53670e9696e974b60f#446081dd9d536162c2b4ac53670e9696e974b60f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5889,7 +5890,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-equip"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate#0b6b25f00a8ae33d0f78ca7133c22020f0f51d19"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=446081dd9d536162c2b4ac53670e9696e974b60f#446081dd9d536162c2b4ac53670e9696e974b60f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8224,7 +8225,7 @@ dependencies = [
 [[package]]
 name = "rmrk-traits"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate#0b6b25f00a8ae33d0f78ca7133c22020f0f51d19"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=446081dd9d536162c2b4ac53670e9696e974b60f#446081dd9d536162c2b4ac53670e9696e974b60f"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -10713,9 +10714,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "ss58-registry"
-version = "1.20.0"
+version = "1.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e1e7c268f5610088463d23188fc9e764cda491784360e5e4ea3a8ce1e0e2ac9"
+checksum = "5d804c8d48aeab838be31570866fce1130d275b563d49af08b4927a0bd561e7c"
 dependencies = [
  "Inflector",
  "num-format",
@@ -11436,7 +11437,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.3",
  "rand 0.8.5",
  "static_assertions",

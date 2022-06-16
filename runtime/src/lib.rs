@@ -580,6 +580,7 @@ parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const MaxLicenseMetadata: u32 = 10000;
+    pub const MaxWasmPermissionBytes: u32 = 10000000;
 }
 
 #[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
@@ -644,6 +645,8 @@ impl inv4::Config for Runtime {
     type WeightToFeePolynomial = WeightToFee;
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
+
+    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
 }
 
 impl pallet_sudo::Config for Runtime {
