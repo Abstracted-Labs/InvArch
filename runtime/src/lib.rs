@@ -647,7 +647,7 @@ impl inv4::Config for Runtime {
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
 
-    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
+    type MaxWasmPermissionBytes = ();
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1057,9 +1057,7 @@ impl_runtime_apis! {
             let mut list = Vec::<BenchmarkList>::new();
 
             frame_list_benchmark!(list, extra, pallet_ipf, Ipf);
-            frame_list_benchmark!(list, extra, pallet_ips, Ips);
-            frame_list_benchmark!(list, extra, pallet_ipt, Ipt);
-            frame_list_benchmark!(list, extra, pallet_ipl, Ipl);
+
             list_benchmarks!(list, extra);
 
             let storage_info = AllPalletsWithSystem::storage_info();
@@ -1096,9 +1094,7 @@ impl_runtime_apis! {
 
             // INV4 Pallets
             add_benchmark!(params, batches, pallet_ipf, Ipf);
-            add_benchmark!(params, batches, pallet_ips, Ips);
-            add_benchmark!(params, batches, pallet_ipt, Ipt);
-            add_benchmark!(params, batches, pallet_ipl, Ipl);
+
 
             add_benchmarks!(params, batches);
 
