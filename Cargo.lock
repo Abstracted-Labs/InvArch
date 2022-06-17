@@ -3407,6 +3407,7 @@ dependencies = [
  "frame-try-runtime",
  "getrandom 0.2.6",
  "hex-literal",
+ "invarch-primitives",
  "log",
  "pallet-aura",
  "pallet-authorship",
@@ -5622,6 +5623,7 @@ name = "pallet-inv4"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pallet-inv4+rmrk#fbdf83ec8a9ec2e484df507c8dd886e24b6bd79f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
@@ -5648,6 +5650,7 @@ name = "pallet-ipf"
 version = "0.1.0-dev"
 source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pallet-inv4+rmrk#fbdf83ec8a9ec2e484df507c8dd886e24b6bd79f"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
@@ -10720,6 +10723,7 @@ name = "ss58-registry"
 version = "1.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d804c8d48aeab838be31570866fce1130d275b563d49af08b4927a0bd561e7c"
+
 dependencies = [
  "Inflector",
  "num-format",

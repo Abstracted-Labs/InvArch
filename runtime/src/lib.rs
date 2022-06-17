@@ -49,6 +49,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
 };
+
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use scale_info::TypeInfo;
 use smallvec::smallvec;
@@ -1048,13 +1049,17 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark as frame_list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            frame_list_benchmark!(list, extra, pallet_ipf, Ipf);
+            frame_list_benchmark!(list, extra, pallet_ips, Ips);
+            frame_list_benchmark!(list, extra, pallet_ipt, Ipt);
+            frame_list_benchmark!(list, extra, pallet_ipl, Ipl);
             list_benchmarks!(list, extra);
 
             let storage_info = AllPalletsWithSystem::storage_info();
@@ -1065,7 +1070,7 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
             use frame_system_benchmarking::Pallet as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
@@ -1088,6 +1093,12 @@ impl_runtime_apis! {
 
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
+
+            // INV4 Pallets
+            add_benchmark!(params, batches, pallet_ipf, Ipf);
+            add_benchmark!(params, batches, pallet_ips, Ips);
+            add_benchmark!(params, batches, pallet_ipt, Ipt);
+            add_benchmark!(params, batches, pallet_ipl, Ipl);
 
             add_benchmarks!(params, batches);
 

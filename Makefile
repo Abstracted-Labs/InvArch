@@ -2,7 +2,7 @@ check:
 	cargo check
 
 build:
-	cargo build --release
+	cargo build --release --features runtime-benchmarks
 
 test:
 	cargo test
@@ -122,4 +122,17 @@ run-solo-alice:
 run-solo-bob:
 	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334
 
+
 run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make
+
+run-benchmark-ipf:
+	./target/release/invarch-collator benchmark \
+		--chain solo-dev \
+		--execution wasm \
+    --wasm-execution compiled \
+		--pallet pallet-ipf \
+		--extrinsic '*' \
+    --steps 20 \
+    --repeat 10 \
+    --json-file=./weights/ipf/ipf.json \
+		--output ../InvArch-Frames/INV4/pallet-ipf/src/weights.rs

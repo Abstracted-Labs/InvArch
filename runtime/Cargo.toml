@@ -201,6 +201,11 @@ runtime-benchmarks = [
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
+
+    "pallet-ipf/runtime-benchmarks",
+    "pallet-ips/runtime-benchmarks",
+    "pallet-ipt/runtime-benchmarks",
+    "pallet-ipl/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -213,3 +218,4 @@ try-runtime = [
 #contracts-unstable-interface = [
 #	"pallet-contracts/unstable-interface"
 #]
+
