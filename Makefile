@@ -122,6 +122,9 @@ run-solo-alice:
 run-solo-bob:
 	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334
 
+
+run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make
+
 run-benchmark-ipf:
 	./target/release/invarch-collator benchmark \
 		--chain solo-dev \
@@ -133,39 +136,3 @@ run-benchmark-ipf:
     --repeat 10 \
     --json-file=./weights/ipf/ipf.json \
 		--output ../InvArch-Frames/INV4/pallet-ipf/src/weights.rs
-
-run-benchmark-ips:
-	./target/release/invarch-collator benchmark \
-		--chain solo-dev \
-		--execution wasm \
-		--wasm-execution compiled \
-		--pallet pallet-ips \
-		--extrinsic 'destroy' \
-		--steps 20 \
-		--repeat 10 \
-		--json-file=./weights/ips/ips.json \
-		--output ../InvArch-Frames/INV4/pallet-ips/src/weights.rs
-
-run-benchmark-ipt:
-	./target/release/invarch-collator benchmark \
-		--chain solo-dev \
-		--execution wasm \
-		--wasm-execution compiled \
-		--pallet pallet-ipt \
-		--extrinsic '*' \
-		--steps 20 \
-		--repeat 10 \
-		--json-file=./weights/ipt/ipt.json \
-		--output ../InvArch-Frames/INV4/pallet-ipt/src/weights.rs
-
-run-benchmark-ipl:
-	./target/release/invarch-collator benchmark \
-		--chain solo-dev \
-		--execution wasm \
-		--wasm-execution compiled \
-		--pallet pallet-ipl \
-		--extrinsic '*' \
-		--steps 20 \
-		--repeat 10 \
-		--json-file=./weights/ipl/ipl.json \
-		--output ../InvArch-Frames/INV4/pallet-ipl/src/weights.rs

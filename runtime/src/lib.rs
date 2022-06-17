@@ -31,10 +31,30 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
+pub use frame_support::{
+    construct_runtime, match_types, parameter_types,
+    traits::{
+        AsEnsureOriginWithArg, Contains, Currency, Everything, FindAuthor, Imbalance,
+        KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
+    },
+    weights::{
+        constants::RocksDbWeight,
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+        ConstantMultiplier, DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient,
+        WeightToFeeCoefficients, WeightToFeePolynomial,
+    },
+    BoundedVec, ConsensusEngineId, PalletId,
+};
+use frame_system::{
+    limits::{BlockLength, BlockWeights},
+    EnsureRoot, EnsureSigned,
+};
+
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
     crypto::KeyTypeId,
     OpaqueMetadata,
@@ -47,31 +67,11 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
 };
+pub use sp_runtime::{Perbill, Permill};
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-pub use frame_support::{
-    construct_runtime, match_type, parameter_types,
-    traits::{
-        Contains, Currency, Everything, FindAuthor, KeyOwnerProofSystem, Nothing, Randomness,
-        StorageInfo,
-    },
-    weights::{
-        constants::RocksDbWeight,
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-        DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-        WeightToFeePolynomial,
-    },
-    ConsensusEngineId, PalletId,
-};
-use frame_system::{
-    limits::{BlockLength, BlockWeights},
-    EnsureRoot,
-};
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-pub use sp_runtime::{Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
@@ -87,14 +87,10 @@ use xcm_executor::XcmExecutor;
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
 
-/// Import the ips pallet.
-pub use pallet_ips as ips;
+/// Import the inv4 pallet.
+pub use pallet_inv4 as inv4;
 
-/// Import the ipt pallet.
-pub use pallet_ipt as ipt;
-
-/// Import the ipl pallet.
-pub use pallet_ipl as ipl;
+use inv4::ipl::LicenseList;
 
 // Runtime Constants
 //mod constants;
@@ -441,7 +437,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    // Relay Chain `TransactionByteFee` / 10
+    /// Relay Chain `TransactionByteFee` / 10
     pub const TransactionByteFee: Balance = 10 * MICROUNIT;
     pub const OperationalFeeMultiplier: u8 = 5;
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
@@ -449,10 +445,25 @@ parameter_types! {
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+pub struct DealWithFees;
+impl OnUnbalanced<NegativeImbalance> for DealWithFees {
+    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+        if let Some(mut fees) = fees_then_tips.next() {
+            if let Some(tips) = fees_then_tips.next() {
+                // Merge with fee, for now we send everything to the treasury
+                tips.merge_into(&mut fees);
+            }
+            Treasury::on_unbalanced(fees);
+        }
+    }
+}
+
 impl pallet_transaction_payment::Config for Runtime {
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-    type TransactionByteFee = TransactionByteFee;
+    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type WeightToFee = WeightToFee;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     // type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type FeeMultiplierUpdate =
         TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
@@ -567,56 +578,76 @@ impl ipf::Config for Runtime {
 }
 
 parameter_types! {
+    pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
-    pub const MaxIptMetadata: u32 = 10000;
-}
-
-impl pallet_ipt::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type Balance = Balance;
-    type IptId = CommonId;
-    type ExistentialDeposit = ExistentialDeposit;
-    type Call = Call;
-    type MaxCallers = MaxCallers;
-    type WeightToFeePolynomial = WeightToFee;
-    type MaxSubAssets = MaxCallers;
-    type MaxIptMetadata = MaxIptMetadata;
-}
-
-parameter_types! {
     pub const MaxLicenseMetadata: u32 = 10000;
+    pub const MaxWasmPermissionBytes: u32 = 10000000;
 }
 
-impl pallet_ipl::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type Balance = Balance;
-    type IplId = CommonId;
-    type Licenses = invarch_primitives::InvArchLicenses;
-    type MaxLicenseMetadata = MaxLicenseMetadata;
+#[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
+pub enum InvArchLicenses {
+    Apache2,
+    GPLv3,
+    Custom(
+        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
+        <Runtime as frame_system::Config>::Hash,
+    ),
 }
 
-parameter_types! {
+impl LicenseList<Runtime> for InvArchLicenses {
+    fn get_hash_and_metadata(
+        &self,
+    ) -> (
+        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
+        <Runtime as frame_system::Config>::Hash,
+    ) {
+        match self {
+            InvArchLicenses::Apache2 => (
+                vec![65, 112, 97, 99, 104, 97, 32, 118, 50, 46, 48]
+                    .try_into()
+                    .unwrap(),
+                [
+                    7, 57, 92, 251, 234, 183, 217, 144, 220, 196, 201, 132, 176, 249, 18, 224, 237,
+                    201, 2, 113, 146, 78, 111, 152, 92, 71, 16, 228, 87, 39, 81, 142,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::GPLv3 => (
+                vec![71, 78, 85, 32, 71, 80, 76, 32, 118, 51]
+                    .try_into()
+                    .unwrap(),
+                [
+                    72, 7, 169, 24, 30, 7, 200, 69, 232, 27, 10, 138, 130, 253, 91, 158, 210, 95,
+                    127, 37, 85, 41, 106, 136, 66, 116, 64, 35, 252, 195, 69, 253,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::Custom(metadata, hash) => (metadata.clone(), *hash),
+        }
+    }
+}
+
+impl inv4::Config for Runtime {
     // The maximum size of an IPS's metadata
-    pub const MaxIpsMetadata: u32 = 10000;
-}
-
-impl ips::Config for Runtime {
-    // The maximum size of an IPS's metadata
-    type MaxIpsMetadata = MaxIpsMetadata;
+    type MaxMetadata = MaxMetadata;
     // The IPS ID type
-    type IpsId = CommonId;
+    type IpId = CommonId;
     // The IPS Pallet Events
     type Event = Event;
     // Currency
     type Currency = Balances;
-    // The IpsData type (Vector of IPFs)
-    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
 
     type Balance = Balance;
+
+    type Call = Call;
+    type MaxCallers = MaxCallers;
+    type WeightToFeePolynomial = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type Licenses = InvArchLicenses;
+
+    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -691,6 +722,92 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(1);
+    pub const ProposalBondMinimum: Balance = 100 * UNIT;
+    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const Burn: Permill = Permill::from_percent(1);
+    pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
+    pub const MaxApprovals: u32 = 100;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type PalletId = TreasuryPalletId;
+    type Currency = Balances;
+    type ApproveOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = EnsureRoot<AccountId>;
+    type Event = Event;
+    type OnSlash = ();
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type SpendPeriod = SpendPeriod;
+    type Burn = ();
+    type BurnDestination = ();
+    type SpendFunds = ();
+    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type MaxApprovals = MaxApprovals;
+    type ProposalBondMaximum = ();
+}
+
+parameter_types! {
+      pub const MaxRecursions: u32 = 10;
+      pub const ResourceSymbolLimit: u32 = 10;
+      pub const PartsLimit: u32 = 3;
+      pub const MaxPriorities: u32 = 3;
+      pub const CollectionSymbolLimit: u32 = 100;
+}
+
+impl pallet_rmrk_core::Config for Runtime {
+    type Event = Event;
+    type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
+    type MaxRecursions = MaxRecursions;
+    type ResourceSymbolLimit = ResourceSymbolLimit;
+    type PartsLimit = PartsLimit;
+    type MaxPriorities = MaxPriorities;
+    type CollectionSymbolLimit = CollectionSymbolLimit;
+}
+
+parameter_types! {
+      pub const MaxPropertiesPerTheme: u32 = 100;
+      pub const MaxCollectionsEquippablePerPart: u32 = 100;
+}
+
+impl pallet_rmrk_equip::Config for Runtime {
+    type Event = Event;
+    type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+    type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+}
+
+parameter_types! {
+      pub const ClassDeposit: Balance = 10 * MILLIUNIT;
+      pub const InstanceDeposit: Balance = UNIT;
+      pub const KeyLimit: u32 = 32;
+      pub const ValueLimit: u32 = 256;
+      pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
+      pub const AttributeDepositBase: Balance = 10 * MILLIUNIT;
+      pub const DepositPerByte: Balance = MILLIUNIT;
+      pub const UniquesStringLimit: u32 = 128;
+}
+
+impl pallet_uniques::Config for Runtime {
+    type Event = Event;
+    type ClassId = u32;
+    type InstanceId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+    type Locker = pallet_rmrk_core::Pallet<Runtime>;
+    type ClassDeposit = ClassDeposit;
+    type InstanceDeposit = InstanceDeposit;
+    type MetadataDepositBase = UniquesMetadataDepositBase;
+    type AttributeDepositBase = AttributeDepositBase;
+    type DepositPerByte = DepositPerByte;
+    type StringLimit = UniquesStringLimit;
+    type KeyLimit = KeyLimit;
+    type ValueLimit = ValueLimit;
+    type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -710,6 +827,7 @@ construct_runtime!(
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+            Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
 
         // Collator support. The order of there 4 are important and shale not change.
         Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,
@@ -731,10 +849,11 @@ construct_runtime!(
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
-        Ips: ips::{Pallet, Call, Storage, Event<T>} = 71,
-        Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 72,
-        Ipl: ipl::{Pallet, Call, Storage, Event<T>} = 73,
-        //Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 74,
+        INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+
+        Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
+        RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
+        RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
     }
 );
 

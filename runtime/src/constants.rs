@@ -4,7 +4,7 @@ pub mod currency {
     /// The existential deposit. Set to 1/10 of its parent Relay Chain (v9010).
     pub const EXISTENTIAL_DEPOSIT: Balance = 10 * CENTS;
 
-    pub const UNITS: Balance = 10_000_000_000;
+    pub const UNITS: Balance = 1000_000_000_000;
     pub const DOLLARS: Balance = UNITS;
     pub const CENTS: Balance = UNITS / 100; // 100_000_000
     pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
