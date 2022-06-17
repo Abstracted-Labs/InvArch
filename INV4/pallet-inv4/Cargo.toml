@@ -27,6 +27,7 @@ rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-fea
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
 
 sp-sandbox = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.22", default-features = false }
+parity-wasm = { version = "0.42.0", default-features = false }
 
 
 # InvArch dependencies

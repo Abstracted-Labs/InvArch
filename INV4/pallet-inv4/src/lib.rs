@@ -331,6 +331,9 @@ pub mod pallet {
         IpsInsideIpsDisabled,
 
         CantExecuteThisCall,
+
+        InvalidWasmPermission,
+        WasmPermissionFailedExecution,
     }
 
     /// Dispatch functions
