@@ -647,7 +647,7 @@ impl inv4::Config for Runtime {
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
 
-    type MaxWasmPermissionBytes = ();
+    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
 }
 
 impl pallet_sudo::Config for Runtime {
