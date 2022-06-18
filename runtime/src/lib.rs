@@ -83,10 +83,6 @@ pub use sp_runtime::BuildStorage;
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
-// use fp_rpc::TransactionStatus; TODO
-
-//use pallet_contracts::{weights::WeightInfo, AddressGenerator};
-
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
 
@@ -95,14 +91,8 @@ pub use pallet_inv4 as inv4;
 
 use inv4::ipl::LicenseList;
 
-// Runtime Constants
-//mod constants;
 // Weights
 mod weights;
-
-//pub use pallet_contracts;
-
-// use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
 
 use sp_core::crypto::ByteArray;
 
@@ -120,7 +110,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     }
 }
 
-/// The IpsId + AssetId
+/// The IpId
 type CommonId = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
@@ -230,19 +220,38 @@ impl_opaque_keys! {
     }
 }
 
-// To learn more about runtime versioning and what each of the following value means:
-//   https://substrate.dev/docs/en/knowledgebase/runtime/upgrades#runtime-versioning
+#[cfg(feature = "tinker")]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("tinker_node"),
+    impl_name: create_runtime_str!("tinker_node"),
+    authoring_version: 1,
+    spec_version: 1,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
+    state_version: 1,
+};
+
+#[cfg(feature = "brainstorm")]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("invarch-node"),
-    impl_name: create_runtime_str!("invarch-node"),
+    spec_name: create_runtime_str!("brainstorm_node"),
+    impl_name: create_runtime_str!("brainstorm_node"),
     authoring_version: 1,
-    // The version of the runtime specification. A full node will not attempt to use its native
-    //   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
-    //   `spec_version`, and `authoring_version` are the same between Wasm and native.
-    // This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
-    //   the compatible custom types.
-    spec_version: 100,
+    spec_version: 1,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
+    state_version: 1,
+};
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("invarch_node"),
+    impl_name: create_runtime_str!("invarch_node"),
+    authoring_version: 1,
+    spec_version: 1,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -275,10 +284,6 @@ pub const UNIT: Balance = 1_000_000_000_000;
 pub const MILLIUNIT: Balance = 1_000_000_000;
 pub const MICROUNIT: Balance = 1_000_000;
 
-//const fn deposit(items: u32, bytes: u32) -> Balance {
-//    items as Balance * 15 * UNIT + (bytes as Balance) * 6 * UNIT
-//}
-
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 
@@ -301,6 +306,15 @@ pub fn native_version() -> NativeVersion {
         can_author_with: Default::default(),
     }
 }
+
+#[cfg(feature = "tinker")]
+pub const SS58_PREFIX: u16 = 117u16;
+
+#[cfg(feature = "brainstorm")]
+pub const SS58_PREFIX: u16 = 42u16;
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+pub const SS58_PREFIX: u16 = 42u16;
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
@@ -329,7 +343,7 @@ parameter_types! {
         })
         .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
         .build_or_panic();
-    pub const SS58Prefix: u16 = 42;
+    pub const SS58Prefix: u16 = SS58_PREFIX;
 
     pub const BlockHashCount: BlockNumber = 1200;
 }
@@ -564,8 +578,6 @@ impl pallet_collator_selection::Config for Runtime {
     type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
-// ------ InvArch Modules ---
-
 parameter_types! {
     // The maximum size of an IPF's metadata
     pub const MaxIpfMetadata: u32 = 10000;
@@ -658,65 +670,7 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
-// parameter_types! {
-//     pub const MaxValueSize: u32 = 16 * 1024;
-//     // The lazy deletion runs inside on_initialize.
-//     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
-//         RuntimeBlockWeights::get().max_block;
-//     // The weight needed for decoding the queue should be less or equal than a fifth
-//     // of the overall weight dedicated to the lazy deletion.
-//     pub DeletionQueueDepth: u32 = ((DeletionWeightLimit::get() / (
-//             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(1) -
-//             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
-//         )) / 5) as u32;
-//     pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
-// }
-
-// pub struct DeployingAddress;
-
-// impl AddressGenerator<Runtime> for DeployingAddress {
-//     fn generate_address(
-//         deploying_address: &<Runtime as frame_system::Config>::AccountId,
-//         _code_hash: &<Runtime as frame_system::Config>::Hash,
-//         _salt: &[u8],
-//     ) -> <Runtime as frame_system::Config>::AccountId {
-//         deploying_address.clone().into()
-//     }
-// }
-
-// impl pallet_contracts::Config for Runtime {
-//     type Time = Timestamp;
-//     type Randomness = RandomnessCollectiveFlip;
-//     type Currency = Balances;
-//     type Event = Event;
-//     type Call = Call;
-//     /// The safest default is to allow no calls at all.
-//     ///
-//     /// Runtimes should whitelist dispatchables that are allowed to be called from contracts
-//     /// and make sure they are stable. Dispatchables exposed to contracts are not allowed to
-//     /// change because that would break already deployed contracts. The `Call` structure itself
-//     /// is not allowed to change the indices of existing pallets, too.
-//     type CallFilter = frame_support::traits::Nothing;
-//     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-//     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-//     type ChainExtension = ();
-//     type DeletionQueueDepth = DeletionQueueDepth;
-//     type DeletionWeightLimit = DeletionWeightLimit;
-//     type Schedule = Schedule;
-//     type CallStack = [pallet_contracts::Frame<Self>; 31];
-
-//     type DepositPerByte = ExistentialDeposit;
-//     type DepositPerItem = ExistentialDeposit;
-//     type AddressGenerator = DeployingAddress;
-// }
-
 impl pallet_randomness_collective_flip::Config for Runtime {}
-
-// impl pallet_smartip::Config for Runtime {
-//     type Event = Event;
-//     type Currency = Balances;
-//     type ExistentialDeposit = ExistentialDeposit;
-// }
 
 impl pallet_utility::Config for Runtime {
     type Event = Event;
@@ -823,11 +777,29 @@ parameter_types! {
     pub const MaxVestingSchedules: u32 = 2u32;
 }
 
+#[cfg(feature = "tinker")]
 parameter_types! {
       pub InvarchAccounts: Vec<AccountId> = vec![
-            hex_literal::hex!["5336f96b54fa1832d517549bbffdfba2cbd8983b8dcf65caff82d616014f5951"].into(), // TODO: Add InvArch Accounts.
-            TreasuryPalletId::get().into_account_truncating(),
+          // Tinker Root Account (i53Pqi67ocj66W81cJNrUvjjoM3RcAsGhXVTzREs5BRfwLnd7)
+          hex_literal::hex!["f430c3461d19cded0bb3195af29d2b0379a96836c714ceb8e64d3f10902cec55"].into(),
+          // Tinker Rewards Account (i4zTcKHr38MbSUrhFLVKHG5iULhYttBVrqVon2rv6iWcxQwQQ)
+          hex_literal::hex!["725bf57f1243bf4b06e911a79eb954d1fe1003f697ef5db9640e64d6e30f9a42"].into(),
+          TreasuryPalletId::get().into_account_truncating(),
       ];
+}
+
+#[cfg(feature = "brainstorm")]
+parameter_types! {
+    pub InvarchAccounts: Vec<AccountId> = vec![
+        TreasuryPalletId::get().into_account_truncating(),
+    ];
+}
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+parameter_types! {
+    pub InvarchAccounts: Vec<AccountId> = vec![
+        TreasuryPalletId::get().into_account_truncating(),
+    ];
 }
 
 pub struct EnsureInvarchAccount;
@@ -1053,56 +1025,6 @@ impl_runtime_apis! {
             Executive::execute_block_no_check(block)
         }
     }
-
-    // impl pallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
-    //     for Runtime
-    // {
-    //     fn call(
-    //         origin: AccountId,
-    //         dest: AccountId,
-    //         value: Balance,
-    //         gas_limit: u64,
-    //         o: Option<Balance>,
-    //         input_data: Vec<u8>,
-    //     ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
-    //         Contracts::bare_call(
-    //             origin, dest, value, gas_limit, o, input_data,
-    //             CONTRACTS_DEBUG_OUTPUT
-    //         )
-    //     }
-
-    //     fn instantiate(
-    //         origin: AccountId,
-    //         endowment: Balance,
-    //         gas_limit: u64,
-    //         o: Option<Balance>,
-    //         code: pallet_contracts_primitives::Code<Hash>,
-    //         data: Vec<u8>,
-    //         salt: Vec<u8>,
-    //     ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
-    //     {
-    //         Contracts::bare_instantiate(origin, endowment, gas_limit, o, code, data, salt,
-    //             CONTRACTS_DEBUG_OUTPUT
-    //         )
-    //     }
-
-    //     fn get_storage(
-    //         address: AccountId,
-    //         key: [u8; 32],
-    //     ) -> pallet_contracts_primitives::GetStorageResult {
-    //         Contracts::get_storage(address, key)
-    //     }
-
-    //     fn upload_code(origin: AccountId, code: Vec<u8>, o: Option<Balance>) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance> {
-    //         Contracts::bare_upload_code(origin, code, o)
-    //     }
-
-    //     // fn rent_projection(
-    //     //     address: AccountId,
-    //     // )-> pallet_contracts_primitives::RentProjectionResult<BlockNumber> {
-    //     //     Contracts::rent_projection(address)
-    //     // }
-    // }
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
