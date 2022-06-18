@@ -4,7 +4,7 @@ use frame_support::{
     dispatch::{CallMetadata, Dispatchable, GetCallMetadata, GetDispatchInfo, RawOrigin},
     pallet_prelude::*,
     traits::WrapperKeepOpaque,
-    weights::WeightToFeePolynomial,
+    weights::WeightToFee,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{utils::multi_account_id, OneOrPercent, Parentage, SubIptInfo};
@@ -208,7 +208,7 @@ impl<T: Config> Pallet<T> {
                 <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
                     multi_account_id::<T, T::IpId>(ipt_id.0, None),
                 ),
-                <T as pallet::Config>::Balance::from(T::WeightToFeePolynomial::calc(
+                <T as pallet::Config>::Balance::from(T::WeightToFeePolynomial::weight_to_fee(
                     &call.get_dispatch_info().weight,
                 ))
                 .into(),
@@ -242,7 +242,7 @@ impl<T: Config> Pallet<T> {
                         multi_account_id::<T, T::IpId>(ipt_id.0, None),
                     ),
                     <T as pallet::Config>::Balance::from(
-                        (T::WeightToFeePolynomial::calc(&call.get_dispatch_info().weight)
+                        (T::WeightToFeePolynomial::weight_to_fee(&call.get_dispatch_info().weight)
                             / total_per_threshold.into())
                             * owner_balance.into(),
                     )
@@ -369,7 +369,7 @@ impl<T: Config> Pallet<T> {
                 };
 
             let fee: <T as pallet::Config>::Balance =
-                T::WeightToFeePolynomial::calc(&old_data.call_weight).into();
+                T::WeightToFeePolynomial::weight_to_fee(&old_data.call_weight).into();
 
             if (total_in_operation + voter_balance) > total_per_threshold {
                 pallet_balances::Pallet::<T>::transfer(
@@ -421,7 +421,7 @@ impl<T: Config> Pallet<T> {
                             multi_account_id::<T, T::IpId>(ipt_id.0, None),
                         ),
                         <T as pallet::Config>::Balance::from(
-                            (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                            (T::WeightToFeePolynomial::weight_to_fee(&old_data.call_weight)
                                 / total_per_threshold.into())
                                 * voter_balance.into(),
                         )
@@ -513,7 +513,7 @@ impl<T: Config> Pallet<T> {
                             signer.0.clone(),
                         ),
                         <T as pallet::Config>::Balance::from(
-                            (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                            (T::WeightToFeePolynomial::weight_to_fee(&old_data.call_weight)
                                 / total_per_threshold.into())
                                 * Balance::<T>::get((ipt_id.0, signer.1), signer.0)
                                     .ok_or(Error::<T>::UnknownError)?
@@ -593,7 +593,7 @@ impl<T: Config> Pallet<T> {
                     )),
                     <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner),
                     <T as pallet::Config>::Balance::from(
-                        (T::WeightToFeePolynomial::calc(&old_data.call_weight)
+                        (T::WeightToFeePolynomial::weight_to_fee(&old_data.call_weight)
                             / total_per_threshold.into())
                             * voter_balance.into(),
                     )

@@ -65,8 +65,8 @@ pub mod pallet {
         + pallet_balances::Config
         + pallet_rmrk_core::Config
         + pallet_uniques::Config<
-            ClassId = rmrk_traits::primitives::CollectionId,
-            InstanceId = rmrk_traits::primitives::NftId,
+            CollectionId = rmrk_traits::primitives::CollectionId,
+            ItemId = rmrk_traits::primitives::NftId,
         >
     {
         /// The IPS Pallet Events
