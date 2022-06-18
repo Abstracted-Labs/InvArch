@@ -31,6 +31,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
+use frame_support::dispatch::RawOrigin;
+use frame_support::pallet_prelude::EnsureOrigin;
 pub use frame_support::{
     construct_runtime, match_types, parameter_types,
     traits::{
@@ -62,7 +64,9 @@ use sp_core::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+    traits::{
+        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify,
+    },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
 };
@@ -117,7 +121,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 /// The IpsId + AssetId
-type CommonId = u64;
+type CommonId = u32;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -751,9 +755,10 @@ impl pallet_treasury::Config for Runtime {
 parameter_types! {
       pub const MaxRecursions: u32 = 10;
       pub const ResourceSymbolLimit: u32 = 10;
-      pub const PartsLimit: u32 = 3;
-      pub const MaxPriorities: u32 = 3;
+      pub const PartsLimit: u32 = 25;
+      pub const MaxPriorities: u32 = 25;
       pub const CollectionSymbolLimit: u32 = 100;
+      pub const MaxResourcesOnMint: u32 = 100;
 }
 
 impl pallet_rmrk_core::Config for Runtime {
@@ -764,6 +769,7 @@ impl pallet_rmrk_core::Config for Runtime {
     type PartsLimit = PartsLimit;
     type MaxPriorities = MaxPriorities;
     type CollectionSymbolLimit = CollectionSymbolLimit;
+    type MaxResourcesOnMint = MaxResourcesOnMint;
 }
 
 parameter_types! {
@@ -778,8 +784,8 @@ impl pallet_rmrk_equip::Config for Runtime {
 }
 
 parameter_types! {
-      pub const ClassDeposit: Balance = 10 * MILLIUNIT;
-      pub const InstanceDeposit: Balance = UNIT;
+      pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
+      pub const ItemDeposit: Balance = UNIT;
       pub const KeyLimit: u32 = 32;
       pub const ValueLimit: u32 = 256;
       pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
@@ -790,14 +796,14 @@ parameter_types! {
 
 impl pallet_uniques::Config for Runtime {
     type Event = Event;
-    type ClassId = u32;
-    type InstanceId = u32;
+    type CollectionId = CommonId;
+    type ItemId = CommonId;
     type Currency = Balances;
-    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type ForceOrigin = EnsureRoot<AccountId>;
     type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
     type Locker = pallet_rmrk_core::Pallet<Runtime>;
-    type ClassDeposit = ClassDeposit;
-    type InstanceDeposit = InstanceDeposit;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
     type MetadataDepositBase = UniquesMetadataDepositBase;
     type AttributeDepositBase = AttributeDepositBase;
     type DepositPerByte = DepositPerByte;
@@ -805,6 +811,59 @@ impl pallet_uniques::Config for Runtime {
     type KeyLimit = KeyLimit;
     type ValueLimit = ValueLimit;
     type WeightInfo = ();
+}
+
+impl orml_xcm::Config for Runtime {
+    type Event = Event;
+    type SovereignOrigin = EnsureRoot<AccountId>;
+}
+
+parameter_types! {
+    pub const MinVestedTransfer: Balance = UNIT * 100;
+    pub const MaxVestingSchedules: u32 = 2u32;
+}
+
+parameter_types! {
+      pub InvarchAccounts: Vec<AccountId> = vec![
+            hex_literal::hex!["5336f96b54fa1832d517549bbffdfba2cbd8983b8dcf65caff82d616014f5951"].into(), // TODO: Add InvArch Accounts.
+            TreasuryPalletId::get().into_account_truncating(),
+      ];
+}
+
+pub struct EnsureInvarchAccount;
+impl EnsureOrigin<Origin> for EnsureInvarchAccount {
+    type Success = AccountId;
+
+    fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+        Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+            RawOrigin::Signed(caller) => {
+                if InvarchAccounts::get().contains(&caller) {
+                    Ok(caller)
+                } else {
+                    Err(Origin::from(Some(caller)))
+                }
+            }
+            r => Err(Origin::from(r)),
+        })
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn successful_origin() -> Origin {
+        let zero_account_id =
+            AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("infinite length input; no invalid inputs for type; qed");
+        Origin::from(RawOrigin::Signed(zero_account_id))
+    }
+}
+
+impl orml_vesting::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type MinVestedTransfer = MinVestedTransfer;
+    type VestedTransferOrigin = EnsureInvarchAccount;
+    type WeightInfo = ();
+    type MaxVestingSchedules = MaxVestingSchedules;
+    type BlockNumberProvider = System;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -853,6 +912,9 @@ construct_runtime!(
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
         RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
+
+        OrmlXcm: orml_xcm = 90,
+        Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
     }
 );
 

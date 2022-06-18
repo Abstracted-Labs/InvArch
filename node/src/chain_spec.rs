@@ -283,10 +283,6 @@ pub fn local_testnet_config() -> ChainSpec {
     )
 }
 
-pub fn tinkernet_config() -> Result<ChainSpec, String> {
-    ChainSpec::from_json_bytes(&include_bytes!("../res/tinker-spec-raw.json")[..])
-}
-
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
     root_key: AccountId,
@@ -340,6 +336,7 @@ fn testnet_genesis(
             key: Some(root_key),
         },
         treasury: Default::default(),
+        vesting: Default::default(),
         // evm: EVMConfig {
         //     accounts: {
         //         let mut map = BTreeMap::new();
