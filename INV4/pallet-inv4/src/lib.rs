@@ -25,7 +25,7 @@ use frame_support::{
     dispatch::Dispatchable,
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get, GetCallMetadata},
-    weights::{GetDispatchInfo, PostDispatchInfo, WeightToFeePolynomial},
+    weights::{GetDispatchInfo, PostDispatchInfo, WeightToFee},
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -94,9 +94,8 @@ pub mod pallet {
             + TypeInfo
             + Sum<<Self as pallet::Config>::Balance>
             + IsType<<Self as pallet_balances::Config>::Balance>
-            + IsType<
-                <<Self as pallet::Config>::WeightToFeePolynomial as WeightToFeePolynomial>::Balance,
-            >;
+            + IsType<<<Self as pallet::Config>::WeightToFee as WeightToFee>::Balance>
+            + From<u128>;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
@@ -111,7 +110,7 @@ pub mod pallet {
             + GetCallMetadata
             + Encode;
 
-        type WeightToFeePolynomial: WeightToFeePolynomial;
+        type WeightToFee: WeightToFee;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
@@ -282,8 +281,6 @@ pub mod pallet {
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
         PermissionSet(T::IpId, T::IpId, [u8; 2], BoolOrWasm<T>),
         WeightSet(T::IpId, T::IpId, OneOrPercent),
-
-        Debug(Vec<u8>, u32, u32),
     }
 
     /// Errors for IPF pallet
@@ -334,13 +331,15 @@ pub mod pallet {
 
         InvalidWasmPermission,
         WasmPermissionFailedExecution,
+
+        DivisionByZero,
     }
 
     /// Dispatch functions
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Create IP (Intellectual Property) Set (IPS)
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        #[pallet::weight(900_000_000)]
         pub fn create_ips(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -350,7 +349,7 @@ pub mod pallet {
             ipl_execution_threshold: OneOrPercent,
             ipl_default_asset_weight: OneOrPercent,
             ipl_default_permission: bool,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             Pallet::<T>::inner_create_ips(
                 owner,
                 metadata,
@@ -387,7 +386,7 @@ pub mod pallet {
         // TODO: Rewrite
 
         /// Append new assets to an IP Set
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn append(
             owner: OriginFor<T>,
             ips_id: T::IpId,
@@ -398,7 +397,7 @@ pub mod pallet {
         }
 
         /// Remove assets from an IP Set
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn remove(
             owner: OriginFor<T>,
             ips_id: T::IpId,
@@ -409,13 +408,13 @@ pub mod pallet {
         }
 
         /// Allows replicas of this IPS to be made.
-        #[pallet::weight(100_000)]
+        #[pallet::weight(300_000_000)]
         pub fn allow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
             Pallet::<T>::inner_allow_replica(owner, ips_id)
         }
 
         /// Disallows replicas of this IPS to be made.
-        #[pallet::weight(100_000)]
+        #[pallet::weight(100_000_000)]
         pub fn disallow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
             Pallet::<T>::inner_disallow_replica(owner, ips_id)
         }
@@ -439,7 +438,7 @@ pub mod pallet {
         //     )
         // }
 
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(100_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -449,7 +448,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
 
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(100_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -459,7 +458,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
 
-        #[pallet::weight(100_000)]
+        #[pallet::weight(100_000_000)]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             include_caller: bool,
@@ -469,7 +468,7 @@ pub mod pallet {
             Pallet::<T>::inner_operate_multisig(caller, include_caller, ipt_id, call)
         }
 
-        #[pallet::weight(100_000)]
+        #[pallet::weight(100_000_000)]
         pub fn vote_multisig(
             caller: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -478,7 +477,7 @@ pub mod pallet {
             Pallet::<T>::inner_vote_multisig(caller, ipt_id, call_hash)
         }
 
-        #[pallet::weight(100_000)]
+        #[pallet::weight(100_000_000)]
         pub fn withdraw_vote_multisig(
             caller: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -487,7 +486,7 @@ pub mod pallet {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, ipt_id, call_hash)
         }
 
-        #[pallet::weight(100_000)]
+        #[pallet::weight(100_000_000)]
         pub fn create_sub_asset(
             caller: OriginFor<T>,
             ipt_id: T::IpId,
@@ -496,7 +495,7 @@ pub mod pallet {
             Pallet::<T>::inner_create_sub_asset(caller, ipt_id, sub_assets)
         }
 
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(100_000_000)] // TODO: Set correct weight
         pub fn set_permission(
             owner: OriginFor<T>,
             ipl_id: T::IpId,
@@ -507,7 +506,7 @@ pub mod pallet {
             Pallet::<T>::inner_set_permission(owner, ipl_id, sub_asset, call_metadata, permission)
         }
 
-        #[pallet::weight(100_000)] // TODO: Set correct weight
+        #[pallet::weight(100_000_000)] // TODO: Set correct weight
         pub fn set_asset_weight(
             owner: OriginFor<T>,
             ipl_id: T::IpId,

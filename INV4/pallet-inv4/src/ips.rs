@@ -26,7 +26,7 @@ impl<T: Config> Pallet<T> {
         ipl_execution_threshold: OneOrPercent,
         ipl_default_asset_weight: OneOrPercent,
         ipl_default_permission: bool,
-    ) -> DispatchResultWithPostInfo {
+    ) -> DispatchResult {
         // IPS inside IPS disabled for now. Needs rewrite.
         ensure!(
             !assets
@@ -36,7 +36,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::IpsInsideIpsDisabled
         );
 
-        NextIpId::<T>::try_mutate(|ips_id| -> DispatchResultWithPostInfo {
+        NextIpId::<T>::try_mutate(|ips_id| -> DispatchResult {
             let creator = ensure_signed(owner.clone())?;
 
             let bounded_metadata: BoundedVec<u8, T::MaxMetadata> = metadata
@@ -115,13 +115,14 @@ impl<T: Config> Pallet<T> {
                 owner.clone(),
                 T::Lookup::unlookup(ips_account.clone()),
                 <T as pallet_balances::Config>::ExistentialDeposit::get(),
-            )?;
+            )
+            .map_err(|error_with_post_info| error_with_post_info.error)?;
 
             Balance::<T>::insert::<
                 (<T as Config>::IpId, Option<<T as Config>::IpId>),
                 T::AccountId,
                 <T as Config>::Balance,
-            >((current_id, None), creator, One::one());
+            >((current_id, None), creator, 1000000u128.into());
 
             let info = IpInfo {
                 parentage: Parentage::Parent(ips_account.clone()),
@@ -145,7 +146,7 @@ impl<T: Config> Pallet<T> {
 
             Self::deposit_event(Event::Created(ips_account, current_id));
 
-            Ok(().into())
+            Ok(())
         })
     }
 
