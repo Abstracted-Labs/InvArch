@@ -3322,6 +3322,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pallet-inv4+rmrk#9730ca989497f47c243e0f48d205e397e38fbc01"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5622,6 +5623,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pallet-inv4+rmrk#9730ca989497f47c243e0f48d205e397e38fbc01"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5648,6 +5650,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pallet-inv4+rmrk#9730ca989497f47c243e0f48d205e397e38fbc01"
 dependencies = [
  "frame-support",
  "frame-system",
