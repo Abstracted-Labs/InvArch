@@ -408,13 +408,13 @@ pub mod pallet {
         }
 
         /// Allows replicas of this IPS to be made.
-        #[pallet::weight(300_000_000)]
+        #[pallet::weight(200_000_000)]
         pub fn allow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
             Pallet::<T>::inner_allow_replica(owner, ips_id)
         }
 
         /// Disallows replicas of this IPS to be made.
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(200_000_000)]
         pub fn disallow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
             Pallet::<T>::inner_disallow_replica(owner, ips_id)
         }
@@ -438,7 +438,7 @@ pub mod pallet {
         //     )
         // }
 
-        #[pallet::weight(100_000_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -448,7 +448,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
 
-        #[pallet::weight(100_000_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
             owner: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -458,7 +458,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
 
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(350_000_000)]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             include_caller: bool,
@@ -468,7 +468,7 @@ pub mod pallet {
             Pallet::<T>::inner_operate_multisig(caller, include_caller, ipt_id, call)
         }
 
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(350_000_000)]
         pub fn vote_multisig(
             caller: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -477,7 +477,7 @@ pub mod pallet {
             Pallet::<T>::inner_vote_multisig(caller, ipt_id, call_hash)
         }
 
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(250_000_000)]
         pub fn withdraw_vote_multisig(
             caller: OriginFor<T>,
             ipt_id: (T::IpId, Option<T::IpId>),
@@ -486,7 +486,7 @@ pub mod pallet {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, ipt_id, call_hash)
         }
 
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(200_000_000)]
         pub fn create_sub_asset(
             caller: OriginFor<T>,
             ipt_id: T::IpId,
@@ -495,7 +495,7 @@ pub mod pallet {
             Pallet::<T>::inner_create_sub_asset(caller, ipt_id, sub_assets)
         }
 
-        #[pallet::weight(100_000_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_permission(
             owner: OriginFor<T>,
             ipl_id: T::IpId,
@@ -506,7 +506,7 @@ pub mod pallet {
             Pallet::<T>::inner_set_permission(owner, ipl_id, sub_asset, call_metadata, permission)
         }
 
-        #[pallet::weight(100_000_000)] // TODO: Set correct weight
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_asset_weight(
             owner: OriginFor<T>,
             ipl_id: T::IpId,
