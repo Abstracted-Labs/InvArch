@@ -438,6 +438,14 @@ parameter_types! {
     pub const WeightToFeeScalar: Balance = 150;
 }
 
+pub struct ToStakingPot;
+impl OnUnbalanced<NegativeImbalance> for ToStakingPot {
+    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
+        let staking_pot = PotId::get().into_account_truncating();
+        Balances::resolve_creating(&staking_pot, amount);
+    }
+}
+
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 pub struct DealWithFees;
@@ -448,7 +456,11 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
                 // Merge with fee, for now we send everything to the treasury
                 tips.merge_into(&mut fees);
             }
-            Treasury::on_unbalanced(fees);
+
+            let (to_collators, to_treasury) = fees.ration(10, 90);
+
+            Treasury::on_unbalanced(to_treasury);
+            ToStakingPot::on_unbalanced(to_collators);
         }
     }
 }
@@ -543,7 +555,7 @@ impl pallet_aura::Config for Runtime {
 
 parameter_types! {
     pub const PotId: PalletId = PalletId(*b"PotStake");
-    pub const MaxCandidates: u32 = 1000;
+    pub const MaxCandidates: u32 = 50;
     pub const MinCandidates: u32 = 5;
     pub const SessionLength: BlockNumber = 6 * HOURS;
     pub const MaxInvulnerables: u32 = 100;
