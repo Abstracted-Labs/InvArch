@@ -1,16 +1,18 @@
 pub mod currency {
     use crate::Balance;
 
-    /// The existential deposit. Set to 1/10 of its parent Relay Chain (v9010).
-    pub const EXISTENTIAL_DEPOSIT: Balance = 10 * CENTS;
+    pub const UNIT: Balance = 1_000_000_000_000;
+    pub const MILLIUNIT: Balance = 1_000_000_000;
+    pub const MICROUNIT: Balance = 1_000_000;
 
-    pub const UNITS: Balance = 1000_000_000_000;
-    pub const DOLLARS: Balance = UNITS;
-    pub const CENTS: Balance = UNITS / 100; // 100_000_000
-    pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+    pub const CENTS: Balance = UNIT / 10_000;
+    pub const MILLICENTS: Balance = CENTS / 1_000;
 
+    // Almost same as Kusama
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
-        // 1/10 of Polkadot v9010
-        (items as Balance * 20 * DOLLARS + (bytes as Balance) * 100 * MILLICENTS) / 10
+        items as Balance * 2_000 * CENTS + (bytes as Balance) * 100 * MILLICENTS
     }
 }
+
+/// The IpId
+pub type CommonId = u32;

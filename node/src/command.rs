@@ -30,13 +30,9 @@ use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
     NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
-use sc_service::{
-    config::{BasePath, PrometheusConfig},
-    TaskManager,
-};
+use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::AccountIdConversion;
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
 use std::{io::Write, net::SocketAddr};
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -298,8 +294,9 @@ pub fn run() -> Result<()> {
                 // we don't need any of the components of new_partial, just a runtime, or a task
                 // manager to do `async_run`.
                 let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                let task_manager = TaskManager::new(config.tokio_handle.clone(), registry)
-                    .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
+                let task_manager =
+                    sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                        .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
 
                 Ok((
                     cmd.run::<Block, TemplateRuntimeExecutor>(config),

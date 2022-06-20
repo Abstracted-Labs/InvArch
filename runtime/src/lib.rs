@@ -14,12 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with InvArch.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The InvArch Runtime.
-//!
-//! Primary features of this runtime include:
-//! * IPF, IPS, IPT
-//! * SmartIP
-
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
@@ -31,22 +25,20 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
-use frame_support::dispatch::RawOrigin;
-use frame_support::pallet_prelude::EnsureOrigin;
 pub use frame_support::{
     construct_runtime, match_types, parameter_types,
     traits::{
-        AsEnsureOriginWithArg, Contains, Currency, Everything, FindAuthor, Imbalance,
-        KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
+        Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
-        constants::RocksDbWeight,
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         ConstantMultiplier, DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient,
         WeightToFeeCoefficients, WeightToFeePolynomial,
     },
     BoundedVec, ConsensusEngineId, PalletId,
 };
+use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
 use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
@@ -57,12 +49,7 @@ use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{
-    crypto::KeyTypeId,
-    OpaqueMetadata,
-    H160,
-    // U256,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
@@ -111,8 +98,8 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     }
 }
 
-/// The IpId
-type CommonId = u32;
+mod constants;
+use constants::{currency::*, *};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -252,11 +239,6 @@ pub const DAYS: BlockNumber = HOURS * 24;
 // Prints debug output of the `contracts` pallet to stdout if the node is
 // started with `-lruntime::contracts=debug`.
 pub const CONTRACTS_DEBUG_OUTPUT: bool = true;
-
-// Contract price units
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
 
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
@@ -841,6 +823,45 @@ impl orml_vesting::Config for Runtime {
     type BlockNumberProvider = System;
 }
 
+parameter_types! {
+    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+        RuntimeBlockWeights::get().max_block;
+    // Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+    pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+    pub const MaxScheduledPerBlock: u32 = 50u32;
+}
+
+impl pallet_scheduler::Config for Runtime {
+    type Event = Event;
+    type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = ();
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+    // Max size 4MB allowed: 4096 * 1024
+    pub const PreimageMaxSize: u32 = 4096 * 1024;
+      pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+      pub const PreimageByteDeposit: Balance = deposit(0, 1);
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = ();
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -856,6 +877,8 @@ construct_runtime!(
         } = 2,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
+        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 6,
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
