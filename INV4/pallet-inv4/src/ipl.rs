@@ -26,6 +26,12 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
+        // Wasm permissions disabled for now. Too new for Tinkernet.
+        ensure!(
+            matches!(permission, BoolOrWasm::<T>::Bool(_)),
+            Error::<T>::WasmPermissionsDisabled
+        );
+
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
         match ip.parentage {

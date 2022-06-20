@@ -309,29 +309,40 @@ pub mod pallet {
         /// Replicas of this IPS are not allowed
         ReplicaNotAllowed,
 
+        /// IP not found
         IpDoesntExist,
         NotEnoughAmount,
+        /// Max amount of multisig signers reached
         TooManySignatories,
         UnexistentBalance,
         MultisigOperationUninitialized,
         CouldntDecodeCall,
+        /// Multisig operation already exists and is available for voting
         MultisigOperationAlreadyExists,
         NotAVoter,
         UnknownError,
+        /// Sub-asset not found
         SubAssetNotFound,
+        /// Sub-asset already exists
         SubAssetAlreadyExists,
+        /// Max amount of sub-assets reached
         TooManySubAssets,
+        /// This sub-asset has no permission to execute this call
         SubAssetHasNoPermission,
         FailedDivision,
         CallHasTooFewBytes,
 
+        /// IPS inside of another IPS is disabled temporarily
         IpsInsideIpsDisabled,
+        /// Wasm IPL Permissions are disabled temporarily
+        WasmPermissionsDisabled,
 
         CantExecuteThisCall,
 
         InvalidWasmPermission,
         WasmPermissionFailedExecution,
 
+        /// Division by 0 happened somewhere, maybe you have IPT assets with no decimal points?
         DivisionByZero,
     }
 
