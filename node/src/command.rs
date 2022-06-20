@@ -99,7 +99,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn description() -> String {
-        "InvArch Parachain Collator\n\nThe command-line arguments provided first will be \
+        "InvArch Tinkernet Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		parachain-collator <parachain-args> -- <relay-chain-args>"
@@ -291,30 +291,27 @@ pub fn run() -> Result<()> {
                 }
             }
         }
+        #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
-            if cfg!(feature = "try-runtime") {
-                let runner = cli.create_runner(cmd)?;
+            let runner = cli.create_runner(cmd)?;
+            runner.async_run(|config| {
+                // we don't need any of the components of new_partial, just a runtime, or a task
+                // manager to do `async_run`.
+                let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                let task_manager = TaskManager::new(config.tokio_handle.clone(), registry)
+                    .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
 
-                // grab the task manager.
-                let registry = &runner
-                    .config()
-                    .prometheus_config
-                    .as_ref()
-                    .map(|cfg| &cfg.registry);
-                let task_manager =
-                    TaskManager::new(runner.config().tokio_handle.clone(), *registry)
-                        .map_err(|e| format!("Error: {:?}", e))?;
-
-                runner.async_run(|config| {
-                    Ok((
-                        cmd.run::<Block, TemplateRuntimeExecutor>(config),
-                        task_manager,
-                    ))
-                })
-            } else {
-                Err("Try-runtime must be enabled by `--features try-runtime`.".into())
-            }
+                Ok((
+                    cmd.run::<Block, TemplateRuntimeExecutor>(config),
+                    task_manager,
+                ))
+            })
         }
+
+        #[cfg(not(feature = "try-runtime"))]
+        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+                 You can enable it with `--features try-runtime`."
+            .into()),
         None => {
             let mut runner = cli.create_runner(&cli.run.normalize())?;
 

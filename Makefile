@@ -4,6 +4,12 @@ check:
 build:
 	cargo build --release
 
+build-tinker:
+	cargo build --release --features tinker
+
+build-brainstorm:
+	cargo build --release --features brainstorm
+
 test:
 	cargo test
 

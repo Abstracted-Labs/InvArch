@@ -76,7 +76,7 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", optional = true }
 
 ## Polkadot dependencies Dependencies
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.24" }
@@ -112,4 +112,7 @@ runtime-benchmarks = [
     "polkadot-cli/runtime-benchmarks"
     ]
 #contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
-try-runtime = ["invarch-runtime/try-runtime"]
+try-runtime = [
+    "invarch-runtime/try-runtime",
+    "try-runtime-cli",
+]
