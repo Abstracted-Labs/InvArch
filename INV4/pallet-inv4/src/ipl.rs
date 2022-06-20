@@ -1,7 +1,6 @@
 use super::pallet::*;
 use frame_support::pallet_prelude::*;
-use frame_system::ensure_signed;
-use frame_system::pallet_prelude::*;
+use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, Parentage};
 
 use parity_wasm::elements::{ExportEntry, ImportEntry};

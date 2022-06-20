@@ -18,8 +18,7 @@
 #![allow(clippy::unused_unit)]
 
 use frame_support::{ensure, traits::Get, BoundedVec, Parameter};
-use frame_system::ensure_signed;
-use frame_system::pallet_prelude::OriginFor;
+use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use primitives::IpfInfo;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};

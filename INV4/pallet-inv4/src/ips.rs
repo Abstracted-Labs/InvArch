@@ -1,16 +1,12 @@
 use super::pallet::*;
 use crate::ipl::LicenseList;
 use frame_support::pallet_prelude::*;
-use frame_system::ensure_signed;
-use frame_system::pallet_prelude::*;
-use primitives::utils::multi_account_id;
-use primitives::IpInfo;
-use primitives::{IpsType, OneOrPercent, Parentage};
+use frame_system::{ensure_signed, pallet_prelude::*};
+use primitives::{utils::multi_account_id, IpInfo, IpsType, OneOrPercent, Parentage};
 use rmrk_traits::{Collection, Nft};
 use sp_arithmetic::traits::{CheckedAdd, One, Zero};
 use sp_runtime::traits::StaticLookup;
-use sp_std::convert::TryInto;
-use sp_std::vec::Vec;
+use sp_std::{convert::TryInto, vec::Vec};
 
 pub type IpsIndexOf<T> = <T as Config>::IpId;
 

@@ -30,9 +30,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
-use sp_std::boxed::Box;
-use sp_std::convert::TryInto;
-use sp_std::vec::Vec;
+use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
 /// Import the primitives crate
 use primitives::IpInfo;
@@ -50,9 +48,7 @@ pub mod pallet {
     use scale_info::prelude::fmt::Display;
     use sp_std::iter::Sum;
 
-    pub use super::ipl;
-    pub use super::ips;
-    pub use super::ipt;
+    pub use super::{ipl, ips, ipt};
 
     use crate::ipl::LicenseList;
 
