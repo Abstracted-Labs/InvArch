@@ -536,7 +536,7 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_types! {
-    pub const PotId: PalletId = PalletId(*b"PotStake");
+    pub const PotId: PalletId = PalletId(*b"ia/Potst");
     pub const MaxCandidates: u32 = 50;
     pub const MinCandidates: u32 = 5;
     pub const SessionLength: BlockNumber = 6 * HOURS;
@@ -981,16 +981,16 @@ impl pallet_rmrk_core::Config for Runtime {
     type MaxResourcesOnMint = MaxResourcesOnMint;
 }
 
-parameter_types! {
-      pub const MaxPropertiesPerTheme: u32 = 100;
-      pub const MaxCollectionsEquippablePerPart: u32 = 100;
-}
+// parameter_types! {
+//       pub const MaxPropertiesPerTheme: u32 = 100;
+//       pub const MaxCollectionsEquippablePerPart: u32 = 100;
+// }
 
-impl pallet_rmrk_equip::Config for Runtime {
-    type Event = Event;
-    type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
-    type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
-}
+// impl pallet_rmrk_equip::Config for Runtime {
+//     type Event = Event;
+//     type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+//     type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+// }
 
 parameter_types! {
       pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
@@ -1179,7 +1179,7 @@ construct_runtime!(
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
-        RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
+     //   RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
