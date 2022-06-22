@@ -14,12 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with InvArch.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The InvArch Runtime.
-//!
-//! Primary features of this runtime include:
-//! * IPF, IPS, IPT
-//! * SmartIP
-
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
@@ -31,48 +25,44 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
-use ipl::LicenseList;
-use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+pub use frame_support::{
+    construct_runtime, match_types, parameter_types,
+    traits::{
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
+        Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
+    },
+    weights::{
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+        ConstantMultiplier, DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient,
+        WeightToFeeCoefficients, WeightToFeePolynomial,
+    },
+    BoundedVec, ConsensusEngineId, PalletId,
+};
+use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
+use frame_system::{
+    limits::{BlockLength, BlockWeights},
+    EnsureRoot, EnsureSigned,
+};
+use pallet_transaction_payment::Multiplier;
+use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
-use sp_core::{
-    crypto::KeyTypeId,
-    OpaqueMetadata,
-    H160,
-    // U256,
-};
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+    traits::{
+        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify,
+    },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
 };
+pub use sp_runtime::{Perbill, Permill};
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-pub use frame_support::{
-    construct_runtime, match_type, parameter_types,
-    traits::{
-        Contains, Currency, Everything, FindAuthor, Imbalance, KeyOwnerProofSystem, Nothing,
-        OnUnbalanced, Randomness, StorageInfo,
-    },
-    weights::{
-        constants::RocksDbWeight,
-        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-        DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-        WeightToFeePolynomial,
-    },
-    ConsensusEngineId, PalletId,
-};
-use frame_system::{
-    limits::{BlockLength, BlockWeights},
-    EnsureRoot,
-};
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-pub use sp_runtime::{Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
@@ -81,30 +71,16 @@ pub use sp_runtime::BuildStorage;
 use xcm::latest::prelude::BodyId;
 use xcm_executor::XcmExecutor;
 
-// use fp_rpc::TransactionStatus; TODO
-
-//use pallet_contracts::{weights::WeightInfo, AddressGenerator};
-
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
 
-/// Import the ips pallet.
-pub use pallet_ips as ips;
+/// Import the inv4 pallet.
+pub use pallet_inv4 as inv4;
 
-/// Import the ipt pallet.
-pub use pallet_ipt as ipt;
+use inv4::ipl::LicenseList;
 
-/// Import the ipl pallet.
-pub use pallet_ipl as ipl;
-
-// Runtime Constants
-//mod constants;
 // Weights
 mod weights;
-
-//pub use pallet_contracts;
-
-// use pallet_evm::{EnsureAddressTruncated, HashedAddressMapping};
 
 use sp_core::crypto::ByteArray;
 
@@ -122,42 +98,8 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     }
 }
 
-#[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
-pub enum InvArchLicenses {
-    Apache2,
-    GPLv3,
-    Custom(Vec<u8>, Hash),
-}
-
-impl LicenseList for InvArchLicenses {
-    type IpfsHash = Hash; // License IPFS hash.
-    type LicenseMetadata = Vec<u8>; // License name.
-
-    fn get_hash_and_metadata(&self) -> (Self::LicenseMetadata, Self::IpfsHash) {
-        match self {
-            InvArchLicenses::Apache2 => (
-                vec![65, 112, 97, 99, 104, 97, 32, 118, 50, 46, 48],
-                [
-                    7, 57, 92, 251, 234, 183, 217, 144, 220, 196, 201, 132, 176, 249, 18, 224, 237,
-                    201, 2, 113, 146, 78, 111, 152, 92, 71, 16, 228, 87, 39, 81, 142,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::GPLv3 => (
-                vec![71, 78, 85, 32, 71, 80, 76, 32, 118, 51],
-                [
-                    72, 7, 169, 24, 30, 7, 200, 69, 232, 27, 10, 138, 130, 253, 91, 158, 210, 95,
-                    127, 37, 85, 41, 106, 136, 66, 116, 64, 35, 252, 195, 69, 253,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::Custom(metadata, hash) => (metadata.clone(), *hash),
-        }
-    }
-}
-
-/// The IpsId + AssetId
-type CommonId = u64;
+mod constants;
+use constants::{currency::*, *};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -216,33 +158,6 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
 >;
 
-/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
-/// node's balance type.
-///
-/// This should typically create a mapping between the following ranges:
-///   - `[0, MAXIMUM_BLOCK_WEIGHT]`
-///   - `[Balance::min, Balance::max]`
-///
-/// Yet, it can be used for any other sort of change to weight-fee. Some example being:
-///   - Setting it to `0` will essentially disable the weight fee.
-///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
-pub struct WeightToFee;
-impl WeightToFeePolynomial for WeightToFee {
-    type Balance = Balance;
-    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-        // in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
-        // in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
-        let p = MILLIUNIT / 10;
-        let q = 100 * Balance::from(ExtrinsicBaseWeight::get());
-        smallvec![WeightToFeeCoefficient {
-            degree: 1,
-            negative: false,
-            coeff_frac: Perbill::from_rational(p % q, q),
-            coeff_integer: p / q,
-        }]
-    }
-}
-
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -266,19 +181,38 @@ impl_opaque_keys! {
     }
 }
 
-// To learn more about runtime versioning and what each of the following value means:
-//   https://substrate.dev/docs/en/knowledgebase/runtime/upgrades#runtime-versioning
+#[cfg(feature = "tinker")]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("tinker_node"),
+    impl_name: create_runtime_str!("tinker_node"),
+    authoring_version: 1,
+    spec_version: 1,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
+    state_version: 1,
+};
+
+#[cfg(feature = "brainstorm")]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("invarch-node"),
-    impl_name: create_runtime_str!("invarch-node"),
+    spec_name: create_runtime_str!("brainstorm_node"),
+    impl_name: create_runtime_str!("brainstorm_node"),
     authoring_version: 1,
-    // The version of the runtime specification. A full node will not attempt to use its native
-    //   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
-    //   `spec_version`, and `authoring_version` are the same between Wasm and native.
-    // This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
-    //   the compatible custom types.
-    spec_version: 100,
+    spec_version: 1,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 1,
+    state_version: 1,
+};
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("invarch_node"),
+    impl_name: create_runtime_str!("invarch_node"),
+    authoring_version: 1,
+    spec_version: 1,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -306,15 +240,6 @@ pub const DAYS: BlockNumber = HOURS * 24;
 // started with `-lruntime::contracts=debug`.
 pub const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
-// Contract price units
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
-
-//const fn deposit(items: u32, bytes: u32) -> Balance {
-//    items as Balance * 15 * UNIT + (bytes as Balance) * 6 * UNIT
-//}
-
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 
@@ -337,6 +262,15 @@ pub fn native_version() -> NativeVersion {
         can_author_with: Default::default(),
     }
 }
+
+#[cfg(feature = "tinker")]
+pub const SS58_PREFIX: u16 = 117u16;
+
+#[cfg(feature = "brainstorm")]
+pub const SS58_PREFIX: u16 = 42u16;
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+pub const SS58_PREFIX: u16 = 42u16;
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
@@ -365,7 +299,7 @@ parameter_types! {
         })
         .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
         .build_or_panic();
-    pub const SS58Prefix: u16 = 42;
+    pub const SS58Prefix: u16 = SS58_PREFIX;
 
     pub const BlockHashCount: BlockNumber = 1200;
 }
@@ -476,12 +410,22 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-    // Relay Chain `TransactionByteFee` / 10
+    /// Relay Chain `TransactionByteFee` / 10
     pub const TransactionByteFee: Balance = 10 * MICROUNIT;
     pub const OperationalFeeMultiplier: u8 = 5;
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
+
+    pub const WeightToFeeScalar: Balance = 150;
+}
+
+pub struct ToStakingPot;
+impl OnUnbalanced<NegativeImbalance> for ToStakingPot {
+    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
+        let staking_pot = PotId::get().into_account_truncating();
+        Balances::resolve_creating(&staking_pot, amount);
+    }
 }
 
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
@@ -494,18 +438,37 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
                 // Merge with fee, for now we send everything to the treasury
                 tips.merge_into(&mut fees);
             }
-            Treasury::on_unbalanced(fees);
+
+            let (to_collators, to_treasury) = fees.ration(10, 90);
+
+            Treasury::on_unbalanced(to_treasury);
+            ToStakingPot::on_unbalanced(to_collators);
         }
+    }
+}
+
+//pub type WeightToFee = ConstantMultiplier<Balance, WeightToFeeScalar>;
+
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+    type Balance = Balance;
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        let p = UNIT / 500;
+        let q = Balance::from(ExtrinsicBaseWeight::get());
+        smallvec![WeightToFeeCoefficient {
+            degree: 1,
+            negative: false,
+            coeff_frac: Perbill::from_rational(p % q, q),
+            coeff_integer: p / q,
+        }]
     }
 }
 
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
-    type TransactionByteFee = TransactionByteFee;
     type WeightToFee = WeightToFee;
-    // type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
-    type FeeMultiplierUpdate =
-        TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
@@ -573,8 +536,8 @@ impl pallet_aura::Config for Runtime {
 }
 
 parameter_types! {
-    pub const PotId: PalletId = PalletId(*b"PotStake");
-    pub const MaxCandidates: u32 = 1000;
+    pub const PotId: PalletId = PalletId(*b"ia/Potst");
+    pub const MaxCandidates: u32 = 50;
     pub const MinCandidates: u32 = 5;
     pub const SessionLength: BlockNumber = 6 * HOURS;
     pub const MaxInvulnerables: u32 = 100;
@@ -600,8 +563,6 @@ impl pallet_collator_selection::Config for Runtime {
     type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
-// ------ InvArch Modules ---
-
 parameter_types! {
     // The maximum size of an IPF's metadata
     pub const MaxIpfMetadata: u32 = 10000;
@@ -617,56 +578,346 @@ impl ipf::Config for Runtime {
 }
 
 parameter_types! {
+    pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
-    pub const MaxIptMetadata: u32 = 10000;
-}
-
-impl pallet_ipt::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type Balance = Balance;
-    type IptId = CommonId;
-    type ExistentialDeposit = ExistentialDeposit;
-    type Call = Call;
-    type MaxCallers = MaxCallers;
-    type WeightToFeePolynomial = WeightToFee;
-    type MaxSubAssets = MaxCallers;
-    type MaxIptMetadata = MaxIptMetadata;
-}
-
-parameter_types! {
     pub const MaxLicenseMetadata: u32 = 10000;
+    pub const MaxWasmPermissionBytes: u32 = 10000000;
 }
 
-impl pallet_ipl::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type Balance = Balance;
-    type IplId = CommonId;
-    type Licenses = InvArchLicenses;
-    type MaxLicenseMetadata = MaxLicenseMetadata;
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
+pub enum InvArchLicenses {
+    /// Apache License 2.0 | https://choosealicense.com/licenses/apache-2.0/
+    Apache2,
+    /// GNU General Public License v3.0 | https://choosealicense.com/licenses/gpl-3.0/
+    GPLv3,
+    /// GNU General Public License v2.0 | https://choosealicense.com/licenses/gpl-2.0/
+    GPLv2,
+    /// GNU Affero General Public License v3.0 | https://choosealicense.com/licenses/agpl-3.0/
+    AGPLv3,
+    /// GNU Lesser General Public License v3.0 | https://choosealicense.com/licenses/lgpl-3.0/
+    LGPLv3,
+    /// MIT License | https://choosealicense.com/licenses/mit/
+    MIT,
+    /// ISC License | https://choosealicense.com/licenses/isc/
+    ISC,
+    /// Mozilla Public License 2.0 | https://choosealicense.com/licenses/mpl-2.0/
+    MPLv2,
+    /// Boost Software License 1.0 | https://choosealicense.com/licenses/bsl-1.0/
+    BSLv1,
+    /// The Unlicense | https://choosealicense.com/licenses/unlicense/
+    Unlicense,
+    /// Creative Commons Zero v1.0 Universal | https://choosealicense.com/licenses/cc0-1.0/
+    CC0_1,
+    /// Creative Commons Attribution 4.0 International | https://choosealicense.com/licenses/cc-by-4.0/
+    CC_BY_4,
+    /// Creative Commons Attribution Share Alike 4.0 International | https://choosealicense.com/licenses/cc-by-sa-4.0/
+    CC_BY_SA_4,
+    /// Creative Commons Attribution-NoDerivatives 4.0 International | https://creativecommons.org/licenses/by-nd/4.0/
+    CC_BY_ND_4,
+    /// Creative Commons Attribution-NonCommercial 4.0 International | http://creativecommons.org/licenses/by-nc/4.0/
+    CC_BY_NC_4,
+    /// Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International | http://creativecommons.org/licenses/by-nc-sa/4.0/
+    CC_BY_NC_SA_4,
+    /// Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International | http://creativecommons.org/licenses/by-nc-nd/4.0/
+    CC_BY_NC_ND_4,
+    /// SIL Open Font License 1.1 | https://choosealicense.com/licenses/ofl-1.1/
+    OFL_1_1,
+    /// Dapper Labs' NFT License Version 2.0 | https://www.nftlicense.org/
+    NFT_License_2,
+    Custom(
+        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
+        <Runtime as frame_system::Config>::Hash,
+    ),
 }
 
-parameter_types! {
+impl LicenseList<Runtime> for InvArchLicenses {
+    fn get_hash_and_metadata(
+        &self,
+    ) -> (
+        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
+        <Runtime as frame_system::Config>::Hash,
+    ) {
+        match self {
+            InvArchLicenses::Apache2 => (
+                vec![
+                    65, 112, 97, 99, 104, 101, 32, 76, 105, 99, 101, 110, 115, 101, 32, 50, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    7, 57, 92, 251, 234, 183, 217, 144, 220, 196, 201, 132, 176, 249, 18, 224, 237,
+                    201, 2, 113, 146, 78, 111, 152, 92, 71, 16, 228, 87, 39, 81, 142,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::GPLv3 => (
+                vec![
+                    71, 78, 85, 32, 71, 101, 110, 101, 114, 97, 108, 32, 80, 117, 98, 108, 105, 99,
+                    32, 76, 105, 99, 101, 110, 115, 101, 32, 118, 51, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    72, 7, 169, 24, 30, 7, 200, 69, 232, 27, 10, 138, 130, 253, 91, 158, 210, 95,
+                    127, 37, 85, 41, 106, 136, 66, 116, 64, 35, 252, 195, 69, 253,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::GPLv2 => (
+                vec![
+                    71, 78, 85, 32, 71, 101, 110, 101, 114, 97, 108, 32, 80, 117, 98, 108, 105, 99,
+                    32, 76, 105, 99, 101, 110, 115, 101, 32, 118, 50, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    83, 11, 214, 48, 75, 23, 172, 31, 175, 110, 63, 110, 178, 73, 2, 178, 184, 21,
+                    246, 188, 76, 84, 217, 226, 18, 136, 59, 165, 230, 221, 238, 176,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::AGPLv3 => (
+                vec![
+                    71, 78, 85, 32, 65, 102, 102, 101, 114, 111, 32, 71, 101, 110, 101, 114, 97,
+                    108, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105, 99, 101, 110, 115, 101, 32,
+                    118, 51, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    16, 157, 152, 89, 106, 226, 188, 217, 72, 112, 106, 206, 65, 165, 183, 196, 92,
+                    139, 38, 166, 5, 26, 115, 178, 28, 146, 161, 129, 62, 94, 35, 237,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::LGPLv3 => (
+                vec![
+                    71, 78, 85, 32, 76, 101, 115, 115, 101, 114, 32, 71, 101, 110, 101, 114, 97,
+                    108, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105, 99, 101, 110, 115, 101, 32,
+                    118, 51, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    41, 113, 123, 121, 57, 73, 217, 57, 239, 157, 246, 130, 231, 72, 190, 228, 200,
+                    196, 32, 236, 163, 234, 84, 132, 137, 143, 25, 250, 176, 138, 20, 72,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::MIT => (
+                vec![77, 73, 84, 32, 76, 105, 99, 101, 110, 115, 101]
+                    .try_into()
+                    .unwrap(),
+                [
+                    30, 110, 34, 127, 171, 16, 29, 6, 239, 45, 145, 39, 222, 102, 84, 140, 102,
+                    230, 120, 249, 189, 170, 34, 83, 199, 156, 9, 49, 150, 152, 11, 200,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::ISC => (
+                vec![73, 83, 67, 32, 76, 105, 99, 101, 110, 115, 101]
+                    .try_into()
+                    .unwrap(),
+                [
+                    119, 124, 140, 27, 203, 222, 251, 174, 95, 70, 118, 187, 129, 69, 225, 96, 227,
+                    232, 195, 7, 229, 132, 185, 27, 190, 77, 151, 87, 106, 54, 147, 44,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::MPLv2 => (
+                vec![
+                    77, 111, 122, 105, 108, 108, 97, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105,
+                    99, 101, 110, 115, 101, 32, 50, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    22, 230, 111, 228, 166, 207, 221, 50, 16, 229, 13, 232, 100, 77, 102, 184, 158,
+                    79, 129, 211, 209, 102, 176, 109, 87, 105, 70, 160, 64, 123, 111, 125,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::BSLv1 => (
+                vec![
+                    66, 111, 111, 115, 116, 32, 83, 111, 102, 116, 119, 97, 114, 101, 32, 76, 105,
+                    99, 101, 110, 115, 101, 32, 49, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    174, 124, 16, 124, 106, 249, 123, 122, 241, 56, 223, 75, 59, 68, 65, 204, 73,
+                    69, 88, 196, 145, 163, 233, 220, 238, 63, 99, 237, 91, 2, 44, 204,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::Unlicense => (
+                vec![84, 104, 101, 32, 85, 110, 108, 105, 99, 101, 110, 115, 101]
+                    .try_into()
+                    .unwrap(),
+                [
+                    208, 213, 16, 2, 240, 247, 235, 52, 119, 223, 47, 248, 137, 215, 165, 255, 76,
+                    216, 178, 1, 189, 80, 159, 6, 76, 219, 36, 87, 18, 95, 66, 69,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC0_1 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    90, 101, 114, 111, 32, 118, 49, 46, 48, 32, 85, 110, 105, 118, 101, 114, 115,
+                    97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    157, 190, 198, 99, 94, 106, 166, 7, 57, 110, 33, 230, 148, 72, 5, 109, 159,
+                    142, 83, 41, 164, 67, 188, 195, 189, 191, 36, 11, 61, 171, 27, 20,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 32, 52, 46, 48, 32, 73,
+                    110, 116, 101, 114, 110, 97, 116, 105, 111, 110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    40, 210, 60, 93, 221, 27, 242, 205, 66, 90, 61, 65, 117, 72, 161, 102, 0, 242,
+                    255, 168, 0, 82, 46, 245, 187, 126, 239, 220, 22, 231, 141, 195,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_SA_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 32, 83, 104, 97, 114, 101,
+                    32, 65, 108, 105, 107, 101, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110,
+                    97, 116, 105, 111, 110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    250, 189, 246, 254, 64, 139, 178, 19, 24, 92, 176, 241, 128, 91, 98, 105, 205,
+                    149, 22, 98, 175, 178, 74, 187, 181, 189, 44, 158, 64, 117, 224, 61,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_ND_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 68, 101, 114,
+                    105, 118, 97, 116, 105, 118, 101, 115, 32, 52, 46, 48, 32, 73, 110, 116, 101,
+                    114, 110, 97, 116, 105, 111, 110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    50, 75, 4, 246, 125, 55, 242, 42, 183, 14, 224, 101, 36, 251, 72, 169, 71, 35,
+                    92, 129, 50, 38, 165, 223, 90, 240, 205, 149, 113, 56, 115, 85,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_NC_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
+                    109, 109, 101, 114, 99, 105, 97, 108, 32, 52, 46, 48, 32, 73, 110, 116, 101,
+                    114, 110, 97, 116, 105, 111, 110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    30, 62, 213, 3, 26, 115, 233, 140, 111, 241, 54, 179, 119, 44, 203, 198, 240,
+                    172, 227, 68, 101, 15, 57, 156, 29, 234, 167, 155, 66, 200, 219, 146,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_NC_SA_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
+                    109, 109, 101, 114, 99, 105, 97, 108, 45, 83, 104, 97, 114, 101, 65, 108, 105,
+                    107, 101, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110, 97, 116, 105, 111,
+                    110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    52, 186, 173, 229, 107, 225, 22, 146, 198, 254, 191, 247, 180, 34, 43, 39, 219,
+                    40, 4, 143, 186, 8, 23, 44, 210, 224, 186, 201, 166, 41, 158, 121,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::CC_BY_NC_ND_4 => (
+                vec![
+                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
+                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
+                    109, 109, 101, 114, 99, 105, 97, 108, 45, 78, 111, 68, 101, 114, 105, 118, 97,
+                    116, 105, 118, 101, 115, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110, 97,
+                    116, 105, 111, 110, 97, 108,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    127, 207, 189, 44, 174, 24, 37, 236, 169, 209, 80, 31, 171, 44, 32, 63, 200,
+                    40, 59, 177, 185, 27, 199, 7, 96, 93, 98, 43, 219, 226, 216, 52,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::OFL_1_1 => (
+                vec![
+                    83, 73, 76, 32, 79, 112, 101, 110, 32, 70, 111, 110, 116, 32, 76, 105, 99, 101,
+                    110, 115, 101, 32, 49, 46, 49,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    44, 228, 173, 234, 177, 180, 217, 203, 36, 28, 127, 255, 113, 162, 181, 151,
+                    240, 101, 203, 142, 246, 219, 177, 3, 77, 139, 82, 210, 87, 200, 140, 196,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::NFT_License_2 => (
+                vec![
+                    78, 70, 84, 32, 76, 105, 99, 101, 110, 115, 101, 32, 86, 101, 114, 115, 105,
+                    111, 110, 32, 50, 46, 48,
+                ]
+                .try_into()
+                .unwrap(),
+                [
+                    126, 111, 159, 224, 78, 176, 72, 197, 201, 197, 30, 50, 31, 166, 61, 182, 81,
+                    131, 149, 233, 202, 149, 92, 62, 241, 34, 86, 196, 64, 243, 112, 152,
+                ]
+                .into(),
+            ),
+            InvArchLicenses::Custom(metadata, hash) => (metadata.clone(), *hash),
+        }
+    }
+}
+
+impl inv4::Config for Runtime {
     // The maximum size of an IPS's metadata
-    pub const MaxIpsMetadata: u32 = 10000;
-}
-
-impl ips::Config for Runtime {
-    // The maximum size of an IPS's metadata
-    type MaxIpsMetadata = MaxIpsMetadata;
+    type MaxMetadata = MaxMetadata;
     // The IPS ID type
-    type IpsId = CommonId;
+    type IpId = CommonId;
     // The IPS Pallet Events
     type Event = Event;
     // Currency
     type Currency = Balances;
-    // The IpsData type (Vector of IPFs)
-    type IpsData = Vec<<Runtime as ipf::Config>::IpfId>;
     // The ExistentialDeposit
     type ExistentialDeposit = ExistentialDeposit;
 
     type Balance = Balance;
+
+    type Call = Call;
+    type MaxCallers = MaxCallers;
+    type WeightToFee = WeightToFee;
+    type MaxSubAssets = MaxCallers;
+    type Licenses = InvArchLicenses;
+
+    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -674,65 +925,7 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
-// parameter_types! {
-//     pub const MaxValueSize: u32 = 16 * 1024;
-//     // The lazy deletion runs inside on_initialize.
-//     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
-//         RuntimeBlockWeights::get().max_block;
-//     // The weight needed for decoding the queue should be less or equal than a fifth
-//     // of the overall weight dedicated to the lazy deletion.
-//     pub DeletionQueueDepth: u32 = ((DeletionWeightLimit::get() / (
-//             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(1) -
-//             <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
-//         )) / 5) as u32;
-//     pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
-// }
-
-// pub struct DeployingAddress;
-
-// impl AddressGenerator<Runtime> for DeployingAddress {
-//     fn generate_address(
-//         deploying_address: &<Runtime as frame_system::Config>::AccountId,
-//         _code_hash: &<Runtime as frame_system::Config>::Hash,
-//         _salt: &[u8],
-//     ) -> <Runtime as frame_system::Config>::AccountId {
-//         deploying_address.clone().into()
-//     }
-// }
-
-// impl pallet_contracts::Config for Runtime {
-//     type Time = Timestamp;
-//     type Randomness = RandomnessCollectiveFlip;
-//     type Currency = Balances;
-//     type Event = Event;
-//     type Call = Call;
-//     /// The safest default is to allow no calls at all.
-//     ///
-//     /// Runtimes should whitelist dispatchables that are allowed to be called from contracts
-//     /// and make sure they are stable. Dispatchables exposed to contracts are not allowed to
-//     /// change because that would break already deployed contracts. The `Call` structure itself
-//     /// is not allowed to change the indices of existing pallets, too.
-//     type CallFilter = frame_support::traits::Nothing;
-//     type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-//     type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
-//     type ChainExtension = ();
-//     type DeletionQueueDepth = DeletionQueueDepth;
-//     type DeletionWeightLimit = DeletionWeightLimit;
-//     type Schedule = Schedule;
-//     type CallStack = [pallet_contracts::Frame<Self>; 31];
-
-//     type DepositPerByte = ExistentialDeposit;
-//     type DepositPerItem = ExistentialDeposit;
-//     type AddressGenerator = DeployingAddress;
-// }
-
 impl pallet_randomness_collective_flip::Config for Runtime {}
-
-// impl pallet_smartip::Config for Runtime {
-//     type Event = Event;
-//     type Currency = Balances;
-//     type ExistentialDeposit = ExistentialDeposit;
-// }
 
 impl pallet_utility::Config for Runtime {
     type Event = Event;
@@ -768,6 +961,177 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBondMaximum = ();
 }
 
+parameter_types! {
+      pub const MaxRecursions: u32 = 10;
+      pub const ResourceSymbolLimit: u32 = 10;
+      pub const PartsLimit: u32 = 25;
+      pub const MaxPriorities: u32 = 25;
+      pub const CollectionSymbolLimit: u32 = 100;
+      pub const MaxResourcesOnMint: u32 = 100;
+}
+
+impl pallet_rmrk_core::Config for Runtime {
+    type Event = Event;
+    type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
+    type MaxRecursions = MaxRecursions;
+    type ResourceSymbolLimit = ResourceSymbolLimit;
+    type PartsLimit = PartsLimit;
+    type MaxPriorities = MaxPriorities;
+    type CollectionSymbolLimit = CollectionSymbolLimit;
+    type MaxResourcesOnMint = MaxResourcesOnMint;
+}
+
+// parameter_types! {
+//       pub const MaxPropertiesPerTheme: u32 = 100;
+//       pub const MaxCollectionsEquippablePerPart: u32 = 100;
+// }
+
+// impl pallet_rmrk_equip::Config for Runtime {
+//     type Event = Event;
+//     type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+//     type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+// }
+
+parameter_types! {
+      pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
+      pub const ItemDeposit: Balance = UNIT;
+      pub const KeyLimit: u32 = 32;
+      pub const ValueLimit: u32 = 256;
+      pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
+      pub const AttributeDepositBase: Balance = 10 * MILLIUNIT;
+      pub const DepositPerByte: Balance = MILLIUNIT;
+      pub const UniquesStringLimit: u32 = 128;
+}
+
+impl pallet_uniques::Config for Runtime {
+    type Event = Event;
+    type CollectionId = CommonId;
+    type ItemId = CommonId;
+    type Currency = Balances;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+    type Locker = pallet_rmrk_core::Pallet<Runtime>;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
+    type MetadataDepositBase = UniquesMetadataDepositBase;
+    type AttributeDepositBase = AttributeDepositBase;
+    type DepositPerByte = DepositPerByte;
+    type StringLimit = UniquesStringLimit;
+    type KeyLimit = KeyLimit;
+    type ValueLimit = ValueLimit;
+    type WeightInfo = ();
+}
+
+impl orml_xcm::Config for Runtime {
+    type Event = Event;
+    type SovereignOrigin = EnsureRoot<AccountId>;
+}
+
+parameter_types! {
+    pub const MinVestedTransfer: Balance = UNIT * 100;
+    pub const MaxVestingSchedules: u32 = 2u32;
+}
+
+#[cfg(feature = "tinker")]
+parameter_types! {
+      pub InvarchAccounts: Vec<AccountId> = vec![
+          // Tinker Root Account (i53Pqi67ocj66W81cJNrUvjjoM3RcAsGhXVTzREs5BRfwLnd7)
+          hex_literal::hex!["f430c3461d19cded0bb3195af29d2b0379a96836c714ceb8e64d3f10902cec55"].into(),
+          // Tinker Rewards Account (i4zTcKHr38MbSUrhFLVKHG5iULhYttBVrqVon2rv6iWcxQwQQ)
+          hex_literal::hex!["725bf57f1243bf4b06e911a79eb954d1fe1003f697ef5db9640e64d6e30f9a42"].into(),
+          TreasuryPalletId::get().into_account_truncating(),
+      ];
+}
+
+#[cfg(feature = "brainstorm")]
+parameter_types! {
+    pub InvarchAccounts: Vec<AccountId> = vec![
+        TreasuryPalletId::get().into_account_truncating(),
+    ];
+}
+
+#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
+parameter_types! {
+    pub InvarchAccounts: Vec<AccountId> = vec![
+        TreasuryPalletId::get().into_account_truncating(),
+    ];
+}
+
+pub struct EnsureInvarchAccount;
+impl EnsureOrigin<Origin> for EnsureInvarchAccount {
+    type Success = AccountId;
+
+    fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+        Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+            RawOrigin::Signed(caller) => {
+                if InvarchAccounts::get().contains(&caller) {
+                    Ok(caller)
+                } else {
+                    Err(Origin::from(Some(caller)))
+                }
+            }
+            r => Err(Origin::from(r)),
+        })
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn successful_origin() -> Origin {
+        let zero_account_id =
+            AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("infinite length input; no invalid inputs for type; qed");
+        Origin::from(RawOrigin::Signed(zero_account_id))
+    }
+}
+
+impl orml_vesting::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type MinVestedTransfer = MinVestedTransfer;
+    type VestedTransferOrigin = EnsureInvarchAccount;
+    type WeightInfo = ();
+    type MaxVestingSchedules = MaxVestingSchedules;
+    type BlockNumberProvider = System;
+}
+
+parameter_types! {
+    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+        RuntimeBlockWeights::get().max_block;
+    // Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+    pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+    pub const MaxScheduledPerBlock: u32 = 50u32;
+}
+
+impl pallet_scheduler::Config for Runtime {
+    type Event = Event;
+    type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = ();
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+    // Max size 4MB allowed: 4096 * 1024
+    pub const PreimageMaxSize: u32 = 4096 * 1024;
+      pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+      pub const PreimageByteDeposit: Balance = deposit(0, 1);
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = ();
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -783,6 +1147,8 @@ construct_runtime!(
         } = 2,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
+        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 6,
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
@@ -809,10 +1175,14 @@ construct_runtime!(
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
-        Ips: ips::{Pallet, Call, Storage, Event<T>} = 71,
-        Ipt: ipt::{Pallet, Call, Storage, Event<T>} = 72,
-        Ipl: ipl::{Pallet, Call, Storage, Event<T>} = 73,
-        //Smartip: pallet_smartip::{Pallet, Call, Storage, Event<T>} = 74,
+        INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+
+        Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
+        RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
+     //   RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
+
+        OrmlXcm: orml_xcm = 90,
+        Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
     }
 );
 
@@ -942,8 +1312,14 @@ impl_runtime_apis! {
     #[cfg(feature = "try-runtime")]
     impl frame_try_runtime::TryRuntime<Block> for Runtime {
         fn on_runtime_upgrade() -> (Weight, Weight) {
-            log::info!("try-runtime::on_runtime_upgrade parachain-template.");
-            let weight = Executive::try_runtime_upgrade().unwrap();
+            log::info!("try-runtime::on_runtime_upgrade.");
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+            // right here and right now.
+            let weight = Executive::try_runtime_upgrade().map_err(|err|{
+                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
+                err
+            }).unwrap();
             (weight, RuntimeBlockWeights::get().max_block)
         }
 
@@ -951,56 +1327,6 @@ impl_runtime_apis! {
             Executive::execute_block_no_check(block)
         }
     }
-
-    // impl pallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
-    //     for Runtime
-    // {
-    //     fn call(
-    //         origin: AccountId,
-    //         dest: AccountId,
-    //         value: Balance,
-    //         gas_limit: u64,
-    //         o: Option<Balance>,
-    //         input_data: Vec<u8>,
-    //     ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
-    //         Contracts::bare_call(
-    //             origin, dest, value, gas_limit, o, input_data,
-    //             CONTRACTS_DEBUG_OUTPUT
-    //         )
-    //     }
-
-    //     fn instantiate(
-    //         origin: AccountId,
-    //         endowment: Balance,
-    //         gas_limit: u64,
-    //         o: Option<Balance>,
-    //         code: pallet_contracts_primitives::Code<Hash>,
-    //         data: Vec<u8>,
-    //         salt: Vec<u8>,
-    //     ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
-    //     {
-    //         Contracts::bare_instantiate(origin, endowment, gas_limit, o, code, data, salt,
-    //             CONTRACTS_DEBUG_OUTPUT
-    //         )
-    //     }
-
-    //     fn get_storage(
-    //         address: AccountId,
-    //         key: [u8; 32],
-    //     ) -> pallet_contracts_primitives::GetStorageResult {
-    //         Contracts::get_storage(address, key)
-    //     }
-
-    //     fn upload_code(origin: AccountId, code: Vec<u8>, o: Option<Balance>) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance> {
-    //         Contracts::bare_upload_code(origin, code, o)
-    //     }
-
-    //     // fn rent_projection(
-    //     //     address: AccountId,
-    //     // )-> pallet_contracts_primitives::RentProjectionResult<BlockNumber> {
-    //     //     Contracts::rent_projection(address)
-    //     // }
-    // }
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
