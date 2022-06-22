@@ -26,19 +26,31 @@ pub enum IpsType<IpsId> {
     Replica(IpsId),
 }
 
-/// IPS info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpsInfo<AccountId, Data, IpsMetadataOf, IpsId> {
+pub enum BoolOrWasm<Wasm> {
+    Bool(bool),
+    Wasm(Wasm),
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
     /// IPS parentage
-    pub parentage: Parentage<AccountId, IpsId>,
+    pub parentage: Parentage<AccountId, IpId>,
     /// IPS metadata
     pub metadata: IpsMetadataOf,
     /// IPS Properties
     pub data: Data,
     /// IPS Type
-    pub ips_type: IpsType<IpsId>,
+    pub ips_type: IpsType<IpId>,
     /// If this IPS allows replicas
     pub allow_replica: bool,
+
+    pub supply: Balance,
+
+    pub license: (LicenseMetadata, Hash),
+    pub execution_threshold: OneOrPercent,
+    pub default_asset_weight: OneOrPercent,
+    pub default_permission: bool,
 }
 
 /// IPF Info
@@ -54,13 +66,6 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
     pub data: Data,
 }
 
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IptInfo<AccountId, Balance> {
-    pub owner: AccountId,
-    /// The total supply across all accounts.
-    pub supply: Balance,
-}
-
 // This is a struct in preparation for having more fields in the future.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
 pub struct SubIptInfo<IptId, SubAssetMetadata> {
@@ -69,25 +74,9 @@ pub struct SubIptInfo<IptId, SubAssetMetadata> {
 }
 
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct IplInfo<AccountId, IplId, LicenseMetadata, Hash> {
-    pub owner: AccountId,
-    pub id: IplId,
-    pub license: (LicenseMetadata, Hash),
-    pub execution_threshold: OneOrPercent,
-    pub default_asset_weight: OneOrPercent,
-    pub default_permission: bool,
-}
-
-#[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
 pub struct CallInfo<Data> {
     pub pallet: Data,
     pub function: Data,
-}
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub enum AnyId<IpsId, IpfId> {
-    IpsId(IpsId),
-    IpfId(IpfId),
 }
 
 pub mod utils {

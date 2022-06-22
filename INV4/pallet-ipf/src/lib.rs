@@ -18,8 +18,7 @@
 #![allow(clippy::unused_unit)]
 
 use frame_support::{ensure, traits::Get, BoundedVec, Parameter};
-use frame_system::ensure_signed;
-use frame_system::pallet_prelude::OriginFor;
+use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use primitives::IpfInfo;
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, Member, One};
 use sp_std::{convert::TryInto, vec::Vec};
@@ -112,7 +111,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Mint IPF(Intellectual Property Token) to `owner`
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        #[pallet::weight(300_000_000)]
         pub fn mint(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -145,7 +144,7 @@ pub mod pallet {
         }
 
         /// Burn IPF(Intellectual Property Token) from `owner`
-        #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
+        #[pallet::weight(300_000_000)]
         pub fn burn(owner: OriginFor<T>, ipf_id: T::IpfId) -> DispatchResult {
             IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResult {
                 let owner = ensure_signed(owner)?;
