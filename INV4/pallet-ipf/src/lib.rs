@@ -110,7 +110,8 @@ pub mod pallet {
     /// Dispatch functions
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Mint IPF(Intellectual Property Token) to `owner`
+        /// Mint IPF(Intellectual Property File) to `owner`.
+        /// i.e. create IP File
         #[pallet::weight(300_000_000)]
         pub fn mint(
             owner: OriginFor<T>,
@@ -143,7 +144,8 @@ pub mod pallet {
             })
         }
 
-        /// Burn IPF(Intellectual Property Token) from `owner`
+        /// Burn IPF(Intellectual Property File) from `owner`.
+        /// i.e. delete IP file
         #[pallet::weight(300_000_000)]
         pub fn burn(owner: OriginFor<T>, ipf_id: T::IpfId) -> DispatchResult {
             IpfStorage::<T>::try_mutate(ipf_id, |ipf_info| -> DispatchResult {
