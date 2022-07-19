@@ -118,6 +118,7 @@ pub mod pallet {
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
 
+        /// Max bytes for WASM bytecode?
         #[pallet::constant]
         type MaxWasmPermissionBytes: Get<u32>;
     }
@@ -135,6 +136,7 @@ pub mod pallet {
         <T as frame_system::Config>::Hash,
     >;
 
+    /// Valid types that an IP Set can hold
     #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
     pub enum AnyId<IpsId, IpfId, RmrkNftTuple, RmrkCollectionId> {
         IpfId(IpfId),
@@ -157,9 +159,9 @@ pub mod pallet {
     #[pallet::getter(fn next_ips_id)]
     pub type NextIpId<T: Config> = StorageValue<_, T::IpId, ValueQuery>;
 
-    /// Store IPS info
+    /// Store IPS info. Core IP Set storage
     ///
-    /// Return `None` if IPS info not set of removed
+    /// Return `None` if IPS info not set or removed
     #[pallet::storage]
     #[pallet::getter(fn ips_storage)]
     pub type IpStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpId, IpInfoOf<T>>;
@@ -176,15 +178,19 @@ pub mod pallet {
         (),
     >;
 
+    /// Details of a multisig call.
+    ///
+    /// Key: (IP Set ID, call hash)
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
-    /// Details of a multisig call.
     pub type Multisig<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::IpId, [u8; 32]), crate::ipt::MultisigOperationOf<T>>;
 
+    /// Details of a sub token.
+    ///
+    /// Key: (IP Set ID, sub token ID)
     #[pallet::storage]
     #[pallet::getter(fn sub_assets)]
-    /// Details of a sub asset.
     pub type SubAssets<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
@@ -194,9 +200,13 @@ pub mod pallet {
         SubIptInfo<T::IpId, BoundedVec<u8, T::MaxMetadata>>,
     >;
 
+    /// The holdings of a specific account for a specific token.
+    ///
+    /// Get `account123` balance for the primary token (IPT0) pegged to IP Set `id123`:
+    /// `Self::balance((id123, None), account123);`
+    /// Replace `None` with `Some(id234)` to get specific sub token balance
     #[pallet::storage]
     #[pallet::getter(fn balance)]
-    /// The holdings of a specific account for a specific asset.
     pub type Balance<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
@@ -206,9 +216,11 @@ pub mod pallet {
         <T as pallet::Config>::Balance,
     >;
 
+    /// Sub asset voting weight (non IPT0).
+    ///
+    /// Key: (IP Set ID, sub token ID)
     #[pallet::storage]
     #[pallet::getter(fn asset_weight_storage)]
-    /// Details of a multisig call.
     pub type AssetWeight<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::IpId, Blake2_128Concat, T::IpId, OneOrPercent>;
 
@@ -219,6 +231,9 @@ pub mod pallet {
 
     pub type BoolOrWasm<T> = BOW<BoundedVec<u8, <T as Config>::MaxWasmPermissionBytes>>;
 
+    /// Store WASM function? What permissions does a sub token have?
+    ///
+    /// Key: (Ip Set ID???, sub token ID???), arguments ???
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
     pub type Permissions<T: Config> = StorageDoubleMap<
@@ -233,19 +248,28 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// An IP Set was created
         Created(T::AccountId, T::IpId),
+        /// An IP Set was destroyed/deleted
         Destroyed(T::AccountId, T::IpId),
+        /// IpInfo (IPS) struct updated in storage to hold either new assets, new metadata, or both
         Appended(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdOf<T>>),
+        /// IpInfo (IPS) struct updated: assets removed from IPS. Optionally, new metadata set
         Removed(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdWithNewOwner<T>>),
+        /// Replicas of this IP Set are now allowed
         AllowedReplica(T::IpId),
+        /// Replicas of this IP Set are no longer allowed
         DisallowedReplica(T::IpId),
+        /// A replica of this IP Set was created
         ReplicaCreated(T::AccountId, T::IpId, T::IpId),
 
+        /// Sub tokens were minted/IPF was created???
         Minted(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
             <T as pallet::Config>::Balance,
         ),
+        /// Sub tokens were burned/IPF was deleted???
         Burned(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
@@ -289,6 +313,7 @@ pub mod pallet {
         /// IPS not found
         IpsNotFound,
         /// The operator has no permission
+        /// Ex: Attempting to add a file owned by another account to your IP set
         NoPermission,
         /// The IPS is already owned
         AlreadyOwned,
@@ -445,6 +470,7 @@ pub mod pallet {
         //     )
         // }
 
+        /// Mint `amount` of specified token to `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
             owner: OriginFor<T>,
@@ -455,6 +481,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
 
+        /// Burn `amount` of specified token from `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
             owner: OriginFor<T>,
@@ -493,6 +520,7 @@ pub mod pallet {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, ipt_id, call_hash)
         }
 
+        /// Create one or more sub tokens for an IP Set
         #[pallet::weight(200_000_000)]
         pub fn create_sub_asset(
             caller: OriginFor<T>,

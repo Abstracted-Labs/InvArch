@@ -48,6 +48,7 @@ pub type SubAssetsWithEndowment<T> = Vec<(
 )>;
 
 impl<T: Config> Pallet<T> {
+    /// Mint `amount` of specified token to `target` account
     pub(crate) fn inner_ipt_mint(
         owner: OriginFor<T>,
         ipt_id: (T::IpId, Option<T::IpId>),
@@ -56,8 +57,10 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
+        // IP Set must exist for their to be a token
         let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Cannot mint IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == &owner, Error::<T>::NoPermission)
@@ -65,6 +68,7 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
+        // If trying to mint more of a sub token, token must already exist
         if let Some(sub_asset) = ipt_id.1 {
             ensure!(
                 SubAssets::<T>::get(ipt_id.0, sub_asset).is_some(),
@@ -72,6 +76,7 @@ impl<T: Config> Pallet<T> {
             );
         }
 
+        // Actually mint tokens
         Pallet::<T>::internal_mint(ipt_id, target.clone(), amount)?;
 
         Self::deposit_event(Event::Minted(ipt_id, target, amount));
@@ -79,6 +84,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Burn `amount` of specified token from `target` account
     pub(crate) fn inner_ipt_burn(
         owner: OriginFor<T>,
         ipt_id: (T::IpId, Option<T::IpId>),
@@ -87,8 +93,10 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
+        // IP Set must exist for their to be a token
         let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Cannot burn IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == &owner, Error::<T>::NoPermission)
@@ -96,6 +104,7 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
+        // If trying to burn sub tokens, token must already exist
         if let Some(sub_asset) = ipt_id.1 {
             ensure!(
                 SubAssets::<T>::get(ipt_id.0, sub_asset).is_some(),
@@ -103,6 +112,7 @@ impl<T: Config> Pallet<T> {
             );
         }
 
+        // Actually burn tokens
         Pallet::<T>::internal_burn(target.clone(), ipt_id, amount)?;
 
         Self::deposit_event(Event::Burned(ipt_id, target, amount));
@@ -630,6 +640,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Create one or more sub tokens for an IP Set
     pub(crate) fn inner_create_sub_asset(
         caller: OriginFor<T>,
         ipt_id: T::IpId,
@@ -640,6 +651,7 @@ impl<T: Config> Pallet<T> {
 
             let old_ipt = ipt.clone().ok_or(Error::<T>::IpDoesntExist)?;
 
+            // Can only create sub tokens from the topmost parent?
             match old_ipt.parentage {
                 Parentage::Parent(ips_account) => {
                     ensure!(ips_account == caller, Error::<T>::NoPermission)
@@ -647,6 +659,7 @@ impl<T: Config> Pallet<T> {
                 Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
             }
 
+            // Create sub tokens, if none already exist
             for sub in sub_assets.clone() {
                 ensure!(
                     !SubAssets::<T>::contains_key(ipt_id, sub.0.id),
@@ -669,6 +682,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Mint `amount` of specified token to `target` account
     pub fn internal_mint(
         ipt_id: (T::IpId, Option<T::IpId>),
         target: T::AccountId,
@@ -677,10 +691,12 @@ impl<T: Config> Pallet<T> {
         IpStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
             Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
+                // Increase `target` account's balance of `ipt_id` sub token by `amount`
                 *balance = Some(old_balance + amount);
 
                 let mut old_ipt = ipt.take().ok_or(Error::<T>::IpDoesntExist)?;
 
+                // If minting IPT0 tokens, update supply
                 if ipt_id.1.is_none() {
                     old_ipt.supply += amount;
                 }
@@ -692,6 +708,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Burn `amount` of specified token from `target` account
     pub fn internal_burn(
         target: T::AccountId,
         ipt_id: (T::IpId, Option<T::IpId>),
@@ -700,6 +717,7 @@ impl<T: Config> Pallet<T> {
         IpStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
             Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                 let old_balance = balance.take().ok_or(Error::<T>::IpDoesntExist)?;
+                // Decrease `target` account's balance of `ipt_id` sub token by `amount`
                 *balance = Some(
                     old_balance
                         .checked_sub(&amount)
@@ -708,6 +726,7 @@ impl<T: Config> Pallet<T> {
 
                 let mut old_ipt = ipt.take().ok_or(Error::<T>::IpDoesntExist)?;
 
+                // If burning IPT0 tokens, update supply
                 if ipt_id.1.is_none() {
                     old_ipt.supply = old_ipt
                         .supply

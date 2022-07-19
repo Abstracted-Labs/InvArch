@@ -13,6 +13,7 @@ pub type IpsIndexOf<T> = <T as Config>::IpId;
 pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 
 impl<T: Config> Pallet<T> {
+    /// Create IP Set
     pub(crate) fn inner_create_ips(
         owner: OriginFor<T>,
         metadata: Vec<u8>,
@@ -39,11 +40,13 @@ impl<T: Config> Pallet<T> {
                 .try_into()
                 .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
+            // Increment counter
             let current_id = *ips_id;
             *ips_id = ips_id
                 .checked_add(&One::one())
                 .ok_or(Error::<T>::NoAvailableIpId)?;
 
+            // Verify `creator` has permission to add each item in `assets` to new IP Set
             for asset in assets.clone() {
                 match asset {
                     AnyId::IpsId(_) => (),
@@ -79,9 +82,11 @@ impl<T: Config> Pallet<T> {
                 }
             }
 
+            // Generate new `AccountId` to represent new IP Set being created
             let ips_account =
                 primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);
 
+            // Transfer ownership (issuer for `RmrkCollection`) to `ips_account` for each item in `assets`
             for asset in assets.clone() {
                 match asset {
                     AnyId::IpsId(_) => (),
@@ -107,6 +112,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
 
+            // `ips_account` needs the existential deposit, so we send that
             pallet_balances::Pallet::<T>::transfer_keep_alive(
                 owner.clone(),
                 T::Lookup::unlookup(ips_account.clone()),
@@ -114,11 +120,14 @@ impl<T: Config> Pallet<T> {
             )
             .map_err(|error_with_post_info| error_with_post_info.error)?;
 
+            // Send IP Set `creator` 1,000,000 "IPT0" tokens
+            // Token has 6 decimal places: 1,000,000 / 10^6 = 1 IPTO token
+            // This allows for token divisiblity
             Balance::<T>::insert::<
                 (<T as Config>::IpId, Option<<T as Config>::IpId>),
                 T::AccountId,
                 <T as Config>::Balance,
-            >((current_id, None), creator, 1000000u128.into());
+            >((current_id, None), creator, 1_000_000u128.into());
 
             let info = IpInfo {
                 parentage: Parentage::Parent(ips_account.clone()),
@@ -137,6 +146,7 @@ impl<T: Config> Pallet<T> {
                 default_permission: ipl_default_permission,
             };
 
+            // Update core IPS storage
             IpStorage::<T>::insert(current_id, info);
             IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
 
@@ -146,6 +156,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Append new assets to an IP Set
     pub(crate) fn inner_append(
         owner: OriginFor<T>,
         ips_id: T::IpId,
@@ -168,6 +179,7 @@ impl<T: Config> Pallet<T> {
 
             let parent_id = ips_id;
 
+            // Get highest level IPS `AccountId` in the hierarchy
             let ips_account = match info.parentage.clone() {
                 Parentage::Parent(ips_account) => ips_account,
                 Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
@@ -178,6 +190,7 @@ impl<T: Config> Pallet<T> {
                 Error::<T>::ValueNotChanged
             );
 
+            // Verify valid permission to add each item in `assets` to IP Set
             for asset in assets.clone() {
                 match asset {
                     AnyId::IpsId(_) => (),
@@ -200,6 +213,9 @@ impl<T: Config> Pallet<T> {
                             .ok_or(Error::<T>::IpfNotFound)?
                             .owner;
 
+                        // Ensure: either it's the IP Set itself or it's the IP Set with the include_caller option from multisig.
+                        // We need that second one so we can allow someone to start a multisig call to include assets
+                        // that they own without manually sending to the IPS and then starting a multisig
                         ensure!(
                             this_ipf_owner.clone() == ips_account
                                 || caller_account
@@ -215,6 +231,8 @@ impl<T: Config> Pallet<T> {
                             pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
                                 .ok_or(Error::<T>::IpfNotFound)?
                                 .owner;
+
+                        // Ensure IP Set is already owner of the NFT or owned by account initiating multisig call with `include_caller` option
                         ensure!(
                             this_rmrk_owner.clone()
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
@@ -240,6 +258,8 @@ impl<T: Config> Pallet<T> {
                             pallet_rmrk_core::Collections::<T>::get(collection_id)
                                 .ok_or(Error::<T>::IpfNotFound)?
                                 .issuer;
+                        // Ensure IP Set is already owner(issuer) of NFT collection or
+                        // initater of multisig call with `include_caller` is the owner(issuer)
                         ensure!(
                             this_rmrk_issuer.clone() == ips_account.clone()
                                 || caller_account
@@ -253,6 +273,7 @@ impl<T: Config> Pallet<T> {
                 }
             }
 
+            // Permissions have been verified, now send all assets to `ips_account`
             for asset in assets.clone() {
                 match asset {
                     AnyId::IpsId(_) => (),
@@ -323,6 +344,7 @@ impl<T: Config> Pallet<T> {
             //     }
             // }
 
+            // Update IpInfo struct in storage to hold either new assets, new metadata, or both
             *ips_info = Some(IpInfo {
                 parentage: info.parentage,
                 metadata: if let Some(metadata) = new_metadata.clone() {
@@ -365,6 +387,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Remove an asset/assets from an IP Set
     pub(crate) fn inner_remove(
         owner: OriginFor<T>,
         ips_id: T::IpId,
@@ -390,8 +413,10 @@ impl<T: Config> Pallet<T> {
                 Parentage::Child(_, absolute_parent_account) => absolute_parent_account,
             };
 
+            // Only IP Set can remove assets from itself
             ensure!(ips_account == caller_account, Error::<T>::NoPermission);
 
+            // Are any of the assets requested for removal, not in the IP Set?
             ensure!(
                 !assets
                     .clone()
@@ -402,8 +427,10 @@ impl<T: Config> Pallet<T> {
 
             let mut old_assets = info.data.clone();
 
+            // Checks passed, now send requested assets to new owners
             for any_id in assets.clone().into_iter() {
                 match any_id {
+                    // Don't do anything. Nested IPS needs rewrite
                     (AnyId::IpsId(_this_ips_id), _new_owner) => (),
                     // {
                     //     IpStorage::<T>::try_mutate_exists(this_ips_id, |ips| -> DispatchResult {
@@ -445,6 +472,8 @@ impl<T: Config> Pallet<T> {
                 }
             }
 
+            // Extract `AnyIdOf`'s from `AnyIdWithNewOwner`'s tuples
+            // Then remove all assets from `old_assets` that were transferred out of the IP Set
             let just_ids = assets
                 .clone()
                 .into_iter()
@@ -452,6 +481,7 @@ impl<T: Config> Pallet<T> {
                 .collect::<Vec<AnyIdOf<T>>>();
             old_assets.retain(|x| !just_ids.clone().contains(x));
 
+            // Update IP Set info struct in storage
             *ips_info = Some(IpInfo {
                 parentage: info.parentage,
                 metadata: if let Some(metadata) = new_metadata.clone() {
@@ -488,11 +518,13 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Allow replication for the specified IP Set
     pub(crate) fn inner_allow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
         IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
             let owner = ensure_signed(owner)?;
             let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
 
+            // Only the top-level IP Set can update the allow replica feature
             match info.parentage.clone() {
                 Parentage::Parent(ips_account) => {
                     ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -500,13 +532,16 @@ impl<T: Config> Pallet<T> {
                 Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
             }
 
+            // Can only activate feature if not already activated
             ensure!(!info.allow_replica, Error::<T>::ValueNotChanged);
 
+            // Only `Normal` (original) IP Sets can activate this feature, not `Replica`s
             ensure!(
                 !matches!(info.ips_type, IpsType::Replica(_)),
                 Error::<T>::ReplicaCannotAllowReplicas
             );
 
+            // Checks passed, now update IP Set info struct in storage
             *ips_info = Some(IpInfo {
                 parentage: info.parentage,
                 metadata: info.metadata,
@@ -528,11 +563,13 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// Disallow replication for the specified IP Set
     pub(crate) fn inner_disallow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
         IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
             let owner = ensure_signed(owner)?;
             let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
 
+            // Only the top-level IP Set can update the allow replica feature
             match info.parentage.clone() {
                 Parentage::Parent(ips_account) => {
                     ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -540,13 +577,16 @@ impl<T: Config> Pallet<T> {
                 Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
             }
 
+            // Only `Normal` (original) IP Sets can deactivate this feature, not `Replica`s
             ensure!(
                 !matches!(info.ips_type, IpsType::Replica(_)),
                 Error::<T>::ReplicaCannotAllowReplicas
             );
 
+            // Can only deactivate feature if not already deactivated
             ensure!(info.allow_replica, Error::<T>::ValueNotChanged);
 
+            // Checks passed, now update IP Set info struct in storage
             *ips_info = Some(IpInfo {
                 parentage: info.parentage,
                 metadata: info.metadata,
@@ -568,6 +608,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
+    /// DISABLED
     pub(crate) fn _inner_create_replica(
         owner: OriginFor<T>,
         original_ips_id: T::IpId,
@@ -582,16 +623,20 @@ impl<T: Config> Pallet<T> {
             let original_ips =
                 IpStorage::<T>::get(original_ips_id).ok_or(Error::<T>::IpsNotFound)?;
 
+            // Replication must be allowed
             ensure!(original_ips.allow_replica, Error::<T>::ReplicaNotAllowed);
 
             let current_id = *ips_id;
+            // Increment counter
             *ips_id = ips_id
                 .checked_add(&One::one())
                 .ok_or(Error::<T>::NoAvailableIpId)?;
 
+            // Generate new `AccountId` to represent new IP Set being created
             let ips_account =
                 primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);
 
+            // `ips_account` needs the existential deposit, so we send that
             pallet_balances::Pallet::<T>::transfer_keep_alive(
                 owner.clone(),
                 T::Lookup::unlookup(ips_account.clone()),
@@ -613,12 +658,14 @@ impl<T: Config> Pallet<T> {
                 default_permission: ipl_default_permission,
             };
 
+            // ???
             Pallet::<T>::internal_mint(
                 (current_id, None),
                 creator,
                 <T as Config>::ExistentialDeposit::get(),
             )?;
 
+            // Update core IPS storage
             IpStorage::<T>::insert(current_id, info);
             IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
 
