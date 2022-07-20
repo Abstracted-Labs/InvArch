@@ -1,7 +1,7 @@
-FROM ubuntu as builder
+FROM rust:buster as builder
 RUN apt-get update --fix-missing
-RUN apt-get install -y git && apt-get install -y curl && apt-get install -y build-essential && apt-get install -y clang && apt-get install -y jq
-RUN git clone -b development https://github.com/InvArch/InvArch-Node
+RUN apt-get install -y git && apt-get install -y curl && apt-get install -y build-essential && apt-get install -y clang && apt-get install -y jq && apt-get install -y cmake
+RUN git clone -b main https://github.com/InvArch/InvArch-Node
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     export PATH="$PATH:$HOME/.cargo/bin" && \
     cd InvArch-Node && \

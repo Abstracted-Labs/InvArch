@@ -6,11 +6,12 @@ services:
     image: invarch/inv4:latest
     build:
       dockerfile: dockerfile
-    networks:
-      - internet
+    network_mode: "host"
     ports:
       - "9944:9944"
     command:
+      - "--force-authoring"
+      - "--collator"
       - "--unsafe-ws-external"
       - "--unsafe-rpc-external"
       - "--chain=solo-dev"
@@ -22,16 +23,15 @@ services:
     image: invarch/inv4:latest
     build:
       dockerfile: dockerfile
-    networks:
-      - internet
+    network_mode: "host"
     ports:
       - "9945:9944"
     command:
+      - "--force-authoring"
+      - "--collator"
       - "--unsafe-ws-external"
       - "--unsafe-rpc-external"
       - "--chain=solo-dev"
       - "--tmp"
       - "--bob"
-
-networks:
-  internet:
+      - "--port=30335"
