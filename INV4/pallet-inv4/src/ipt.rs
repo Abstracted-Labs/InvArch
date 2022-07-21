@@ -57,7 +57,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
-        // IP Set must exist for their to be a token
+        // IP Set must exist for there to be a token
         let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Cannot mint IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
