@@ -269,7 +269,7 @@ pub mod pallet {
             T::AccountId,
             <T as pallet::Config>::Balance,
         ),
-        /// Sub tokens were burned/IPF was deleted???
+        /// Sub tokens were burned
         Burned(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
