@@ -243,7 +243,7 @@ pub mod pallet {
         /// A replica of this IP Set was created
         ReplicaCreated(T::AccountId, T::IpId, T::IpId),
 
-        /// Sub tokens were minted/IPF was created???
+        /// Sub tokens were minted
         Minted(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
