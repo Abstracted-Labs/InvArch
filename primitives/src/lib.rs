@@ -50,7 +50,7 @@ pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata
     pub ips_type: IpsType<IpId>,
     /// If this IPS allows replicas
     pub allow_replica: bool,
-    /// Specifically, the supply of IPT0 (ownership) tokens???
+    /// Specifically, the supply of IPT0 (ownership) tokens.
     pub supply: Balance,
 
     pub license: (LicenseMetadata, Hash),
