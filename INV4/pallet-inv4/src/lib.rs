@@ -117,9 +117,6 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
-
-        #[pallet::constant]
-        type MaxWasmPermissionBytes: Get<u32>;
     }
 
     pub type BalanceOf<T> =
@@ -212,23 +209,10 @@ pub mod pallet {
     pub type AssetWeight<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::IpId, Blake2_128Concat, T::IpId, OneOrPercent>;
 
-    // StorageDoubleMap Store wasm function, input = call/pallet id + arguments, output = boolean
-    // (T::IpId, T::IpId), [u8; 2] -> Wasm function or simple boolean via BoolOrWasm enum
-
-    pub use primitives::BoolOrWasm as BOW;
-
-    pub type BoolOrWasm<T> = BOW<BoundedVec<u8, <T as Config>::MaxWasmPermissionBytes>>;
-
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
-    pub type Permissions<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        (T::IpId, T::IpId),
-        Blake2_128Concat,
-        [u8; 2],
-        BoolOrWasm<T>,
-    >;
+    pub type Permissions<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, (T::IpId, T::IpId), Blake2_128Concat, [u8; 2], bool>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -275,7 +259,7 @@ pub mod pallet {
         MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
         MultisigCanceled(T::AccountId, [u8; 32]),
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
-        PermissionSet(T::IpId, T::IpId, [u8; 2], BoolOrWasm<T>),
+        PermissionSet(T::IpId, T::IpId, [u8; 2], bool),
         WeightSet(T::IpId, T::IpId, OneOrPercent),
     }
 
@@ -508,7 +492,7 @@ pub mod pallet {
             ipl_id: T::IpId,
             sub_asset: T::IpId,
             call_metadata: [u8; 2],
-            permission: BoolOrWasm<T>,
+            permission: bool,
         ) -> DispatchResult {
             Pallet::<T>::inner_set_permission(owner, ipl_id, sub_asset, call_metadata, permission)
         }
