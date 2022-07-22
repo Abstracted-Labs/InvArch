@@ -57,15 +57,18 @@ impl<T: Config> Pallet<T> {
                         );
                     }
                     AnyId::RmrkNft((collection_id, nft_id)) => {
+                        let rmrk_nft = pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
+                            .ok_or(Error::<T>::IpfNotFound)?;
+
                         ensure!(
-                            pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
-                                .ok_or(Error::<T>::IpfNotFound)?
-                                .owner
+                            rmrk_nft.owner
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
                                     creator.clone()
                                 ),
                             Error::<T>::NoPermission
                         );
+
+                        ensure!(rmrk_nft.transferable == true, Error::<T>::NoPermission);
                     }
                     AnyId::RmrkCollection(collection_id) => {
                         ensure!(
@@ -211,10 +214,9 @@ impl<T: Config> Pallet<T> {
                         );
                     }
                     AnyId::RmrkNft((collection_id, nft_id)) => {
-                        let this_rmrk_owner =
-                            pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
-                                .ok_or(Error::<T>::IpfNotFound)?
-                                .owner;
+                        let this_rmrk_nft = pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
+                            .ok_or(Error::<T>::IpfNotFound)?;
+                        let this_rmrk_owner = this_rmrk_nft.owner;
                         ensure!(
                             this_rmrk_owner.clone()
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
@@ -234,6 +236,8 @@ impl<T: Config> Pallet<T> {
                                 },
                             Error::<T>::NoPermission
                         );
+
+                        ensure!(this_rmrk_nft.transferable == true, Error::<T>::NoPermission);
                     }
                     AnyId::RmrkCollection(collection_id) => {
                         let this_rmrk_issuer =
