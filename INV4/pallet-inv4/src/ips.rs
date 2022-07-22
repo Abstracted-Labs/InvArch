@@ -129,7 +129,7 @@ impl<T: Config> Pallet<T> {
                 ips_type: IpsType::Normal,
                 allow_replica,
 
-                supply: One::one(),
+                supply: 1000000u128.into(),
 
                 license: ipl_license.get_hash_and_metadata(),
                 execution_threshold: ipl_execution_threshold,
