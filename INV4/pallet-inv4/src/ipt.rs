@@ -137,7 +137,8 @@ impl<T: Config> Pallet<T> {
         let total_issuance = ipt.supply
             + SubAssets::<T>::iter_prefix_values(ipt_id.0)
                 .map(|sub_asset| {
-                    let supply = IpStorage::<T>::get(sub_asset.id)?.supply;
+                    let supply =
+                        Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id))).sum();
 
                     if let OneOrPercent::ZeroPoint(weight) =
                         Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
@@ -202,7 +203,7 @@ impl<T: Config> Pallet<T> {
             Error::<T>::MultisigOperationAlreadyExists
         );
 
-        if owner_balance > total_per_threshold {
+        if owner_balance >= total_per_threshold {
             pallet_balances::Pallet::<T>::transfer(
                 caller,
                 <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
@@ -344,7 +345,8 @@ impl<T: Config> Pallet<T> {
             let total_issuance = ipt.supply
                 + SubAssets::<T>::iter_prefix_values(ipt_id.0)
                     .map(|sub_asset| {
-                        let supply = IpStorage::<T>::get(sub_asset.id)?.supply;
+                        let supply =
+                            Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id))).sum();
 
                         if let OneOrPercent::ZeroPoint(weight) =
                             Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
@@ -371,7 +373,7 @@ impl<T: Config> Pallet<T> {
             let fee: <T as pallet::Config>::Balance =
                 T::WeightToFee::weight_to_fee(&old_data.call_weight).into();
 
-            if (total_in_operation + voter_balance) > total_per_threshold {
+            if (total_in_operation + voter_balance) >= total_per_threshold {
                 pallet_balances::Pallet::<T>::transfer(
                     caller,
                     <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
