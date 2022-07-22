@@ -68,7 +68,7 @@ impl<T: Config> Pallet<T> {
                             Error::<T>::NoPermission
                         );
 
-                        ensure!(rmrk_nft.transferable == true, Error::<T>::NoPermission);
+                        ensure!(rmrk_nft.transferable, Error::<T>::NoPermission);
                     }
                     AnyId::RmrkCollection(collection_id) => {
                         ensure!(
@@ -237,7 +237,7 @@ impl<T: Config> Pallet<T> {
                             Error::<T>::NoPermission
                         );
 
-                        ensure!(this_rmrk_nft.transferable == true, Error::<T>::NoPermission);
+                        ensure!(this_rmrk_nft.transferable, Error::<T>::NoPermission);
                     }
                     AnyId::RmrkCollection(collection_id) => {
                         let this_rmrk_issuer =
