@@ -26,10 +26,6 @@ pallet-rmrk-core = { git = "https://github.com/Phala-Network/rmrk-substrate", de
 rmrk-traits = { git = "https://github.com/Phala-Network/rmrk-substrate", default-features = false, branch = "polkadot-v0.9.24" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
-sp-sandbox = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-parity-wasm = { version = "0.42.0", default-features = false }
-
-
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
@@ -55,6 +51,5 @@ std = [
   "scale-info/std",
   "pallet-balances/std",
   "pallet-assets/std",
-  "sp-sandbox/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
