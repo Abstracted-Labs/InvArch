@@ -25,14 +25,14 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", branch = "main", default-features = false }
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "main",  default-features = false }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-pre_launch_fixes", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-pre_launch_fixes",  default-features = false }
 #pallet-inv4 = { path = "../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
 #pallet-ipf = { path = "../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
 
 ## Parity's Unique + RMRK Pallets
-pallet-rmrk-core = { git = "https://github.com/Phala-Network/rmrk-substrate", default-features = false, branch = "polkadot-v0.9.24" }
-pallet-rmrk-equip = { git = "https://github.com/Phala-Network/rmrk-substrate", default-features = false, branch = "polkadot-v0.9.24" }
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c2200e1e8965f3823cc7c91592da82db942ea7c3" }
+pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c2200e1e8965f3823cc7c91592da82db942ea7c3" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
 
 ## ORML Pallets

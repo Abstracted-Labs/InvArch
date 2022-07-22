@@ -3322,7 +3322,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#dc4926fd0f0fd6ecbd39f8f3ef8acd23d7c1a7b5"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#24fcc0f0a566f8658d8befbc24dabc071096ded1"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5664,7 +5664,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#dc4926fd0f0fd6ecbd39f8f3ef8acd23d7c1a7b5"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#24fcc0f0a566f8658d8befbc24dabc071096ded1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5675,7 +5675,6 @@ dependencies = [
  "pallet-rmrk-core",
  "pallet-uniques",
  "parity-scale-codec",
- "parity-wasm 0.42.2",
  "rmrk-traits",
  "scale-info",
  "serde",
@@ -5684,14 +5683,13 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-sandbox",
  "sp-std",
 ]
 
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#dc4926fd0f0fd6ecbd39f8f3ef8acd23d7c1a7b5"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#24fcc0f0a566f8658d8befbc24dabc071096ded1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5922,7 +5920,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
-source = "git+https://github.com/Phala-Network/rmrk-substrate?branch=polkadot-v0.9.24#953dc14f1e6411d6949eafa3d3a73da984acb5f6"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=c2200e1e8965f3823cc7c91592da82db942ea7c3#c2200e1e8965f3823cc7c91592da82db942ea7c3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5939,7 +5937,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-equip"
 version = "0.0.1"
-source = "git+https://github.com/Phala-Network/rmrk-substrate?branch=polkadot-v0.9.24#953dc14f1e6411d6949eafa3d3a73da984acb5f6"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=c2200e1e8965f3823cc7c91592da82db942ea7c3#c2200e1e8965f3823cc7c91592da82db942ea7c3"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8299,7 +8297,7 @@ dependencies = [
 [[package]]
 name = "rmrk-traits"
 version = "0.0.1"
-source = "git+https://github.com/Phala-Network/rmrk-substrate?branch=polkadot-v0.9.24#953dc14f1e6411d6949eafa3d3a73da984acb5f6"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=c2200e1e8965f3823cc7c91592da82db942ea7c3#c2200e1e8965f3823cc7c91592da82db942ea7c3"
 dependencies = [
  "frame-support",
  "frame-system",
