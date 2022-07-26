@@ -298,6 +298,7 @@ pub mod pallet {
         ),
         MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
         MultisigCanceled(T::AccountId, [u8; 32]),
+        /// One of more sub tokens were created
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
         PermissionSet(T::IpId, T::IpId, [u8; 2], BoolOrWasm<T>),
         WeightSet(T::IpId, T::IpId, OneOrPercent),
@@ -351,13 +352,14 @@ pub mod pallet {
         /// This sub-asset has no permission to execute this call
         SubAssetHasNoPermission,
         FailedDivision,
+        /// Failed to extract metadata from a `Call`
         CallHasTooFewBytes,
 
         /// IPS inside of another IPS is disabled temporarily
         IpsInsideIpsDisabled,
         /// Wasm IPL Permissions are disabled temporarily
         WasmPermissionsDisabled,
-
+        /// Multisig is not allowed to call these extrinsics
         CantExecuteThisCall,
 
         InvalidWasmPermission,
