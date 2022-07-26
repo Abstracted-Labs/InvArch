@@ -67,6 +67,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Return `execution_threshold` setting for sub tokens in a given IP Set
     pub fn execution_threshold(ipl_id: T::IpId) -> Option<OneOrPercent> {
         IpStorage::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
     }

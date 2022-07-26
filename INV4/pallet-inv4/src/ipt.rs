@@ -15,6 +15,7 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 
 pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 
+/// Details of a multisig operation
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct MultisigOperation<AccountId, Signers, Call> {
     signers: Signers,
@@ -118,6 +119,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Something
     pub(crate) fn inner_operate_multisig(
         caller: OriginFor<T>,
         include_caller: bool,
@@ -126,6 +128,7 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller.clone())?;
 
+        // These extrinsics must be called only through InvArch functions or storage will become out of sync
         ensure!(
             !matches!(
                 call.get_call_metadata(),
@@ -140,14 +143,17 @@ impl<T: Config> Pallet<T> {
             Error::<T>::CantExecuteThisCall
         );
 
+        // Get IPS/IPT info
         let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
         let total_issuance = ipt.supply
             + SubAssets::<T>::iter_prefix_values(ipt_id.0)
                 .map(|sub_asset| {
                     let supply =
                         Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id))).sum();
 
+                    // Take into account that some sub tokens have full weight while others may have partial weight or none at all
                     if let OneOrPercent::ZeroPoint(weight) =
                         Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
                     {
@@ -161,6 +167,7 @@ impl<T: Config> Pallet<T> {
                 .into_iter()
                 .sum();
 
+        // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call
         let total_per_threshold: <T as pallet::Config>::Balance =
             if let OneOrPercent::ZeroPoint(percent) =
                 Pallet::<T>::execution_threshold(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?
@@ -170,6 +177,7 @@ impl<T: Config> Pallet<T> {
                 total_issuance
             };
 
+        // Get call metadata
         let call_metadata: [u8; 2] = call
             .encode()
             .split_at(2)
@@ -178,6 +186,7 @@ impl<T: Config> Pallet<T> {
             .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
         let owner_balance: <T as Config>::Balance = if let OneOrPercent::ZeroPoint(percent) = {
+            // Function called with some sub token
             if let Some(sub_asset) = ipt_id.1 {
                 ensure!(
                     Pallet::<T>::has_permission(ipt_id.0, sub_asset, call_metadata,)?,
@@ -186,16 +195,20 @@ impl<T: Config> Pallet<T> {
 
                 Pallet::<T>::asset_weight(ipt_id.0, sub_asset).ok_or(Error::<T>::IpDoesntExist)?
             } else {
+                // Function called with IPT0 token
                 OneOrPercent::One
             }
         } {
+            // `ZeroPoint` sub token, so apply asset weight to caller balance
             percent * Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
         } else {
+            // Either IPT0 token or 100% asset weight sub token
             Balance::<T>::get(ipt_id, owner.clone()).ok_or(Error::<T>::NoPermission)?
         };
 
         let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
+        // Compute the `call` hash
         let call_hash: [u8; 32] = blake2_256(&call.encode());
 
         ensure!(
@@ -637,7 +650,8 @@ impl<T: Config> Pallet<T> {
 
             let old_ipt = ipt.clone().ok_or(Error::<T>::IpDoesntExist)?;
 
-            // Can only create sub tokens from the topmost parent?
+            // Can only create sub tokens from the topmost parent, an IP Set that is `Parentage::Parent`.
+            // Additionally, call must be from IP Set multisig
             match old_ipt.parentage {
                 Parentage::Parent(ips_account) => {
                     ensure!(ips_account == caller, Error::<T>::NoPermission)
