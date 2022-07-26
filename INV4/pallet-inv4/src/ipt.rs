@@ -212,7 +212,7 @@ impl<T: Config> Pallet<T> {
         let call_hash: [u8; 32] = blake2_256(&call.encode());
 
         ensure!(
-            Multisig::<T>::get((ipt_id.0, blake2_256(&call.encode()))).is_none(),
+            Multisig::<T>::get((ipt_id.0, call_hash)).is_none(),
             Error::<T>::MultisigOperationAlreadyExists
         );
 
