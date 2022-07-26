@@ -31,7 +31,9 @@ jsonrpsee = { version = "0.13.0", features = ["server"] }
 jsonrpc-core = "18.0.0"
 
 ## Local Dependencies
-invarch-runtime = { path = "../runtime" }
+tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
+brainstorm-runtime = { path = "../runtime/brainstorm", optional = true }
+
 
 ## Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
@@ -106,13 +108,17 @@ pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", branch
 
 
 [features]
-default = []
+default = ["tinkernet"]
+
+tinkernet = ["tinkernet-runtime"]
+brainstorm = ["brainstorm-runtime"]
+
 runtime-benchmarks = [
-    "invarch-runtime/runtime-benchmarks",
+    "tinkernet-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks"
     ]
 #contracts-unstable-interface = ["invarch-runtime/contracts-unstable-interface"]
 try-runtime = [
-    "invarch-runtime/try-runtime",
+    "tinkernet-runtime/try-runtime",
     "try-runtime-cli",
 ]

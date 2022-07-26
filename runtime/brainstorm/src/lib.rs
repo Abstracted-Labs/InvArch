@@ -181,36 +181,10 @@ impl_opaque_keys! {
     }
 }
 
-#[cfg(feature = "tinker")]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("tinker_node"),
-    impl_name: create_runtime_str!("tinker_node"),
-    authoring_version: 1,
-    spec_version: 1,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
-    state_version: 1,
-};
-
-#[cfg(feature = "brainstorm")]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("brainstorm_node"),
     impl_name: create_runtime_str!("brainstorm_node"),
-    authoring_version: 1,
-    spec_version: 1,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
-    state_version: 1,
-};
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
-#[sp_version::runtime_version]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("invarch_node"),
-    impl_name: create_runtime_str!("invarch_node"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 1,
@@ -263,13 +237,6 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[cfg(feature = "tinker")]
-pub const SS58_PREFIX: u16 = 117u16;
-
-#[cfg(feature = "brainstorm")]
-pub const SS58_PREFIX: u16 = 42u16;
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
 pub const SS58_PREFIX: u16 = 42u16;
 
 parameter_types! {
@@ -581,7 +548,6 @@ parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const MaxLicenseMetadata: u32 = 10000;
-    pub const MaxWasmPermissionBytes: u32 = 10000000;
 }
 
 #[allow(non_camel_case_types)]
@@ -1030,25 +996,6 @@ parameter_types! {
     pub const MaxVestingSchedules: u32 = 2u32;
 }
 
-#[cfg(feature = "tinker")]
-parameter_types! {
-      pub InvarchAccounts: Vec<AccountId> = vec![
-          // Tinker Root Account (i53Pqi67ocj66W81cJNrUvjjoM3RcAsGhXVTzREs5BRfwLnd7)
-          hex_literal::hex!["f430c3461d19cded0bb3195af29d2b0379a96836c714ceb8e64d3f10902cec55"].into(),
-          // Tinker Rewards Account (i4zTcKHr38MbSUrhFLVKHG5iULhYttBVrqVon2rv6iWcxQwQQ)
-          hex_literal::hex!["725bf57f1243bf4b06e911a79eb954d1fe1003f697ef5db9640e64d6e30f9a42"].into(),
-          TreasuryPalletId::get().into_account_truncating(),
-      ];
-}
-
-#[cfg(feature = "brainstorm")]
-parameter_types! {
-    pub InvarchAccounts: Vec<AccountId> = vec![
-        TreasuryPalletId::get().into_account_truncating(),
-    ];
-}
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
 parameter_types! {
     pub InvarchAccounts: Vec<AccountId> = vec![
         TreasuryPalletId::get().into_account_truncating(),

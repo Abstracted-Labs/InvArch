@@ -4,8 +4,8 @@ check:
 build:
 	cargo build --release
 
-build-tinker:
-	cargo build --release --features tinker
+build-tinkernet:
+	cargo build --release --features tinkernet
 
 build-brainstorm:
 	cargo build --release --features brainstorm

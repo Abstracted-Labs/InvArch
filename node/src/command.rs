@@ -15,6 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{Block, RuntimeApi, VERSION};
+
+#[cfg(feature = "brainstorm")]
+use brainstorm_runtime::{Block, RuntimeApi, VERSION};
+
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
@@ -24,7 +30,6 @@ use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use invarch_runtime::{Block, RuntimeApi};
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -81,7 +86,7 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &invarch_runtime::VERSION
+        &VERSION
     }
 }
 

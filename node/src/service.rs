@@ -1,7 +1,17 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // Local Runtime Types
-use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce, RuntimeApi};
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{
+    api, native_version as _native_version, opaque::Block, AccountId, Balance, Hash,
+    Index as Nonce, RuntimeApi,
+};
+
+#[cfg(feature = "brainstorm")]
+use brainstorm_runtime::{
+    api, native_version as _native_version, opaque::Block, AccountId, Balance, Hash,
+    Index as Nonce, RuntimeApi,
+};
 
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
@@ -44,11 +54,11 @@ impl sc_executor::NativeExecutionDispatch for TemplateRuntimeExecutor {
     type ExtendHostFunctions = ();
 
     fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-        invarch_runtime::api::dispatch(method, data)
+        api::dispatch(method, data)
     }
 
     fn native_version() -> sc_executor::NativeVersion {
-        invarch_runtime::native_version()
+        _native_version()
     }
 }
 
