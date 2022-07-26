@@ -22,7 +22,7 @@ on:
         type: choice
         options:
           - brainstorm
-          - tinker
+          - tinkernet
           - invarch
       # Get the scope of release note
       scope:
@@ -55,9 +55,8 @@ jobs:
         id: srtool_build
         uses: chevdor/srtool-actions@v0.4.0
         env:
-          BUILD_OPTS: "--features ${{ github.event.inputs.chain }}"
+          BUILD_OPTS: ""
         with:
-          runtime_dir: "runtime/"
           chain: ${{ github.event.inputs.chain }}
           tag: ${{ github.event.inputs.srtool_image }}
 
@@ -89,7 +88,7 @@ jobs:
       # Generate release notes
       - name: Generate note
         id: generate-note
-        uses: AcalaNetwork/acala-release-note-action@master
+        uses: InvArch/release-note-action@master
         with:
           scope: ${{ github.event.inputs.scope }}
           chain: ${{ github.event.inputs.chain }}
