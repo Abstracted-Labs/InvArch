@@ -16,9 +16,3 @@ Release {{tag}}
 ```
 {{subwasm_details}}
 ```
-
-### Proposal Hash
-
-```
-{{proposal_hash}}
-```
