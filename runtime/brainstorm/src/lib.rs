@@ -601,6 +601,7 @@ pub enum InvArchLicenses {
 }
 
 impl LicenseList<Runtime> for InvArchLicenses {
+    /// Returns the license name as bytes and the IPFS hash of the licence on IPFS
     fn get_hash_and_metadata(
         &self,
     ) -> (
