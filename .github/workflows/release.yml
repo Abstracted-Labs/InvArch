@@ -84,10 +84,6 @@ jobs:
           subwasm  --json info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ github.event.inputs.chain }}-subwam-info.json
           subwasm info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ github.event.inputs.chain }}-subwam-info.txt
           cat ${{ github.event.inputs.chain }}-subwam-info.txt
-      # Diff new wasm with current
-      - name: Check the metadata diff
-        run: |
-          subwasm diff ${{ steps.srtool_build.outputs.wasm }} --chain-b ${{ github.event.inputs.chain }} | tee ${{ github.event.inputs.chain }}-diff.txt
           
       - name: Archive Artifacts for ${{ github.event.inputs.chain }}
         uses: actions/upload-artifact@v2
@@ -120,9 +116,6 @@ jobs:
           NETWORK=${{ github.event.inputs.chain }}
           SRTOOL_DETAILS=$(cat ${{ github.event.inputs.chain }}-srtool-digest.json)
           SUBWASM_DETAILS=$(cat ${{ github.event.inputs.chain }}-subwam-info.json)
-          PROPOSAL_DARWINIA_COMPRESSED=$(cat ${FILE_DARWINIA} | jq -r .proposal_hash)
-          RUNTIME_VERSION_CRAB=$(cat ${FILE_CRAB} | jq -r .core_version | sed "${REGEX_CORE_VERSION}")
-          RUNTIME_VERSION_DARWINIA=$(cat ${FILE_DARWINIA} | jq -r .core_version | sed "${REGEX_CORE_VERSION}")
           echo 'Template data:'
           jq -n \
             --arg tag "$TAG" \
