@@ -25,6 +25,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
     construct_runtime, match_types, parameter_types,
     traits::{
@@ -430,6 +431,7 @@ impl WeightToFeePolynomial for WeightToFee {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type Event = Event;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type WeightToFee = WeightToFee;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -451,6 +453,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type OutboundXcmpMessageSource = XcmpQueue;
     type XcmpMessageHandler = XcmpQueue;
     type ReservedXcmpWeight = ReservedXcmpWeight;
+    type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -921,6 +924,7 @@ impl pallet_treasury::Config for Runtime {
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
 }
 
 parameter_types! {
@@ -943,16 +947,16 @@ impl pallet_rmrk_core::Config for Runtime {
     type MaxResourcesOnMint = MaxResourcesOnMint;
 }
 
-// parameter_types! {
-//       pub const MaxPropertiesPerTheme: u32 = 100;
-//       pub const MaxCollectionsEquippablePerPart: u32 = 100;
-// }
+parameter_types! {
+      pub const MaxPropertiesPerTheme: u32 = 100;
+      pub const MaxCollectionsEquippablePerPart: u32 = 100;
+}
 
-// impl pallet_rmrk_equip::Config for Runtime {
-//     type Event = Event;
-//     type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
-//     type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
-// }
+impl pallet_rmrk_equip::Config for Runtime {
+    type Event = Event;
+    type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+    type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+}
 
 parameter_types! {
       pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
@@ -1100,7 +1104,7 @@ construct_runtime!(
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
             Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
 
         // Collator support. The order of there 4 are important and shale not change.
@@ -1127,7 +1131,7 @@ construct_runtime!(
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
-     //   RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
+        RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
