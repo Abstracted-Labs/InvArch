@@ -406,7 +406,7 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
                 tips.merge_into(&mut fees);
             }
 
-            let (to_collators, to_treasury) = fees.ration(10, 90);
+            let (to_collators, to_treasury) = fees.ration(50, 50);
 
             Treasury::on_unbalanced(to_treasury);
             ToStakingPot::on_unbalanced(to_collators);
