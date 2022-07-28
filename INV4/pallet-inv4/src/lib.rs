@@ -220,6 +220,9 @@ pub mod pallet {
     pub type AssetWeight<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::IpId, Blake2_128Concat, T::IpId, OneOrPercent>;
 
+    /// What pallet functions a sub token has permission to call
+    ///
+    /// Key: (Ip Set ID, sub token ID), call metadata
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
     pub type Permissions<T: Config> =

@@ -186,6 +186,7 @@ impl<T: Config> Pallet<T> {
             .try_into()
             .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
+        // Get caller balance of `ipt_id` token, weight adjusted
         let owner_balance: <T as Config>::Balance = if let OneOrPercent::ZeroPoint(percent) = {
             // Function called with some sub token
             if let Some(sub_asset) = ipt_id.1 {

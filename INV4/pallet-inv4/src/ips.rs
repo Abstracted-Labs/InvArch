@@ -233,6 +233,8 @@ impl<T: Config> Pallet<T> {
                         let this_rmrk_nft = pallet_rmrk_core::Nfts::<T>::get(collection_id, nft_id)
                             .ok_or(Error::<T>::IpfNotFound)?;
                         let this_rmrk_owner = this_rmrk_nft.owner;
+
+                        // Ensure IP Set is already owner of the NFT or owned by account initiating multisig call with `include_caller` option
                         ensure!(
                             this_rmrk_owner.clone()
                                 == rmrk_traits::AccountIdOrCollectionNftTuple::AccountId(
