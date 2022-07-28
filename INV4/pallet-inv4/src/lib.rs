@@ -118,7 +118,7 @@ pub mod pallet {
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
 
-        /// Max bytes for WASM bytecode?
+        /// Max bytes for asset permission WASM code
         #[pallet::constant]
         type MaxWasmPermissionBytes: Get<u32>;
     }
@@ -178,7 +178,7 @@ pub mod pallet {
         (),
     >;
 
-    /// Details of a multisig call.
+    /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
     ///
     /// Key: (IP Set ID, call hash)
     #[pallet::storage]
@@ -233,7 +233,7 @@ pub mod pallet {
 
     /// Store WASM function? What permissions does a sub token have?
     ///
-    /// Key: (Ip Set ID???, sub token ID???), arguments ???
+    /// Key: (Ip Set ID sub token ID arguments), call metadata
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
     pub type Permissions<T: Config> = StorageDoubleMap<
@@ -275,6 +275,9 @@ pub mod pallet {
             T::AccountId,
             <T as pallet::Config>::Balance,
         ),
+        /// A vote to execute a call has begun. The call needs more votes to pass.
+        /// 
+        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteStarted(
             T::AccountId,
             <T as pallet::Config>::Balance,
@@ -282,6 +285,9 @@ pub mod pallet {
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
+        /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
+        ///
+        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteAdded(
             T::AccountId,
             <T as pallet::Config>::Balance,
@@ -296,7 +302,13 @@ pub mod pallet {
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
+        /// Multisig call was executed.
+        /// 
+        /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
         MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
+        /// The vote on a multisig call was cancelled/withdrawn
+        /// 
+        /// Params: caller derived account ID, the call hash
         MultisigCanceled(T::AccountId, [u8; 32]),
         /// One of more sub tokens were created
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
@@ -341,6 +353,7 @@ pub mod pallet {
         CouldntDecodeCall,
         /// Multisig operation already exists and is available for voting
         MultisigOperationAlreadyExists,
+        /// Cannot withdraw a vote on a multisig transaction you have not voted on
         NotAVoter,
         UnknownError,
         /// Sub-asset not found

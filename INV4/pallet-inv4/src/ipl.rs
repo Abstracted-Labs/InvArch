@@ -6,6 +6,7 @@ use primitives::{OneOrPercent, Parentage};
 use parity_wasm::elements::{ExportEntry, ImportEntry};
 use sp_sandbox::{SandboxEnvironmentBuilder, SandboxInstance, SandboxMemory};
 
+/// Trait for getting license information
 pub trait LicenseList<T: Config> {
     fn get_hash_and_metadata(
         &self,
@@ -33,6 +34,7 @@ impl<T: Config> Pallet<T> {
 
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -41,9 +43,11 @@ impl<T: Config> Pallet<T> {
         }
 
         if let BoolOrWasm::<T>::Wasm(ref wasm) = permission {
+            // Construct a web assembly module
             let module = parity_wasm::elements::Module::from_bytes(&wasm)
                 .map_err(|_| Error::<T>::InvalidWasmPermission)?;
 
+            // Ensure that the module reference of the import entry is "e" and the field reference is "m"???
             ensure!(
                 if let Some(import_section) = module.import_section() {
                     import_section
