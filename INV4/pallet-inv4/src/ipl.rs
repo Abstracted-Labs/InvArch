@@ -24,6 +24,7 @@ impl<T: Config> Pallet<T> {
 
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
