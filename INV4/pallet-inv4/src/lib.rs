@@ -259,7 +259,7 @@ pub mod pallet {
             <T as pallet::Config>::Balance,
         ),
         /// A vote to execute a call has begun. The call needs more votes to pass.
-        /// 
+        ///
         /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteStarted(
             T::AccountId,
@@ -286,16 +286,22 @@ pub mod pallet {
             crate::ipt::OpaqueCall<T>,
         ),
         /// Multisig call was executed.
-        /// 
+        ///
         /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
         MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
         /// The vote on a multisig call was cancelled/withdrawn
-        /// 
+        ///
         /// Params: caller derived account ID, the call hash
         MultisigCanceled(T::AccountId, [u8; 32]),
         /// One of more sub tokens were created
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
+        /// Permission for a given function was just set for a sub token
+        ///
+        /// Params: IP Set ID, Sub token ID, call_metadata(pallet index, function index), true/false permission
         PermissionSet(T::IpId, T::IpId, [u8; 2], bool),
+        /// The voting weight was set for a sub token
+        ///
+        /// Params: IP Set ID, Sub token ID, voting power percentage
         WeightSet(T::IpId, T::IpId, OneOrPercent),
     }
 

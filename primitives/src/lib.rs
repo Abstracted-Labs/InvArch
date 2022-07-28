@@ -55,7 +55,7 @@ pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata
 
     pub license: (LicenseMetadata, Hash),
     /// Aye vote percentage required to execute a multisig call.
-    /// 
+    ///
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve
     pub execution_threshold: OneOrPercent,
     pub default_asset_weight: OneOrPercent,

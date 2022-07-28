@@ -256,7 +256,8 @@ impl<T: Config> Pallet<T> {
                 opaque_call,
                 dispatch_result.is_ok(),
             ));
-        } else { // `caller` does not have enough balance to execute.
+        } else {
+            // `caller` does not have enough balance to execute.
             if owner_balance > Zero::zero() {
                 // Transfer the `caller`s portion of the extrinsic fee to the IP Set account
                 pallet_balances::Pallet::<T>::transfer(
@@ -419,7 +420,7 @@ impl<T: Config> Pallet<T> {
                     .into(),
                 )?;
 
-                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn 
+                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
                 // Actually dispatch this call and return the result of it
@@ -451,7 +452,8 @@ impl<T: Config> Pallet<T> {
                     old_data.actual_call,
                     dispatch_result.is_ok(),
                 ));
-            } else { // `caller`s votes were not enough to pass the vote
+            } else {
+                // `caller`s votes were not enough to pass the vote
                 if voter_balance > Zero::zero() {
                     // Transfer the callers portion of the transaction fee to the IP Set account
                     pallet_balances::Pallet::<T>::transfer(
@@ -587,7 +589,8 @@ impl<T: Config> Pallet<T> {
                     ),
                     call_hash,
                 ));
-            } else { // caller is not the creator of this vote
+            } else {
+                // caller is not the creator of this vote
                 // Get caller balance of `ipt_id` token, weight adjusted
                 let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
                     if let Some(sub_asset) = ipt_id.1 {

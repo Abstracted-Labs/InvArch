@@ -14,6 +14,7 @@ pub trait LicenseList<T: Config> {
 }
 
 impl<T: Config> Pallet<T> {
+    /// Set yes/no permission for a sub token to start/vote on a specific multisig call
     pub(crate) fn inner_set_permission(
         owner: OriginFor<T>,
         ipl_id: T::IpId,
@@ -45,6 +46,7 @@ impl<T: Config> Pallet<T> {
         Ok(())
     }
 
+    /// Set the voting weight for a sub token
     pub(crate) fn inner_set_asset_weight(
         owner: OriginFor<T>,
         ipl_id: T::IpId,
@@ -55,6 +57,7 @@ impl<T: Config> Pallet<T> {
 
         let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -74,11 +77,14 @@ impl<T: Config> Pallet<T> {
         IpStorage::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
     }
 
+    /// Get the voting weight for a sub token. If none is found, returns the default voting weight
     pub fn asset_weight(ipl_id: T::IpId, sub_asset: T::IpId) -> Option<OneOrPercent> {
         AssetWeight::<T>::get(ipl_id, sub_asset)
             .or_else(|| IpStorage::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
     }
 
+    /// Check if a sub token has permission to iniate/vote on an extrinsic via the multisig.
+    /// `call_metadata`: 1st byte = pallet index, 2nd byte = function index
     pub fn has_permission(
         ipl_id: T::IpId,
         sub_asset: T::IpId,
