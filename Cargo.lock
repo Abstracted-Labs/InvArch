@@ -687,12 +687,12 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-inv4 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes)",
- "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes)",
+ "pallet-inv4",
+ "pallet-ipf",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
- "pallet-rmrk-equip 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
+ "pallet-rmrk-core",
+ "pallet-rmrk-equip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -3275,21 +3275,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-dependencies = [
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "invarch-primitives"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#8000ac6841646a20a79d94616b613c43f071835e"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#71da2ea0f39feb0a5ff1bc0c40a4d1b8695b83f3"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5481,42 +5467,18 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#71da2ea0f39feb0a5ff1bc0c40a4d1b8695b83f3"
 dependencies = [
  "frame-support",
  "frame-system",
- "invarch-primitives 0.1.0-dev",
+ "invarch-primitives",
  "pallet-assets",
  "pallet-balances",
- "pallet-ipf 0.1.0-dev",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
+ "pallet-ipf",
+ "pallet-rmrk-core",
  "pallet-uniques",
  "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
- "scale-info",
- "serde",
- "smallvec",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-inv4"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#8000ac6841646a20a79d94616b613c43f071835e"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes)",
- "pallet-assets",
- "pallet-balances",
- "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes)",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
- "pallet-uniques",
- "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
+ "rmrk-traits",
  "scale-info",
  "serde",
  "smallvec",
@@ -5530,27 +5492,11 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#71da2ea0f39feb0a5ff1bc0c40a4d1b8695b83f3"
 dependencies = [
  "frame-support",
  "frame-system",
- "invarch-primitives 0.1.0-dev",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-ipf"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes#8000ac6841646a20a79d94616b613c43f071835e"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-pre_launch_fixes)",
+ "invarch-primitives",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5764,23 +5710,6 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97#3791ea5b7e383d46017a6ce67897e00cff924a97"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-uniques",
- "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-rmrk-core"
-version = "0.0.1"
 source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b#ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b"
 dependencies = [
  "frame-support",
@@ -5788,25 +5717,7 @@ dependencies = [
  "pallet-balances",
  "pallet-uniques",
  "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-rmrk-equip"
-version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97#3791ea5b7e383d46017a6ce67897e00cff924a97"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
- "pallet-uniques",
- "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97)",
+ "rmrk-traits",
  "scale-info",
  "serde",
  "sp-runtime",
@@ -5821,10 +5732,10 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
+ "pallet-rmrk-core",
  "pallet-uniques",
  "parity-scale-codec",
- "rmrk-traits 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
+ "rmrk-traits",
  "scale-info",
  "serde",
  "sp-runtime",
@@ -8099,21 +8010,6 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
-]
-
-[[package]]
-name = "rmrk-traits"
-version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=3791ea5b7e383d46017a6ce67897e00cff924a97#3791ea5b7e383d46017a6ce67897e00cff924a97"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -11004,12 +10900,12 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-inv4 0.1.0-dev",
- "pallet-ipf 0.1.0-dev",
+ "pallet-inv4",
+ "pallet-ipf",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
- "pallet-rmrk-core 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
- "pallet-rmrk-equip 0.0.1 (git+https://github.com/rmrk-team/rmrk-substrate?rev=ebfbbbc5107c72f2e5b0cdbe190c83b2fce3f66b)",
+ "pallet-rmrk-core",
+ "pallet-rmrk-equip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
