@@ -132,6 +132,7 @@ pub mod pallet {
         <T as frame_system::Config>::Hash,
     >;
 
+    /// Valid types that an IP Set can hold
     #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
     pub enum AnyId<IpsId, IpfId, RmrkNftTuple, RmrkCollectionId> {
         IpfId(IpfId),
@@ -154,9 +155,9 @@ pub mod pallet {
     #[pallet::getter(fn next_ips_id)]
     pub type NextIpId<T: Config> = StorageValue<_, T::IpId, ValueQuery>;
 
-    /// Store IPS info
+    /// Store IPS info. Core IP Set storage
     ///
-    /// Return `None` if IPS info not set of removed
+    /// Return `None` if IPS info not set or removed
     #[pallet::storage]
     #[pallet::getter(fn ips_storage)]
     pub type IpStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpId, IpInfoOf<T>>;
@@ -173,15 +174,19 @@ pub mod pallet {
         (),
     >;
 
+    /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
+    ///
+    /// Key: (IP Set ID, call hash)
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
-    /// Details of a multisig call.
     pub type Multisig<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::IpId, [u8; 32]), crate::ipt::MultisigOperationOf<T>>;
 
+    /// Details of a sub token.
+    ///
+    /// Key: (IP Set ID, sub token ID)
     #[pallet::storage]
     #[pallet::getter(fn sub_assets)]
-    /// Details of a sub asset.
     pub type SubAssets<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
@@ -191,9 +196,13 @@ pub mod pallet {
         SubIptInfo<T::IpId, BoundedVec<u8, T::MaxMetadata>>,
     >;
 
+    /// The holdings of a specific account for a specific token.
+    ///
+    /// Get `account123` balance for the primary token (IPT0) pegged to IP Set `id123`:
+    /// `Self::balance((id123, None), account123);`
+    /// Replace `None` with `Some(id234)` to get specific sub token balance
     #[pallet::storage]
     #[pallet::getter(fn balance)]
-    /// The holdings of a specific account for a specific asset.
     pub type Balance<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
@@ -203,12 +212,17 @@ pub mod pallet {
         <T as pallet::Config>::Balance,
     >;
 
+    /// Sub asset voting weight (non IPT0).
+    ///
+    /// Key: (IP Set ID, sub token ID)
     #[pallet::storage]
     #[pallet::getter(fn asset_weight_storage)]
-    /// Details of a multisig call.
     pub type AssetWeight<T: Config> =
         StorageDoubleMap<_, Blake2_128Concat, T::IpId, Blake2_128Concat, T::IpId, OneOrPercent>;
 
+    /// What pallet functions a sub token has permission to call
+    ///
+    /// Key: (Ip Set ID, sub token ID), call metadata
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
     pub type Permissions<T: Config> =
@@ -217,24 +231,36 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// An IP Set was created
         Created(T::AccountId, T::IpId),
+        /// An IP Set was destroyed/deleted
         Destroyed(T::AccountId, T::IpId),
+        /// IpInfo (IPS) struct updated in storage to hold either new assets, new metadata, or both
         Appended(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdOf<T>>),
+        /// IpInfo (IPS) struct updated: assets removed from IPS. Optionally, new metadata set
         Removed(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdWithNewOwner<T>>),
+        /// Replicas of this IP Set are now allowed
         AllowedReplica(T::IpId),
+        /// Replicas of this IP Set are no longer allowed
         DisallowedReplica(T::IpId),
+        /// A replica of this IP Set was created
         ReplicaCreated(T::AccountId, T::IpId, T::IpId),
 
+        /// Sub tokens were minted
         Minted(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
             <T as pallet::Config>::Balance,
         ),
+        /// Sub tokens were burned
         Burned(
             (T::IpId, Option<T::IpId>),
             T::AccountId,
             <T as pallet::Config>::Balance,
         ),
+        /// A vote to execute a call has begun. The call needs more votes to pass.
+        ///
+        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteStarted(
             T::AccountId,
             <T as pallet::Config>::Balance,
@@ -242,6 +268,9 @@ pub mod pallet {
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
+        /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
+        ///
+        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteAdded(
             T::AccountId,
             <T as pallet::Config>::Balance,
@@ -256,10 +285,23 @@ pub mod pallet {
             [u8; 32],
             crate::ipt::OpaqueCall<T>,
         ),
+        /// Multisig call was executed.
+        ///
+        /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
         MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
+        /// The vote on a multisig call was cancelled/withdrawn
+        ///
+        /// Params: caller derived account ID, the call hash
         MultisigCanceled(T::AccountId, [u8; 32]),
+        /// One of more sub tokens were created
         SubAssetCreated(Vec<(T::IpId, T::IpId)>),
+        /// Permission for a given function was just set for a sub token
+        ///
+        /// Params: IP Set ID, Sub token ID, call_metadata(pallet index, function index), true/false permission
         PermissionSet(T::IpId, T::IpId, [u8; 2], bool),
+        /// The voting weight was set for a sub token
+        ///
+        /// Params: IP Set ID, Sub token ID, voting power percentage
         WeightSet(T::IpId, T::IpId, OneOrPercent),
     }
 
@@ -273,6 +315,7 @@ pub mod pallet {
         /// IPS not found
         IpsNotFound,
         /// The operator has no permission
+        /// Ex: Attempting to add a file owned by another account to your IP set
         NoPermission,
         /// The IPS is already owned
         AlreadyOwned,
@@ -299,6 +342,7 @@ pub mod pallet {
         CouldntDecodeCall,
         /// Multisig operation already exists and is available for voting
         MultisigOperationAlreadyExists,
+        /// Cannot withdraw a vote on a multisig transaction you have not voted on
         NotAVoter,
         UnknownError,
         /// Sub-asset not found
@@ -310,13 +354,14 @@ pub mod pallet {
         /// This sub-asset has no permission to execute this call
         SubAssetHasNoPermission,
         FailedDivision,
+        /// Failed to extract metadata from a `Call`
         CallHasTooFewBytes,
 
         /// IPS inside of another IPS is disabled temporarily
         IpsInsideIpsDisabled,
         /// Wasm IPL Permissions are disabled temporarily
         WasmPermissionsDisabled,
-
+        /// Multisig is not allowed to call these extrinsics
         CantExecuteThisCall,
 
         InvalidWasmPermission,
@@ -429,6 +474,7 @@ pub mod pallet {
         //     )
         // }
 
+        /// Mint `amount` of specified token to `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
             owner: OriginFor<T>,
@@ -439,6 +485,7 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
         }
 
+        /// Burn `amount` of specified token from `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
             owner: OriginFor<T>,
@@ -477,6 +524,7 @@ pub mod pallet {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, ipt_id, call_hash)
         }
 
+        /// Create one or more sub tokens for an IP Set
         #[pallet::weight(200_000_000)]
         pub fn create_sub_asset(
             caller: OriginFor<T>,
