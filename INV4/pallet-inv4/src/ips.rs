@@ -1,8 +1,8 @@
 use super::pallet::*;
-use crate::ipl::LicenseList;
+use crate::{ipl::LicenseList, util::derive_ips_account};
 use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
-use primitives::{utils::multi_account_id, IpInfo, IpsType, OneOrPercent, Parentage};
+use primitives::{IpInfo, IpsType, OneOrPercent, Parentage};
 use rmrk_traits::{Collection, Nft};
 use sp_arithmetic::traits::{CheckedAdd, One, Zero};
 use sp_runtime::traits::StaticLookup;
@@ -86,8 +86,7 @@ impl<T: Config> Pallet<T> {
             }
 
             // Generate new `AccountId` to represent new IP Set being created
-            let ips_account =
-                primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);
+            let ips_account = derive_ips_account::<T>(current_id, None);
 
             // Transfer ownership (issuer for `RmrkCollection`) to `ips_account` for each item in `assets`
             for asset in assets.clone() {
@@ -222,7 +221,7 @@ impl<T: Config> Pallet<T> {
                         ensure!(
                             this_ipf_owner.clone() == ips_account
                                 || caller_account
-                                    == multi_account_id::<T, T::IpId>(
+                                    == derive_ips_account::<T>(
                                         parent_id,
                                         Some(this_ipf_owner.clone())
                                     ),
@@ -245,7 +244,7 @@ impl<T: Config> Pallet<T> {
                                 ) = this_rmrk_owner.clone()
                                 {
                                     caller_account
-                                        == multi_account_id::<T, T::IpId>(
+                                        == derive_ips_account::<T>(
                                             parent_id,
                                             Some(rmrk_owner_account),
                                         )
@@ -267,10 +266,7 @@ impl<T: Config> Pallet<T> {
                         ensure!(
                             this_rmrk_issuer.clone() == ips_account.clone()
                                 || caller_account
-                                    == multi_account_id::<T, T::IpId>(
-                                        parent_id,
-                                        Some(this_rmrk_issuer),
-                                    ),
+                                    == derive_ips_account::<T>(parent_id, Some(this_rmrk_issuer),),
                             Error::<T>::NoPermission
                         );
                     }
@@ -637,8 +633,7 @@ impl<T: Config> Pallet<T> {
                 .ok_or(Error::<T>::NoAvailableIpId)?;
 
             // Generate new `AccountId` to represent new IP Set being created
-            let ips_account =
-                primitives::utils::multi_account_id::<T, <T as Config>::IpId>(current_id, None);
+            let ips_account = derive_ips_account::<T>(current_id, None);
 
             // `ips_account` needs the existential deposit, so we send that
             pallet_balances::Pallet::<T>::transfer_keep_alive(

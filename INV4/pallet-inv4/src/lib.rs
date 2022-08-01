@@ -26,7 +26,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get, GetCallMetadata},
     weights::{GetDispatchInfo, PostDispatchInfo, WeightToFee},
-    BoundedVec, Parameter,
+    BoundedVec, PalletId, Parameter,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
@@ -40,6 +40,7 @@ pub use pallet::*;
 pub mod ipl;
 pub mod ips;
 pub mod ipt;
+pub mod util;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -76,6 +77,12 @@ pub mod pallet {
             + Display
             + MaxEncodedLen
             + Clone;
+
+        /// The pallet id is used to salt the IPS accounts.
+        /// Make sure your parachain has a unique id, preferably containing some sort of identifier.
+        /// For example: PalletId(*b"tnkr/inv")
+        #[pallet::constant]
+        type UniquePalletId: Get<PalletId>;
 
         /// Currency
         type Currency: FSCurrency<Self::AccountId>;
