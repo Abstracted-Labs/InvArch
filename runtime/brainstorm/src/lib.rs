@@ -547,12 +547,6 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
-parameter_types! {
-    pub const MaxMetadata: u32 = 10000;
-    pub const MaxCallers: u32 = 10000;
-    pub const MaxLicenseMetadata: u32 = 10000;
-}
-
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
 pub enum InvArchLicenses {
@@ -867,6 +861,13 @@ impl LicenseList<Runtime> for InvArchLicenses {
     }
 }
 
+parameter_types! {
+    pub const MaxMetadata: u32 = 10000;
+    pub const MaxCallers: u32 = 10000;
+    pub const MaxLicenseMetadata: u32 = 10000;
+    pub const UniqueINV4PalletId: PalletId = PalletId(*b"brst/inv");
+}
+
 impl inv4::Config for Runtime {
     // The maximum size of an IPS's metadata
     type MaxMetadata = MaxMetadata;
@@ -886,6 +887,8 @@ impl inv4::Config for Runtime {
     type WeightToFee = WeightToFee;
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
+
+    type UniquePalletId = UniqueINV4PalletId;
 }
 
 impl pallet_sudo::Config for Runtime {
