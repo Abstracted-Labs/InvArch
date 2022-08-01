@@ -501,7 +501,7 @@ impl<T: Config> Pallet<T> {
         })
     }
 
-    /// START HERE TOMORROW
+    /// Withdraw vote from an ongoing multisig operation
     pub(crate) fn inner_withdraw_vote_multisig(
         caller: OriginFor<T>,
         ipt_id: (T::IpId, Option<T::IpId>),

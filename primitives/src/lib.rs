@@ -99,9 +99,9 @@ pub mod utils {
         original_caller: Option<T::AccountId>,
     ) -> <T as frame_system::Config>::AccountId {
         let entropy = if let Some(original_caller) = original_caller {
-            (b"modlpy/utilisuba", ips_id, original_caller).using_encoded(blake2_256)
+            (b"invarch/ipsacountsalt", ips_id, original_caller).using_encoded(blake2_256)
         } else {
-            (b"modlpy/utilisuba", ips_id).using_encoded(blake2_256)
+            (b"invarch/ipsacountsalt", ips_id).using_encoded(blake2_256)
         };
 
         Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
