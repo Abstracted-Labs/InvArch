@@ -78,12 +78,6 @@ pub mod pallet {
             + MaxEncodedLen
             + Clone;
 
-        /// The pallet id is used to salt the IPS accounts.
-        /// Make sure your parachain has a unique id, preferably containing some sort of identifier.
-        /// For example: PalletId(*b"tnkr/inv")
-        #[pallet::constant]
-        type UniquePalletId: Get<PalletId>;
-
         /// Currency
         type Currency: FSCurrency<Self::AccountId>;
 
