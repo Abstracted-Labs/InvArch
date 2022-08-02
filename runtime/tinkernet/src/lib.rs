@@ -863,7 +863,6 @@ parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const MaxLicenseMetadata: u32 = 10000;
-    pub const UniqueINV4PalletId: PalletId = PalletId(*b"tnkr/inv");
 }
 
 impl inv4::Config for Runtime {
@@ -885,8 +884,6 @@ impl inv4::Config for Runtime {
     type WeightToFee = WeightToFee;
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
-
-    type UniquePalletId = UniqueINV4PalletId;
 }
 
 impl pallet_sudo::Config for Runtime {
