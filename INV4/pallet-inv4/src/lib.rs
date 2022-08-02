@@ -26,7 +26,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get, GetCallMetadata},
     weights::{GetDispatchInfo, PostDispatchInfo, WeightToFee},
-    BoundedVec, PalletId, Parameter,
+    BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
 use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
