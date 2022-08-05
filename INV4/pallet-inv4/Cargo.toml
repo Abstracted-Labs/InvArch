@@ -22,8 +22,8 @@ smallvec = "1.6.1"
 scale-info = { version = "2.0.0", features = ["derive"], default-features = false }
 
 
-pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "bff95783072d54ef9c8240add2960ff0c0c445f7" }
-rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "bff95783072d54ef9c8240add2960ff0c0c445f7" }
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
+rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 
 # InvArch dependencies
