@@ -7,7 +7,7 @@ use sp_runtime::traits::TrailingZeroInput;
 /// Generates an `AccountId` using an `IpId` as the seed + the PalletId as salt.
 pub fn derive_ips_account<T: Config>(
     ips_id: T::IpId,
-    original_caller: Option<T::AccountId>,
+    original_caller: Option<&T::AccountId>,
 ) -> T::AccountId {
     let entropy = if let Some(original_caller) = original_caller {
         (

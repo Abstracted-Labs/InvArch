@@ -233,77 +233,131 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
         /// An IP Set was created
-        Created(T::AccountId, T::IpId),
+        IPSCreated {
+            ips_account: T::AccountId,
+            ips_id: T::IpId,
+            assets: Vec<AnyIdOf<T>>,
+        },
         /// An IP Set was destroyed/deleted
-        Destroyed(T::AccountId, T::IpId),
+        IPSDestroyed {
+            ips_account: T::AccountId,
+            ips_id: T::IpId,
+        },
         /// IpInfo (IPS) struct updated in storage to hold either new assets, new metadata, or both
-        Appended(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdOf<T>>),
+        AppendedToIPS {
+            caller_account: T::AccountId,
+            ips_id: T::IpId,
+            new_metadata: Option<Vec<u8>>,
+            assets: Vec<AnyIdOf<T>>,
+        },
         /// IpInfo (IPS) struct updated: assets removed from IPS. Optionally, new metadata set
-        Removed(T::AccountId, T::IpId, Vec<u8>, Vec<AnyIdWithNewOwner<T>>),
+        RemovedFromIPS {
+            caller_account: T::AccountId,
+            ips_id: T::IpId,
+            new_metadata: Option<Vec<u8>>,
+            assets_and_new_owners: Vec<AnyIdWithNewOwner<T>>,
+        },
         /// Replicas of this IP Set are now allowed
-        AllowedReplica(T::IpId),
+        AllowedReplica { ips_id: T::IpId },
         /// Replicas of this IP Set are no longer allowed
-        DisallowedReplica(T::IpId),
+        DisallowedReplica { ips_id: T::IpId },
         /// A replica of this IP Set was created
-        ReplicaCreated(T::AccountId, T::IpId, T::IpId),
+        ReplicaCreated {
+            ips_account: T::AccountId,
+            ips_id: T::IpId,
+            replica_id: T::IpId,
+        },
 
-        /// Sub tokens were minted
-        Minted(
-            (T::IpId, Option<T::IpId>),
-            T::AccountId,
-            <T as pallet::Config>::Balance,
-        ),
-        /// Sub tokens were burned
-        Burned(
-            (T::IpId, Option<T::IpId>),
-            T::AccountId,
-            <T as pallet::Config>::Balance,
-        ),
+        /// IP Tokens were minted
+        Minted {
+            token: (T::IpId, Option<T::IpId>),
+            target: T::AccountId,
+            amount: <T as pallet::Config>::Balance,
+        },
+        /// IP Tokens were burned
+        Burned {
+            token: (T::IpId, Option<T::IpId>),
+            target: T::AccountId,
+            amount: <T as pallet::Config>::Balance,
+        },
         /// A vote to execute a call has begun. The call needs more votes to pass.
         ///
         /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
-        MultisigVoteStarted(
-            T::AccountId,
-            <T as pallet::Config>::Balance,
-            <T as pallet::Config>::Balance,
-            [u8; 32],
-            crate::ipt::OpaqueCall<T>,
-        ),
+        MultisigVoteStarted {
+            ips_id: T::IpId,
+            executor_account: T::AccountId,
+            voter: T::AccountId,
+            votes_added: <T as pallet::Config>::Balance,
+            votes_required: <T as pallet::Config>::Balance,
+            call_hash: [u8; 32],
+            call: crate::ipt::OpaqueCall<T>,
+        },
         /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
         ///
         /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
-        MultisigVoteAdded(
-            T::AccountId,
-            <T as pallet::Config>::Balance,
-            <T as pallet::Config>::Balance,
-            [u8; 32],
-            crate::ipt::OpaqueCall<T>,
-        ),
-        MultisigVoteWithdrawn(
-            T::AccountId,
-            <T as pallet::Config>::Balance,
-            <T as pallet::Config>::Balance,
-            [u8; 32],
-            crate::ipt::OpaqueCall<T>,
-        ),
+        MultisigVoteAdded {
+            ips_id: T::IpId,
+            executor_account: T::AccountId,
+            voter: T::AccountId,
+            votes_added: <T as pallet::Config>::Balance,
+            current_votes: <T as pallet::Config>::Balance,
+            votes_required: <T as pallet::Config>::Balance,
+            call_hash: [u8; 32],
+            call: crate::ipt::OpaqueCall<T>,
+        },
+        MultisigVoteWithdrawn {
+            ips_id: T::IpId,
+            executor_account: T::AccountId,
+            voter: T::AccountId,
+            votes_removed: <T as pallet::Config>::Balance,
+            votes_required: <T as pallet::Config>::Balance,
+            call_hash: [u8; 32],
+            call: crate::ipt::OpaqueCall<T>,
+        },
         /// Multisig call was executed.
         ///
         /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
-        MultisigExecuted(T::AccountId, crate::ipt::OpaqueCall<T>, bool),
+        MultisigExecuted {
+            ips_id: T::IpId,
+            executor_account: T::AccountId,
+            voter: T::AccountId,
+            call_hash: [u8; 32],
+            call: crate::ipt::OpaqueCall<T>,
+            result: bool,
+        },
         /// The vote on a multisig call was cancelled/withdrawn
         ///
         /// Params: caller derived account ID, the call hash
-        MultisigCanceled(T::AccountId, [u8; 32]),
+        MultisigCanceled {
+            ips_id: T::IpId,
+            executor_account: T::AccountId,
+            call_hash: [u8; 32],
+        },
         /// One of more sub tokens were created
-        SubAssetCreated(Vec<(T::IpId, T::IpId)>),
+        SubTokenCreated {
+            sub_tokens_with_endowment: Vec<(
+                (T::IpId, T::IpId),
+                T::AccountId,
+                <T as pallet::Config>::Balance,
+            )>,
+        },
         /// Permission for a given function was just set for a sub token
         ///
         /// Params: IP Set ID, Sub token ID, call_metadata(pallet index, function index), true/false permission
-        PermissionSet(T::IpId, T::IpId, [u8; 2], bool),
+        PermissionSet {
+            ips_id: T::IpId,
+            sub_token_id: T::IpId,
+            call_index: [u8; 2],
+            permission: bool,
+        },
         /// The voting weight was set for a sub token
         ///
         /// Params: IP Set ID, Sub token ID, voting power percentage
-        WeightSet(T::IpId, T::IpId, OneOrPercent),
+        WeightSet {
+            ips_id: T::IpId,
+            sub_token_id: T::IpId,
+            voting_weight: OneOrPercent,
+        },
     }
 
     /// Errors for IPF pallet
@@ -527,33 +581,33 @@ pub mod pallet {
 
         /// Create one or more sub tokens for an IP Set
         #[pallet::weight(200_000_000)]
-        pub fn create_sub_asset(
+        pub fn create_sub_token(
             caller: OriginFor<T>,
-            ipt_id: T::IpId,
-            sub_assets: crate::ipt::SubAssetsWithEndowment<T>,
+            ips_id: T::IpId,
+            sub_tokens: crate::ipt::SubAssetsWithEndowment<T>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_create_sub_asset(caller, ipt_id, sub_assets)
+            Pallet::<T>::inner_create_sub_token(caller, ips_id, sub_tokens)
         }
 
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_permission(
             owner: OriginFor<T>,
-            ipl_id: T::IpId,
-            sub_asset: T::IpId,
-            call_metadata: [u8; 2],
+            ips_id: T::IpId,
+            sub_token_id: T::IpId,
+            call_index: [u8; 2],
             permission: bool,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_permission(owner, ipl_id, sub_asset, call_metadata, permission)
+            Pallet::<T>::inner_set_permission(owner, ips_id, sub_token_id, call_index, permission)
         }
 
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
-        pub fn set_asset_weight(
+        pub fn set_sub_token_weight(
             owner: OriginFor<T>,
-            ipl_id: T::IpId,
-            sub_asset: T::IpId,
-            asset_weight: OneOrPercent,
+            ips_id: T::IpId,
+            sub_token_id: T::IpId,
+            voting_weight: OneOrPercent,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_asset_weight(owner, ipl_id, sub_asset, asset_weight)
+            Pallet::<T>::inner_set_sub_token_weight(owner, ips_id, sub_token_id, voting_weight)
         }
     }
 

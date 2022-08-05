@@ -80,7 +80,11 @@ impl<T: Config> Pallet<T> {
         // Actually mint tokens
         Pallet::<T>::internal_mint(ipt_id, target.clone(), amount)?;
 
-        Self::deposit_event(Event::Minted(ipt_id, target, amount));
+        Self::deposit_event(Event::Minted {
+            token: ipt_id,
+            target,
+            amount,
+        });
 
         Ok(())
     }
@@ -116,7 +120,11 @@ impl<T: Config> Pallet<T> {
         // Actually burn tokens
         Pallet::<T>::internal_burn(target.clone(), ipt_id, amount)?;
 
-        Self::deposit_event(Event::Burned(ipt_id, target, amount));
+        Self::deposit_event(Event::Burned {
+            token: ipt_id,
+            target,
+            amount,
+        });
 
         Ok(())
     }
@@ -240,20 +248,22 @@ impl<T: Config> Pallet<T> {
             let dispatch_result = call.dispatch(
                 RawOrigin::Signed(derive_ips_account::<T>(
                     ipt_id.0,
-                    if include_caller {
-                        Some(owner.clone())
-                    } else {
-                        None
-                    },
+                    if include_caller { Some(&owner) } else { None },
                 ))
                 .into(),
             );
 
-            Self::deposit_event(Event::MultisigExecuted(
-                derive_ips_account::<T>(ipt_id.0, if include_caller { Some(owner) } else { None }),
-                opaque_call,
-                dispatch_result.is_ok(),
-            ));
+            Self::deposit_event(Event::MultisigExecuted {
+                ips_id: ipt_id.0,
+                executor_account: derive_ips_account::<T>(
+                    ipt_id.0,
+                    if include_caller { Some(&owner) } else { None },
+                ),
+                voter: owner,
+                call_hash,
+                call: opaque_call,
+                result: dispatch_result.is_ok(),
+            });
         } else {
             // `caller` does not have enough balance to execute.
             if owner_balance > Zero::zero() {
@@ -290,13 +300,18 @@ impl<T: Config> Pallet<T> {
                 },
             );
 
-            Self::deposit_event(Event::MultisigVoteStarted(
-                derive_ips_account::<T>(ipt_id.0, if include_caller { Some(owner) } else { None }),
-                owner_balance,
-                ipt.supply,
+            Self::deposit_event(Event::MultisigVoteStarted {
+                ips_id: ipt_id.0,
+                executor_account: derive_ips_account::<T>(
+                    ipt_id.0,
+                    if include_caller { Some(&owner) } else { None },
+                ),
+                voter: owner,
+                votes_added: owner_balance,
+                votes_required: total_per_threshold,
                 call_hash,
-                opaque_call,
-            ));
+                call: opaque_call,
+            });
         }
 
         Ok(().into())
@@ -427,7 +442,7 @@ impl<T: Config> Pallet<T> {
                         RawOrigin::Signed(derive_ips_account::<T>(
                             ipt_id.0,
                             if old_data.include_original_caller {
-                                Some(old_data.original_caller.clone())
+                                Some(&old_data.original_caller)
                             } else {
                                 None
                             },
@@ -435,18 +450,21 @@ impl<T: Config> Pallet<T> {
                         .into(),
                     );
 
-                Self::deposit_event(Event::MultisigExecuted(
-                    derive_ips_account::<T>(
+                Self::deposit_event(Event::MultisigExecuted {
+                    ips_id: ipt_id.0,
+                    executor_account: derive_ips_account::<T>(
                         ipt_id.0,
                         if old_data.include_original_caller {
-                            Some(old_data.original_caller.clone())
+                            Some(&old_data.original_caller)
                         } else {
                             None
                         },
                     ),
-                    old_data.actual_call,
-                    dispatch_result.is_ok(),
-                ));
+                    voter: owner,
+                    call_hash,
+                    call: old_data.actual_call,
+                    result: dispatch_result.is_ok(),
+                });
             } else {
                 // `caller`s votes were not enough to pass the vote
                 if voter_balance > Zero::zero() {
@@ -471,25 +489,28 @@ impl<T: Config> Pallet<T> {
                 // Update storage
                 old_data.signers = {
                     let mut v = old_data.signers.to_vec();
-                    v.push((owner, ipt_id.1));
+                    v.push((owner.clone(), ipt_id.1));
                     v.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?
                 };
                 *data = Some(old_data.clone());
 
-                Self::deposit_event(Event::MultisigVoteAdded(
-                    derive_ips_account::<T>(
+                Self::deposit_event(Event::MultisigVoteAdded {
+                    ips_id: ipt_id.0,
+                    executor_account: derive_ips_account::<T>(
                         ipt_id.0,
                         if old_data.include_original_caller {
-                            Some(old_data.original_caller.clone())
+                            Some(&old_data.original_caller)
                         } else {
                             None
                         },
                     ),
-                    voter_balance,
-                    ipt.supply,
+                    voter: owner,
+                    votes_added: voter_balance,
+                    current_votes: (total_in_operation + voter_balance),
+                    votes_required: total_per_threshold,
                     call_hash,
-                    old_data.actual_call,
-                ));
+                    call: old_data.actual_call,
+                });
             }
 
             Ok(().into())
@@ -523,7 +544,9 @@ impl<T: Config> Pallet<T> {
                 let total_issuance = ipt.supply
                     + SubAssets::<T>::iter_prefix_values(ipt_id.0)
                         .map(|sub_asset| {
-                            let supply = IpStorage::<T>::get(sub_asset.id)?.supply;
+                            let supply =
+                                Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id)))
+                                    .sum();
 
                             if let OneOrPercent::ZeroPoint(weight) =
                                 Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
@@ -573,17 +596,18 @@ impl<T: Config> Pallet<T> {
                 // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
-                Self::deposit_event(Event::MultisigCanceled(
-                    derive_ips_account::<T>(
+                Self::deposit_event(Event::MultisigCanceled {
+                    ips_id: ipt_id.0,
+                    executor_account: derive_ips_account::<T>(
                         ipt_id.0,
                         if old_data.include_original_caller {
-                            Some(old_data.original_caller)
+                            Some(&old_data.original_caller)
                         } else {
                             None
                         },
                     ),
                     call_hash,
-                ));
+                });
             } else {
                 // caller is not the creator of this vote
                 // Get caller balance of `ipt_id` token, weight adjusted
@@ -606,7 +630,9 @@ impl<T: Config> Pallet<T> {
                 let total_issuance = ipt.supply
                     + SubAssets::<T>::iter_prefix_values(ipt_id.0)
                         .map(|sub_asset| {
-                            let supply = IpStorage::<T>::get(sub_asset.id)?.supply;
+                            let supply =
+                                Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id)))
+                                    .sum();
 
                             if let OneOrPercent::ZeroPoint(weight) =
                                 Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
@@ -646,7 +672,7 @@ impl<T: Config> Pallet<T> {
                     <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
                         derive_ips_account::<T>(ipt_id.0, None),
                     )),
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner),
+                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner.clone()),
                     <T as pallet::Config>::Balance::from(
                         (T::WeightToFee::weight_to_fee(&old_data.call_weight)
                             .checked_div(&total_per_threshold.into())
@@ -658,20 +684,22 @@ impl<T: Config> Pallet<T> {
 
                 *data = Some(old_data.clone());
 
-                Self::deposit_event(Event::MultisigVoteWithdrawn(
-                    derive_ips_account::<T>(
+                Self::deposit_event(Event::MultisigVoteWithdrawn {
+                    ips_id: ipt_id.0,
+                    executor_account: derive_ips_account::<T>(
                         ipt_id.0,
                         if old_data.include_original_caller {
-                            Some(old_data.original_caller.clone())
+                            Some(&old_data.original_caller)
                         } else {
                             None
                         },
                     ),
-                    voter_balance,
-                    ipt.supply,
+                    voter: owner,
+                    votes_removed: voter_balance,
+                    votes_required: total_per_threshold,
                     call_hash,
-                    old_data.actual_call,
-                ));
+                    call: old_data.actual_call,
+                });
             }
 
             Ok(().into())
@@ -679,10 +707,10 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Create one or more sub tokens for an IP Set
-    pub(crate) fn inner_create_sub_asset(
+    pub(crate) fn inner_create_sub_token(
         caller: OriginFor<T>,
         ipt_id: T::IpId,
-        sub_assets: SubAssetsWithEndowment<T>,
+        sub_tokens: SubAssetsWithEndowment<T>,
     ) -> DispatchResultWithPostInfo {
         IpStorage::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
             let caller = ensure_signed(caller.clone())?;
@@ -699,7 +727,7 @@ impl<T: Config> Pallet<T> {
             }
 
             // Create sub tokens, if none already exist
-            for sub in sub_assets.clone() {
+            for sub in sub_tokens.clone() {
                 ensure!(
                     !SubAssets::<T>::contains_key(ipt_id, sub.0.id),
                     Error::<T>::SubAssetAlreadyExists
@@ -710,12 +738,12 @@ impl<T: Config> Pallet<T> {
                 Balance::<T>::insert((ipt_id, Some(sub.0.id)), sub.1 .0, sub.1 .1);
             }
 
-            Self::deposit_event(Event::SubAssetCreated(
-                sub_assets
+            Self::deposit_event(Event::SubTokenCreated {
+                sub_tokens_with_endowment: sub_tokens
                     .into_iter()
-                    .map(|sub| (ipt_id, sub.0.id))
+                    .map(|sub| ((ipt_id, sub.0.id), sub.1 .0, sub.1 .1))
                     .collect(),
-            ));
+            });
 
             Ok(().into())
         })

@@ -17,14 +17,14 @@ impl<T: Config> Pallet<T> {
     /// Set yes/no permission for a sub token to start/vote on a specific multisig call
     pub(crate) fn inner_set_permission(
         owner: OriginFor<T>,
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        call_metadata: [u8; 2],
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        call_index: [u8; 2],
         permission: bool,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
-        let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Only the top-level IP Set can set permissions
         match ip.parentage {
@@ -34,28 +34,28 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        Permissions::<T>::insert((ipl_id, sub_asset), call_metadata, permission);
+        Permissions::<T>::insert((ips_id, sub_token_id), call_index, permission);
 
-        Self::deposit_event(Event::PermissionSet(
-            ipl_id,
-            sub_asset,
-            call_metadata,
+        Self::deposit_event(Event::PermissionSet {
+            ips_id,
+            sub_token_id,
+            call_index,
             permission,
-        ));
+        });
 
         Ok(())
     }
 
     /// Set the voting weight for a sub token
-    pub(crate) fn inner_set_asset_weight(
+    pub(crate) fn inner_set_sub_token_weight(
         owner: OriginFor<T>,
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        asset_weight: OneOrPercent,
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        voting_weight: OneOrPercent,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
-        let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Only the top-level IP Set can set permissions
         match ip.parentage {
@@ -65,35 +65,39 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        AssetWeight::<T>::insert(ipl_id, sub_asset, asset_weight);
+        AssetWeight::<T>::insert(ips_id, sub_token_id, voting_weight);
 
-        Self::deposit_event(Event::WeightSet(ipl_id, sub_asset, asset_weight));
+        Self::deposit_event(Event::WeightSet {
+            ips_id,
+            sub_token_id,
+            voting_weight,
+        });
 
         Ok(())
     }
 
     /// Return `execution_threshold` setting for sub tokens in a given IP Set
-    pub fn execution_threshold(ipl_id: T::IpId) -> Option<OneOrPercent> {
-        IpStorage::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
+    pub fn execution_threshold(ips_id: T::IpId) -> Option<OneOrPercent> {
+        IpStorage::<T>::get(ips_id).map(|ips| ips.execution_threshold)
     }
 
     /// Get the voting weight for a sub token. If none is found, returns the default voting weight
-    pub fn asset_weight(ipl_id: T::IpId, sub_asset: T::IpId) -> Option<OneOrPercent> {
-        AssetWeight::<T>::get(ipl_id, sub_asset)
-            .or_else(|| IpStorage::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
+    pub fn asset_weight(ips_id: T::IpId, sub_token_id: T::IpId) -> Option<OneOrPercent> {
+        AssetWeight::<T>::get(ips_id, sub_token_id)
+            .or_else(|| IpStorage::<T>::get(ips_id).map(|ips| ips.default_asset_weight))
     }
 
     /// Check if a sub token has permission to iniate/vote on an extrinsic via the multisig.
     /// `call_metadata`: 1st byte = pallet index, 2nd byte = function index
     pub fn has_permission(
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        call_metadata: [u8; 2],
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        call_index: [u8; 2],
     ) -> Result<bool, Error<T>> {
         Ok(
-            Permissions::<T>::get((ipl_id, sub_asset), call_metadata).unwrap_or(
-                IpStorage::<T>::get(ipl_id)
-                    .map(|ipl| ipl.default_permission)
+            Permissions::<T>::get((ips_id, sub_token_id), call_index).unwrap_or(
+                IpStorage::<T>::get(ips_id)
+                    .map(|ips| ips.default_permission)
                     .ok_or(Error::<T>::IpDoesntExist)?,
             ),
         )

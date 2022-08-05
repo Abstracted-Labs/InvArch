@@ -135,12 +135,13 @@ impl<T: Config> Pallet<T> {
                 parentage: Parentage::Parent(ips_account.clone()),
                 metadata: bounded_metadata,
                 data: assets
+                    .clone()
                     .try_into()
                     .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
                 ips_type: IpsType::Normal,
                 allow_replica,
 
-                supply: 1000000u128.into(),
+                supply: 1_000_000u128.into(),
 
                 license: ipl_license.get_hash_and_metadata(),
                 execution_threshold: ipl_execution_threshold,
@@ -152,7 +153,11 @@ impl<T: Config> Pallet<T> {
             IpStorage::<T>::insert(current_id, info);
             IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
 
-            Self::deposit_event(Event::Created(ips_account, current_id));
+            Self::deposit_event(Event::IPSCreated {
+                ips_account,
+                ips_id: current_id,
+                assets,
+            });
 
             Ok(())
         })
@@ -221,10 +226,7 @@ impl<T: Config> Pallet<T> {
                         ensure!(
                             this_ipf_owner.clone() == ips_account
                                 || caller_account
-                                    == derive_ips_account::<T>(
-                                        parent_id,
-                                        Some(this_ipf_owner.clone())
-                                    ),
+                                    == derive_ips_account::<T>(parent_id, Some(&this_ipf_owner)),
                             Error::<T>::NoPermission
                         );
                     }
@@ -246,7 +248,7 @@ impl<T: Config> Pallet<T> {
                                     caller_account
                                         == derive_ips_account::<T>(
                                             parent_id,
-                                            Some(rmrk_owner_account),
+                                            Some(&rmrk_owner_account),
                                         )
                                 } else {
                                     false
@@ -266,7 +268,7 @@ impl<T: Config> Pallet<T> {
                         ensure!(
                             this_rmrk_issuer.clone() == ips_account.clone()
                                 || caller_account
-                                    == derive_ips_account::<T>(parent_id, Some(this_rmrk_issuer),),
+                                    == derive_ips_account::<T>(parent_id, Some(&this_rmrk_issuer),),
                             Error::<T>::NoPermission
                         );
                     }
@@ -372,16 +374,12 @@ impl<T: Config> Pallet<T> {
                 default_permission: info.default_permission,
             });
 
-            Self::deposit_event(Event::Appended(
+            Self::deposit_event(Event::AppendedToIPS {
                 caller_account,
                 ips_id,
-                if let Some(metadata) = new_metadata {
-                    metadata
-                } else {
-                    info.metadata.to_vec()
-                },
+                new_metadata,
                 assets,
-            ));
+            });
 
             Ok(())
         })
@@ -503,16 +501,12 @@ impl<T: Config> Pallet<T> {
                 default_permission: info.default_permission,
             });
 
-            Self::deposit_event(Event::Removed(
+            Self::deposit_event(Event::RemovedFromIPS {
                 caller_account,
                 ips_id,
-                if let Some(metadata) = new_metadata {
-                    metadata
-                } else {
-                    info.metadata.to_vec()
-                },
-                assets,
-            ));
+                new_metadata,
+                assets_and_new_owners: assets,
+            });
 
             Ok(())
         })
@@ -557,7 +551,7 @@ impl<T: Config> Pallet<T> {
                 default_permission: info.default_permission,
             });
 
-            Self::deposit_event(Event::AllowedReplica(ips_id));
+            Self::deposit_event(Event::AllowedReplica { ips_id });
 
             Ok(())
         })
@@ -602,7 +596,7 @@ impl<T: Config> Pallet<T> {
                 default_permission: info.default_permission,
             });
 
-            Self::deposit_event(Event::DisallowedReplica(ips_id));
+            Self::deposit_event(Event::DisallowedReplica { ips_id });
 
             Ok(())
         })
@@ -668,11 +662,11 @@ impl<T: Config> Pallet<T> {
             IpStorage::<T>::insert(current_id, info);
             IpsByOwner::<T>::insert(ips_account.clone(), current_id, ());
 
-            Self::deposit_event(Event::ReplicaCreated(
+            Self::deposit_event(Event::ReplicaCreated {
                 ips_account,
-                current_id,
-                original_ips_id,
-            ));
+                ips_id: original_ips_id,
+                replica_id: current_id,
+            });
 
             Ok(().into())
         })
