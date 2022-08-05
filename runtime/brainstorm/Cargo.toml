@@ -31,8 +31,8 @@ pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gab
 #pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
 
 ## Parity's Unique + RMRK Pallets
-pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "bff95783072d54ef9c8240add2960ff0c0c445f7" }
-pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "bff95783072d54ef9c8240add2960ff0c0c445f7" }
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
+pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 
 ## ORML Pallets
