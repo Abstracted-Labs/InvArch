@@ -100,15 +100,11 @@ jobs:
             ${{ github.event.inputs.chain }}-diff.txt
 
 
-
-      - uses: actions/checkout@v3
-
-
-      - name: Create Tag
-        uses: negz/create-tag@v1
-        with:
-          version: ${{ github.event.inputs.tag }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+ #     - name: Create Tag
+ #       uses: negz/create-tag@v1
+ #       with:
+ #         version: ${{ github.event.inputs.tag }}
+ #         token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate template data
         run: |
@@ -134,16 +130,16 @@ jobs:
           datafile: template_data.json
           path: .github/release-template.md
 
-      - name: Publish github release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ steps.srtool_build.outputs.wasm }}
-            ${{ steps.srtool_build.outputs.wasm_compressed }}
-          body_path: ".github/release-template.md"
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
- #     - name: Test
- #       uses: pCYSl5EDgo/cat@master
+ #     - name: Publish github release
+ #       uses: softprops/action-gh-release@v1
  #       with:
- #         path: .github/release-template.md
+ #         files: |
+ #           ${{ steps.srtool_build.outputs.wasm }}
+ #           ${{ steps.srtool_build.outputs.wasm_compressed }}
+ #         body_path: ".github/release-template.md"
+ #         token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Test
+        uses: pCYSl5EDgo/cat@master
+        with:
+          path: .github/release-template.md
