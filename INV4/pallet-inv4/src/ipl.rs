@@ -3,9 +3,7 @@ use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, Parentage};
 
-use parity_wasm::elements::{ExportEntry, ImportEntry};
-use sp_sandbox::{SandboxEnvironmentBuilder, SandboxInstance, SandboxMemory};
-
+/// Trait for getting license information
 pub trait LicenseList<T: Config> {
     fn get_hash_and_metadata(
         &self,
@@ -16,23 +14,19 @@ pub trait LicenseList<T: Config> {
 }
 
 impl<T: Config> Pallet<T> {
+    /// Set yes/no permission for a sub token to start/vote on a specific multisig call
     pub(crate) fn inner_set_permission(
         owner: OriginFor<T>,
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        call_metadata: [u8; 2],
-        permission: BoolOrWasm<T>,
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        call_index: [u8; 2],
+        permission: bool,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
-        // Wasm permissions disabled for now. Too new for Tinkernet.
-        ensure!(
-            matches!(permission, BoolOrWasm::<T>::Bool(_)),
-            Error::<T>::WasmPermissionsDisabled
-        );
+        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
 
-        let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
-
+        // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -40,57 +34,30 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        if let BoolOrWasm::<T>::Wasm(ref wasm) = permission {
-            let module = parity_wasm::elements::Module::from_bytes(&wasm)
-                .map_err(|_| Error::<T>::InvalidWasmPermission)?;
+        Permissions::<T>::insert((ips_id, sub_token_id), call_index, permission);
 
-            ensure!(
-                if let Some(import_section) = module.import_section() {
-                    import_section
-                        .entries()
-                        .iter()
-                        .any(|entry: &ImportEntry| entry.module() == "e" && entry.field() == "m")
-                } else {
-                    false
-                },
-                Error::<T>::InvalidWasmPermission
-            );
-
-            ensure!(
-                if let Some(export_section) = module.export_section() {
-                    export_section
-                        .entries()
-                        .iter()
-                        .any(|entry: &ExportEntry| entry.field() == "c")
-                } else {
-                    false
-                },
-                Error::<T>::InvalidWasmPermission
-            );
-        }
-
-        Permissions::<T>::insert((ipl_id, sub_asset), call_metadata, permission.clone());
-
-        Self::deposit_event(Event::PermissionSet(
-            ipl_id,
-            sub_asset,
-            call_metadata,
+        Self::deposit_event(Event::PermissionSet {
+            ips_id,
+            sub_token_id,
+            call_index,
             permission,
-        ));
+        });
 
         Ok(())
     }
 
-    pub(crate) fn inner_set_asset_weight(
+    /// Set the voting weight for a sub token
+    pub(crate) fn inner_set_sub_token_weight(
         owner: OriginFor<T>,
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        asset_weight: OneOrPercent,
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        voting_weight: OneOrPercent,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
-        let ip = IpStorage::<T>::get(ipl_id).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
 
+        // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(ips_account == owner, Error::<T>::NoPermission)
@@ -98,62 +65,41 @@ impl<T: Config> Pallet<T> {
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        AssetWeight::<T>::insert(ipl_id, sub_asset, asset_weight);
+        AssetWeight::<T>::insert(ips_id, sub_token_id, voting_weight);
 
-        Self::deposit_event(Event::WeightSet(ipl_id, sub_asset, asset_weight));
+        Self::deposit_event(Event::WeightSet {
+            ips_id,
+            sub_token_id,
+            voting_weight,
+        });
 
         Ok(())
     }
 
-    pub fn execution_threshold(ipl_id: T::IpId) -> Option<OneOrPercent> {
-        IpStorage::<T>::get(ipl_id).map(|ipl| ipl.execution_threshold)
+    /// Return `execution_threshold` setting for sub tokens in a given IP Set
+    pub fn execution_threshold(ips_id: T::IpId) -> Option<OneOrPercent> {
+        IpStorage::<T>::get(ips_id).map(|ips| ips.execution_threshold)
     }
 
-    pub fn asset_weight(ipl_id: T::IpId, sub_asset: T::IpId) -> Option<OneOrPercent> {
-        AssetWeight::<T>::get(ipl_id, sub_asset)
-            .or_else(|| IpStorage::<T>::get(ipl_id).map(|ipl| ipl.default_asset_weight))
+    /// Get the voting weight for a sub token. If none is found, returns the default voting weight
+    pub fn asset_weight(ips_id: T::IpId, sub_token_id: T::IpId) -> Option<OneOrPercent> {
+        AssetWeight::<T>::get(ips_id, sub_token_id)
+            .or_else(|| IpStorage::<T>::get(ips_id).map(|ips| ips.default_asset_weight))
     }
 
+    /// Check if a sub token has permission to iniate/vote on an extrinsic via the multisig.
+    /// `call_metadata`: 1st byte = pallet index, 2nd byte = function index
     pub fn has_permission(
-        ipl_id: T::IpId,
-        sub_asset: T::IpId,
-        call_metadata: [u8; 2],
-        call_arguments: BoundedVec<u8, T::MaxWasmPermissionBytes>,
+        ips_id: T::IpId,
+        sub_token_id: T::IpId,
+        call_index: [u8; 2],
     ) -> Result<bool, Error<T>> {
-        Permissions::<T>::get((ipl_id, sub_asset), call_metadata).map_or(
-            IpStorage::<T>::get(ipl_id)
-                .map(|ipl| ipl.default_permission)
-                .ok_or(Error::<T>::IpDoesntExist),
-            |bool_or_wasm| -> Result<bool, Error<T>> {
-                match bool_or_wasm {
-                    BoolOrWasm::<T>::Bool(b) => Ok(b),
-                    BoolOrWasm::<T>::Wasm(wasm) => {
-                        let args = call_arguments.as_slice();
-
-                        let mut env =
-                            sp_sandbox::default_executor::EnvironmentDefinitionBuilder::new();
-                        let mem = sp_sandbox::default_executor::Memory::new(1u32, Some(1u32))
-                            .map_err(|_| Error::<T>::WasmPermissionFailedExecution)?;
-                        mem.set(1u32, args)
-                            .map_err(|_| Error::<T>::WasmPermissionFailedExecution)?;
-                        env.add_memory("e", "m", mem);
-
-                        let mut instance =
-                            sp_sandbox::default_executor::Instance::new(&wasm, &env, &mut ())
-                                .map_err(|_| Error::<T>::WasmPermissionFailedExecution)?;
-
-                        if let sp_sandbox::ReturnValue::Value(sp_sandbox::Value::I32(integer)) =
-                            instance
-                                .invoke("c", &[sp_sandbox::Value::I32(args.len() as i32)], &mut ())
-                                .map_err(|_| Error::<T>::WasmPermissionFailedExecution)?
-                        {
-                            Ok(!matches!(integer, 0))
-                        } else {
-                            Err(Error::<T>::InvalidWasmPermission)
-                        }
-                    }
-                }
-            },
+        Ok(
+            Permissions::<T>::get((ips_id, sub_token_id), call_index).unwrap_or(
+                IpStorage::<T>::get(ips_id)
+                    .map(|ips| ips.default_permission)
+                    .ok_or(Error::<T>::IpDoesntExist)?,
+            ),
         )
     }
 }

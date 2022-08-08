@@ -11,36 +11,32 @@ version = '0.1.0-dev'
 [dependencies]
 serde = { version = "1.0.132", optional = true }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 smallvec = "1.6.1"
 
 scale-info = { version = "2.0.0", features = ["derive"], default-features = false }
 
 
-pallet-rmrk-core = { git = "https://github.com/Phala-Network/rmrk-substrate", default-features = false, branch = "polkadot-v0.9.24" }
-rmrk-traits = { git = "https://github.com/Phala-Network/rmrk-substrate", default-features = false, branch = "polkadot-v0.9.24" }
-pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-
-sp-sandbox = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-parity-wasm = { version = "0.42.0", default-features = false }
-
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
+rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "e4aa98631ec3b4cdc821fd07698ae553af86d889" }
+pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 ipf = { package = "pallet-ipf", path = "../pallet-ipf", default-features = false }
 
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26", default-features = false }
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.24", default-features = false }
+pallet-balances = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.26", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.26" }
 
 [features]
 default = ["std"]
@@ -55,6 +51,5 @@ std = [
   "scale-info/std",
   "pallet-balances/std",
   "pallet-assets/std",
-  "sp-sandbox/std"
 ]
 try-runtime = ["frame-support/try-runtime"]
