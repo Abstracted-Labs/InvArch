@@ -5,9 +5,11 @@
 
 #![warn(missing_docs)]
 
-use std::sync::Arc;
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
-use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
+#[cfg(feature = "brainstorm")]
+use brainstorm_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
@@ -15,6 +17,7 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use std::sync::Arc;
 
 use sc_consensus_manual_seal::rpc::EngineCommand;
 

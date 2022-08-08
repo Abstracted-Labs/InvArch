@@ -15,16 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{Block, RuntimeApi, VERSION};
+
+#[cfg(feature = "brainstorm")]
+use brainstorm_runtime::{Block, RuntimeApi, VERSION};
+
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
     service::{new_partial, ChainIdentify, TemplateRuntimeExecutor},
 };
 use codec::Encode;
-use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_client_cli::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use invarch_runtime::{Block, RuntimeApi};
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -81,7 +86,7 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &invarch_runtime::VERSION
+        &VERSION
     }
 }
 
@@ -212,9 +217,9 @@ pub fn run() -> Result<()> {
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
 
-            let spec = load_spec(&params.chain.clone().unwrap_or_default())?;
+            let spec = load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
             let state_version = Cli::native_runtime_version(&spec).state_version();
-            let block: Block = generate_genesis_block(&spec, state_version)?;
+            let block: Block = generate_genesis_block(&*spec, state_version)?;
             let raw_header = block.header().encode();
             let output_buf = if params.raw {
                 raw_header
@@ -235,8 +240,9 @@ pub fn run() -> Result<()> {
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
 
-            let raw_wasm_blob =
-                extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
+            let raw_wasm_blob = extract_genesis_wasm(
+                &cli.load_spec(&params.shared_params.chain.clone().unwrap_or_default())?,
+            )?;
             let output_buf = if params.raw {
                 raw_wasm_blob
             } else {
@@ -355,7 +361,7 @@ pub fn run() -> Result<()> {
 
                 let state_version =
                     RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
-                let block: Block = generate_genesis_block(&config.chain_spec, state_version)
+                let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
                     .map_err(|e| format!("{:?}", e))?;
                 let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 

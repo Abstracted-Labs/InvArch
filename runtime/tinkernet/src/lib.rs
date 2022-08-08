@@ -25,6 +25,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use codec::{Decode, Encode};
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 pub use frame_support::{
     construct_runtime, match_types, parameter_types,
     traits::{
@@ -181,38 +182,12 @@ impl_opaque_keys! {
     }
 }
 
-#[cfg(feature = "tinker")]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("tinker_node"),
-    impl_name: create_runtime_str!("tinker_node"),
-    authoring_version: 1,
-    spec_version: 1,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
-    state_version: 1,
-};
-
-#[cfg(feature = "brainstorm")]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("brainstorm_node"),
-    impl_name: create_runtime_str!("brainstorm_node"),
+    spec_name: create_runtime_str!("tinkernet_node"),
+    impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 1,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
-    state_version: 1,
-};
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
-#[sp_version::runtime_version]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("invarch_node"),
-    impl_name: create_runtime_str!("invarch_node"),
-    authoring_version: 1,
-    spec_version: 1,
+    spec_version: 2,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -263,14 +238,7 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-#[cfg(feature = "tinker")]
 pub const SS58_PREFIX: u16 = 117u16;
-
-#[cfg(feature = "brainstorm")]
-pub const SS58_PREFIX: u16 = 42u16;
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
-pub const SS58_PREFIX: u16 = 42u16;
 
 parameter_types! {
     pub const Version: RuntimeVersion = VERSION;
@@ -439,15 +407,13 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
                 tips.merge_into(&mut fees);
             }
 
-            let (to_collators, to_treasury) = fees.ration(10, 90);
+            let (to_collators, to_treasury) = fees.ration(50, 50);
 
             Treasury::on_unbalanced(to_treasury);
             ToStakingPot::on_unbalanced(to_collators);
         }
     }
 }
-
-//pub type WeightToFee = ConstantMultiplier<Balance, WeightToFeeScalar>;
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
@@ -465,6 +431,7 @@ impl WeightToFeePolynomial for WeightToFee {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type Event = Event;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
     type WeightToFee = WeightToFee;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -486,6 +453,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type OutboundXcmpMessageSource = XcmpQueue;
     type XcmpMessageHandler = XcmpQueue;
     type ReservedXcmpWeight = ReservedXcmpWeight;
+    type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -577,13 +545,6 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
-parameter_types! {
-    pub const MaxMetadata: u32 = 10000;
-    pub const MaxCallers: u32 = 10000;
-    pub const MaxLicenseMetadata: u32 = 10000;
-    pub const MaxWasmPermissionBytes: u32 = 10000000;
-}
-
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
 pub enum InvArchLicenses {
@@ -632,6 +593,7 @@ pub enum InvArchLicenses {
 }
 
 impl LicenseList<Runtime> for InvArchLicenses {
+    /// Returns the license name as bytes and the IPFS hash of the licence on IPFS
     fn get_hash_and_metadata(
         &self,
     ) -> (
@@ -897,6 +859,12 @@ impl LicenseList<Runtime> for InvArchLicenses {
     }
 }
 
+parameter_types! {
+    pub const MaxMetadata: u32 = 10000;
+    pub const MaxCallers: u32 = 10000;
+    pub const MaxLicenseMetadata: u32 = 10000;
+}
+
 impl inv4::Config for Runtime {
     // The maximum size of an IPS's metadata
     type MaxMetadata = MaxMetadata;
@@ -916,8 +884,6 @@ impl inv4::Config for Runtime {
     type WeightToFee = WeightToFee;
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
-
-    type MaxWasmPermissionBytes = MaxWasmPermissionBytes;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -959,6 +925,7 @@ impl pallet_treasury::Config for Runtime {
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
 }
 
 parameter_types! {
@@ -981,16 +948,16 @@ impl pallet_rmrk_core::Config for Runtime {
     type MaxResourcesOnMint = MaxResourcesOnMint;
 }
 
-// parameter_types! {
-//       pub const MaxPropertiesPerTheme: u32 = 100;
-//       pub const MaxCollectionsEquippablePerPart: u32 = 100;
-// }
+parameter_types! {
+      pub const MaxPropertiesPerTheme: u32 = 100;
+      pub const MaxCollectionsEquippablePerPart: u32 = 100;
+}
 
-// impl pallet_rmrk_equip::Config for Runtime {
-//     type Event = Event;
-//     type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
-//     type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
-// }
+impl pallet_rmrk_equip::Config for Runtime {
+    type Event = Event;
+    type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+    type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+}
 
 parameter_types! {
       pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
@@ -1032,29 +999,15 @@ parameter_types! {
     pub const MaxVestingSchedules: u32 = 2u32;
 }
 
-#[cfg(feature = "tinker")]
 parameter_types! {
       pub InvarchAccounts: Vec<AccountId> = vec![
-          // Tinker Root Account (i53Pqi67ocj66W81cJNrUvjjoM3RcAsGhXVTzREs5BRfwLnd7)
+          // Tinkernet Root Account (i53Pqi67ocj66W81cJNrUvjjoM3RcAsGhXVTzREs5BRfwLnd7)
           hex_literal::hex!["f430c3461d19cded0bb3195af29d2b0379a96836c714ceb8e64d3f10902cec55"].into(),
-          // Tinker Rewards Account (i4zTcKHr38MbSUrhFLVKHG5iULhYttBVrqVon2rv6iWcxQwQQ)
+          // Tinkernet Rewards Account (i4zTcKHr38MbSUrhFLVKHG5iULhYttBVrqVon2rv6iWcxQwQQ)
           hex_literal::hex!["725bf57f1243bf4b06e911a79eb954d1fe1003f697ef5db9640e64d6e30f9a42"].into(),
+          // Tinkernet Treasury Pallet Account
           TreasuryPalletId::get().into_account_truncating(),
       ];
-}
-
-#[cfg(feature = "brainstorm")]
-parameter_types! {
-    pub InvarchAccounts: Vec<AccountId> = vec![
-        TreasuryPalletId::get().into_account_truncating(),
-    ];
-}
-
-#[cfg(all(not(feature = "tinker"), not(feature = "brainstorm")))]
-parameter_types! {
-    pub InvarchAccounts: Vec<AccountId> = vec![
-        TreasuryPalletId::get().into_account_truncating(),
-    ];
 }
 
 pub struct EnsureInvarchAccount;
@@ -1152,7 +1105,7 @@ construct_runtime!(
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
             Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
 
         // Collator support. The order of there 4 are important and shale not change.
@@ -1179,7 +1132,7 @@ construct_runtime!(
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
-     //   RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
+        RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,

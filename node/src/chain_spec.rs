@@ -19,9 +19,21 @@
 //! Learn more about Substrate chain specifications at
 //! https://docs.substrate.io/v3/runtime/chain-specs/
 
-use cumulus_primitives_core::ParaId;
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{
+    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
+    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
+    EXISTENTIAL_DEPOSIT, WASM_BINARY,
+};
 
-use invarch_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+#[cfg(feature = "brainstorm")]
+use brainstorm_runtime::{
+    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
+    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
+    EXISTENTIAL_DEPOSIT, WASM_BINARY,
+};
+
+use cumulus_primitives_core::ParaId;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 // use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -35,7 +47,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<invarch_runtime::GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -85,8 +97,8 @@ where
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn template_session_keys(keys: AuraId) -> invarch_runtime::SessionKeys {
-    invarch_runtime::SessionKeys { aura: keys }
+pub fn template_session_keys(keys: AuraId) -> SessionKeys {
+    SessionKeys { aura: keys }
 }
 
 pub fn development_config() -> ChainSpec {
@@ -278,15 +290,15 @@ fn testnet_genesis(
     invulnerables: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     id: ParaId,
-) -> invarch_runtime::GenesisConfig {
-    invarch_runtime::GenesisConfig {
-        system: invarch_runtime::SystemConfig {
+) -> GenesisConfig {
+    GenesisConfig {
+        system: SystemConfig {
             // Add Wasm runtime to storage.
-            code: invarch_runtime::WASM_BINARY
+            code: WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
         },
-        balances: invarch_runtime::BalancesConfig {
+        balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
             balances: endowed_accounts
                 .iter()
@@ -294,13 +306,13 @@ fn testnet_genesis(
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        parachain_info: invarch_runtime::ParachainInfoConfig { parachain_id: id },
-        collator_selection: invarch_runtime::CollatorSelectionConfig {
+        parachain_info: ParachainInfoConfig { parachain_id: id },
+        collator_selection: CollatorSelectionConfig {
             invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
             candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
             ..Default::default()
         },
-        session: invarch_runtime::SessionConfig {
+        session: SessionConfig {
             keys: invulnerables
                 .into_iter()
                 .map(|(acc, aura)| {
@@ -317,48 +329,14 @@ fn testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        polkadot_xcm: invarch_runtime::PolkadotXcmConfig {
+        polkadot_xcm: PolkadotXcmConfig {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
         },
-        sudo: invarch_runtime::SudoConfig {
+        sudo: SudoConfig {
             // Assign network admin rights.
             key: Some(root_key),
         },
         treasury: Default::default(),
         vesting: Default::default(),
-        // evm: EVMConfig {
-        //     accounts: {
-        //         let mut map = BTreeMap::new();
-        //         map.insert(
-        //             // H160 address of Alice dev account
-        //             // Derived from SS58 (42 prefix) address
-        //             // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-        //             // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-        //             // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
-        //             H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
-        //                 .expect("internal H160 is valid; qed"),
-        //             pallet_evm::GenesisAccount {
-        //                 balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-        //                     .expect("internal U256 is valid; qed"),
-        //                 code: Default::default(),
-        //                 nonce: Default::default(),
-        //                 storage: Default::default(),
-        //             },
-        //         );
-        //         map.insert(
-        //             // H160 address of CI test runner account
-        //             H160::from_str("6be02d1d3665660d22ff9624b7be0551ee1ac91b")
-        //                 .expect("internal H160 is valid; qed"),
-        //             pallet_evm::GenesisAccount {
-        //                 balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-        //                     .expect("internal U256 is valid; qed"),
-        //                 code: Default::default(),
-        //                 nonce: Default::default(),
-        //                 storage: Default::default(),
-        //             },
-        //         );
-        //         map
-        //     },
-        // },
     }
 }

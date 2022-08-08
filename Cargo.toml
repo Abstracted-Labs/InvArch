@@ -1,7 +1,8 @@
 [workspace]
 members = [
     'node',
-    'runtime',
+    'runtime/tinkernet',
+    'runtime/brainstorm',
 ]
 [profile.release]
 panic = 'unwind'
