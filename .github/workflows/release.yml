@@ -144,5 +144,6 @@ jobs:
 #          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Test
-        run: |
-          cat .github/release-template.md
+        uses: pCYSl5EDgo/cat@master
+        with:
+          path: .github/release-template.md
