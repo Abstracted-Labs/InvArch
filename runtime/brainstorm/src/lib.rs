@@ -997,8 +997,8 @@ impl orml_xcm::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MinVestedTransfer: Balance = UNIT * 100;
-    pub const MaxVestingSchedules: u32 = 2u32;
+    pub const MinVestedTransfer: Balance = UNIT * 1;
+    pub const MaxVestingSchedules: u32 = 50u32;
 }
 
 parameter_types! {
