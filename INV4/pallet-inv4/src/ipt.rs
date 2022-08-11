@@ -148,6 +148,9 @@ impl<T: Config> Pallet<T> {
                         | "burn_nft"
                         | "destroy_collection"
                         | "change_collection_issuer",
+                } | CallMetadata {
+                    pallet_name: "Ipf",
+                    function_name: "burn"
                 }
             ),
             Error::<T>::CantExecuteThisCall
