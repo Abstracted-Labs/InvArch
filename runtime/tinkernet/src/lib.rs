@@ -187,7 +187,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 3,
+    spec_version: 4,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -281,6 +281,70 @@ impl Contains<Call> for BaseFilter {
     }
 }
 
+pub struct MaintenanceFilter;
+impl Contains<Call> for MaintenanceFilter {
+    fn contains(c: &Call) -> bool {
+        match c {
+            Call::Balances(_) => false,
+            Call::Vesting(_) => false,
+            _ => true,
+        }
+    }
+}
+
+/// The hooks we want to run in Maintenance Mode
+pub struct MaintenanceHooks;
+
+impl frame_support::traits::OnInitialize<BlockNumber> for MaintenanceHooks {
+    fn on_initialize(n: BlockNumber) -> Weight {
+        AllPalletsReversedWithSystemFirst::on_initialize(n)
+    }
+}
+
+impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
+    fn on_runtime_upgrade() -> Weight {
+        AllPalletsReversedWithSystemFirst::on_runtime_upgrade()
+    }
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        AllPalletsReversedWithSystemFirst::pre_upgrade()
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        AllPalletsReversedWithSystemFirst::post_upgrade()
+    }
+}
+
+impl frame_support::traits::OnFinalize<BlockNumber> for MaintenanceHooks {
+    fn on_finalize(n: BlockNumber) {
+        AllPalletsReversedWithSystemFirst::on_finalize(n)
+    }
+}
+
+impl frame_support::traits::OnIdle<BlockNumber> for MaintenanceHooks {
+    fn on_idle(_n: BlockNumber, _max_weight: Weight) -> Weight {
+        0
+    }
+}
+
+impl frame_support::traits::OffchainWorker<BlockNumber> for MaintenanceHooks {
+    fn offchain_worker(n: BlockNumber) {
+        AllPalletsReversedWithSystemFirst::offchain_worker(n)
+    }
+}
+
+impl pallet_maintenance_mode::Config for Runtime {
+    type Event = Event;
+    type NormalCallFilter = BaseFilter;
+    type MaintenanceCallFilter = MaintenanceFilter;
+    type MaintenanceOrigin = EnsureRoot<AccountId>;
+    // We use AllPalletsReversedWithSystemFirst because we dont want to change the hooks in normal
+    // operation
+    type NormalExecutiveHooks = AllPalletsReversedWithSystemFirst;
+    type MaintenanceExecutiveHooks = MaintenanceHooks;
+}
+
 // Configure FRAME pallets to include in runtime.
 
 impl frame_system::Config for Runtime {
@@ -321,7 +385,7 @@ impl frame_system::Config for Runtime {
     /// The weight of database operations that the runtime can invoke.
     type DbWeight = RocksDbWeight;
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = MaintenanceMode;
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
     /// Block & extrinsics weights: base values and limits.
@@ -1102,6 +1166,7 @@ construct_runtime!(
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
         Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 6,
+        MaintenanceMode: pallet_maintenance_mode::{Pallet, Call, Config, Storage, Event} = 7,
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,

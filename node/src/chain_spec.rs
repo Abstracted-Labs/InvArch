@@ -338,5 +338,6 @@ fn testnet_genesis(
         },
         treasury: Default::default(),
         vesting: Default::default(),
+        maintenance_mode: Default::default(),
     }
 }
