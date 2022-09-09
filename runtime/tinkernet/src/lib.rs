@@ -64,13 +64,11 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
 use xcm::latest::prelude::BodyId;
-use xcm_executor::XcmExecutor;
 
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
@@ -100,7 +98,10 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 mod constants;
-use constants::{currency::*, *};
+use constants::currency::*;
+mod common_types;
+use common_types::*;
+mod assets;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -187,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 4,
+    spec_version: 5,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -523,23 +524,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
-
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ChannelInfo = ParachainSystem;
-    type VersionWrapper = ();
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-    type ControllerOrigin = EnsureRoot<AccountId>;
-    type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-    type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
-}
-
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-}
 
 parameter_types! {
     pub const Period: u32 = 6 * HOURS;
@@ -1053,11 +1037,6 @@ impl pallet_uniques::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl orml_xcm::Config for Runtime {
-    type Event = Event;
-    type SovereignOrigin = EnsureRoot<AccountId>;
-}
-
 parameter_types! {
     pub const MinVestedTransfer: Balance = UNIT * 1;
     pub const MaxVestingSchedules: u32 = 50u32;
@@ -1201,6 +1180,11 @@ construct_runtime!(
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 92,
+        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 93,
+        AssetRegistry: orml_asset_registry::{Pallet, Call, Config<T>, Storage, Event<T>} = 94,
+        Currencies: orml_currencies::{Pallet, Call} = 95,
+        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 96,
     }
 );
 

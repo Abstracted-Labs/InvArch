@@ -339,5 +339,9 @@ fn testnet_genesis(
         treasury: Default::default(),
         vesting: Default::default(),
         maintenance_mode: Default::default(),
+        #[cfg(feature = "tinkernet")]
+        asset_registry: Default::default(),
+        #[cfg(feature = "tinkernet")]
+        tokens: Default::default(),
     }
 }

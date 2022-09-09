@@ -38,8 +38,15 @@ pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", defau
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 
 ## ORML Pallets
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 orml-vesting = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.26" }
 
 ## Substrate Dependencies
 # Substrate FRAME Dependencies
@@ -170,6 +177,12 @@ std = [
 	  "xcm/std",
     "orml-xcm/std",
     "orml-vesting/std",
+    "orml-unknown-tokens/std",
+    "orml-xtokens/std",
+    "orml-xcm-support/std",
+    "orml-tokens/std",
+    "orml-currencies/std",
+    "orml-asset-registry/std",
     "pallet-ipf/std",
     "pallet-inv4/std",
     "pallet-maintenance-mode/std"
