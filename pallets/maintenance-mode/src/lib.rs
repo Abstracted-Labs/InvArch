@@ -54,9 +54,12 @@ pub use pallet::*;
 
 #[pallet]
 pub mod pallet {
-    use frame_support::pallet_prelude::*;
-    use frame_support::traits::{
-        Contains, EnsureOrigin, OffchainWorker, OnFinalize, OnIdle, OnInitialize, OnRuntimeUpgrade,
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{
+            Contains, EnsureOrigin, OffchainWorker, OnFinalize, OnIdle, OnInitialize,
+            OnRuntimeUpgrade,
+        },
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::DispatchResult;
