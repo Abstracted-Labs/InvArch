@@ -70,10 +70,10 @@ start-parachain-full-node:
 .PHONY: setup-testing purge-testing download-relay generate-relay-raw-chainspec build generate-both copy-collator-to-testing
 
 generate-genesis-wasm:
-	./target/release/invarch-collator export-genesis-wasm > testing/genesis-wasm
+	./target/release/invarch-collator export-genesis-wasm --chain local > testing/genesis-wasm
 
 generate-genesis-state:
-	./target/release/invarch-collator export-genesis-state > testing/genesis-state
+	./target/release/invarch-collator export-genesis-state --chain local > testing/genesis-state
 
 generate-both: generate-genesis-state generate-genesis-wasm
 
@@ -104,6 +104,7 @@ purge-testing:
 
 run-parachain-collator:
 	./testing/invarch-collator \
+		--chain local \
 		--collator \
 		--alice \
 		--force-authoring \
