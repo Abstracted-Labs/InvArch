@@ -2,7 +2,6 @@ use crate::{
     common_types::AssetId, constants::TreasuryAccount, AccountId, Balance, Balances, BlockNumber,
     Event, ExistentialDeposit, MaxLocks, MaxReserves, Origin, Runtime, Tokens,
 };
-use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
     traits::{Contains, EnsureOrigin, EnsureOriginWithArg},
@@ -28,18 +27,13 @@ impl EnsureOriginWithArg<Origin, Option<u32>> for AssetAuthority {
     }
 }
 
-#[derive(scale_info::TypeInfo, Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct CustomMetadata {
-    pub fee_per_second: u128,
-}
-
 impl orml_asset_registry::Config for Runtime {
     type Event = Event;
     type AuthorityOrigin = AssetAuthority;
     type AssetId = AssetId;
     type Balance = Balance;
     type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
-    type CustomMetadata = CustomMetadata;
+    type CustomMetadata = ();
     type WeightInfo = ();
 }
 

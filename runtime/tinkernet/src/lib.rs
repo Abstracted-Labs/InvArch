@@ -188,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 5,
+    spec_version: 6,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -288,6 +288,8 @@ impl Contains<Call> for MaintenanceFilter {
         match c {
             Call::Balances(_) => false,
             Call::Vesting(_) => false,
+            Call::XTokens(_) => false,
+            Call::PolkadotXcm(_) => false,
             _ => true,
         }
     }
