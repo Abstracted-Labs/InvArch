@@ -25,8 +25,8 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", branch = "main", default-features = false }
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "main",  default-features = false }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", rev = "f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0",  default-features = false }
 #pallet-inv4 = { path = "../../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
 #pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
 
@@ -55,6 +55,7 @@ frame-try-runtime = { git = "https://github.com/paritytech/substrate", default-f
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
+pallet-identity = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 pallet-preimage = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 pallet-session = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }

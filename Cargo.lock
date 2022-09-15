@@ -696,8 +696,8 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-inv4",
- "pallet-ipf",
+ "pallet-inv4 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=main)",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=main)",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
  "pallet-rmrk-core",
@@ -3312,6 +3312,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "invarch-primitives"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0#f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "io-lifetimes"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5489,10 +5504,35 @@ source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#b70fe4b4f9cc
 dependencies = [
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=main)",
  "pallet-assets",
  "pallet-balances",
- "pallet-ipf",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=main)",
+ "pallet-rmrk-core",
+ "pallet-uniques",
+ "parity-scale-codec",
+ "rmrk-traits",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-inv4"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0#f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0)",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0)",
  "pallet-rmrk-core",
  "pallet-uniques",
  "parity-scale-codec",
@@ -5514,7 +5554,24 @@ source = "git+https://github.com/InvArch/InvArch-Frames?branch=main#b70fe4b4f9cc
 dependencies = [
  "frame-support",
  "frame-system",
- "invarch-primitives",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?branch=main)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ipf"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0#f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "invarch-primitives 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -10934,8 +10991,9 @@ dependencies = [
  "pallet-authorship",
  "pallet-balances",
  "pallet-collator-selection",
- "pallet-inv4",
- "pallet-ipf",
+ "pallet-identity",
+ "pallet-inv4 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0)",
+ "pallet-ipf 0.1.0-dev (git+https://github.com/InvArch/InvArch-Frames?rev=f26e8018e7c9fdd416f675dfa4d765fe8b2b23c0)",
  "pallet-maintenance-mode",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
