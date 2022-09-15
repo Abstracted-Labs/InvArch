@@ -481,10 +481,11 @@ pub mod pallet {
         pub fn append(
             owner: OriginFor<T>,
             ips_id: T::IpId,
+            original_caller: Option<T::AccountId>,
             assets: Vec<AnyIdOf<T>>,
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_append(owner, ips_id, assets, new_metadata)
+            Pallet::<T>::inner_append(owner, ips_id, original_caller, assets, new_metadata)
         }
 
         /// Remove assets from an IP Set
@@ -492,10 +493,11 @@ pub mod pallet {
         pub fn remove(
             owner: OriginFor<T>,
             ips_id: T::IpId,
+            original_caller: Option<T::AccountId>,
             assets: Vec<AnyIdWithNewOwner<T>>,
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_remove(owner, ips_id, assets, new_metadata)
+            Pallet::<T>::inner_remove(owner, ips_id, original_caller, assets, new_metadata)
         }
 
         /// Allows replicas of this IPS to be made.

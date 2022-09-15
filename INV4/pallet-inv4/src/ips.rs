@@ -167,6 +167,7 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_append(
         owner: OriginFor<T>,
         ips_id: T::IpId,
+        original_caller: Option<T::AccountId>,
         assets: Vec<AnyIdOf<T>>,
         new_metadata: Option<Vec<u8>>,
     ) -> DispatchResult {
@@ -195,6 +196,11 @@ impl<T: Config> Pallet<T> {
             ensure!(
                 !assets.is_empty() || new_metadata.is_some(),
                 Error::<T>::ValueNotChanged
+            );
+
+            ensure!(
+                caller_account == derive_ips_account::<T>(ips_id, original_caller.as_ref()),
+                Error::<T>::NoPermission
             );
 
             // Verify valid permission to add each item in `assets` to IP Set
@@ -389,6 +395,7 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_remove(
         owner: OriginFor<T>,
         ips_id: T::IpId,
+        original_caller: Option<T::AccountId>,
         assets: Vec<AnyIdWithNewOwner<T>>,
         new_metadata: Option<Vec<u8>>,
     ) -> DispatchResult {
@@ -412,7 +419,10 @@ impl<T: Config> Pallet<T> {
             };
 
             // Only IP Set can remove assets from itself
-            ensure!(ips_account == caller_account, Error::<T>::NoPermission);
+            ensure!(
+                caller_account == derive_ips_account::<T>(ips_id, original_caller.as_ref()),
+                Error::<T>::NoPermission
+            );
 
             // Are any of the assets requested for removal, not in the IP Set?
             ensure!(
