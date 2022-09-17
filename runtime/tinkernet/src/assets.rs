@@ -14,7 +14,6 @@ use orml_traits::parameter_type_with_key;
 pub const CORE_ASSET_ID: AssetId = 0;
 
 parameter_types! {
-    pub const RegistryStrLimit: u32 = 32;
     pub const NativeAssetId: AssetId = CORE_ASSET_ID;
 }
 

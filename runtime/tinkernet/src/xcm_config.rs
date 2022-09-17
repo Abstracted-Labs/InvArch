@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     assets::CORE_ASSET_ID, common_types::AssetId, constants::TreasuryAccount, AssetRegistry,
-    Currencies, UnknownTokens,
+    Currencies, DealWithFees, UnknownTokens,
 };
 use codec::{Decode, Encode};
 use cumulus_primitives_core::ParaId;
@@ -20,7 +20,6 @@ pub use orml_xcm_support::{
 };
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use polkadot_runtime_common::impls::ToAuthor;
 use scale_info::TypeInfo;
 use sp_runtime::traits::Convert;
 use xcm::latest::prelude::*;
@@ -152,6 +151,13 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
     }
 }
 
+parameter_types! {
+    pub TNKRMultiLocation: MultiLocation = MultiLocation::new(0, X1(GeneralIndex(CORE_ASSET_ID.into())));
+}
+
+pub type Trader =
+    UsingComponents<WeightToFee, TNKRMultiLocation, AccountId, Balances, DealWithFees>;
+
 pub struct XcmConfig;
 
 impl xcm_executor::Config for XcmConfig {
@@ -166,8 +172,7 @@ impl xcm_executor::Config for XcmConfig {
 
     type Barrier = Barrier;
     type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
-    type Trader =
-        UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ToAuthor<Runtime>>;
+    type Trader = Trader;
     type ResponseHandler = PolkadotXcm;
     type AssetTrap = PolkadotXcm;
     type AssetClaims = PolkadotXcm;
