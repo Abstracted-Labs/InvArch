@@ -15,9 +15,10 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
-use orml_traits::FixedConversionRateProvider;
-use orml_traits::MultiCurrency;
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
+use orml_traits::{
+    location::AbsoluteReserveProvider, parameter_type_with_key, FixedConversionRateProvider,
+    MultiCurrency,
+};
 pub use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };

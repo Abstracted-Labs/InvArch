@@ -25,8 +25,8 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-v0.9.28_upgrade", default-features = false }
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-v0.9.28_upgrade",  default-features = false }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", rev = "5c7b64849f5a4bc0717e04c5f7ee697b47138c45", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "5c7b64849f5a4bc0717e04c5f7ee697b47138c45",  default-features = false }
 #pallet-inv4 = { path = "../../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
 #pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
 
