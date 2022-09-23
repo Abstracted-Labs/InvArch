@@ -33,7 +33,7 @@ pub struct FullDeps<C, P> {
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
     /// Command sink used for solo-dev mode
-    pub command_sink: Option<jsonrpc_core::futures::channel::mpsc::Sender<EngineCommand<Hash>>>,
+    pub command_sink: Option<futures::channel::mpsc::Sender<EngineCommand<Hash>>>,
 }
 
 /// Instantiate all RPC extensions.
