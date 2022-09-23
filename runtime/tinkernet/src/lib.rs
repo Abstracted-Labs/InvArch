@@ -1124,6 +1124,30 @@ impl pallet_preimage::Config for Runtime {
     type ByteDeposit = PreimageByteDeposit;
 }
 
+parameter_types! {
+    pub BasicDeposit: Balance = 5 * UNIT;
+    pub FieldDeposit: Balance = 2 * UNIT;
+    pub const MaxAdditionalFields: u32 = 5;
+    pub const MaxRegistrars: u32 = 10;
+    pub const MaxSubAccounts: u32 = 10;
+    pub SubAccountDeposit: Balance = 5 * UNIT;
+}
+
+impl pallet_identity::Config for Runtime {
+    type BasicDeposit = BasicDeposit;
+    type Currency = Balances;
+    type Event = Event;
+    type FieldDeposit = FieldDeposit;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxRegistrars = MaxRegistrars;
+    type MaxSubAccounts = MaxSubAccounts;
+    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type Slashed = Treasury;
+    type SubAccountDeposit = SubAccountDeposit;
+    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -1133,7 +1157,7 @@ construct_runtime!(
     {
         // System support stuff
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-            Utility: pallet_utility::{Pallet, Call, Event} = 1,
+        Utility: pallet_utility::{Pallet, Call, Event} = 1,
         ParachainSystem: cumulus_pallet_parachain_system::{
             Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
         } = 2,
@@ -1164,7 +1188,8 @@ construct_runtime!(
         // FRAME
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 40,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
-        //Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>} = 43,
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
+
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
