@@ -188,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 9,
+    spec_version: 10,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -211,10 +211,6 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
-
-// Prints debug output of the `contracts` pallet to stdout if the node is
-// started with `-lruntime::contracts=debug`.
-pub const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
@@ -275,23 +271,21 @@ parameter_types! {
 
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
-    fn contains(c: &Call) -> bool {
-        match c {
-            _ => true,
-        }
+    fn contains(_c: &Call) -> bool {
+        // match c {
+        //     _ => true,
+        // }
+        true
     }
 }
 
 pub struct MaintenanceFilter;
 impl Contains<Call> for MaintenanceFilter {
     fn contains(c: &Call) -> bool {
-        match c {
-            Call::Balances(_) => false,
-            Call::Vesting(_) => false,
-            Call::XTokens(_) => false,
-            Call::PolkadotXcm(_) => false,
-            _ => true,
-        }
+        !matches!(
+            c,
+            Call::Balances(_) | Call::Vesting(_) | Call::XTokens(_) | Call::PolkadotXcm(_)
+        )
     }
 }
 
@@ -953,7 +947,7 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(1);
     pub const ProposalBondMinimum: Balance = 100 * UNIT;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const SpendPeriod: BlockNumber = DAYS;
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
@@ -1040,7 +1034,7 @@ impl pallet_uniques::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MinVestedTransfer: Balance = UNIT * 1;
+    pub const MinVestedTransfer: Balance = UNIT;
     pub const MaxVestingSchedules: u32 = 50u32;
 }
 

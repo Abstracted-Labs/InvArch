@@ -14,6 +14,9 @@ use frame_support::{
     weights::Weight,
 };
 use frame_system::EnsureRoot;
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
+use orml_traits::FixedConversionRateProvider;
+use orml_traits::MultiCurrency;
 use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key};
 pub use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
@@ -27,8 +30,8 @@ use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
     AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds, LocationInverter,
     ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-    UsingComponents,
+    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
+    TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::XcmExecutor;
 
@@ -155,8 +158,34 @@ parameter_types! {
     pub TNKRMultiLocation: MultiLocation = MultiLocation::new(0, X1(GeneralIndex(CORE_ASSET_ID.into())));
 }
 
-pub type Trader =
-    UsingComponents<WeightToFee, TNKRMultiLocation, AccountId, Balances, DealWithFees>;
+pub struct FeePerSecondProvider;
+impl FixedConversionRateProvider for FeePerSecondProvider {
+    fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
+        AssetRegistry::fetch_metadata_by_location(location)?
+            .additional
+            .fee_per_second
+    }
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+    fn take_revenue(revenue: MultiAsset) {
+        if let MultiAsset {
+            id: xcm::latest::AssetId::Concrete(id),
+            fun: Fungibility::Fungible(amount),
+        } = revenue
+        {
+            if let Some(currency_id) = CurrencyIdConvert::convert(id) {
+                let _ = Currencies::deposit(currency_id, &TreasuryAccount::get(), amount);
+            }
+        }
+    }
+}
+
+pub type Trader = (
+    UsingComponents<WeightToFee, TNKRMultiLocation, AccountId, Balances, DealWithFees>,
+    AssetRegistryTrader<FixedRateAssetRegistryTrader<FeePerSecondProvider>, ToTreasury>,
+);
 
 pub struct XcmConfig;
 

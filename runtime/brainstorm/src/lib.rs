@@ -274,10 +274,11 @@ parameter_types! {
 
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
-    fn contains(c: &Call) -> bool {
-        match c {
-            _ => true,
-        }
+    fn contains(_c: &Call) -> bool {
+        // match c {
+        //     _ => true,
+        // }
+        true
     }
 }
 
@@ -905,7 +906,7 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(1);
     pub const ProposalBondMinimum: Balance = 100 * UNIT;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const SpendPeriod: BlockNumber = DAYS;
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
@@ -997,7 +998,7 @@ impl orml_xcm::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MinVestedTransfer: Balance = UNIT * 1;
+    pub const MinVestedTransfer: Balance = UNIT;
     pub const MaxVestingSchedules: u32 = 50u32;
 }
 
