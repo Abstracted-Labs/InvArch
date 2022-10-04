@@ -64,13 +64,11 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
 use xcm::latest::prelude::BodyId;
-use xcm_executor::XcmExecutor;
 
 /// Import the ipf pallet.
 pub use pallet_ipf as ipf;
@@ -100,7 +98,10 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
 }
 
 mod constants;
-use constants::{currency::*, *};
+use constants::currency::*;
+mod common_types;
+use common_types::*;
+mod assets;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -187,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 5,
+    spec_version: 6,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -211,10 +212,6 @@ pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
-// Prints debug output of the `contracts` pallet to stdout if the node is
-// started with `-lruntime::contracts=debug`.
-pub const CONTRACTS_DEBUG_OUTPUT: bool = true;
-
 /// The existential deposit. Set to 1/10 of the Connected Relay Chain
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 
@@ -226,8 +223,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 /// `Operational` extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-/// We allow for 0.5 of a second of compute with a 12 seconds average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -275,20 +271,30 @@ parameter_types! {
 pub struct BaseFilter;
 impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
-        match c {
-            _ => true,
-        }
+        !matches!(
+            c,
+            //    Call::XTokens(_)
+            //        | Call::PolkadotXcm(_)
+            //    |
+            Call::OrmlXcm(_) //        | Call::Currencies(_)
+                             //        | Call::Tokens(_)
+        )
     }
 }
 
 pub struct MaintenanceFilter;
 impl Contains<Call> for MaintenanceFilter {
     fn contains(c: &Call) -> bool {
-        match c {
-            Call::Balances(_) => false,
-            Call::Vesting(_) => false,
-            _ => true,
-        }
+        !matches!(
+            c,
+            Call::Balances(_)
+                | Call::Vesting(_)
+                | Call::XTokens(_)
+                | Call::PolkadotXcm(_)
+                | Call::OrmlXcm(_)
+                | Call::Currencies(_)
+                | Call::Tokens(_)
+        )
     }
 }
 
@@ -297,40 +303,40 @@ pub struct MaintenanceHooks;
 
 impl frame_support::traits::OnInitialize<BlockNumber> for MaintenanceHooks {
     fn on_initialize(n: BlockNumber) -> Weight {
-        AllPalletsReversedWithSystemFirst::on_initialize(n)
+        AllPalletsWithSystem::on_initialize(n)
     }
 }
 
 impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
     fn on_runtime_upgrade() -> Weight {
-        AllPalletsReversedWithSystemFirst::on_runtime_upgrade()
+        AllPalletsWithSystem::on_runtime_upgrade()
     }
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        AllPalletsReversedWithSystemFirst::pre_upgrade()
+        AllPalletsWithSystem::pre_upgrade()
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        AllPalletsReversedWithSystemFirst::post_upgrade()
+        AllPalletsWithSystem::post_upgrade()
     }
 }
 
 impl frame_support::traits::OnFinalize<BlockNumber> for MaintenanceHooks {
     fn on_finalize(n: BlockNumber) {
-        AllPalletsReversedWithSystemFirst::on_finalize(n)
+        AllPalletsWithSystem::on_finalize(n)
     }
 }
 
 impl frame_support::traits::OnIdle<BlockNumber> for MaintenanceHooks {
     fn on_idle(_n: BlockNumber, _max_weight: Weight) -> Weight {
-        0
+        Weight::zero()
     }
 }
 
 impl frame_support::traits::OffchainWorker<BlockNumber> for MaintenanceHooks {
     fn offchain_worker(n: BlockNumber) {
-        AllPalletsReversedWithSystemFirst::offchain_worker(n)
+        AllPalletsWithSystem::offchain_worker(n)
     }
 }
 
@@ -341,7 +347,7 @@ impl pallet_maintenance_mode::Config for Runtime {
     type MaintenanceOrigin = EnsureRoot<AccountId>;
     // We use AllPalletsReversedWithSystemFirst because we dont want to change the hooks in normal
     // operation
-    type NormalExecutiveHooks = AllPalletsReversedWithSystemFirst;
+    type NormalExecutiveHooks = AllPalletsWithSystem;
     type MaintenanceExecutiveHooks = MaintenanceHooks;
 }
 
@@ -484,7 +490,7 @@ impl WeightToFeePolynomial for WeightToFee {
     type Balance = Balance;
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
         let p = UNIT / 500;
-        let q = Balance::from(ExtrinsicBaseWeight::get());
+        let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: 1,
             negative: false,
@@ -504,8 +510,8 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT /4;
+    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -523,23 +529,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
-
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ChannelInfo = ParachainSystem;
-    type VersionWrapper = ();
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-    type ControllerOrigin = EnsureRoot<AccountId>;
-    type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-    type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
-}
-
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-}
 
 parameter_types! {
     pub const Period: u32 = 6 * HOURS;
@@ -967,7 +956,7 @@ impl pallet_utility::Config for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(1);
     pub const ProposalBondMinimum: Balance = 100 * UNIT;
-    pub const SpendPeriod: BlockNumber = 1 * DAYS;
+    pub const SpendPeriod: BlockNumber = DAYS;
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
@@ -1053,13 +1042,8 @@ impl pallet_uniques::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl orml_xcm::Config for Runtime {
-    type Event = Event;
-    type SovereignOrigin = EnsureRoot<AccountId>;
-}
-
 parameter_types! {
-    pub const MinVestedTransfer: Balance = UNIT * 1;
+    pub const MinVestedTransfer: Balance = UNIT;
     pub const MaxVestingSchedules: u32 = 50u32;
 }
 
@@ -1173,6 +1157,22 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+      pub DepositBase: Balance = deposit(1, 88);
+      pub DepositFactor: Balance = deposit(0, 32);
+      pub const MaxSignatories: u16 = 50;
+}
+
+impl pallet_multisig::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = MaxSignatories;
+    type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -1206,7 +1206,7 @@ construct_runtime!(
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config} = 31,
+        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config, Call} = 31,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
@@ -1214,7 +1214,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 40,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
-
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
@@ -1226,6 +1226,11 @@ construct_runtime!(
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
+        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 92,
+        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 93,
+        AssetRegistry: orml_asset_registry::{Pallet, Call, Config<T>, Storage, Event<T>} = 94,
+        Currencies: orml_currencies::{Pallet, Call} = 95,
+        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 96,
     }
 );
 

@@ -26,12 +26,12 @@ use tinkernet_runtime::{
     EXISTENTIAL_DEPOSIT, WASM_BINARY,
 };
 
-#[cfg(feature = "brainstorm")]
-use brainstorm_runtime::{
-    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
-    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
-    EXISTENTIAL_DEPOSIT, WASM_BINARY,
-};
+//#[cfg(feature = "brainstorm")]
+//use brainstorm_runtime::{
+//    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
+//    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
+//    EXISTENTIAL_DEPOSIT, WASM_BINARY,
+//};
 
 use cumulus_primitives_core::ParaId;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -339,5 +339,9 @@ fn testnet_genesis(
         treasury: Default::default(),
         vesting: Default::default(),
         maintenance_mode: Default::default(),
+        #[cfg(feature = "tinkernet")]
+        asset_registry: Default::default(),
+        #[cfg(feature = "tinkernet")]
+        tokens: Default::default(),
     }
 }

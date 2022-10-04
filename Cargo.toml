@@ -2,7 +2,7 @@
 members = [
     'node',
     'runtime/tinkernet',
-    'runtime/brainstorm',
+   # 'runtime/brainstorm',
 ]
 [profile.release]
 panic = 'unwind'

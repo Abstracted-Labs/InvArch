@@ -8,8 +8,8 @@
 #[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
-#[cfg(feature = "brainstorm")]
-use brainstorm_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
+//#[cfg(feature = "brainstorm")]
+//use brainstorm_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};
@@ -33,7 +33,7 @@ pub struct FullDeps<C, P> {
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
     /// Command sink used for solo-dev mode
-    pub command_sink: Option<jsonrpc_core::futures::channel::mpsc::Sender<EngineCommand<Hash>>>,
+    pub command_sink: Option<futures::channel::mpsc::Sender<EngineCommand<Hash>>>,
 }
 
 /// Instantiate all RPC extensions.
@@ -64,7 +64,7 @@ where
         command_sink: _,
     } = deps;
 
-    module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-    module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+    module.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+    module.merge(TransactionPayment::new(client).into_rpc())?;
     Ok(module)
 }

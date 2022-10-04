@@ -70,10 +70,10 @@ start-parachain-full-node:
 .PHONY: setup-testing purge-testing download-relay generate-relay-raw-chainspec build generate-both copy-collator-to-testing
 
 generate-genesis-wasm:
-	./target/release/invarch-collator export-genesis-wasm > testing/genesis-wasm
+	./target/release/invarch-collator export-genesis-wasm --chain local > testing/genesis-wasm
 
 generate-genesis-state:
-	./target/release/invarch-collator export-genesis-state > testing/genesis-state
+	./target/release/invarch-collator export-genesis-state --chain local > testing/genesis-state
 
 generate-both: generate-genesis-state generate-genesis-wasm
 
@@ -104,6 +104,7 @@ purge-testing:
 
 run-parachain-collator:
 	./testing/invarch-collator \
+		--chain local \
 		--collator \
 		--alice \
 		--force-authoring \
@@ -123,9 +124,9 @@ setup-testing: | purge-testing download-relay generate-relay-raw-chainspec build
 	$(info Terminal 3: make run-parachain-collator)
 
 run-solo-alice:
-	./target/release/invarch-collator --chain solo-dev --alice --tmp
+	./target/release/invarch-collator --chain solo-dev --alice --tmp --rpc-cors=all
 
 run-solo-bob:
-	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334
+	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334 --rpc-cors=all
 
 run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make

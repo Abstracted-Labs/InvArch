@@ -7,11 +7,11 @@ use tinkernet_runtime::{
     Index as Nonce, RuntimeApi,
 };
 
-#[cfg(feature = "brainstorm")]
-use brainstorm_runtime::{
-    api, native_version as _native_version, opaque::Block, AccountId, Balance, Hash,
-    Index as Nonce, RuntimeApi,
-};
+//#[cfg(feature = "brainstorm")]
+//use brainstorm_runtime::{
+//    api, native_version as _native_version, opaque::Block, AccountId, Balance, Hash,
+//    Index as Nonce, RuntimeApi,
+//};
 
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
@@ -26,14 +26,14 @@ use cumulus_primitives_parachain_inherent::{
 };
 use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
 use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayChainResult};
-use cumulus_relay_chain_rpc_interface::RelayChainRPCInterface;
+use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
 use jsonrpsee::RpcModule;
 use polkadot_service::CollatorPair;
 use sc_client_api::ExecutorProvider;
 use sc_executor::NativeElseWasmExecutor;
-use sc_network::NetworkService;
+use sc_network::{NetworkBlock, NetworkService};
 use sc_service::{
-    ChainSpec, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager,
+    ChainSpec, Configuration, PartialComponents, TFullBackend, TFullClient, TaskManager,
 };
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
@@ -203,10 +203,13 @@ async fn build_relay_chain_interface(
     Option<CollatorPair>,
 )> {
     match collator_options.relay_chain_rpc_url {
-        Some(relay_chain_url) => Ok((
-            Arc::new(RelayChainRPCInterface::new(relay_chain_url).await?) as Arc<_>,
-            None,
-        )),
+        Some(relay_chain_url) => {
+            let client = create_client_and_start_worker(relay_chain_url, task_manager).await?;
+            Ok((
+                Arc::new(RelayChainRpcInterface::new(client)) as Arc<_>,
+                None,
+            ))
+        }
         None => build_inprocess_relay_chain(
             polkadot_config,
             parachain_config,
@@ -220,6 +223,7 @@ async fn build_relay_chain_interface(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
+#[allow(clippy::too_many_arguments)]
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
     parachain_config: Configuration,
@@ -286,10 +290,6 @@ where
         bool,
     ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
-    if matches!(parachain_config.role, Role::Light) {
-        return Err("Light client not supported!".into());
-    }
-
     let parachain_config = prepare_node_config(parachain_config);
 
     let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue)?;
@@ -880,7 +880,7 @@ where
         keystore_container,
         task_manager,
         transaction_pool,
-        select_chain: sc_consensus::LongestChain::new(backend.clone()),
+        select_chain: sc_consensus::LongestChain::new(backend),
         other: (telemetry, telemetry_worker_handle),
     };
 

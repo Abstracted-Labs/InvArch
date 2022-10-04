@@ -1,3 +1,7 @@
+use crate::{AccountId, TreasuryPalletId};
+use frame_support::parameter_types;
+use sp_runtime::traits::AccountIdConversion;
+
 pub mod currency {
     use crate::Balance;
 
@@ -14,5 +18,6 @@ pub mod currency {
     }
 }
 
-/// The IpId
-pub type CommonId = u32;
+parameter_types! {
+    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+}
