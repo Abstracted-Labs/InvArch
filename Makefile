@@ -124,9 +124,9 @@ setup-testing: | purge-testing download-relay generate-relay-raw-chainspec build
 	$(info Terminal 3: make run-parachain-collator)
 
 run-solo-alice:
-	./target/release/invarch-collator --chain solo-dev --alice --tmp
+	./target/release/invarch-collator --chain solo-dev --alice --tmp --rpc-cors=all
 
 run-solo-bob:
-	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334
+	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334 --rpc-cors=all
 
 run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make

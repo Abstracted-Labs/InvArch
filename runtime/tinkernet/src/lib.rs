@@ -223,8 +223,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 /// `Operational` extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-/// We allow for 0.5 of a second of compute with a 12 seconds average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -304,40 +303,40 @@ pub struct MaintenanceHooks;
 
 impl frame_support::traits::OnInitialize<BlockNumber> for MaintenanceHooks {
     fn on_initialize(n: BlockNumber) -> Weight {
-        AllPalletsReversedWithSystemFirst::on_initialize(n)
+        AllPalletsWithSystem::on_initialize(n)
     }
 }
 
 impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
     fn on_runtime_upgrade() -> Weight {
-        AllPalletsReversedWithSystemFirst::on_runtime_upgrade()
+        AllPalletsWithSystem::on_runtime_upgrade()
     }
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        AllPalletsReversedWithSystemFirst::pre_upgrade()
+        AllPalletsWithSystem::pre_upgrade()
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        AllPalletsReversedWithSystemFirst::post_upgrade()
+        AllPalletsWithSystem::post_upgrade()
     }
 }
 
 impl frame_support::traits::OnFinalize<BlockNumber> for MaintenanceHooks {
     fn on_finalize(n: BlockNumber) {
-        AllPalletsReversedWithSystemFirst::on_finalize(n)
+        AllPalletsWithSystem::on_finalize(n)
     }
 }
 
 impl frame_support::traits::OnIdle<BlockNumber> for MaintenanceHooks {
     fn on_idle(_n: BlockNumber, _max_weight: Weight) -> Weight {
-        0
+        Weight::zero()
     }
 }
 
 impl frame_support::traits::OffchainWorker<BlockNumber> for MaintenanceHooks {
     fn offchain_worker(n: BlockNumber) {
-        AllPalletsReversedWithSystemFirst::offchain_worker(n)
+        AllPalletsWithSystem::offchain_worker(n)
     }
 }
 
@@ -348,7 +347,7 @@ impl pallet_maintenance_mode::Config for Runtime {
     type MaintenanceOrigin = EnsureRoot<AccountId>;
     // We use AllPalletsReversedWithSystemFirst because we dont want to change the hooks in normal
     // operation
-    type NormalExecutiveHooks = AllPalletsReversedWithSystemFirst;
+    type NormalExecutiveHooks = AllPalletsWithSystem;
     type MaintenanceExecutiveHooks = MaintenanceHooks;
 }
 
@@ -491,7 +490,7 @@ impl WeightToFeePolynomial for WeightToFee {
     type Balance = Balance;
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
         let p = UNIT / 500;
-        let q = Balance::from(ExtrinsicBaseWeight::get());
+        let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: 1,
             negative: false,
@@ -511,8 +510,8 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT /4;
+    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {

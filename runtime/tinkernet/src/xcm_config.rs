@@ -11,7 +11,6 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{
     parameter_types,
     traits::{Everything, Get, Nothing},
-    weights::Weight,
 };
 use frame_system::EnsureRoot;
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
@@ -84,7 +83,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
     /// The amount of weight an XCM operation takes. This is a safe overestimate.
-    pub const BaseXcmWeight: Weight = 100_000_000;
+    pub const BaseXcmWeight: u64 = 100_000_000;
     pub const MaxInstructions: u32 = 100;
     pub const MaxAssetsForTransfer: usize = 2;
 }

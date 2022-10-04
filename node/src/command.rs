@@ -18,8 +18,8 @@
 #[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{Block, RuntimeApi, VERSION};
 
-#[cfg(feature = "brainstorm")]
-use brainstorm_runtime::{Block, RuntimeApi, VERSION};
+//#[cfg(feature = "brainstorm")]
+//use brainstorm_runtime::{Block, RuntimeApi, VERSION};
 
 use crate::{
     chain_spec,
@@ -438,7 +438,7 @@ impl CliConfiguration<Self> for RelayChainCli {
     fn base_path(&self) -> Result<Option<BasePath>> {
         Ok(self
             .shared_params()
-            .base_path()
+            .base_path()?
             .or_else(|| self.base_path.clone().map(Into::into)))
     }
 
@@ -493,10 +493,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 
     fn transaction_pool(&self, is_dev: bool) -> Result<sc_service::config::TransactionPoolOptions> {
         self.base.base.transaction_pool(is_dev)
-    }
-
-    fn state_cache_child_ratio(&self) -> Result<Option<usize>> {
-        self.base.base.state_cache_child_ratio()
     }
 
     fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
