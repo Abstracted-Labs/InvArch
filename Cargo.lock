@@ -11080,6 +11080,7 @@ dependencies = [
  "pallet-inv4",
  "pallet-ipf",
  "pallet-maintenance-mode",
+ "pallet-multisig",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
  "pallet-rmrk-core",

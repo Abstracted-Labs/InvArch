@@ -188,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 7,
+    spec_version: 8,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -273,11 +273,11 @@ impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
         !matches!(
             c,
-            Call::XTokens(_)
-                | Call::PolkadotXcm(_)
-                | Call::OrmlXcm(_)
-                | Call::Currencies(_)
-                | Call::Tokens(_)
+            //    Call::XTokens(_)
+            //        | Call::PolkadotXcm(_)
+            //    |
+            Call::OrmlXcm(_) //        | Call::Currencies(_)
+                             //        | Call::Tokens(_)
         )
     }
 }
@@ -1157,6 +1157,22 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+      pub DepositBase: Balance = deposit(1, 88);
+      pub DepositFactor: Balance = deposit(0, 32);
+      pub const MaxSignatories: u16 = 50;
+}
+
+impl pallet_multisig::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = MaxSignatories;
+    type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -1198,7 +1214,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 40,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
-
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
