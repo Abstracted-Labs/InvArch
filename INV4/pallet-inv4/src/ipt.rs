@@ -227,7 +227,7 @@ impl<T: Config> Pallet<T> {
 
         // Ensure that this exact `call` has not been executed before???
         ensure!(
-            Multisig::<T>::get((ipt_id.0, call_hash)).is_none(),
+            Multisig::<T>::get(ipt_id.0, call_hash).is_none(),
             Error::<T>::MultisigOperationAlreadyExists
         );
 
@@ -290,7 +290,8 @@ impl<T: Config> Pallet<T> {
 
             // Multisig call is now in the voting stage, so update storage.
             Multisig::<T>::insert(
-                (ipt_id.0, call_hash),
+                ipt_id.0,
+                call_hash,
                 MultisigOperation {
                     signers: vec![(owner.clone(), ipt_id.1)]
                         .try_into()
@@ -326,7 +327,7 @@ impl<T: Config> Pallet<T> {
         ipt_id: (T::IpId, Option<T::IpId>),
         call_hash: [u8; 32],
     ) -> DispatchResultWithPostInfo {
-        Multisig::<T>::try_mutate_exists((ipt_id.0, call_hash), |data| {
+        Multisig::<T>::try_mutate_exists(ipt_id.0, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
             let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
@@ -526,7 +527,7 @@ impl<T: Config> Pallet<T> {
         ipt_id: (T::IpId, Option<T::IpId>),
         call_hash: [u8; 32],
     ) -> DispatchResultWithPostInfo {
-        Multisig::<T>::try_mutate_exists((ipt_id.0, call_hash), |data| {
+        Multisig::<T>::try_mutate_exists(ipt_id.0, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
             let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;

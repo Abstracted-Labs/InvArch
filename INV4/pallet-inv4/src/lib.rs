@@ -180,8 +180,14 @@ pub mod pallet {
     /// Key: (IP Set ID, call hash)
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
-    pub type Multisig<T: Config> =
-        StorageMap<_, Blake2_128Concat, (T::IpId, [u8; 32]), crate::ipt::MultisigOperationOf<T>>;
+    pub type Multisig<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::IpId,
+        Blake2_128Concat,
+        [u8; 32],
+        crate::ipt::MultisigOperationOf<T>,
+    >;
 
     /// Details of a sub token.
     ///
