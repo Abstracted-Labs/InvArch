@@ -13,8 +13,6 @@ Install some required stuff:
 (choose option 1 - Proceed with installation (default))
 You may need to restart your system before the next steps.
 ```
-rustup install nightly-2021-11-02
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-11-02
 apt install cmake git clang libclang-dev
 ```
 Type Y to proceed.
@@ -23,27 +21,19 @@ Clone the repo:
 
  ``git clone git@github.com:InvArch/InvArch-Node.git``
 
-Type the following command, and make sure you can see "gm-chain", if not then you likely did something wrong.
+Type the following command, and make sure you can see "InvArch-Node", if not then you likely did something wrong.
 
   ``ls -la``
 
-Enter the repo and check out the most recent tagged release of code (https://github.com/GMorDIE/gm-chain/releases)
+Enter the repo and check out the most recent tagged release of code (https://github.com/InvArch/InvArch-Node/releases)
 
 ```
 cd InvArch-Node
-git checkout v1.2.0
+git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
 ```
 
 You need to compile the code, this will take quite a while depending on your system (30+ minutes is normal):
- ``cargo build --release``
-
-Mid-way through compiling, you likely need to enter this command when prompted:
-
-``rustup target add wasm32-unknown-unknown``
-
-Resume compiling:
-
-``cargo build --release``
+ ``cargo build --release --features tinkernet``
 
 Move the node executable to `usr/local/bin`, make it executable, and change ownership to our `tinkernet-collator` service user:
 ```
@@ -52,7 +42,7 @@ sudo chmod +x /usr/local/bin/tinkernet-collator
 sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/tinkernet-collator
 ```
 
-Create the base-path folder, copy the gm_chain "chainspec" into it, and give it the necessary permissions & ownership:
+Create the base-path folder, copy the tinker-raw "chainspec" into it, and give it the necessary permissions & ownership:
 ```
 sudo mkdir /var/lib/tinkernet
 sudo cp ~/InvArch-Node/res/kusama/tinker-raw.json /var/lib/tinkernet/tinker-raw.json
@@ -80,7 +70,7 @@ ExecStart=/usr/local/bin/tinkernet-collator \
   --force-authoring \
   --name "YOUR-COLLATOR-NAME-HERE" \
   --chain /var/lib/tinkernet/tinker-raw.json \
-  --port 30333 \
+  --listen-addr "/ip4/0.0.0.0/tcp/30333/ws" \
   --telemetry-url "wss://telemetry.polkadot.io/submit 0" \
   -- \
   --execution wasm \
@@ -158,13 +148,12 @@ You need to make sure that you have a Polkadot/Substrate account set up, here's 
 
 2. Talisman Video   https://docs.talisman.xyz/talisman/talisman-initiation/setup-a-talisman-wallet  
 
-Now that you have made an account using one of those extensions, head on over to the GM Parachain section of Polkadot JS: 
+Now that you have made an account using one of those extensions, head on over to the InvArch Tinkernet section of Polkadot JS: 
 
-https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fkusama.gmordie.com#/extrinsics
+https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
 
-Ensure that you are in the Developer pallet (the top header), and navigate to the extrinsics section in the drop down.
+Ensure that you are in the Developer tab (the top header), and navigate to the extrinsics section in the drop down.
 
-Note: If you are doing this before the token distribution event, please ping the GM Intern in our Discord, and I will send you some $FREN so you can send the extrinsics.
 
 In the "using the selected account field" select the account you just made for the collator.<br/>
 In the "submit the following extrinsic field" select "session".<br/>
