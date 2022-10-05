@@ -11,7 +11,7 @@ use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, Parentage, SubIptInfo};
 use sp_arithmetic::traits::Zero;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedDiv, CheckedSub, StaticLookup};
+use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedSub, StaticLookup};
 use sp_std::{boxed::Box, vec, vec::Vec};
 
 pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
@@ -763,13 +763,20 @@ impl<T: Config> Pallet<T> {
             Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
                 // Increase `target` account's balance of `ipt_id` sub token by `amount`
-                *balance = Some(old_balance + amount);
+                *balance = Some(
+                    old_balance
+                        .checked_add(&amount)
+                        .ok_or(Error::<T>::Overflow)?,
+                );
 
                 let mut old_ipt = ipt.take().ok_or(Error::<T>::IpDoesntExist)?;
 
                 // If minting IPT0 tokens, update supply
                 if ipt_id.1.is_none() {
-                    old_ipt.supply += amount;
+                    old_ipt.supply = old_ipt
+                        .supply
+                        .checked_add(&amount)
+                        .ok_or(Error::<T>::Overflow)?;
                 }
 
                 *ipt = Some(old_ipt);

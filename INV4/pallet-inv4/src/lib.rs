@@ -430,6 +430,8 @@ pub mod pallet {
 
         /// Division by 0 happened somewhere, maybe you have IPT assets with no decimal points?
         DivisionByZero,
+
+        Overflow,
     }
 
     /// Dispatch functions
