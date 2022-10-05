@@ -188,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 6,
+    spec_version: 7,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -273,11 +273,11 @@ impl Contains<Call> for BaseFilter {
     fn contains(c: &Call) -> bool {
         !matches!(
             c,
-            //    Call::XTokens(_)
-            //        | Call::PolkadotXcm(_)
-            //    |
-            Call::OrmlXcm(_) //        | Call::Currencies(_)
-                             //        | Call::Tokens(_)
+            Call::XTokens(_)
+                | Call::PolkadotXcm(_)
+                | Call::OrmlXcm(_)
+                | Call::Currencies(_)
+                | Call::Tokens(_)
         )
     }
 }
