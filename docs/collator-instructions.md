@@ -192,17 +192,6 @@ https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
 
 
 ## Register as a collator candidate (to join the active set)
-### Get the current candidate count
-
-1. Visit the Regular UI: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/js
-2. Add this script and run it:
-```jsx
-// Simple script to get candidate pool size
-const candidatePool = await api.query.parachainStaking.candidatePool();
-console.log(`Candidate pool size is: ${candidatePool.length}`);
-```
-3. Write down the result
-
 ### Join Candidates
 1. Return to the Extrinics page: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
 2. In the `using the selected account` field, select the account you just made for the collator.
