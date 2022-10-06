@@ -1,57 +1,81 @@
-# How to set up an InvArch Collator
+# How to set up an InvArch or Tinkernet Collator
 
-Make sure you are logged in as a user with root privileges, otherwise:
-
-``sudo su -``
+Make sure you are logged in as a user with root privileges.
 
 Create a new service user to run your collator service:
-`sudo useradd --no-create-home --shell /usr/sbin/nologin tinkernet-collator`
+```shell
+sudo useradd --no-create-home --shell /usr/sbin/nologin tinkernet-collator
+```
+
+You can either install the InvArch node using a pre-built binary from GitHub, or compile it from source if you'd like to customize it.
+
+## Standard Installation
+
+Download the pre-built binary to `/usr/local/bin` and give it the necessary permissions & ownership:
+```shell
+sudo wget https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator -P /usr/local/bin
+sudo chmod +x /usr/local/bin/invarch-collator
+sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/invarch-collator
+```
+
+
+## Install from Source
 
 Install some required stuff:
 
-``curl https://sh.rustup.rs -sSf | sh``
+```shell
+curl https://sh.rustup.rs -sSf | sh
+```
 (choose option 1 - Proceed with installation (default))
 You may need to restart your system before the next steps.
 ```
-apt install cmake git clang libclang-dev
+sudo apt -y install cmake git clang libclang-dev
 ```
-Type Y to proceed.
 
 Clone the repo:
 
- ``git clone git@github.com:InvArch/InvArch-Node.git``
+ ```shell
+ git clone git@github.com:InvArch/InvArch-Node.git
+ ```
 
-Type the following command, and make sure you can see "InvArch-Node", if not then you likely did something wrong.
-
-  ``ls -la``
+Make sure you can see the "InvArch-Node" folder using `ls -la`. If not then you likely did something wrong.
 
 Enter the repo and check out the most recent tagged release of code (https://github.com/InvArch/InvArch-Node/releases)
 
-```
+```shell
 cd InvArch-Node
 git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
 ```
 
 You need to compile the code, this will take quite a while depending on your system (30+ minutes is normal):
- ``cargo build --release --features tinkernet``
+```
+cargo build --release --features tinkernet
+```
 
 Move the node executable to `usr/local/bin`, make it executable, and change ownership to our `tinkernet-collator` service user:
-```
+```shell
 sudo mv ~/InvArch-Node/target/release/invarch-collator /usr/local/bin/tinkernet-collator
 sudo chmod +x /usr/local/bin/tinkernet-collator
 sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/tinkernet-collator
 ```
 
-Create the base-path folder, copy the tinker-raw "chainspec" into it, and give it the necessary permissions & ownership:
-```
+## Run the node
+
+Now that you've got a collator node executable at `/usr/local/bin/tinkernet-collator` (either pre-built or built yourself), you're ready to create its data directory and run it for the first time.
+
+Download the chainspec (`tinker-raw.json`), set up the `tinkernet` data directory, and give it the necessary ownership:
+```shell
 sudo mkdir /var/lib/tinkernet
-sudo cp ~/InvArch-Node/res/kusama/tinker-raw.json /var/lib/tinkernet/tinker-raw.json
+sudo wget https://github.com/InvArch/InvArch-Node/releases/latest/download/tinker-raw.json -P /var/lib/tinkernet
 sudo chown -R tinkernet-collator:tinkernet-collator /var/lib/tinkernet
 ```
 
+
 Create a systemd service file to run your collator (and automatically restart it):
 
-`sudo nano /etc/systemd/system/tinkernet-collator.service`
+```shell
+sudo nano /etc/systemd/system/tinkernet-collator.service
+```
 
 Within that file, paste in the following:
 ```
@@ -90,77 +114,109 @@ Then ctrl + s then ctrl + x to save & exit that file.
 
 Let's start the collator:
 
-`sudo systemctl daemon-reload && sudo systemctl enable tinkernet-collator && sudo systemctl start tinkernet-collator.service`
+```shell
+sudo systemctl daemon-reload && sudo systemctl enable tinkernet-collator && sudo systemctl start tinkernet-collator.service
+```
 
 Now, let's check that the chain is running
 
-``sudo systemctl status tinkernet-collator.service``
+```shell
+sudo systemctl status tinkernet-collator.service
+```
 
 If the service indicates it's "running" and you see no errors, you should be ok. If not, you can debug using one of the following:
-`sudo journalctl -fu tinkernet-collator`
-`sudo systemctl status --full --lines=100 tinkernet-collator`
-
-Check if your node appears here (from your browser):
-
-``https://telemetry.polkadot.io/#list/0x19a3733beb9cb8a970a308d835599e9005e02dc007a35440e461a451466776f8``
+```shell
+sudo journalctl -fu tinkernet-collator
+sudo systemctl status --full --lines=100 tinkernet-collator
+```
 
 Syncing the Kusama relaychain will take a long time, depending on your download speed (it needs to download something like 130 gb via P2P). If you'd like to accelerate that process you can download a snapshot of the Kusama relaychain to start with:
 
-``sudo systemctl stop tinkernet-collator.service``
+```shell
+sudo systemctl stop tinkernet-collator.service
+```
 
-``ls /var/lib/tinkernet``
+Run `ls /var/lib/tinkernet` and you should now see that "chains" and "polkadot" directories have been created.
 
-You should see "chains" and "polkadot" directories.
+To accelerate setup, delete the relay chain state and download a snapshot instead:
 
-``sudo apt install curl lz4 tar``
-
-Enter y to continue if prompted.
-
-``sudo rm -rf /var/lib/tinkernet/polkadot/chains/ksmcc3/*``
-
-``sudo curl -o - -L https://ksm-rocksdb.polkashots.io/snapshot | sudo lz4 -c -d - | sudo tar -x -C /var/lib/tinkernet/polkadot/chains/ksmcc3``
-
-Once that's downloaded, we need to make sure you add your account to the collator, I would strongly reccomend making a new account for that... go to polkadot.js.org, and make a new account but save the "raw seed", and not the mnemonic.
-
-``sudo /usr/local/bin/tinkernet-collator key insert --base-path /var/lib/tinkernet --chain /var/lib/tinkernet/tinker-raw.json --scheme Sr25519 --suri "your_private_key(RAW SEED)_here" --password-interactive --key-type aura``
-
-Note: see more here if you want to double check the above https://docs.substrate.io/tutorials/get-started/trusted-network/#add-keys-to-the-keystore
+```shell
+sudo apt -y install curl lz4 tar
+sudo rm -rf /var/lib/tinkernet/polkadot/chains/ksmcc3/*
+sudo curl -o - -L https://ksm-rocksdb.polkashots.io/snapshot | sudo lz4 -c -d - | sudo tar -x -C /var/lib/tinkernet/polkadot/chains/ksmcc3
+```
 
 Now we can start the the service again:
 
-``sudo systemctl start tinkernet-collator.service``
+```shell
+sudo systemctl start tinkernet-collator.service
+```
 
-Now we need to rotate keys and set our keys on chain.
+Using your browser, check on the "telemetry" website to see if your node is online:
+`https://telemetry.polkadot.io/#list/0xd42e9606a995dfe433dc7955dc2a70f495f350f373daa200098ae84437816ad2`
 
-Ensure the collator is running, or this step won't work:
 
-``curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "author_rotateKeys", "params":[]}' http://127.0.0.1:9933/``
+## Set session keys
+
+Now we need to rotate keys and set our keys on chain to associate our on-chain acct with the collator node software in order to join the active set of collators and receive rewards. Ensure the collator is running or this step won't work.
+
+```shell
+sudo curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "author_rotateKeys", "params":[]}' http://127.0.0.1:9933/
+```
 
 You will be greeted with an output that looks like:
 
-``{"jsonrpc":"2.0","result":"0xprivate_key_will_be_here0","id":1}``
+```shell
+{"jsonrpc":"2.0","result":"0xprivate_key_will_be_here0","id":1}
+```
 
 "result":"**0x_private_key_will_be_here0**" is what we are interested in.
 
 You need to make sure that you have a Polkadot/Substrate account set up, here's some videos in case you don't know how to do that:
 
-1. Polkadot JS Video  https://www.youtube.com/watch?v=dG0DP9vayPY    https://www.youtube.com/watch?v=BpTQBAyFvEk
+1. Polkadot JS Videos  https://www.youtube.com/watch?v=dG0DP9vayPY    https://www.youtube.com/watch?v=BpTQBAyFvEk
 
 2. Talisman Video   https://docs.talisman.xyz/talisman/talisman-initiation/setup-a-talisman-wallet  
 
-Now that you have made an account using one of those extensions, head on over to the InvArch Tinkernet section of Polkadot JS: 
+Now that you have made an account using one of those extensions, head on over to the InvArch Tinkernet section of Polkadot JS:
 
 https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
 
-Ensure that you are in the Developer tab (the top header), and navigate to the extrinsics section in the drop down.
+1. Ensure that you are in the Developer tab (the top header), under Extrinsics->Submission.
+2. In the `using the selected account` field, select the account you just made for the collator.
+3. In the `submit the following extrinsic` field, select `session`.
+4. In the next field (to the right), select `setKeys(keys, proof)`.
+5. In the `keys:` field, paste in your **0x_private_key_will_be_here0** from your node.
+6. In the `proof` field, type in `0`.
+7. Submit the transaction.
 
 
-In the "using the selected account field" select the account you just made for the collator.<br/>
-In the "submit the following extrinsic field" select "session".<br/>
-In the next field (to the right), select "setKeys(keys, proof)".<br/>
-In the "keys:" field, paste in your **0x_private_key_will_be_here0** from your node.<br/>
-In the "proof" field, type in " 0 ".
+## Register as a collator candidate (to join the active set)
+### Get the current candidate count
 
-Submit the transaction.
+1. Visit the Regular UI: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/js
+2. Add this script and run it:
+```jsx
+// Simple script to get candidate pool size
+const candidatePool = await api.query.parachainStaking.candidatePool();
+console.log(`Candidate pool size is: ${candidatePool.length}`);
+```
+3. Write down the result
+
+### Join Candidates
+1. Return to the Extrinics page: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
+2. In the `using the selected account` field, select the account you just made for the collator.
+3. In the `submit the following extrinsic` field, select `collatorSelection`.
+4. In the next field (to the right), select `registerAsCandidate()`.
+5. Submit the transaction.
+6. Wait 2 rounds (roughly 12 hours) for your collator registration to take effect.
 
 Congratulations, you should now be onboarded as a collator.
+
+
+## Prologue: Node Monitoring
+
+As a collator node operator, you should also set up monitoring for your node, including Prometheus, Grafana, and AlertManager. Good instructions for that setup can already be found at:
+Prometheus/Grafana (HDX): https://docs.hydradx.io/node_monitoring
+AlertManager: https://wiki.polkadot.network/docs/maintain-guides-how-to-monitor-your-node
+
