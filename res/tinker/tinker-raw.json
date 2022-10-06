@@ -2,7 +2,12 @@
   "name": "InvArch Tinker Network",
   "id": "invarch_tinker_kusama",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+  	"/ip4/34.207.236.237/tcp/30333/ws/p2p/12D3KooWJDBpFQ4x565XCffrwqNUueWSBjfC7mCPdZxtoofZhQqg",
+  	"/ip4/34.202.164.131/tcp/30333/ws/p2p/12D3KooWKrxbPk5Mc3K6rWTfAxcfQhrcwptvqSx6UZkkhqMuqMe7",
+  	"/ip4/52.206.210.39/tcp/30333/ws/p2p/12D3KooWEhSMWi5Twk4ZqxWahDknmQz5fXvi6GEg7FXN7Co8bSRW",
+	"/dns4/node-6968552592343965696-0.p2p.onfinality.io/tcp/25446/ws/p2p/12D3KooWHoRUQsPCcZFNLMRLk5aDSDkkEBeEc3TZnQe2rBi4H2S8"
+  ],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
