@@ -211,7 +211,7 @@ As a collator node operator, you should also set up monitoring for your node, in
 
 ## Updating your Node
 
-Once new there are new releases, a quick process to update your node is:
+Once there are new releases, a quick process to update your node is:
 ```
 sudo systemctl stop tinkernet-collator
 sudo wget -O /var/lib/tinkernet/tinker-raw.json https://github.com/InvArch/InvArch-Node/releases/latest/download/tinker-raw.json
