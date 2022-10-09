@@ -13,7 +13,7 @@ You can either install the InvArch node using a pre-built binary from GitHub, or
 
 Download the pre-built binary to `/usr/local/bin` and give it the necessary permissions & ownership:
 ```shell
-sudo wget https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator -P /usr/local/bin
+sudo wget -O /usr/local/bin/invarch-collator https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator
 sudo chmod +x /usr/local/bin/invarch-collator
 sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/invarch-collator
 ```
@@ -66,7 +66,7 @@ Now that you've got a collator node executable at `/usr/local/bin/tinkernet-coll
 Download the chainspec (`tinker-raw.json`), set up the `tinkernet` data directory, and give it the necessary ownership:
 ```shell
 sudo mkdir /var/lib/tinkernet
-sudo wget https://github.com/InvArch/InvArch-Node/releases/latest/download/tinker-raw.json -P /var/lib/tinkernet
+sudo wget -O /var/lib/tinkernet/tinker-raw.json https://github.com/InvArch/InvArch-Node/releases/latest/download/tinker-raw.json
 sudo chown -R tinkernet-collator:tinkernet-collator /var/lib/tinkernet
 ```
 
@@ -200,12 +200,25 @@ https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Ftinker.invarch.network#/extrinsics
 5. Submit the transaction.
 6. Wait 2 rounds (roughly 12 hours) for your collator registration to take effect.
 
-Congratulations, you should now be onboarded as a collator.
+Congratulations, you should now be onboarded as a collator!
 
 
 ## Prologue: Node Monitoring
 
 As a collator node operator, you should also set up monitoring for your node, including Prometheus, Grafana, and AlertManager. Good instructions for that setup can already be found at:
-Prometheus/Grafana (HDX): https://docs.hydradx.io/node_monitoring
-AlertManager: https://wiki.polkadot.network/docs/maintain-guides-how-to-monitor-your-node
+* Prometheus/Grafana (HDX): https://docs.hydradx.io/node_monitoring
+* AlertManager: https://wiki.polkadot.network/docs/maintain-guides-how-to-monitor-your-node
 
+## Updating your Node
+
+Once there are new releases, a quick process to update your node is:
+```
+sudo systemctl stop tinkernet-collator
+sudo wget -O /var/lib/tinkernet/tinker-raw.json https://github.com/InvArch/InvArch-Node/releases/latest/download/tinker-raw.json
+sudo chown tinkernet-collator:tinkernet-collator /var/lib/tinkernet/tinker-raw.json
+sudo wget -O /usr/local/bin/invarch-collator https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator
+sudo chmod +x /usr/local/bin/invarch-collator
+sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/invarch-collator
+sudo systemctl start tinkernet-collator
+sudo journalctl -fu tinkernet-collator
+```
