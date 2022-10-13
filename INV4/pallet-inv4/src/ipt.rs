@@ -18,13 +18,14 @@ pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
 
 /// Details of a multisig operation
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct MultisigOperation<AccountId, Signers, Call> {
+pub struct MultisigOperation<AccountId, Signers, Call, Metadata> {
     signers: Signers,
     include_original_caller: bool,
     original_caller: AccountId,
     actual_call: Call,
     call_metadata: [u8; 2],
     call_weight: Weight,
+    metadata: Option<Metadata>,
 }
 
 pub type MultisigOperationOf<T> = MultisigOperation<
@@ -38,6 +39,7 @@ pub type MultisigOperationOf<T> = MultisigOperation<
         <T as Config>::MaxCallers,
     >,
     OpaqueCall<T>,
+    BoundedVec<u8, <T as pallet::Config>::MaxMetadata>,
 >;
 
 pub type SubAssetsWithEndowment<T> = Vec<(
@@ -134,6 +136,7 @@ impl<T: Config> Pallet<T> {
         caller: OriginFor<T>,
         include_caller: bool,
         ipt_id: (T::IpId, Option<T::IpId>),
+        metadata: Option<Vec<u8>>,
         call: Box<<T as pallet::Config>::Call>,
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller.clone())?;
@@ -158,6 +161,15 @@ impl<T: Config> Pallet<T> {
 
         // Get IPS/IPT info
         let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+
+        let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
+            Some(
+                vec.try_into()
+                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
+            )
+        } else {
+            None
+        };
 
         // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
         let total_issuance = ipt.supply
@@ -301,6 +313,7 @@ impl<T: Config> Pallet<T> {
                     actual_call: opaque_call.clone(),
                     call_metadata,
                     call_weight: call.get_dispatch_info().weight,
+                    metadata: bounded_metadata,
                 },
             );
 
