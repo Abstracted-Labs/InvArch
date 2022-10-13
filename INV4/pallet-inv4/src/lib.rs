@@ -561,14 +561,15 @@ pub mod pallet {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
 
-        #[pallet::weight(350_000_000)]
+        #[pallet::weight(400_000_000)]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             include_caller: bool,
             ipt_id: (T::IpId, Option<T::IpId>),
+            metadata: Option<Vec<u8>>,
             call: Box<<T as pallet::Config>::Call>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_operate_multisig(caller, include_caller, ipt_id, call)
+            Pallet::<T>::inner_operate_multisig(caller, include_caller, ipt_id, metadata, call)
         }
 
         #[pallet::weight(350_000_000)]
