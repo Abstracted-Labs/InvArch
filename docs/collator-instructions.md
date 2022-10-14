@@ -13,9 +13,9 @@ You can either install the InvArch node using a pre-built binary from GitHub, or
 
 Download the pre-built binary to `/usr/local/bin` and give it the necessary permissions & ownership:
 ```shell
-sudo wget -O /usr/local/bin/invarch-collator https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator
-sudo chmod +x /usr/local/bin/invarch-collator
-sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/invarch-collator
+sudo wget -O /usr/local/bin/tinkernet-collator https://github.com/InvArch/InvArch-Node/releases/latest/download/invarch-collator
+sudo chmod +x /usr/local/bin/tinkernet-collator
+sudo chown tinkernet-collator:tinkernet-collator /usr/local/bin/tinkernet-collator
 ```
 
 
