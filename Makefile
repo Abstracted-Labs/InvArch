@@ -67,6 +67,32 @@ start-parachain-full-node:
 	--chain <relative path local rococo json file> \
 	--port 30337
 
+bindir = zombienet/binaries
+dir_target = $(bindir)-$(wildcard $(bindir))
+dir_present = $(bindir)-$(bindir)
+dir_absent = $(bindir)-
+
+$(dir_present):
+
+$(dir_absent): | zombienet-download-binaries
+
+zombienet-create-binaries-dir:
+	mkdir zombienet/binaries
+
+zombienet-download-polkadot:
+	wget -O zombienet/binaries/polkadot "https://github.com/paritytech/polkadot/releases/latest/download/polkadot"
+	chmod +x zombienet/binaries/polkadot
+
+zombienet-download-basilisk:
+	wget -O zombienet/binaries/basilisk "https://github.com/galacticcouncil/Basilisk-node/releases/download/v10.3.0/basilisk"
+	chmod +x zombienet/binaries/basilisk
+
+zombienet-download-binaries:  | zombienet-create-binaries-dir zombienet-download-polkadot zombienet-download-basilisk
+
+zombienet-run-tinkernet+basilisk: | $(dir_target)
+	zombienet spawn zombienet/rococo-and-tinkernet+basilisk.toml
+
+
 .PHONY: setup-testing purge-testing download-relay generate-relay-raw-chainspec build generate-both copy-collator-to-testing
 
 generate-genesis-wasm:

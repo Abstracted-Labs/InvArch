@@ -1,0 +1,58 @@
+[settings]
+timeout = 1000
+provider = "native"
+
+[relaychain]
+default_command = "./zombienet/binaries/polkadot"
+chain = "rococo-local"
+
+  [[relaychain.nodes]]
+  name = "alice"
+  validator = true
+  ws_port = 9955
+
+  [[relaychain.nodes]]
+  name = "bob"
+  validator = true
+
+[[parachains]]
+id = 2125
+addToGenesis = true
+cumulus_based = true
+chain = "local"
+
+  [[parachains.collators]]
+  name = "tinkernet-collator-0"
+  command = "./target/release/invarch-collator"
+  ws_port = 9944
+
+  [[parachains.collators]]
+  name = "tinkernet-collator-1"
+  command = "./target/release/invarch-collator"
+
+[[parachains]]
+id = 2090
+addToGenesis = true
+cumulus_based = true
+chain = "local"
+
+  [[parachains.collators]]
+  name = "basilisk-collator-0"
+  command = "./zombienet/binaries/basilisk"
+  ws_port = 9933
+
+  [[parachains.collators]]
+  name = "basilisk-collator-1"
+  command = "./zombienet/binaries/basilisk"
+
+[[hrmp_channels]]
+sender = 2125
+recipient = 2090
+max_capacity = 8
+max_message_size = 512
+
+[[hrmp_channels]]
+sender = 2090
+recipient = 2125
+max_capacity = 8
+max_message_size = 512
