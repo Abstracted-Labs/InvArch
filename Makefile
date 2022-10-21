@@ -72,26 +72,40 @@ dir_target = $(bindir)-$(wildcard $(bindir))
 dir_present = $(bindir)-$(bindir)
 dir_absent = $(bindir)-
 
-$(dir_present):
+polkadot_target = $(bindir)/polkadot-$(wildcard $(bindir)/polkadot)
+polkadot_present = $(bindir)/polkadot-$(bindir)/polkadot
+polkadot_absent = $(bindir)/polkadot-
 
-$(dir_absent): | zombienet-download-binaries
+basilisk_target = $(bindir)/basilisk-$(wildcard $(bindir)/basilisk)
+basilisk_present = $(bindir)/basilisk-$(bindir)/basilisk
+basilisk_absent = $(bindir)/basilisk-
+
+$(dir_present):
+$(polkadot_present):
+$(basilisk_present):
+
+$(dir_absent): | zombienet-create-binaries-dir
+
+$(polkadot_absent): | zombienet-download-polkadot
+
+$(basilisk_absent): | zombienet-download-basilisk
 
 zombienet-create-binaries-dir:
 	mkdir zombienet/binaries
 
-zombienet-download-polkadot:
+zombienet-download-polkadot: | $(dir_target)
 	wget -O zombienet/binaries/polkadot "https://github.com/paritytech/polkadot/releases/latest/download/polkadot"
 	chmod +x zombienet/binaries/polkadot
 
-zombienet-download-basilisk:
+zombienet-download-basilisk: | $(dir_target)
 	wget -O zombienet/binaries/basilisk "https://github.com/galacticcouncil/Basilisk-node/releases/download/v10.3.0/basilisk"
 	chmod +x zombienet/binaries/basilisk
 
-zombienet-download-binaries:  | zombienet-create-binaries-dir zombienet-download-polkadot zombienet-download-basilisk
-
-zombienet-run-tinkernet+basilisk: | $(dir_target)
+zombienet-run-tinkernet+basilisk: | $(polkadot_target) $(basilisk_target)
 	zombienet spawn zombienet/rococo-and-tinkernet+basilisk.toml
 
+zombienet-run-tinkernet+tinkernet: | $(polkadot_target)
+	zombienet spawn zombienet/rococo-and-tinkernet+tinkernet.toml
 
 .PHONY: setup-testing purge-testing download-relay generate-relay-raw-chainspec build generate-both copy-collator-to-testing
 
