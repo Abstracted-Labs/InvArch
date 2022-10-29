@@ -1,4 +1,5 @@
 use super::pallet::{self, *};
+use crate::origin::{ensure_multisig, INV4Origin, MultisigInternalOrigin};
 use crate::util::derive_ips_account;
 use core::convert::TryInto;
 use frame_support::{
@@ -50,40 +51,49 @@ pub type SubAssetsWithEndowment<T> = Vec<(
     ),
 )>;
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    Result<
+        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+        <T as frame_system::Config>::Origin,
+    >: From<<T as frame_system::Config>::Origin>,
+{
     /// Mint `amount` of specified token to `target` account
     pub(crate) fn inner_ipt_mint(
-        owner: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        origin: OriginFor<T>,
+        sub_token: Option<T::IpId>,
         amount: <T as pallet::Config>::Balance,
         target: T::AccountId,
     ) -> DispatchResult {
-        let owner = ensure_signed(owner)?;
+        let ip_set = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
         // IP Set must exist for there to be a token
-        let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ip_set.id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Cannot mint IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
-                ensure!(ips_account == &owner, Error::<T>::NoPermission)
+                ensure!(
+                    ips_account == &derive_ips_account::<T>(ip_set.id, None),
+                    Error::<T>::NoPermission
+                )
             }
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
         // If trying to mint more of a sub token, token must already exist
-        if let Some(sub_asset) = ipt_id.1 {
+        if let Some(sub) = sub_token {
             ensure!(
-                SubAssets::<T>::get(ipt_id.0, sub_asset).is_some(),
+                SubAssets::<T>::get(ip_set.id, sub).is_some(),
                 Error::<T>::SubAssetNotFound
             );
         }
 
         // Actually mint tokens
-        Pallet::<T>::internal_mint(ipt_id, target.clone(), amount)?;
+        Pallet::<T>::internal_mint((ip_set.id, sub_token), target.clone(), amount)?;
 
         Self::deposit_event(Event::Minted {
-            token: ipt_id,
+            token: (ip_set.id, sub_token),
             target,
             amount,
         });
@@ -93,37 +103,40 @@ impl<T: Config> Pallet<T> {
 
     /// Burn `amount` of specified token from `target` account
     pub(crate) fn inner_ipt_burn(
-        owner: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        origin: OriginFor<T>,
+        sub_token: Option<T::IpId>,
         amount: <T as pallet::Config>::Balance,
         target: T::AccountId,
     ) -> DispatchResult {
-        let owner = ensure_signed(owner)?;
+        let ip_set = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
         // IP Set must exist for their to be a token
-        let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ip_set.id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Cannot burn IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
-                ensure!(ips_account == &owner, Error::<T>::NoPermission)
+                ensure!(
+                    ips_account == &derive_ips_account::<T>(ip_set.id, None),
+                    Error::<T>::NoPermission
+                )
             }
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
         // If trying to burn sub tokens, token must already exist
-        if let Some(sub_asset) = ipt_id.1 {
+        if let Some(sub) = sub_token {
             ensure!(
-                SubAssets::<T>::get(ipt_id.0, sub_asset).is_some(),
+                SubAssets::<T>::get(ip_set.id, sub).is_some(),
                 Error::<T>::SubAssetNotFound
             );
         }
 
         // Actually burn tokens
-        Pallet::<T>::internal_burn(target.clone(), ipt_id, amount)?;
+        Pallet::<T>::internal_burn(target.clone(), (ip_set.id, sub_token), amount)?;
 
         Self::deposit_event(Event::Burned {
-            token: ipt_id,
+            token: (ip_set.id, sub_token),
             target,
             amount,
         });
@@ -261,10 +274,14 @@ impl<T: Config> Pallet<T> {
 
             // Actually dispatch this call and return the result of it
             let dispatch_result = call.dispatch(
-                RawOrigin::Signed(derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
-                ))
+                super::Origin::<T>::Multisig(MultisigInternalOrigin {
+                    id: ipt_id.0,
+                    original_caller: if include_caller {
+                        Some(owner.clone())
+                    } else {
+                        None
+                    },
+                })
                 .into(),
             );
 
@@ -456,14 +473,14 @@ impl<T: Config> Pallet<T> {
                     .try_decode()
                     .ok_or(Error::<T>::CouldntDecodeCall)?
                     .dispatch(
-                        RawOrigin::Signed(derive_ips_account::<T>(
-                            ipt_id.0,
-                            if old_data.include_original_caller {
-                                Some(&old_data.original_caller)
+                        super::Origin::<T>::Multisig(MultisigInternalOrigin {
+                            id: ipt_id.0,
+                            original_caller: if old_data.include_original_caller {
+                                Some(old_data.original_caller.clone())
                             } else {
                                 None
                             },
-                        ))
+                        })
                         .into(),
                     );
 
@@ -725,20 +742,22 @@ impl<T: Config> Pallet<T> {
 
     /// Create one or more sub tokens for an IP Set
     pub(crate) fn inner_create_sub_token(
-        caller: OriginFor<T>,
-        ipt_id: T::IpId,
+        origin: OriginFor<T>,
         sub_tokens: SubAssetsWithEndowment<T>,
     ) -> DispatchResultWithPostInfo {
-        IpStorage::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
-            let caller = ensure_signed(caller.clone())?;
+        let ip_set = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
-            let old_ipt = ipt.clone().ok_or(Error::<T>::IpDoesntExist)?;
+        IpStorage::<T>::try_mutate_exists(ip_set.id, |ips| -> DispatchResultWithPostInfo {
+            let old_ips = ips.clone().ok_or(Error::<T>::IpDoesntExist)?;
 
             // Can only create sub tokens from the topmost parent, an IP Set that is `Parentage::Parent`.
             // Additionally, call must be from IP Set multisig
-            match old_ipt.parentage {
+            match old_ips.parentage {
                 Parentage::Parent(ips_account) => {
-                    ensure!(ips_account == caller, Error::<T>::NoPermission)
+                    ensure!(
+                        ips_account == derive_ips_account::<T>(ip_set.id, None),
+                        Error::<T>::NoPermission
+                    )
                 }
                 Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
             }
@@ -746,19 +765,19 @@ impl<T: Config> Pallet<T> {
             // Create sub tokens, if none already exist
             for sub in sub_tokens.clone() {
                 ensure!(
-                    !SubAssets::<T>::contains_key(ipt_id, sub.0.id),
+                    !SubAssets::<T>::contains_key(ip_set.id, sub.0.id),
                     Error::<T>::SubAssetAlreadyExists
                 );
 
-                SubAssets::<T>::insert(ipt_id, sub.0.id, &sub.0);
+                SubAssets::<T>::insert(ip_set.id, sub.0.id, &sub.0);
 
-                Balance::<T>::insert((ipt_id, Some(sub.0.id)), sub.1 .0, sub.1 .1);
+                Balance::<T>::insert((ip_set.id, Some(sub.0.id)), sub.1 .0, sub.1 .1);
             }
 
             Self::deposit_event(Event::SubTokenCreated {
                 sub_tokens_with_endowment: sub_tokens
                     .into_iter()
-                    .map(|sub| ((ipt_id, sub.0.id), sub.1 .0, sub.1 .1))
+                    .map(|sub| ((ip_set.id, sub.0.id), sub.1 .0, sub.1 .1))
                     .collect(),
             });
 

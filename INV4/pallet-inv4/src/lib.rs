@@ -40,6 +40,7 @@ pub use pallet::*;
 pub mod ipl;
 pub mod ips;
 pub mod ipt;
+pub mod origin;
 pub mod util;
 
 #[frame_support::pallet]
@@ -51,7 +52,7 @@ pub mod pallet {
 
     pub use super::{ipl, ips, ipt};
 
-    use crate::ipl::LicenseList;
+    use crate::{ipl::LicenseList, origin::INV4Origin};
 
     use rmrk_traits::primitives::{CollectionId, NftId};
 
@@ -101,7 +102,7 @@ pub mod pallet {
 
         /// The overarching call type.
         type Call: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+            + Dispatchable<Origin = <Self as pallet::Config>::Origin, PostInfo = PostDispatchInfo>
             + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
@@ -118,7 +119,16 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
+
+        /// The outer `Origin` type.
+        type Origin: From<Origin<Self>>
+            + From<<Self as frame_system::Config>::Origin>
+            + Into<Result<Origin<Self>, <Self as pallet::Config>::Origin>>;
     }
+
+    #[pallet::origin]
+    pub type Origin<T> =
+        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -436,7 +446,13 @@ pub mod pallet {
 
     /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T>
+    where
+        Result<
+            INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+            <T as frame_system::Config>::Origin,
+        >: From<<T as frame_system::Config>::Origin>,
+    {
         /// Create IP (Intellectual Property) Set (IPS)
         #[pallet::weight(900_000_000)]
         pub fn create_ips(
@@ -461,104 +477,46 @@ pub mod pallet {
             )
         }
 
-        // /// Delete an IP Set and all of its contents
-        // #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        // pub fn destroy(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-        //     IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
-        //         let owner = ensure_signed(owner)?;
-        //         let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
-
-        //         match info.parentage {
-        //             Parentage::Parent(ips_account) => {
-        //                 ensure!(ips_account == owner, Error::<T>::NoPermission)
-        //             }
-        //             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
-        //         }
-
-        //         IpsByOwner::<T>::remove(owner.clone(), ips_id);
-
-        //         Self::deposit_event(Event::Destroyed(owner, ips_id));
-
-        //         Ok(())
-        //     })
-        // }
-        // TODO: Rewrite
-
         /// Append new assets to an IP Set
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn append(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
-            original_caller: Option<T::AccountId>,
+            origin: OriginFor<T>,
             assets: Vec<AnyIdOf<T>>,
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_append(owner, ips_id, original_caller, assets, new_metadata)
+            Pallet::<T>::inner_append(origin, assets, new_metadata)
         }
 
         /// Remove assets from an IP Set
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn remove(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
-            original_caller: Option<T::AccountId>,
+            origin: OriginFor<T>,
             assets: Vec<AnyIdWithNewOwner<T>>,
             new_metadata: Option<Vec<u8>>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_remove(owner, ips_id, original_caller, assets, new_metadata)
+            Pallet::<T>::inner_remove(origin, assets, new_metadata)
         }
-
-        /// Allows replicas of this IPS to be made.
-        #[pallet::weight(200_000_000)]
-        pub fn allow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-            Pallet::<T>::inner_allow_replica(owner, ips_id)
-        }
-
-        /// Disallows replicas of this IPS to be made.
-        #[pallet::weight(200_000_000)]
-        pub fn disallow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-            Pallet::<T>::inner_disallow_replica(owner, ips_id)
-        }
-
-        // #[pallet::weight(100_000)]
-        // pub fn create_replica(
-        //     owner: OriginFor<T>,
-        //     original_ips_id: T::IpId,
-        //     ipl_license: <T as Config>::Licenses,
-        //     ipl_execution_threshold: OneOrPercent,
-        //     ipl_default_asset_weight: OneOrPercent,
-        //     ipl_default_permission: bool,
-        // ) -> DispatchResultWithPostInfo {
-        //     Pallet::<T>::inner_create_replica(
-        //         owner,
-        //         original_ips_id,
-        //         ipl_license,
-        //         ipl_execution_threshold,
-        //         ipl_default_asset_weight,
-        //         ipl_default_permission,
-        //     )
-        // }
 
         /// Mint `amount` of specified token to `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
-            owner: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            origin: OriginFor<T>,
+            sub_token: Option<T::IpId>,
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
-            Pallet::<T>::inner_ipt_mint(owner, ipt_id, amount, target)
+            Pallet::<T>::inner_ipt_mint(origin, sub_token, amount, target)
         }
 
         /// Burn `amount` of specified token from `target` account
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
-            owner: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            origin: OriginFor<T>,
+            sub_token: Option<T::IpId>,
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
-            Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
+            Pallet::<T>::inner_ipt_burn(origin, sub_token, amount, target)
         }
 
         #[pallet::weight(400_000_000)]
@@ -593,32 +551,29 @@ pub mod pallet {
         /// Create one or more sub tokens for an IP Set
         #[pallet::weight(200_000_000)]
         pub fn create_sub_token(
-            caller: OriginFor<T>,
-            ips_id: T::IpId,
+            origin: OriginFor<T>,
             sub_tokens: crate::ipt::SubAssetsWithEndowment<T>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_create_sub_token(caller, ips_id, sub_tokens)
+            Pallet::<T>::inner_create_sub_token(origin, sub_tokens)
         }
 
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_permission(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
+            origin: OriginFor<T>,
             sub_token_id: T::IpId,
             call_index: [u8; 2],
             permission: bool,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_permission(owner, ips_id, sub_token_id, call_index, permission)
+            Pallet::<T>::inner_set_permission(origin, sub_token_id, call_index, permission)
         }
 
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_sub_token_weight(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
+            origin: OriginFor<T>,
             sub_token_id: T::IpId,
             voting_weight: OneOrPercent,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_sub_token_weight(owner, ips_id, sub_token_id, voting_weight)
+            Pallet::<T>::inner_set_sub_token_weight(origin, sub_token_id, voting_weight)
         }
     }
 

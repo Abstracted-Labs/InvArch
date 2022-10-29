@@ -1,6 +1,10 @@
-use super::pallet::*;
+use super::{
+    origin::{ensure_multisig, INV4Origin},
+    pallet::{self, *},
+    util::derive_ips_account,
+};
 use frame_support::pallet_prelude::*;
-use frame_system::{ensure_signed, pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use primitives::{OneOrPercent, Parentage};
 
 /// Trait for getting license information
@@ -13,31 +17,39 @@ pub trait LicenseList<T: Config> {
     );
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    Result<
+        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+        <T as frame_system::Config>::Origin,
+    >: From<<T as frame_system::Config>::Origin>,
+{
     /// Set yes/no permission for a sub token to start/vote on a specific multisig call
     pub(crate) fn inner_set_permission(
-        owner: OriginFor<T>,
-        ips_id: T::IpId,
+        origin: OriginFor<T>,
         sub_token_id: T::IpId,
         call_index: [u8; 2],
         permission: bool,
     ) -> DispatchResult {
-        let owner = ensure_signed(owner)?;
+        let ip_set = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
-        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ip_set.id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
-                ensure!(ips_account == owner, Error::<T>::NoPermission)
+                ensure!(
+                    ips_account == derive_ips_account::<T>(ip_set.id, None),
+                    Error::<T>::NoPermission
+                )
             }
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        Permissions::<T>::insert((ips_id, sub_token_id), call_index, permission);
+        Permissions::<T>::insert((ip_set.id, sub_token_id), call_index, permission);
 
         Self::deposit_event(Event::PermissionSet {
-            ips_id,
+            ips_id: ip_set.id,
             sub_token_id,
             call_index,
             permission,
@@ -48,27 +60,29 @@ impl<T: Config> Pallet<T> {
 
     /// Set the voting weight for a sub token
     pub(crate) fn inner_set_sub_token_weight(
-        owner: OriginFor<T>,
-        ips_id: T::IpId,
+        origin: OriginFor<T>,
         sub_token_id: T::IpId,
         voting_weight: OneOrPercent,
     ) -> DispatchResult {
-        let owner = ensure_signed(owner)?;
+        let ip_set = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
-        let ip = IpStorage::<T>::get(ips_id).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = IpStorage::<T>::get(ip_set.id).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Only the top-level IP Set can set permissions
         match ip.parentage {
             Parentage::Parent(ips_account) => {
-                ensure!(ips_account == owner, Error::<T>::NoPermission)
+                ensure!(
+                    ips_account == derive_ips_account::<T>(ip_set.id, None),
+                    Error::<T>::NoPermission
+                )
             }
             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
         }
 
-        AssetWeight::<T>::insert(ips_id, sub_token_id, voting_weight);
+        AssetWeight::<T>::insert(ip_set.id, sub_token_id, voting_weight);
 
         Self::deposit_event(Event::WeightSet {
-            ips_id,
+            ips_id: ip_set.id,
             sub_token_id,
             voting_weight,
         });
