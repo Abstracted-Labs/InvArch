@@ -1,18 +1,16 @@
 use super::pallet::{self, *};
-use crate::origin::{ensure_multisig, INV4Origin, MultisigInternalOrigin};
+use crate::origin::{ensure_multisig, INV4Origin};
 use crate::util::derive_ips_account;
 use core::convert::TryInto;
 use frame_support::{
-    dispatch::{CallMetadata, Dispatchable, GetCallMetadata, GetDispatchInfo, RawOrigin},
+    dispatch::{CallMetadata, GetCallMetadata, GetDispatchInfo},
     pallet_prelude::*,
     traits::WrapperKeepOpaque,
-    weights::WeightToFee,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, Parentage, SubIptInfo};
-use sp_arithmetic::traits::Zero;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedSub, StaticLookup};
+use sp_runtime::traits::{CheckedAdd, CheckedSub};
 use sp_std::{boxed::Box, vec, vec::Vec};
 
 pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
@@ -258,31 +256,15 @@ where
 
         // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
         if owner_balance >= total_per_threshold {
-            // Transfer the extrinsic fee for `call` from `caller` to the IP Set account
-            pallet_balances::Pallet::<T>::transfer(
-                caller,
-                // Recompute IP Set AccountId
-                <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                    derive_ips_account::<T>(ipt_id.0, None),
-                ),
-                // Calculate fee from the `call` weight
-                <T as pallet::Config>::Balance::from(T::WeightToFee::weight_to_fee(
-                    &call.get_dispatch_info().weight,
-                ))
-                .into(),
-            )?;
-
             // Actually dispatch this call and return the result of it
-            let dispatch_result = call.dispatch(
-                super::Origin::<T>::Multisig(MultisigInternalOrigin {
-                    id: ipt_id.0,
-                    original_caller: if include_caller {
-                        Some(owner.clone())
-                    } else {
-                        None
-                    },
-                })
-                .into(),
+            let dispatch_result = crate::dispatch::dispatch_call::<T>(
+                ipt_id.0,
+                if include_caller {
+                    Some(owner.clone())
+                } else {
+                    None
+                },
+                *call,
             );
 
             Self::deposit_event(Event::MultisigExecuted {
@@ -297,26 +279,6 @@ where
                 result: dispatch_result.is_ok(),
             });
         } else {
-            // `caller` does not have enough balance to execute.
-            if owner_balance > Zero::zero() {
-                // Transfer the `caller`s portion of the extrinsic fee to the IP Set account
-                pallet_balances::Pallet::<T>::transfer(
-                    caller,
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<T>(ipt_id.0, None),
-                    ),
-                    // `caller`s balance is x percent of `total_per_threshold`,
-                    // So they pay x percent of the fee
-                    <T as pallet::Config>::Balance::from(
-                        (T::WeightToFee::weight_to_fee(&call.get_dispatch_info().weight)
-                            .checked_div(&total_per_threshold.into())
-                            .ok_or(Error::<T>::DivisionByZero)?)
-                            * owner_balance.into(),
-                    )
-                    .into(),
-                )?;
-            }
-
             // Multisig call is now in the voting stage, so update storage.
             Multisig::<T>::insert(
                 ipt_id.0,
@@ -441,48 +403,24 @@ where
                     total_issuance
                 };
 
-            // Calculate fee from call weight
-            let fee: <T as pallet::Config>::Balance =
-                T::WeightToFee::weight_to_fee(&old_data.call_weight).into();
-
             // If already cast votes + `caller` weighted votes are enough to meet/exeed the threshold, then go ahead and execute the `call` now.
             if (total_in_operation + voter_balance) >= total_per_threshold {
-                // Transfer the extrinsic fee for `call` from `caller` to the IP Set account
-                pallet_balances::Pallet::<T>::transfer(
-                    caller,
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<T>(ipt_id.0, None),
-                    ),
-                    // Voter will pay the remainder of the fee after subtracting the total IPTs already in the operation converted to real fee value.
-                    fee.checked_sub(
-                        &(total_in_operation
-                            * (fee
-                                .checked_div(&total_per_threshold)
-                                .ok_or(Error::<T>::DivisionByZero)?)),
-                    )
-                    .ok_or(Error::<T>::NotEnoughAmount)?
-                    .into(),
-                )?;
-
                 // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
                 // Actually dispatch this call and return the result of it
-                let dispatch_result = old_data
-                    .actual_call
-                    .try_decode()
-                    .ok_or(Error::<T>::CouldntDecodeCall)?
-                    .dispatch(
-                        super::Origin::<T>::Multisig(MultisigInternalOrigin {
-                            id: ipt_id.0,
-                            original_caller: if old_data.include_original_caller {
-                                Some(old_data.original_caller.clone())
-                            } else {
-                                None
-                            },
-                        })
-                        .into(),
-                    );
+                let dispatch_result = crate::dispatch::dispatch_call::<T>(
+                    ipt_id.0,
+                    if old_data.include_original_caller {
+                        Some(old_data.original_caller.clone())
+                    } else {
+                        None
+                    },
+                    old_data
+                        .actual_call
+                        .try_decode()
+                        .ok_or(Error::<T>::CouldntDecodeCall)?,
+                );
 
                 Self::deposit_event(Event::MultisigExecuted {
                     ips_id: ipt_id.0,
@@ -501,24 +439,6 @@ where
                 });
             } else {
                 // `caller`s votes were not enough to pass the vote
-                if voter_balance > Zero::zero() {
-                    // Transfer the callers portion of the transaction fee to the IP Set account
-                    pallet_balances::Pallet::<T>::transfer(
-                        caller,
-                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                            derive_ips_account::<T>(ipt_id.0, None),
-                        ),
-                        // callers balance is x percent of `total_per_threshold`,
-                        // So they pay x percent of the fee
-                        <T as pallet::Config>::Balance::from(
-                            (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                                .checked_div(&total_per_threshold.into())
-                                .ok_or(Error::<T>::DivisionByZero)?)
-                                * voter_balance.into(),
-                        )
-                        .into(),
-                    )?;
-                }
 
                 // Update storage
                 old_data.signers = {
@@ -574,59 +494,6 @@ where
 
             // if `caller` is the account who created this vote, they can dissolve it immediately
             if owner == old_data.original_caller {
-                // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
-                let total_issuance = ipt.supply
-                    + SubAssets::<T>::iter_prefix_values(ipt_id.0)
-                        .map(|sub_asset| {
-                            let supply =
-                                Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id)))
-                                    .sum();
-
-                            if let OneOrPercent::ZeroPoint(weight) =
-                                Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
-                            {
-                                Some(weight * supply)
-                            } else {
-                                Some(supply)
-                            }
-                        })
-                        .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                        .ok_or(Error::<T>::IpDoesntExist)?
-                        .into_iter()
-                        .sum();
-
-                // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call.
-                let total_per_threshold: <T as pallet::Config>::Balance =
-                    if let OneOrPercent::ZeroPoint(percent) =
-                        Pallet::<T>::execution_threshold(ipt_id.0)
-                            .ok_or(Error::<T>::IpDoesntExist)?
-                    {
-                        percent * total_issuance
-                    } else {
-                        total_issuance
-                    };
-
-                // Send funds held in IPS account for the transaction fee back to the individual signers
-                for signer in old_data.signers {
-                    pallet_balances::Pallet::<T>::transfer(
-                        <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                            derive_ips_account::<T>(ipt_id.0, None),
-                        )),
-                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                            signer.0.clone(),
-                        ),
-                        <T as pallet::Config>::Balance::from(
-                            (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                                .checked_div(&total_per_threshold.into())
-                                .ok_or(Error::<T>::DivisionByZero)?)
-                                * Balance::<T>::get((ipt_id.0, signer.1), signer.0)
-                                    .ok_or(Error::<T>::UnknownError)?
-                                    .into(),
-                        )
-                        .into(),
-                    )?;
-                }
-
                 // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
@@ -700,21 +567,6 @@ where
                     .collect::<Vec<(T::AccountId, Option<T::IpId>)>>()
                     .try_into()
                     .map_err(|_| Error::<T>::TooManySignatories)?;
-
-                // Transfer the callers portion of the transaction fee from the IP Set account back to the caller
-                pallet_balances::Pallet::<T>::transfer(
-                    <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                        derive_ips_account::<T>(ipt_id.0, None),
-                    )),
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner.clone()),
-                    <T as pallet::Config>::Balance::from(
-                        (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                            .checked_div(&total_per_threshold.into())
-                            .ok_or(Error::<T>::DivisionByZero)?)
-                            * voter_balance.into(),
-                    )
-                    .into(),
-                )?;
 
                 *data = Some(old_data.clone());
 

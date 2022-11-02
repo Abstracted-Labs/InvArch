@@ -25,7 +25,7 @@ use frame_support::{
     dispatch::Dispatchable,
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get, GetCallMetadata},
-    weights::{GetDispatchInfo, PostDispatchInfo, WeightToFee},
+    weights::{GetDispatchInfo, PostDispatchInfo},
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -37,6 +37,7 @@ use primitives::IpInfo;
 
 pub use pallet::*;
 
+pub mod dispatch;
 pub mod ipl;
 pub mod ips;
 pub mod ipt;
@@ -46,6 +47,8 @@ pub mod util;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::traits::Contains;
+    use frame_system::RawOrigin;
     use primitives::{OneOrPercent, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_std::iter::Sum;
@@ -92,7 +95,6 @@ pub mod pallet {
             + TypeInfo
             + Sum<<Self as pallet::Config>::Balance>
             + IsType<<Self as pallet_balances::Config>::Balance>
-            + IsType<<<Self as pallet::Config>::WeightToFee as WeightToFee>::Balance>
             + From<u128>;
 
         #[pallet::constant]
@@ -108,7 +110,7 @@ pub mod pallet {
             + GetCallMetadata
             + Encode;
 
-        type WeightToFee: WeightToFee;
+        //  type WeightToFee: WeightToFee;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
@@ -123,7 +125,9 @@ pub mod pallet {
         /// The outer `Origin` type.
         type Origin: From<Origin<Self>>
             + From<<Self as frame_system::Config>::Origin>
-            + Into<Result<Origin<Self>, <Self as pallet::Config>::Origin>>;
+            + From<RawOrigin<<Self as frame_system::Config>::AccountId>>;
+
+        type DispatchAsMultisigWhen: Contains<<Self as pallet::Config>::Call>;
     }
 
     #[pallet::origin]
