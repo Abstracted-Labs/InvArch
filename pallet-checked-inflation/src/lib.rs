@@ -6,7 +6,7 @@ use sp_std::convert::TryInto;
 
 mod inflation;
 
-use inflation::*;
+pub use inflation::*;
 pub use pallet::*;
 
 #[frame_support::pallet]
