@@ -4,6 +4,9 @@ use frame_support::traits::Get;
 use sp_arithmetic::traits::Zero;
 use sp_std::convert::TryInto;
 
+mod inflation;
+
+use inflation::*;
 pub use pallet::*;
 
 #[frame_support::pallet]
@@ -17,7 +20,7 @@ pub mod pallet {
     use frame_system::{ensure_root, pallet_prelude::BlockNumberFor};
     use num_traits::CheckedSub;
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
@@ -42,7 +45,7 @@ pub mod pallet {
         type ErasPerYear: Get<u32>;
 
         #[pallet::constant]
-        type InflationPerEra: Get<BalanceOf<Self>>;
+        type Inflation: Get<InflationMethod<BalanceOf<Self>>>;
 
         type DealWithInflation: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
@@ -63,7 +66,10 @@ pub mod pallet {
     #[pallet::getter(fn year_start_issuance)]
     pub type YearStartIssuance<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-    /// Errors for IPF pallet
+    #[pallet::storage]
+    #[pallet::getter(fn inflation_per_era)]
+    pub type YearlyInflationPerEra<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
     #[pallet::error]
     pub enum Error<T> {}
 
@@ -104,8 +110,6 @@ pub mod pallet {
 
             let blocks_per_era = T::BlocksPerEra::get();
 
-            let inflation_per_era = T::InflationPerEra::get();
-
             let eras_per_year = T::ErasPerYear::get();
 
             if previous_era >= eras_per_year && now >= next_era_starting_block {
@@ -117,6 +121,14 @@ pub mod pallet {
                     <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
 
                 YearStartIssuance::<T>::put(current_issuance);
+
+                let inflation_per_era = GetInflation::<T>::get_inflation_args(
+                    &T::Inflation::get(),
+                    eras_per_year,
+                    current_issuance,
+                );
+
+                YearlyInflationPerEra::<T>::put(inflation_per_era);
 
                 Self::deposit_event(Event::NewYear {
                     starting_issuance: current_issuance,
@@ -134,6 +146,8 @@ pub mod pallet {
 
                 T::DbWeight::get().reads_writes(6, 3)
             } else {
+                let inflation_per_era = Self::inflation_per_era();
+
                 if now >= next_era_starting_block || previous_era.is_zero() {
                     CurrentEra::<T>::put(previous_era + 1);
 
