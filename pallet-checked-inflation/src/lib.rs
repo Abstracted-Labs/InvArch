@@ -89,7 +89,7 @@ pub mod pallet {
         InflationMinted {
             year_start_issuance: BalanceOf<T>,
             current_issuance: BalanceOf<T>,
-            expected_issuance: BalanceOf<T>,
+            expected_new_issuance: BalanceOf<T>,
             minted: BalanceOf<T>,
         },
 
@@ -140,7 +140,7 @@ pub mod pallet {
                 Self::deposit_event(Event::InflationMinted {
                     year_start_issuance: current_issuance,
                     current_issuance,
-                    expected_issuance: current_issuance + inflation_per_era,
+                    expected_new_issuance: current_issuance + inflation_per_era,
                     minted: inflation_per_era,
                 });
 
@@ -162,13 +162,13 @@ pub mod pallet {
                     let current_issuance =
                         <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
 
-                    let expected_issuance =
+                    let expected_current_issuance =
                         start_issuance + (inflation_per_era * previous_era.into());
 
-                    match current_issuance.checked_sub(&expected_issuance) {
+                    match current_issuance.checked_sub(&expected_current_issuance) {
                         Some(over_inflation) if over_inflation > Zero::zero() => {
                             Self::deposit_event(Event::OverInflationDetected {
-                                expected_issuance,
+                                expected_issuance: expected_current_issuance,
                                 current_issuance,
                             });
 
@@ -178,7 +178,8 @@ pub mod pallet {
                                 Self::deposit_event(Event::InflationMinted {
                                     year_start_issuance: start_issuance,
                                     current_issuance,
-                                    expected_issuance,
+                                    expected_new_issuance: expected_current_issuance
+                                        + inflation_per_era,
                                     minted: to_mint,
                                 });
                             }
@@ -190,7 +191,8 @@ pub mod pallet {
                             Self::deposit_event(Event::InflationMinted {
                                 year_start_issuance: start_issuance,
                                 current_issuance,
-                                expected_issuance,
+                                expected_new_issuance: expected_current_issuance
+                                    + inflation_per_era,
                                 minted: inflation_per_era,
                             });
                         }
