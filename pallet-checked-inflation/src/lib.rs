@@ -5,6 +5,7 @@ use sp_arithmetic::traits::Zero;
 use sp_std::convert::TryInto;
 
 mod inflation;
+pub mod migrations;
 
 pub use inflation::*;
 pub use pallet::*;
