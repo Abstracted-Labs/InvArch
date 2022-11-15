@@ -50,10 +50,12 @@ pub mod pallet {
         type DealWithInflation: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
 
+    /// The current era. Starts from 1 and is reset every year.
     #[pallet::storage]
     #[pallet::getter(fn current_era)]
     pub type CurrentEra<T: Config> = StorageValue<_, u32, ValueQuery>;
 
+    /// Block that the next era starts at.
     #[pallet::storage]
     #[pallet::getter(fn next_era_starting_block)]
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
@@ -62,10 +64,12 @@ pub mod pallet {
     #[pallet::getter(fn current_year)]
     pub type CurrentYear<T: Config> = StorageValue<_, u32, ValueQuery>;
 
+    /// Total token supply at the very beginning of the year before any inflation has been minted.
     #[pallet::storage]
     #[pallet::getter(fn year_start_issuance)]
     pub type YearStartIssuance<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    /// The number of tokens minted at the beginning of every era during a year.
     #[pallet::storage]
     #[pallet::getter(fn inflation_per_era)]
     pub type YearlyInflationPerEra<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
@@ -112,7 +116,9 @@ pub mod pallet {
 
             let eras_per_year = T::ErasPerYear::get();
 
+            // If block runs first era of each year. Else block runs every other year.
             if previous_era >= eras_per_year && now >= next_era_starting_block {
+                // Reset block # back to 1 for the new year
                 CurrentEra::<T>::put(1);
 
                 NextEraStartingBlock::<T>::put(now + blocks_per_era);
@@ -148,6 +154,7 @@ pub mod pallet {
             } else {
                 let inflation_per_era = Self::inflation_per_era();
 
+                // First era logic
                 if now >= next_era_starting_block || previous_era.is_zero() {
                     CurrentEra::<T>::put(previous_era + 1);
 
@@ -158,20 +165,29 @@ pub mod pallet {
                         next_era_starting_block: (now + blocks_per_era),
                     });
 
+                    // Get issuance that the year started at
                     let start_issuance = Self::year_start_issuance();
+
+                    // Get actual current total token issuance
                     let current_issuance =
                         <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
 
+                    // Calculate the expected current total token issuance
                     let expected_current_issuance =
                         start_issuance + (inflation_per_era * previous_era.into());
 
+                    // Check that current_issuance and expected_current_issuance match in value. If there is is underflow, that means not enough tokens were minted.
+                    // If the result is > 0, too many tokens were minted.
                     match current_issuance.checked_sub(&expected_current_issuance) {
+                        // Either current issuance matches the expected issuance, or current issuance is higher than expected
+                        // meaning too many tokens were minted
                         Some(over_inflation) if over_inflation > Zero::zero() => {
                             Self::deposit_event(Event::OverInflationDetected {
                                 expected_issuance: expected_current_issuance,
                                 current_issuance,
                             });
 
+                            // Mint the difference
                             if let Some(to_mint) = inflation_per_era.checked_sub(&over_inflation) {
                                 Self::mint(to_mint);
 
@@ -185,6 +201,7 @@ pub mod pallet {
                             }
                         }
 
+                        // Underflow has occurred, not as many tokens exist as expected
                         _ => {
                             Self::mint(inflation_per_era);
 
