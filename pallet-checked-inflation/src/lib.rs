@@ -7,6 +7,12 @@ use sp_std::convert::TryInto;
 mod inflation;
 pub mod migrations;
 
+#[cfg(test)]
+pub(crate) mod mock;
+
+#[cfg(test)]
+mod test;
+
 pub use inflation::*;
 pub use pallet::*;
 
