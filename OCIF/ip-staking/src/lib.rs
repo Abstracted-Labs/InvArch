@@ -61,7 +61,7 @@ pub mod pallet {
             + Clone;
 
         #[pallet::constant]
-        type BlockPerEra: Get<BlockNumberFor<Self>>;
+        type BlocksPerEra: Get<BlockNumberFor<Self>>;
 
         #[pallet::constant]
         type RegisterDeposit: Get<BalanceOf<Self>>;
@@ -217,7 +217,7 @@ pub mod pallet {
             let next_era_starting_block = Self::next_era_starting_block();
 
             if now >= next_era_starting_block || previous_era.is_zero() {
-                let blocks_per_era = T::BlockPerEra::get();
+                let blocks_per_era = T::BlocksPerEra::get();
                 let next_era = previous_era + 1;
                 CurrentEra::<T>::put(next_era);
 
