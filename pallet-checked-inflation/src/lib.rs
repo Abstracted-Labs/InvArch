@@ -124,7 +124,9 @@ pub mod pallet {
             let eras_per_year = T::ErasPerYear::get();
 
             // If block runs first era of each year. Else block runs every other year.
-            if previous_era >= eras_per_year && now >= next_era_starting_block {
+            if previous_era >= eras_per_year && now >= next_era_starting_block
+                || next_era_starting_block == Zero::zero()
+            {
                 // Reset block # back to 1 for the new year
                 CurrentEra::<T>::put(1);
 

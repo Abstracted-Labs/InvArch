@@ -18,11 +18,11 @@ type AccountId = u32;
 type BlockNumber = u64;
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
-const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
+pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
-const INFLATION_RECEIVER: AccountId = 0;
-const ALICE: AccountId = 1;
-const BOB: AccountId = 2;
+pub const INFLATION_RECEIVER: AccountId = 0;
+pub const ALICE: AccountId = 1;
+pub const BOB: AccountId = 2;
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -77,7 +77,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const Inflation: InflationMethod<BalanceOf<Test>> = InflationMethod::Rate(Perbill::from_percent(50));
+    pub const Inflation: InflationMethod<BalanceOf<Test>> = InflationMethod::Rate(Perbill::from_percent(10));
 }
 
 pub struct DealWithInflation;
@@ -87,13 +87,49 @@ impl OnUnbalanced<NegativeImbalance> for DealWithInflation {
     }
 }
 
+pub const BLOCKS_PER_ERA: u64 = 4;
+pub const ERAS_PER_YEAR: u32 = 365;
+
 impl pallet::Config for Test {
-    type BlocksPerEra = ConstU64<7200>;
+    type BlocksPerEra = ConstU64<BLOCKS_PER_ERA>;
     type Currency = Balances;
     type Event = Event;
-    type ErasPerYear = ConstU32<365>;
+    type ErasPerYear = ConstU32<ERAS_PER_YEAR>;
     type Inflation = Inflation;
     type DealWithInflation = DealWithInflation;
+}
+
+pub struct ExtBuilder;
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        ExtBuilder
+    }
+}
+
+pub const GENESIS_ISSUANCE: u128 = 11700000000000000000;
+
+impl ExtBuilder {
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut t = frame_system::GenesisConfig::default()
+            .build_storage::<Test>()
+            .unwrap();
+
+        pallet_balances::GenesisConfig::<Test> {
+            balances: vec![(INFLATION_RECEIVER, GENESIS_ISSUANCE)],
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+        let mut ext = sp_io::TestExternalities::new(t);
+        ext.execute_with(|| System::set_block_number(0));
+
+        //   ext.execute_with(|| YearStartIssuance::<Test>::put(Balances::total_issuance()));
+
+        // ext.execute_with(|| run_to_block(1));
+
+        ext
+    }
 }
 
 pub fn run_to_block(n: u64) {
@@ -114,9 +150,17 @@ pub fn run_to_next_era() {
 pub fn run_to_next_year() {
     run_to_next_era();
 
-    let blocks_per_era = 7200u32;
-    let eras_per_year = 365u32;
     let current_era = CheckedInflation::current_era();
 
-    run_to_block(System::block_number() + ((eras_per_year - current_era) * blocks_per_era) as u64);
+    run_to_block(System::block_number() + ((ERAS_PER_YEAR - current_era) as u64 * BLOCKS_PER_ERA));
+}
+
+pub fn run_to_half_year() {
+    run_to_next_era();
+
+    let current_era = CheckedInflation::current_era();
+
+    run_to_block(
+        System::block_number() + (((ERAS_PER_YEAR / 2) - current_era) as u64 * BLOCKS_PER_ERA),
+    );
 }
