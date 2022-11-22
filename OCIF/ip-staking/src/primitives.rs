@@ -14,15 +14,12 @@ pub type BalanceOf<T> =
 
 const MAX_ASSUMED_VEC_LEN: u32 = 10;
 
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub(crate) enum IpState {
-    Registered,
-    Unregistered(Era),
-}
-
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct IpInfo<AccountId> {
-    pub(crate) account: AccountId,
+pub struct IpInfo<AccountId, Name, Description, Image> {
+    pub account: AccountId,
+    pub name: Name,
+    pub description: Description,
+    pub image: Image,
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -44,7 +41,7 @@ pub struct EraInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) locked: Balance,
 }
 
-#[derive(Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct IpStakeInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
     pub(crate) total: Balance,
