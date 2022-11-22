@@ -1,7 +1,5 @@
-use frame_support::traits::{Currency, Imbalance};
-use sp_runtime::Perbill;
-
 use crate::{mock::*, *};
+use frame_support::traits::{Currency, Imbalance};
 
 #[test]
 fn inflate_one_era() {

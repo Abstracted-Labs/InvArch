@@ -1,8 +1,5 @@
 use core::convert::TryFrom;
-use frame_support::traits::{
-    ConstU128, ConstU32, ConstU64, Currency, Hooks, Imbalance, OnUnbalanced,
-};
-use frame_system::limits::BlockWeightsBuilder;
+use frame_support::traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced};
 use pallet_balances::AccountData;
 use sp_core::H256;
 use sp_runtime::{parameter_types, testing::Header, traits::IdentityLookup, Perbill};
@@ -22,7 +19,6 @@ pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
 pub const INFLATION_RECEIVER: AccountId = 0;
 pub const ALICE: AccountId = 1;
-pub const BOB: AccountId = 2;
 
 frame_support::construct_runtime!(
     pub enum Test where
