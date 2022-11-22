@@ -23,8 +23,10 @@ pub mod pallet {
         pallet_prelude::*,
         traits::{Currency, LockableCurrency, OnUnbalanced, ReservableCurrency},
     };
-    use frame_system::pallet_prelude::OriginFor;
-    use frame_system::{ensure_root, pallet_prelude::BlockNumberFor};
+    use frame_system::{
+        ensure_root,
+        pallet_prelude::{BlockNumberFor, OriginFor},
+    };
     use num_traits::CheckedSub;
 
     pub(crate) type BalanceOf<T> =

@@ -1,7 +1,9 @@
-use crate::testing::*;
-use crate::{pallet::Error, pallet::Event, *};
-use frame_support::traits::Currency;
-use frame_support::{assert_noop, assert_ok};
+use crate::{
+    pallet::{Error, Event},
+    testing::*,
+    *,
+};
+use frame_support::{assert_noop, assert_ok, traits::Currency};
 use mock::Balances;
 use sp_runtime::{traits::Zero, Perbill};
 

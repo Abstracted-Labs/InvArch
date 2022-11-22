@@ -1,7 +1,6 @@
 use crate::{self as pallet_ip_staking};
 
-use core::convert::TryFrom;
-use core::convert::TryInto;
+use core::convert::{TryFrom, TryInto};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{ConstU128, ConstU32, Currency, OnFinalize, OnInitialize, TypedGet},

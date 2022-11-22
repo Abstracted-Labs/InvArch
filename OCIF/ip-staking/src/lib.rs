@@ -17,8 +17,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, Saturating, Zero},
     Perbill,
 };
-use sp_std::convert::From;
-use sp_std::convert::TryInto;
+use sp_std::convert::{From, TryInto};
 
 pub mod primitives;
 use primitives::*;
