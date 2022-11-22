@@ -102,6 +102,8 @@ use constants::currency::*;
 mod common_types;
 use common_types::*;
 mod assets;
+mod inflation;
+mod staking;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -1220,6 +1222,8 @@ construct_runtime!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
         INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+        CheckedInflation: pallet_checked_inflation::{Pallet, Storage, Event<T>, Call} = 75,
+        IpStaking: pallet_ip_staking::{Pallet, Call, Storage, Event<T>} = 76,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
