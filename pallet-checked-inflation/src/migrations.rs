@@ -5,12 +5,11 @@ pub mod first_time {
     use super::*;
     use frame_support::{traits::Currency, weights::Weight};
 
-    pub struct InitializeStorages<T, FirstTime>(sp_std::marker::PhantomData<(T, FirstTime)>);
-    impl<T: Config, FirstTime: Get<bool>> OnRuntimeUpgrade for InitializeStorages<T, FirstTime> {
+    pub struct InitializeStorages<T>(sp_std::marker::PhantomData<T>);
+    impl<T: Config> OnRuntimeUpgrade for InitializeStorages<T> {
         fn on_runtime_upgrade() -> Weight {
-            // Has to be hard coded as being the first time the pallet is added to the runtime
-            // And as a safety measure in case it is still set to true in subsequent upgrades, we checke if YearStartIssuance is 0.
-            if FirstTime::get() && YearStartIssuance::<T>::get() == Zero::zero() {
+            // As a safety measure, we check if YearStartIssuance is 0.
+            if YearStartIssuance::<T>::get() == Zero::zero() {
                 let current_issuance =
                     <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
 
