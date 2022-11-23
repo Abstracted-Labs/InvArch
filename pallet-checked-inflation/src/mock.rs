@@ -144,11 +144,13 @@ pub fn run_to_next_era() {
 }
 
 pub fn run_to_next_year() {
-    run_to_next_era();
+    // run_to_next_era();
 
     let current_era = CheckedInflation::current_era();
 
     run_to_block(System::block_number() + ((ERAS_PER_YEAR - current_era) as u64 * BLOCKS_PER_ERA));
+
+    run_to_next_era();
 }
 
 pub fn run_to_half_year() {

@@ -83,8 +83,15 @@ pub mod pallet {
     #[pallet::getter(fn inflation_per_era)]
     pub type YearlyInflationPerEra<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    /// Wheter or not the inflation process should be halted.
+    #[pallet::storage]
+    #[pallet::getter(fn is_halted)]
+    pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
+
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        NoHaltChange,
+    }
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
@@ -110,6 +117,10 @@ pub mod pallet {
             expected_issuance: BalanceOf<T>,
             current_issuance: BalanceOf<T>,
         },
+
+        HaltChanged {
+            is_halted: bool,
+        },
     }
 
     #[pallet::hooks]
@@ -125,7 +136,8 @@ pub mod pallet {
 
             let eras_per_year = T::ErasPerYear::get();
 
-            // If block runs first era of each year. Else block runs every other year.
+            let is_halted = Self::is_halted();
+
             if previous_era >= eras_per_year && now >= next_era_starting_block
                 || next_era_starting_block == Zero::zero()
             {
@@ -152,20 +164,21 @@ pub mod pallet {
                     next_era_starting_block: (now + blocks_per_era),
                 });
 
-                Self::mint(inflation_per_era);
+                if !is_halted {
+                    Self::mint(inflation_per_era);
 
-                Self::deposit_event(Event::InflationMinted {
-                    year_start_issuance: current_issuance,
-                    current_issuance,
-                    expected_new_issuance: current_issuance + inflation_per_era,
-                    minted: inflation_per_era,
-                });
+                    Self::deposit_event(Event::InflationMinted {
+                        year_start_issuance: current_issuance,
+                        current_issuance,
+                        expected_new_issuance: current_issuance + inflation_per_era,
+                        minted: inflation_per_era,
+                    });
+                }
 
-                T::DbWeight::get().reads_writes(6, 3)
+                T::DbWeight::get().reads_writes(7, 3)
             } else {
                 let inflation_per_era = Self::inflation_per_era();
 
-                // First era logic
                 if now >= next_era_starting_block || previous_era.is_zero() {
                     CurrentEra::<T>::put(previous_era + 1);
 
@@ -176,59 +189,64 @@ pub mod pallet {
                         next_era_starting_block: (now + blocks_per_era),
                     });
 
-                    // Get issuance that the year started at
-                    let start_issuance = Self::year_start_issuance();
+                    if !is_halted {
+                        // Get issuance that the year started at
+                        let start_issuance = Self::year_start_issuance();
 
-                    // Get actual current total token issuance
-                    let current_issuance =
-                        <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
+                        // Get actual current total token issuance
+                        let current_issuance =
+                            <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
 
-                    // Calculate the expected current total token issuance
-                    let expected_current_issuance =
-                        start_issuance + (inflation_per_era * previous_era.into());
+                        // Calculate the expected current total token issuance
+                        let expected_current_issuance =
+                            start_issuance + (inflation_per_era * previous_era.into());
 
-                    // Check that current_issuance and expected_current_issuance match in value. If there is is underflow, that means not enough tokens were minted.
-                    // If the result is > 0, too many tokens were minted.
-                    match current_issuance.checked_sub(&expected_current_issuance) {
-                        // Either current issuance matches the expected issuance, or current issuance is higher than expected
-                        // meaning too many tokens were minted
-                        Some(over_inflation) if over_inflation > Zero::zero() => {
-                            Self::deposit_event(Event::OverInflationDetected {
-                                expected_issuance: expected_current_issuance,
-                                current_issuance,
-                            });
+                        // Check that current_issuance and expected_current_issuance match in value.
+                        // If the result is > 0, too many tokens were minted.
+                        match current_issuance.checked_sub(&expected_current_issuance) {
+                            // Either current issuance matches the expected issuance, or current issuance is higher than expected
+                            // meaning too many tokens were minted
+                            Some(over_inflation) if over_inflation > Zero::zero() => {
+                                Self::deposit_event(Event::OverInflationDetected {
+                                    expected_issuance: expected_current_issuance,
+                                    current_issuance,
+                                });
 
-                            // Mint the difference
-                            if let Some(to_mint) = inflation_per_era.checked_sub(&over_inflation) {
-                                Self::mint(to_mint);
+                                // Mint the difference
+                                if let Some(to_mint) =
+                                    inflation_per_era.checked_sub(&over_inflation)
+                                {
+                                    Self::mint(to_mint);
+
+                                    Self::deposit_event(Event::InflationMinted {
+                                        year_start_issuance: start_issuance,
+                                        current_issuance,
+                                        expected_new_issuance: expected_current_issuance
+                                            + inflation_per_era,
+                                        minted: to_mint,
+                                    });
+                                }
+                            }
+
+                            _ => {
+                                Self::mint(inflation_per_era);
 
                                 Self::deposit_event(Event::InflationMinted {
                                     year_start_issuance: start_issuance,
                                     current_issuance,
                                     expected_new_issuance: expected_current_issuance
                                         + inflation_per_era,
-                                    minted: to_mint,
+                                    minted: inflation_per_era,
                                 });
                             }
                         }
 
-                        // Underflow has occurred, not as many tokens exist as expected
-                        _ => {
-                            Self::mint(inflation_per_era);
-
-                            Self::deposit_event(Event::InflationMinted {
-                                year_start_issuance: start_issuance,
-                                current_issuance,
-                                expected_new_issuance: expected_current_issuance
-                                    + inflation_per_era,
-                                minted: inflation_per_era,
-                            });
-                        }
+                        T::DbWeight::get().reads_writes(8, 2)
+                    } else {
+                        T::DbWeight::get().reads_writes(6, 2)
                     }
-
-                    T::DbWeight::get().reads_writes(7, 2)
                 } else {
-                    T::DbWeight::get().reads(5)
+                    T::DbWeight::get().reads(6)
                 }
             }
         }
@@ -246,12 +264,31 @@ pub mod pallet {
 
             Ok(())
         }
+
+        #[pallet::weight(100_000_000)]
+        pub fn halt_unhalt_pallet(root: OriginFor<T>, halt: bool) -> DispatchResult {
+            ensure_root(root)?;
+
+            let is_halted = Self::is_halted();
+
+            ensure!(is_halted ^ halt, Error::<T>::NoHaltChange);
+
+            Self::internal_halt_unhalt(halt);
+
+            Self::deposit_event(Event::<T>::HaltChanged { is_halted: halt });
+
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
         fn mint(amount: BalanceOf<T>) {
             let inflation = T::Currency::issue(amount);
             <T as Config>::DealWithInflation::on_unbalanced(inflation);
+        }
+
+        pub fn internal_halt_unhalt(halt: bool) {
+            Halted::<T>::put(halt);
         }
     }
 }

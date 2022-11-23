@@ -1840,7 +1840,7 @@ fn new_era_is_handled_with_halt_enabled() {
 
         assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
@@ -1850,7 +1850,7 @@ fn new_era_is_handled_with_halt_enabled() {
         assert_eq!(IpStaking::current_era(), 1);
 
         assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -1873,7 +1873,7 @@ fn pallet_halt_is_ok() {
 
         assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
@@ -1921,7 +1921,7 @@ fn pallet_halt_is_ok() {
         assert_eq!(IpStaking::on_initialize(3), Weight::zero());
 
         assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
             is_halted: false,
         }));
 

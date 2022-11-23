@@ -205,7 +205,7 @@ pub mod pallet {
             era: u32,
             amount: BalanceOf<T>,
         },
-        HaltChange {
+        HaltChanged {
             is_halted: bool,
         },
     }
@@ -622,7 +622,7 @@ pub mod pallet {
 
             Self::internal_halt_unhalt(halt);
 
-            Self::deposit_event(Event::<T>::HaltChange { is_halted: halt });
+            Self::deposit_event(Event::<T>::HaltChanged { is_halted: halt });
 
             Ok(().into())
         }
@@ -826,8 +826,6 @@ pub mod pallet {
                     consumed_weight = consumed_weight.saturating_add(T::DbWeight::get().reads(1));
                 }
             }
-
-            //  ActiveStake::<T>::put(new_active_stake);
 
             (consumed_weight, new_active_stake)
         }
