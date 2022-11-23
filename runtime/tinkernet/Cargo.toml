@@ -33,8 +33,8 @@ pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
 ## Parity's Unique + RMRK Pallets
-pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "20d8a3c12e8958f6c55616f65655d40359f7f841" }
-pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "20d8a3c12e8958f6c55616f65655d40359f7f841" }
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c65927c8440c53f17e4bc55a5f28289d379f41aa" }
+pallet-rmrk-equip = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c65927c8440c53f17e4bc55a5f28289d379f41aa" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.29" }
 
 ## ORML Pallets
