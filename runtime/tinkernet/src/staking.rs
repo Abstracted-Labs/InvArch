@@ -15,7 +15,8 @@ parameter_types! {
     pub const PercentForIp: u32 = 60;
     pub const StakeThresholdForActiveIp: Balance = 5000 * UNIT;
     pub const MaxNameLength: u32 = 20;
-    pub const MaxDescriptionLength: u32 = 100;
+    pub const MaxDescriptionLength: u32 = 300;
+    pub const MaxImageUrlLength: u32 = 60;
 }
 
 impl pallet_ip_staking::Config for Runtime {
@@ -35,4 +36,5 @@ impl pallet_ip_staking::Config for Runtime {
     type StakeThresholdForActiveIp = StakeThresholdForActiveIp;
     type MaxNameLength = MaxNameLength;
     type MaxDescriptionLength = MaxDescriptionLength;
+    type MaxImageUrlLength = MaxImageUrlLength;
 }
