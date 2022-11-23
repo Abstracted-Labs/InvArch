@@ -138,8 +138,9 @@ impl pallet_ip_staking::Config for Test {
     type MaxUnlocking = MaxUnlocking;
     type UnbondingPeriod = UnbondingPeriod;
     type MaxEraStakeValues = MaxEraStakeValues;
-    type MaxDescriptionLength = ConstU32<10>;
-    type MaxNameLength = ConstU32<5>;
+    type MaxDescriptionLength = ConstU32<300>;
+    type MaxNameLength = ConstU32<20>;
+    type MaxImageUrlLength = ConstU32<60>;
     type PercentForIp = PercentForIp;
     type StakeThresholdForActiveIp = ConstU128<THRESHOLD>;
 }

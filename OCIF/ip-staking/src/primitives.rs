@@ -15,11 +15,16 @@ pub type BalanceOf<T> =
 const MAX_ASSUMED_VEC_LEN: u32 = 10;
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct IpInfo<AccountId, Name, Description, Image> {
-    pub account: AccountId,
+pub struct IpMetadata<Name, Description, Image> {
     pub name: Name,
     pub description: Description,
     pub image: Image,
+}
+
+#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub struct IpInfo<AccountId, Metadata> {
+    pub account: AccountId,
+    pub metadata: Metadata,
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]

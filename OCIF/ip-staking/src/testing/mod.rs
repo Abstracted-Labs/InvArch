@@ -37,9 +37,11 @@ pub(crate) fn assert_register(ip: mock::IpId) {
     assert_ok!(IpStaking::register_ip(
         Origin::signed(account),
         ip,
-        Vec::new(),
-        Vec::new(),
-        <Test as frame_system::Config>::Hash::default()
+        IpMetadata {
+            name: BoundedVec::default(),
+            description: BoundedVec::default(),
+            image: BoundedVec::default()
+        }
     ));
 
     let ip_info = RegisteredIp::<Test>::get(ip).unwrap();

@@ -223,9 +223,11 @@ fn register_twice_with_same_account_fails() {
             IpStaking::register_ip(
                 Origin::signed(account(A)),
                 A,
-                Vec::new(),
-                Vec::new(),
-                H256::default()
+                IpMetadata {
+                    name: BoundedVec::default(),
+                    description: BoundedVec::default(),
+                    image: BoundedVec::default()
+                }
             ),
             Error::<Test>::IpAlreadyRegistered
         );
@@ -1829,4 +1831,119 @@ fn staker_info_claim_ops_advanced() {
         assert_eq!(staker_info.len(), 1);
         assert_eq!(staker_info.latest_staked_value(), fourth_stake_value);
     }
+}
+
+#[test]
+fn new_era_is_handled_with_halt_enabled() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert!(Halted::<Test>::exists());
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+            is_halted: true,
+        }));
+
+        run_for_blocks(BLOCKS_PER_ERA * 3);
+
+        assert!(System::block_number() > IpStaking::next_era_starting_block());
+        assert_eq!(IpStaking::current_era(), 1);
+
+        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+            is_halted: false,
+        }));
+
+        run_for_blocks(BLOCKS_PER_ERA);
+
+        assert_eq!(System::block_number(), (4 * BLOCKS_PER_ERA) + 2); // 2 from initialization, advanced 4 eras worth of blocks
+
+        assert_eq!(IpStaking::current_era(), 2);
+        assert_eq!(IpStaking::next_era_starting_block(), (5 * BLOCKS_PER_ERA));
+    })
+}
+
+#[test]
+fn pallet_halt_is_ok() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        assert_ok!(IpStaking::ensure_not_halted());
+        assert!(!Halted::<Test>::exists());
+
+        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert!(Halted::<Test>::exists());
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+            is_halted: true,
+        }));
+
+        let staker_account = account(B);
+        let ip_id = A;
+
+        assert_noop!(
+            IpStaking::register_ip(
+                Origin::signed(account(ip_id)),
+                ip_id,
+                IpMetadata {
+                    name: BoundedVec::default(),
+                    description: BoundedVec::default(),
+                    image: BoundedVec::default()
+                }
+            ),
+            Error::<Test>::Halted
+        );
+        assert_noop!(
+            IpStaking::unregister_ip(Origin::signed(account(ip_id)), ip_id),
+            Error::<Test>::Halted
+        );
+        assert_noop!(
+            IpStaking::withdraw_unstaked(Origin::signed(staker_account)),
+            Error::<Test>::Halted
+        );
+
+        assert_noop!(
+            IpStaking::stake(Origin::signed(staker_account), ip_id, 100),
+            Error::<Test>::Halted
+        );
+        assert_noop!(
+            IpStaking::unstake(Origin::signed(staker_account), ip_id, 100),
+            Error::<Test>::Halted
+        );
+        assert_noop!(
+            IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, 5),
+            Error::<Test>::Halted
+        );
+        assert_noop!(
+            IpStaking::staker_claim_rewards(Origin::signed(staker_account), ip_id),
+            Error::<Test>::Halted
+        );
+
+        assert_eq!(IpStaking::on_initialize(3), Weight::zero());
+
+        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
+        System::assert_last_event(mock::Event::IpStaking(Event::HaltChange {
+            is_halted: false,
+        }));
+
+        assert_register(ip_id);
+    })
+}
+
+#[test]
+fn halted_no_change() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        assert_ok!(IpStaking::ensure_not_halted());
+        assert_noop!(
+            IpStaking::halt_unhalt_pallet(Origin::root(), false),
+            Error::<Test>::NoHaltChange
+        );
+
+        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_noop!(
+            IpStaking::halt_unhalt_pallet(Origin::root(), true),
+            Error::<Test>::NoHaltChange
+        );
+    })
 }

@@ -17,10 +17,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, Saturating, Zero},
     Perbill,
 };
-use sp_std::{
-    convert::{From, TryInto},
-    vec::Vec,
-};
+use sp_std::convert::{From, TryInto};
 
 pub mod primitives;
 use primitives::*;
@@ -49,12 +46,13 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    type IpInfoOf<T> = IpInfo<
-        <T as frame_system::Config>::AccountId,
+    type IpMetadataOf<T> = IpMetadata<
         BoundedVec<u8, <T as Config>::MaxNameLength>,
         BoundedVec<u8, <T as Config>::MaxDescriptionLength>,
-        <T as frame_system::Config>::Hash,
+        BoundedVec<u8, <T as Config>::MaxImageUrlLength>,
     >;
+
+    type IpInfoOf<T> = IpInfo<<T as frame_system::Config>::AccountId, IpMetadataOf<T>>;
 
     pub type Era = u32;
 
@@ -112,6 +110,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxDescriptionLength: Get<u32>;
+
+        #[pallet::constant]
+        type MaxImageUrlLength: Get<u32>;
     }
 
     #[pallet::storage]
@@ -163,8 +164,8 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    #[pallet::getter(fn active_stake)]
-    pub type ActiveStake<T> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    #[pallet::getter(fn is_halted)]
+    pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -204,6 +205,9 @@ pub mod pallet {
             era: u32,
             amount: BalanceOf<T>,
         },
+        HaltChange {
+            is_halted: bool,
+        },
     }
 
     #[pallet::error]
@@ -229,11 +233,17 @@ pub mod pallet {
         MaxNameExceeded,
         MaxDescriptionExceeded,
         NotRegistered,
+        Halted,
+        NoHaltChange,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
+            if Self::is_halted() {
+                return T::DbWeight::get().reads(1);
+            }
+
             let previous_era = Self::current_era();
             let next_era_starting_block = Self::next_era_starting_block();
 
@@ -252,7 +262,7 @@ pub mod pallet {
 
                 consumed_weight + T::DbWeight::get().reads_writes(5, 3)
             } else {
-                T::DbWeight::get().reads(4)
+                T::DbWeight::get().reads(3)
             }
         }
     }
@@ -263,18 +273,11 @@ pub mod pallet {
         pub fn register_ip(
             origin: OriginFor<T>,
             ip_id: <T as pallet::Config>::IpId,
-            name: Vec<u8>,
-            description: Vec<u8>,
-            image: <T as frame_system::Config>::Hash,
+            metadata: IpMetadataOf<T>,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let caller = ensure_signed(origin)?;
-
-            let name: BoundedVec<u8, T::MaxNameLength> =
-                name.try_into().map_err(|_| Error::<T>::MaxNameExceeded)?;
-
-            let description: BoundedVec<u8, T::MaxDescriptionLength> = description
-                .try_into()
-                .map_err(|_| Error::<T>::MaxDescriptionExceeded)?;
 
             ensure!(
                 caller
@@ -295,9 +298,7 @@ pub mod pallet {
                 ip_id,
                 IpInfo {
                     account: caller,
-                    name,
-                    description,
-                    image,
+                    metadata,
                 },
             );
 
@@ -311,6 +312,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             ip_id: <T as pallet::Config>::IpId,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let caller = ensure_signed(origin)?;
 
             ensure!(
@@ -388,6 +391,8 @@ pub mod pallet {
             ip_id: <T as pallet::Config>::IpId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let staker = ensure_signed(origin)?;
 
             ensure!(Self::ip_info(&ip_id).is_some(), Error::<T>::NotRegistered);
@@ -436,6 +441,8 @@ pub mod pallet {
             ip_id: <T as pallet::Config>::IpId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let staker = ensure_signed(origin)?;
 
             ensure!(value > Zero::zero(), Error::<T>::UnstakingNothing);
@@ -480,6 +487,8 @@ pub mod pallet {
 
         #[pallet::weight(1000000000)]
         pub fn withdraw_unstaked(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let staker = ensure_signed(origin)?;
 
             let mut ledger = Self::ledger(&staker);
@@ -513,6 +522,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             ip_id: <T as pallet::Config>::IpId,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             let staker = ensure_signed(origin)?;
 
             let mut staker_info = Self::staker_info(&ip_id, &staker);
@@ -556,6 +567,8 @@ pub mod pallet {
             ip_id: <T as pallet::Config>::IpId,
             #[pallet::compact] era: Era,
         ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
             ensure_signed(origin)?;
 
             let current_era = Self::current_era();
@@ -595,6 +608,21 @@ pub mod pallet {
 
             ip_stake_info.reward_claimed = true;
             IpEraStake::<T>::insert(&ip_id, era, ip_stake_info);
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(1000000000)]
+        pub fn halt_unhalt_pallet(origin: OriginFor<T>, halt: bool) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let is_halted = Self::is_halted();
+
+            ensure!(is_halted ^ halt, Error::<T>::NoHaltChange);
+
+            Self::internal_halt_unhalt(halt);
+
+            Self::deposit_event(Event::<T>::HaltChange { is_halted: halt });
 
             Ok(().into())
         }
@@ -799,9 +827,21 @@ pub mod pallet {
                 }
             }
 
-            ActiveStake::<T>::put(new_active_stake);
+            //  ActiveStake::<T>::put(new_active_stake);
 
             (consumed_weight, new_active_stake)
+        }
+
+        pub fn internal_halt_unhalt(halt: bool) {
+            Halted::<T>::put(halt);
+        }
+
+        pub fn ensure_not_halted() -> Result<(), Error<T>> {
+            if Self::is_halted() {
+                Err(Error::<T>::Halted)
+            } else {
+                Ok(())
+            }
         }
     }
 }
