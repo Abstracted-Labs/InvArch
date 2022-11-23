@@ -27,3 +27,5 @@ storage
 
 # The cache for local vscode data
 .vscode/
+
+zombienet/binaries/*
