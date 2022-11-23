@@ -160,7 +160,12 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    // Remove this before next runtime upgrade
+    (CheckedInflationMigration,),
 >;
+
+pub type CheckedInflationMigration =
+    pallet_checked_inflation::migrations::first_time::InitializeStorages<Runtime>;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
