@@ -46,13 +46,13 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    type IpMetadataOf<T> = IpMetadata<
+    pub type IpMetadataOf<T> = IpMetadata<
         BoundedVec<u8, <T as Config>::MaxNameLength>,
         BoundedVec<u8, <T as Config>::MaxDescriptionLength>,
         BoundedVec<u8, <T as Config>::MaxImageUrlLength>,
     >;
 
-    type IpInfoOf<T> = IpInfo<<T as frame_system::Config>::AccountId, IpMetadataOf<T>>;
+    pub type IpInfoOf<T> = IpInfo<<T as frame_system::Config>::AccountId, IpMetadataOf<T>>;
 
     pub type Era = u32;
 
@@ -207,6 +207,11 @@ pub mod pallet {
         },
         HaltChanged {
             is_halted: bool,
+        },
+        MetadataChanged {
+            ip: <T as Config>::IpId,
+            old_metadata: IpMetadataOf<T>,
+            new_metadata: IpMetadataOf<T>,
         },
     }
 
@@ -383,6 +388,43 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::IpUnregistered { ip: ip_id });
 
             Ok(().into())
+        }
+
+        #[pallet::weight(1000000000)]
+        pub fn change_ip_metadata(
+            origin: OriginFor<T>,
+            ip_id: <T as pallet::Config>::IpId,
+            new_metadata: IpMetadataOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
+            let caller = ensure_signed(origin)?;
+
+            ensure!(
+                caller
+                    == pallet_inv4::util::derive_ips_account::<T, T::IpId, T::AccountId>(
+                        ip_id, None
+                    ),
+                Error::<T>::NoPermission
+            );
+
+            RegisteredIp::<T>::try_mutate(ip_id, |ip| {
+                let mut new_ip = ip.take().ok_or(Error::<T>::NotRegistered)?;
+
+                let old_metadata = new_ip.metadata;
+
+                new_ip.metadata = new_metadata.clone();
+
+                *ip = Some(new_ip);
+
+                Self::deposit_event(Event::<T>::MetadataChanged {
+                    ip: ip_id,
+                    old_metadata,
+                    new_metadata,
+                });
+
+                Ok(().into())
+            })
         }
 
         #[pallet::weight(1000000000)]

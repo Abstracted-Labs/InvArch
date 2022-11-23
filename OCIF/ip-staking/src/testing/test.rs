@@ -1,10 +1,11 @@
 use crate::{
-    pallet::{Error, Event},
+    pallet::{Error, Event, IpMetadataOf},
     testing::*,
     *,
 };
 use frame_support::{assert_noop, assert_ok, traits::Currency};
 use mock::Balances;
+use pallet_inv4::IpInfoOf;
 use sp_runtime::{traits::Zero, Perbill};
 
 #[test]
@@ -230,6 +231,51 @@ fn register_twice_with_same_account_fails() {
                 }
             ),
             Error::<Test>::IpAlreadyRegistered
+        );
+    })
+}
+
+#[test]
+fn change_metadata() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let ip_id = A;
+
+        assert_register(ip_id);
+
+        System::assert_last_event(mock::Event::IpStaking(Event::IpRegistered { ip: ip_id }));
+
+        assert_eq!(
+            IpStaking::ip_info(ip_id),
+            Some(IpInfo {
+                account: account(ip_id),
+                metadata: IpMetadata {
+                    name: BoundedVec::default(),
+                    description: BoundedVec::default(),
+                    image: BoundedVec::default()
+                }
+            })
+        );
+
+        let new_metadata: IpMetadataOf<Test> = IpMetadata {
+            name: b"Test IP".to_vec().try_into().unwrap(),
+            description: b"Description of the test IP".to_vec().try_into().unwrap(),
+            image: b"https://test.ip".to_vec().try_into().unwrap(),
+        };
+
+        assert_ok!(IpStaking::change_ip_metadata(
+            Origin::signed(account(ip_id)),
+            ip_id,
+            new_metadata.clone()
+        ));
+
+        assert_eq!(
+            IpStaking::ip_info(ip_id),
+            Some(IpInfo {
+                account: account(ip_id),
+                metadata: new_metadata
+            })
         );
     })
 }
@@ -1892,10 +1938,25 @@ fn pallet_halt_is_ok() {
             ),
             Error::<Test>::Halted
         );
+
         assert_noop!(
             IpStaking::unregister_ip(Origin::signed(account(ip_id)), ip_id),
             Error::<Test>::Halted
         );
+
+        assert_noop!(
+            IpStaking::change_ip_metadata(
+                Origin::signed(account(ip_id)),
+                ip_id,
+                IpMetadata {
+                    name: BoundedVec::default(),
+                    description: BoundedVec::default(),
+                    image: BoundedVec::default()
+                }
+            ),
+            Error::<Test>::Halted
+        );
+
         assert_noop!(
             IpStaking::withdraw_unstaked(Origin::signed(staker_account)),
             Error::<Test>::Halted
@@ -1905,14 +1966,17 @@ fn pallet_halt_is_ok() {
             IpStaking::stake(Origin::signed(staker_account), ip_id, 100),
             Error::<Test>::Halted
         );
+
         assert_noop!(
             IpStaking::unstake(Origin::signed(staker_account), ip_id, 100),
             Error::<Test>::Halted
         );
+
         assert_noop!(
             IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, 5),
             Error::<Test>::Halted
         );
+
         assert_noop!(
             IpStaking::staker_claim_rewards(Origin::signed(staker_account), ip_id),
             Error::<Test>::Halted
