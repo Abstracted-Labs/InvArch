@@ -3364,6 +3364,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5404,6 +5405,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5684,6 +5686,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5707,6 +5710,7 @@ dependencies = [
 [[package]]
 name = "pallet-ip-staking"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5729,6 +5733,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
 dependencies = [
  "frame-support",
  "frame-system",

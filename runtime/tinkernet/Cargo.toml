@@ -30,6 +30,11 @@ pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gab
 pallet-ip-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation", default-features = false }
 pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation", default-features = false }
 
+#pallet-inv4 = { path = "../../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
+#pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
+#pallet-ip-staking = { path = "../../../InvArch-Pallet-Library/OCIF/ip-staking", default-features = false }
+#pallet-checked-inflation = { path = "../../../InvArch-Pallet-Library/pallet-checked-inflation", default-features = false }
+
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
 ## Parity's Unique + RMRK Pallets
