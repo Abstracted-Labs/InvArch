@@ -1,8 +1,9 @@
 use crate::{Balance, Balances, BlockNumber, Event, IpStaking, NegativeImbalance, Runtime, DAYS};
 use frame_support::{parameter_types, traits::OnUnbalanced};
+use sp_runtime::Perbill;
 
 pub const TEN_PERCENT_PER_YEAR: pallet_checked_inflation::InflationMethod<Balance> =
-    pallet_checked_inflation::InflationMethod::Rate(sp_runtime::Perbill::from_percent(10));
+    pallet_checked_inflation::InflationMethod::Rate(Perbill::from_percent(10));
 
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;

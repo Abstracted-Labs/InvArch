@@ -3364,7 +3364,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5405,7 +5405,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5686,7 +5686,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5710,7 +5710,7 @@ dependencies = [
 [[package]]
 name = "pallet-ip-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5733,7 +5733,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#85d8e765656140e5c92f93a6f02a99e012e2a21b"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -12563,9 +12563,9 @@ dependencies = [
 
 [[package]]
 name = "zstd-sys"
-version = "2.0.1+zstd.1.5.2"
+version = "2.0.3+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fd07cbbc53846d9145dbffdf6dd09a7a0aa52be46741825f5c97bdd4f73f12b"
+checksum = "44ccf97612ac95f3ccb89b2d7346b345e52f1c3019be4984f0455fb4ba991f8a"
 dependencies = [
  "cc",
  "libc",

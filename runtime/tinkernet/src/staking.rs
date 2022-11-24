@@ -12,11 +12,11 @@ parameter_types! {
     pub const MaxUnlockingChunks: u32 = 5;
     pub const UnbondingPeriod: u32 = 7;
     pub const IpStakingPot: PalletId = PalletId(*b"tkr/ipst");
-    pub const PercentForIp: u32 = 60;
+    pub const RewardRatio: (u32, u32) = (60, 40);
     pub const StakeThresholdForActiveIp: Balance = 5000 * UNIT;
     pub const MaxNameLength: u32 = 20;
     pub const MaxDescriptionLength: u32 = 300;
-    pub const MaxImageUrlLength: u32 = 60;
+    pub const MaxImageUrlLength: u32 = 100;
 }
 
 impl pallet_ip_staking::Config for Runtime {
@@ -32,7 +32,7 @@ impl pallet_ip_staking::Config for Runtime {
     type UnbondingPeriod = UnbondingPeriod;
     type MinimumStakingAmount = MinimumStakingAmount;
     type MaxEraStakeValues = MaxEraStakeValues;
-    type PercentForIp = PercentForIp;
+    type RewardRatio = RewardRatio;
     type StakeThresholdForActiveIp = StakeThresholdForActiveIp;
     type MaxNameLength = MaxNameLength;
     type MaxDescriptionLength = MaxDescriptionLength;
