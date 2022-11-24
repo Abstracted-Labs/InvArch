@@ -1,8 +1,6 @@
+use crate::{testing::mock::*, Config, Event, *};
 use frame_support::assert_ok;
 use pallet_inv4::util::derive_ips_account;
-use sp_core::H256;
-
-use crate::{testing::mock::*, Config, Event, *};
 
 pub mod mock;
 pub mod test;

@@ -3,7 +3,6 @@ use frame_support::{
     assert_ok,
     traits::{Currency, Imbalance},
 };
-use sp_runtime::traits::BlockNumberProvider;
 
 #[test]
 fn inflate_one_era() {

@@ -5,7 +5,6 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, traits::Currency};
 use mock::Balances;
-use pallet_inv4::IpInfoOf;
 use sp_runtime::{traits::Zero, Perbill};
 
 #[test]

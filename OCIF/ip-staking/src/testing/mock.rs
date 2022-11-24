@@ -1,9 +1,8 @@
-use crate::{self as pallet_ip_staking};
-
+use crate as pallet_ip_staking;
 use core::convert::{TryFrom, TryInto};
 use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU128, ConstU32, Currency, OnFinalize, OnInitialize, TypedGet},
+    traits::{ConstU128, ConstU32, Currency, OnFinalize, OnInitialize},
     weights::Weight,
     PalletId,
 };
@@ -117,11 +116,10 @@ parameter_types! {
     pub const MaxUnlocking: u32 = MAX_UNLOCKING;
     pub const UnbondingPeriod: EraIndex = UNBONDING_PERIOD;
     pub const MaxEraStakeValues: u32 = MAX_ERA_STAKE_VALUES;
+    pub const RewardRatio: (u32, u32) = (50, 50);
 }
 
 pub type IpId = u32;
-
-pub type PercentForIp = ConstU32<50>;
 
 pub const THRESHOLD: u128 = 50;
 
@@ -141,7 +139,7 @@ impl pallet_ip_staking::Config for Test {
     type MaxDescriptionLength = ConstU32<300>;
     type MaxNameLength = ConstU32<20>;
     type MaxImageUrlLength = ConstU32<60>;
-    type PercentForIp = PercentForIp;
+    type RewardRatio = RewardRatio;
     type StakeThresholdForActiveIp = ConstU128<THRESHOLD>;
 }
 
@@ -252,7 +250,7 @@ pub fn initialize_first_block() {
 }
 
 pub fn split_reward_amount(amount: Balance) -> (Balance, Balance) {
-    let percent = Perbill::from_percent(PercentForIp::get());
+    let percent = Perbill::from_percent(RewardRatio::get().0);
 
     let amount_for_ip = percent * amount;
 

@@ -1,11 +1,10 @@
+use super::*;
+use crate::inflation::InflationMethod;
 use core::convert::TryFrom;
 use frame_support::traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced};
 use pallet_balances::AccountData;
 use sp_core::H256;
 use sp_runtime::{parameter_types, testing::Header, traits::IdentityLookup, Perbill};
-
-use super::*;
-use crate::inflation::InflationMethod;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

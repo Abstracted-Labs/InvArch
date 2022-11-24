@@ -100,7 +100,7 @@ pub mod pallet {
         type MaxEraStakeValues: Get<u32>;
 
         #[pallet::constant]
-        type PercentForIp: Get<u32>;
+        type RewardRatio: Get<(u32, u32)>;
 
         #[pallet::constant]
         type StakeThresholdForActiveIp: Get<BalanceOf<Self>>;
@@ -779,10 +779,9 @@ pub mod pallet {
         }
 
         pub fn rewards(inflation: NegativeImbalanceOf<T>) {
-            let (ip, stakers) = inflation.ration(
-                <T as Config>::PercentForIp::get(),
-                100 - <T as Config>::PercentForIp::get(),
-            );
+            let (ip_part, stakers_part) = <T as Config>::RewardRatio::get();
+
+            let (ip, stakers) = inflation.ration(ip_part, stakers_part);
 
             RewardAccumulator::<T>::mutate(|accumulated_reward| {
                 accumulated_reward.ip = accumulated_reward.ip.saturating_add(ip.peek());
