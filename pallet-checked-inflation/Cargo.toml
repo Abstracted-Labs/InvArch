@@ -1,5 +1,5 @@
 [package]
-name = 'pallet-ip-staking'
+name = 'pallet-checked-inflation'
 authors = ['InvArchitects <https://github.com/InvArch>']
 description = 'FRAME pallet to IP staking'
 edition = '2018'
@@ -29,7 +29,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
-pallet-inv4 = { path = "../../INV4/pallet-inv4", default-features = false }
 
 [features]
 default = ["std"]

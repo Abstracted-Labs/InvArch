@@ -250,7 +250,11 @@ impl<T: Config> Pallet<T> {
                 caller,
                 // Recompute IP Set AccountId
                 <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                    derive_ips_account::<T>(ipt_id.0, None),
+                    derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(ipt_id.0, None),
                 ),
                 // Calculate fee from the `call` weight
                 <T as pallet::Config>::Balance::from(T::WeightToFee::weight_to_fee(
@@ -261,18 +265,24 @@ impl<T: Config> Pallet<T> {
 
             // Actually dispatch this call and return the result of it
             let dispatch_result = call.dispatch(
-                RawOrigin::Signed(derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
+                RawOrigin::Signed(derive_ips_account::<
+                    T,
+                    <T as Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(
+                    ipt_id.0, if include_caller { Some(&owner) } else { None }
                 ))
                 .into(),
             );
 
             Self::deposit_event(Event::MultisigExecuted {
                 ips_id: ipt_id.0,
-                executor_account: derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
+                executor_account: derive_ips_account::<
+                    T,
+                    <T as Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(
+                    ipt_id.0, if include_caller { Some(&owner) } else { None }
                 ),
                 voter: owner,
                 call_hash,
@@ -286,7 +296,11 @@ impl<T: Config> Pallet<T> {
                 pallet_balances::Pallet::<T>::transfer(
                     caller,
                     <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<T>(ipt_id.0, None),
+                        derive_ips_account::<
+                            T,
+                            <T as Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(ipt_id.0, None),
                     ),
                     // `caller`s balance is x percent of `total_per_threshold`,
                     // So they pay x percent of the fee
@@ -319,9 +333,12 @@ impl<T: Config> Pallet<T> {
 
             Self::deposit_event(Event::MultisigVoteStarted {
                 ips_id: ipt_id.0,
-                executor_account: derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
+                executor_account: derive_ips_account::<
+                    T,
+                    <T as Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(
+                    ipt_id.0, if include_caller { Some(&owner) } else { None }
                 ),
                 voter: owner,
                 votes_added: owner_balance,
@@ -434,7 +451,11 @@ impl<T: Config> Pallet<T> {
                 pallet_balances::Pallet::<T>::transfer(
                     caller,
                     <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<T>(ipt_id.0, None),
+                        derive_ips_account::<
+                            T,
+                            <T as Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(ipt_id.0, None),
                     ),
                     // Voter will pay the remainder of the fee after subtracting the total IPTs already in the operation converted to real fee value.
                     fee.checked_sub(
@@ -456,7 +477,11 @@ impl<T: Config> Pallet<T> {
                     .try_decode()
                     .ok_or(Error::<T>::CouldntDecodeCall)?
                     .dispatch(
-                        RawOrigin::Signed(derive_ips_account::<T>(
+                        RawOrigin::Signed(derive_ips_account::<
+                            T,
+                            <T as Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(
                             ipt_id.0,
                             if old_data.include_original_caller {
                                 Some(&old_data.original_caller)
@@ -469,7 +494,11 @@ impl<T: Config> Pallet<T> {
 
                 Self::deposit_event(Event::MultisigExecuted {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -489,7 +518,11 @@ impl<T: Config> Pallet<T> {
                     pallet_balances::Pallet::<T>::transfer(
                         caller,
                         <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                            derive_ips_account::<T>(ipt_id.0, None),
+                            derive_ips_account::<
+                                T,
+                                <T as Config>::IpId,
+                                <T as frame_system::Config>::AccountId,
+                            >(ipt_id.0, None),
                         ),
                         // callers balance is x percent of `total_per_threshold`,
                         // So they pay x percent of the fee
@@ -513,7 +546,11 @@ impl<T: Config> Pallet<T> {
 
                 Self::deposit_event(Event::MultisigVoteAdded {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -593,7 +630,11 @@ impl<T: Config> Pallet<T> {
                 for signer in old_data.signers {
                     pallet_balances::Pallet::<T>::transfer(
                         <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                            derive_ips_account::<T>(ipt_id.0, None),
+                            derive_ips_account::<
+                                T,
+                                <T as Config>::IpId,
+                                <T as frame_system::Config>::AccountId,
+                            >(ipt_id.0, None),
                         )),
                         <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
                             signer.0.clone(),
@@ -615,7 +656,11 @@ impl<T: Config> Pallet<T> {
 
                 Self::deposit_event(Event::MultisigCanceled {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -687,7 +732,11 @@ impl<T: Config> Pallet<T> {
                 // Transfer the callers portion of the transaction fee from the IP Set account back to the caller
                 pallet_balances::Pallet::<T>::transfer(
                     <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                        derive_ips_account::<T>(ipt_id.0, None),
+                        derive_ips_account::<
+                            T,
+                            <T as Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(ipt_id.0, None),
                     )),
                     <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner.clone()),
                     <T as pallet::Config>::Balance::from(
@@ -703,7 +752,11 @@ impl<T: Config> Pallet<T> {
 
                 Self::deposit_event(Event::MultisigVoteWithdrawn {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)

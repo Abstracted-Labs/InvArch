@@ -16,14 +16,13 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 smallvec = "1.6.1"
 
 scale-info = { version = "2.0.0", features = ["derive"], default-features = false }
 
 
-pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "20d8a3c12e8958f6c55616f65655d40359f7f841" }
-rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "20d8a3c12e8958f6c55616f65655d40359f7f841" }
+pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c65927c8440c53f17e4bc55a5f28289d379f41aa" }
+rmrk-traits = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "c65927c8440c53f17e4bc55a5f28289d379f41aa" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 
 # InvArch dependencies
@@ -50,6 +49,5 @@ std = [
   "sp-io/std",
   "scale-info/std",
   "pallet-balances/std",
-  "pallet-assets/std",
 ]
 try-runtime = ["frame-support/try-runtime"]
