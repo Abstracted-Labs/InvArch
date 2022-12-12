@@ -30,6 +30,8 @@ pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "590777
 #pallet-inv4 = { path = "../../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
 #pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
 
+pallet-rules = { path = "../../../InvArch-Frames/pallet-rules", default-features = false }
+
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
 ## Parity's Unique + RMRK Pallets

@@ -54,7 +54,8 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify,
+        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount,
+        StaticLookup, Verify,
     },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
@@ -1174,6 +1175,52 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
+use pallet_rules::{CompRule, Process};
+
+#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
+pub enum CallRules {
+    Balances(CallRulesBalances),
+    System(CallRulesSystem),
+}
+
+#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
+pub enum CallRulesBalances {
+    transfer {
+        dest: CompRule<<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source>,
+        value: CompRule<<Runtime as pallet_balances::Config>::Balance>,
+    },
+}
+
+#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
+pub enum CallRulesSystem {
+    remark { remark: CompRule<Vec<u8>> },
+}
+
+impl pallet_rules::Rule for Call {
+    type CallRule = CallRules;
+
+    fn check_rule(&self, rule: Self::CallRule) -> bool {
+        match (self, rule) {
+            (
+                Call::Balances(pallet_balances::pallet::Call::transfer { dest, value }),
+                CallRules::Balances(CallRulesBalances::transfer { dest: d, value: v }),
+            ) => d.process(dest) && v.process(value),
+
+            (
+                Call::System(frame_system::pallet::Call::remark { remark }),
+                CallRules::System(CallRulesSystem::remark { remark: r }),
+            ) => r.process(remark),
+
+            _ => false,
+        }
+    }
+}
+
+impl pallet_rules::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -1220,6 +1267,8 @@ construct_runtime!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
         INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+
+        Rules: pallet_rules::{Pallet, Call, Storage, Event<T>} = 72,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
