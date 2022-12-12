@@ -1175,7 +1175,7 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use pallet_rules::{CompRule, Process};
+use pallet_rules::{CompRule, GetRuleId, Process};
 
 #[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
 pub enum CallRules {
@@ -1196,8 +1196,24 @@ pub enum CallRulesSystem {
     remark { remark: CompRule<Vec<u8>> },
 }
 
+#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
+pub enum CallIds {
+    BalancesTransfer,
+    SystemRemark,
+}
+
+impl GetRuleId<CallIds> for CallRules {
+    fn get_id(&self) -> CallIds {
+        match self {
+            CallRules::Balances(CallRulesBalances::transfer { .. }) => CallIds::BalancesTransfer,
+            CallRules::System(CallRulesSystem::remark { .. }) => CallIds::SystemRemark,
+        }
+    }
+}
+
 impl pallet_rules::Rule for Call {
     type CallRule = CallRules;
+    type CallId = CallIds;
 
     fn check_rule(&self, rule: Self::CallRule) -> bool {
         match (self, rule) {
