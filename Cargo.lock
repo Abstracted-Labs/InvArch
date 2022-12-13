@@ -5882,6 +5882,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
+ "paste",
  "scale-info",
  "sp-io",
  "sp-runtime",
@@ -6351,9 +6352,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.8"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9423e2b32f7a043629287a536f21951e8c6a82482d0acb1eeebfc90bc2225b22"
+checksum = "cf1c2c742266c2f1041c914ba65355a83ae8747b05f208319784083583494b4b"
 
 [[package]]
 name = "pbkdf2"
@@ -11111,8 +11112,10 @@ dependencies = [
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
+ "paste",
  "polkadot-parachain",
  "polkadot-runtime-common",
+ "quote",
  "scale-info",
  "serde",
  "smallvec",

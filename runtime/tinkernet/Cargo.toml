@@ -24,6 +24,9 @@ serde = { version = "1.0.132", optional = true, features = ["derive"] }
 smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
+quote = "1.0.21"
+paste = "1.0.10"
+
 # InvArch Pallets
 pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", rev = "590777fa17e8e94c5620265a12c4aff5104b2d5c", default-features = false }
 pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "590777fa17e8e94c5620265a12c4aff5104b2d5c",  default-features = false }

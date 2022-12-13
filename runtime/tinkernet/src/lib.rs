@@ -1175,26 +1175,42 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use pallet_rules::{CompRule, GetRuleId, Process};
+use pallet_rules::{build_call_rules, CompRule, GetRuleId, Process};
+use paste::paste;
 
-#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
-pub enum CallRules {
-    Balances(CallRulesBalances),
-    System(CallRulesSystem),
-}
-
-#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
-pub enum CallRulesBalances {
-    transfer {
-        dest: CompRule<<<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source>,
-        value: CompRule<<Runtime as pallet_balances::Config>::Balance>,
+build_call_rules!(
+    Balances {
+        transfer {
+            dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            value: <Runtime as pallet_balances::Config>::Balance,
+        },
+        set_balance {
+            who: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            new_free: <Runtime as pallet_balances::Config>::Balance,
+            new_reserved: <Runtime as pallet_balances::Config>::Balance,
+        },
+        force_transfer {
+            source: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            value: <Runtime as pallet_balances::Config>::Balance,
+        },
+        transfer_keep_alive {
+            dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            value: <Runtime as pallet_balances::Config>::Balance,
+        },
+        transfer_all {
+            dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            keep_alive: bool,
+        },
+        force_unreserve {
+            who: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            amount: <Runtime as pallet_balances::Config>::Balance,
+        },
     },
-}
-
-#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
-pub enum CallRulesSystem {
-    remark { remark: CompRule<Vec<u8>> },
-}
+    System {
+        remark { remark: Vec<u8> },
+    },
+);
 
 #[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
 pub enum CallIds {
@@ -1207,6 +1223,7 @@ impl GetRuleId<CallIds> for CallRules {
         match self {
             CallRules::Balances(CallRulesBalances::transfer { .. }) => CallIds::BalancesTransfer,
             CallRules::System(CallRulesSystem::remark { .. }) => CallIds::SystemRemark,
+            _ => todo!(),
         }
     }
 }
