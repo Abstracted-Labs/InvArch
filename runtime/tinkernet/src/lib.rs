@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with InvArch.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(non_camel_case_types)]
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
@@ -1175,10 +1176,10 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use pallet_rules::{build_call_rules, CompRule, GetRuleId, Process};
-use paste::paste;
+use pallet_rules::build_call_rules;
 
 build_call_rules!(
+    pallet_balances::pallet,
     Balances {
         transfer {
             dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
@@ -1207,47 +1208,25 @@ build_call_rules!(
             amount: <Runtime as pallet_balances::Config>::Balance,
         },
     },
+
+    orml_vesting::module,
+    Vesting {
+       // claim {}
+        vested_transfer {
+            dest: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            schedule: orml_vesting::VestingSchedule<<Runtime as frame_system::Config>::BlockNumber, <<Runtime as orml_vesting::Config>::Currency as Currency<<Runtime as frame_system::Config>::AccountId>>::Balance>
+        },
+        update_vesting_schedules {
+            who: <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source,
+            vesting_schedules: Vec<orml_vesting::VestingSchedule<<Runtime as frame_system::Config>::BlockNumber, <<Runtime as orml_vesting::Config>::Currency as Currency<<Runtime as frame_system::Config>::AccountId>>::Balance>>
+        },
+    },
+
+    frame_system::pallet,
     System {
         remark { remark: Vec<u8> },
     },
 );
-
-#[derive(Encode, Decode, TypeInfo, Debug, Clone, PartialEq, Eq)]
-pub enum CallIds {
-    BalancesTransfer,
-    SystemRemark,
-}
-
-impl GetRuleId<CallIds> for CallRules {
-    fn get_id(&self) -> CallIds {
-        match self {
-            CallRules::Balances(CallRulesBalances::transfer { .. }) => CallIds::BalancesTransfer,
-            CallRules::System(CallRulesSystem::remark { .. }) => CallIds::SystemRemark,
-            _ => todo!(),
-        }
-    }
-}
-
-impl pallet_rules::Rule for Call {
-    type CallRule = CallRules;
-    type CallId = CallIds;
-
-    fn check_rule(&self, rule: Self::CallRule) -> bool {
-        match (self, rule) {
-            (
-                Call::Balances(pallet_balances::pallet::Call::transfer { dest, value }),
-                CallRules::Balances(CallRulesBalances::transfer { dest: d, value: v }),
-            ) => d.process(dest) && v.process(value),
-
-            (
-                Call::System(frame_system::pallet::Call::remark { remark }),
-                CallRules::System(CallRulesSystem::remark { remark: r }),
-            ) => r.process(remark),
-
-            _ => false,
-        }
-    }
-}
 
 impl pallet_rules::Config for Runtime {
     type Event = Event;
