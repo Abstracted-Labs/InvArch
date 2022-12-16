@@ -1181,6 +1181,8 @@ pub mod call_rules;
 impl pallet_rules::Config for Runtime {
     type Event = Event;
     type Call = Call;
+
+    type RulesetId = CommonId;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
