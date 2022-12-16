@@ -1,5 +1,5 @@
 use crate::{
-    pallet::{Error, Event, IpMetadataOf},
+    pallet::{CoreMetadataOf, Error, Event},
     testing::*,
     *,
 };
@@ -8,14 +8,14 @@ use mock::Balances;
 use sp_runtime::{traits::Zero, Perbill};
 
 #[test]
-fn on_initialize_when_ip_staking_enabled_in_mid_of_an_era_is_ok() {
+fn on_initialize_when_core_staking_enabled_in_mid_of_an_era_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         System::set_block_number(2);
 
-        assert_eq!(0u32, IpStaking::current_era());
+        assert_eq!(0u32, OcifStaking::current_era());
 
-        IpStaking::on_initialize(System::block_number());
-        assert_eq!(1u32, IpStaking::current_era());
+        OcifStaking::on_initialize(System::block_number());
+        assert_eq!(1u32, OcifStaking::current_era());
     })
 }
 
@@ -23,27 +23,27 @@ fn on_initialize_when_ip_staking_enabled_in_mid_of_an_era_is_ok() {
 fn rewards_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         assert_eq!(RewardAccumulator::<Test>::get(), Default::default());
-        assert!(Balances::free_balance(&IpStaking::account_id()).is_zero());
+        assert!(Balances::free_balance(&OcifStaking::account_id()).is_zero());
 
         let total_reward = 22344;
-        IpStaking::rewards(Balances::issue(total_reward));
+        OcifStaking::rewards(Balances::issue(total_reward));
 
         assert_eq!(
             total_reward,
-            Balances::free_balance(&IpStaking::account_id())
+            Balances::free_balance(&OcifStaking::account_id())
         );
         let reward_accumulator = RewardAccumulator::<Test>::get();
 
-        let (ip_reward, stakers_reward) = split_reward_amount(total_reward);
+        let (core_reward, stakers_reward) = split_reward_amount(total_reward);
 
         assert_eq!(reward_accumulator.stakers, stakers_reward);
-        assert_eq!(reward_accumulator.ip, ip_reward);
+        assert_eq!(reward_accumulator.core, core_reward);
 
-        IpStaking::on_initialize(System::block_number());
+        OcifStaking::on_initialize(System::block_number());
         assert_eq!(RewardAccumulator::<Test>::get(), Default::default());
         assert_eq!(
             total_reward,
-            Balances::free_balance(&IpStaking::account_id())
+            Balances::free_balance(&OcifStaking::account_id())
         );
     })
 }
@@ -51,19 +51,19 @@ fn rewards_is_ok() {
 #[test]
 fn on_initialize_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
-        assert!(IpStaking::current_era().is_zero());
+        assert!(OcifStaking::current_era().is_zero());
 
         initialize_first_block();
-        let current_era = IpStaking::current_era();
+        let current_era = OcifStaking::current_era();
         assert_eq!(1, current_era);
 
         let previous_era = current_era;
         advance_to_era(previous_era + 10);
 
-        let current_era = IpStaking::current_era();
+        let current_era = OcifStaking::current_era();
         for era in 1..current_era {
             let reward_info = GeneralEraInfo::<Test>::get(era).unwrap().rewards;
-            assert_eq!(ISSUE_PER_ERA, reward_info.stakers + reward_info.ip);
+            assert_eq!(ISSUE_PER_ERA, reward_info.stakers + reward_info.core);
         }
         let era_rewards = GeneralEraInfo::<Test>::get(current_era).unwrap();
         assert_eq!(0, era_rewards.staked);
@@ -77,15 +77,15 @@ fn new_era_length_is_always_blocks_per_era() {
         initialize_first_block();
         let blocks_per_era = mock::BLOCKS_PER_ERA;
 
-        advance_to_era(mock::IpStaking::current_era() + 1);
+        advance_to_era(mock::OcifStaking::current_era() + 1);
 
-        let start_era = mock::IpStaking::current_era();
+        let start_era = mock::OcifStaking::current_era();
         let starting_block_number = System::block_number();
 
-        advance_to_era(mock::IpStaking::current_era() + 1);
+        advance_to_era(mock::OcifStaking::current_era() + 1);
         let ending_block_number = System::block_number();
 
-        assert_eq!(mock::IpStaking::current_era(), start_era + 1);
+        assert_eq!(mock::OcifStaking::current_era(), start_era + 1);
         assert_eq!(ending_block_number - starting_block_number, blocks_per_era);
     })
 }
@@ -93,45 +93,45 @@ fn new_era_length_is_always_blocks_per_era() {
 #[test]
 fn new_era_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
-        advance_to_era(IpStaking::current_era() + 10);
-        let starting_era = IpStaking::current_era();
+        advance_to_era(OcifStaking::current_era() + 10);
+        let starting_era = OcifStaking::current_era();
 
-        assert_eq!(IpStaking::reward_accumulator(), Default::default());
+        assert_eq!(OcifStaking::reward_accumulator(), Default::default());
 
         run_for_blocks(1);
-        let current_era = IpStaking::current_era();
+        let current_era = OcifStaking::current_era();
         assert_eq!(starting_era, current_era);
 
-        let block_reward = IpStaking::reward_accumulator();
-        assert_eq!(ISSUE_PER_BLOCK, block_reward.stakers + block_reward.ip);
+        let block_reward = OcifStaking::reward_accumulator();
+        assert_eq!(ISSUE_PER_BLOCK, block_reward.stakers + block_reward.core);
 
         let staker = account(C);
         let staked_amount = 100;
         assert_register(A);
         assert_stake(staker, &A, staked_amount);
 
-        advance_to_era(IpStaking::current_era() + 1);
+        advance_to_era(OcifStaking::current_era() + 1);
 
-        let current_era = IpStaking::current_era();
+        let current_era = OcifStaking::current_era();
         assert_eq!(starting_era + 1, current_era);
-        System::assert_last_event(mock::Event::IpStaking(Event::NewEra {
+        System::assert_last_event(mock::Event::OcifStaking(Event::NewEra {
             era: starting_era + 1,
         }));
 
-        let block_reward = IpStaking::reward_accumulator();
+        let block_reward = OcifStaking::reward_accumulator();
         assert_eq!(block_reward, Default::default());
 
         let expected_era_reward = ISSUE_PER_ERA;
 
-        let (expected_ip_reward, expected_stakers_reward) = split_reward_amount(ISSUE_PER_ERA);
+        let (expected_core_reward, expected_stakers_reward) = split_reward_amount(ISSUE_PER_ERA);
 
         let era_rewards = GeneralEraInfo::<Test>::get(starting_era).unwrap();
         assert_eq!(staked_amount, era_rewards.staked);
         assert_eq!(
             expected_era_reward,
-            era_rewards.rewards.ip + era_rewards.rewards.stakers
+            era_rewards.rewards.core + era_rewards.rewards.stakers
         );
-        assert_eq!(expected_ip_reward, era_rewards.rewards.ip);
+        assert_eq!(expected_core_reward, era_rewards.rewards.core);
         assert_eq!(expected_stakers_reward, era_rewards.rewards.stakers);
     })
 }
@@ -162,35 +162,37 @@ fn general_staker_info_is_ok() {
         let final_era = 12;
         advance_to_era(final_era);
 
-        let mut first_staker_info = IpStaking::staker_info(&A, &staker_1);
-        let mut second_staker_info = IpStaking::staker_info(&A, &staker_2);
-        let mut third_staker_info = IpStaking::staker_info(&A, &staker_3);
+        let mut first_staker_info = OcifStaking::staker_info(&A, &staker_1);
+        let mut second_staker_info = OcifStaking::staker_info(&A, &staker_2);
+        let mut third_staker_info = OcifStaking::staker_info(&A, &staker_3);
 
         for era in starting_era..mid_era {
-            let ip_info = IpStaking::ip_stake_info(&A, era).unwrap();
-            assert_eq!(2, ip_info.number_of_stakers);
+            let core_info = OcifStaking::core_stake_info(&A, era).unwrap();
+            assert_eq!(2, core_info.number_of_stakers);
 
             assert_eq!((era, amount), first_staker_info.claim());
             assert_eq!((era, amount), second_staker_info.claim());
 
-            assert!(!IpEraStake::<Test>::contains_key(&B, era));
+            assert!(!CoreEraStake::<Test>::contains_key(&B, era));
         }
 
         for era in mid_era..=final_era {
-            let first_ip_info = IpStaking::ip_stake_info(&A, era).unwrap();
-            assert_eq!(2, first_ip_info.number_of_stakers);
+            let first_core_info = OcifStaking::core_stake_info(&A, era).unwrap();
+            assert_eq!(2, first_core_info.number_of_stakers);
 
             assert_eq!((era, amount), first_staker_info.claim());
             assert_eq!((era, amount), third_staker_info.claim());
 
             assert_eq!(
-                IpStaking::ip_stake_info(&B, era).unwrap().number_of_stakers,
+                OcifStaking::core_stake_info(&B, era)
+                    .unwrap()
+                    .number_of_stakers,
                 1
             );
         }
 
-        assert!(!IpEraStake::<Test>::contains_key(&A, starting_era - 1));
-        assert!(!IpEraStake::<Test>::contains_key(&B, starting_era - 1));
+        assert!(!CoreEraStake::<Test>::contains_key(&A, starting_era - 1));
+        assert!(!CoreEraStake::<Test>::contains_key(&B, starting_era - 1));
     })
 }
 
@@ -201,7 +203,7 @@ fn register_is_ok() {
 
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
         assert_register(A);
-        System::assert_last_event(mock::Event::IpStaking(Event::IpRegistered { ip: A }));
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered { core: A }));
 
         assert_eq!(
             RegisterDeposit::get(),
@@ -217,19 +219,19 @@ fn register_twice_with_same_account_fails() {
 
         assert_register(A);
 
-        System::assert_last_event(mock::Event::IpStaking(Event::IpRegistered { ip: A }));
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered { core: A }));
 
         assert_noop!(
-            IpStaking::register_ip(
+            OcifStaking::register_core(
                 Origin::signed(account(A)),
                 A,
-                IpMetadata {
+                CoreMetadata {
                     name: BoundedVec::default(),
                     description: BoundedVec::default(),
                     image: BoundedVec::default()
                 }
             ),
-            Error::<Test>::IpAlreadyRegistered
+            Error::<Test>::CoreAlreadyRegistered
         );
     })
 }
@@ -239,17 +241,19 @@ fn change_metadata() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
+        assert_register(core_id);
 
-        System::assert_last_event(mock::Event::IpStaking(Event::IpRegistered { ip: ip_id }));
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered {
+            core: core_id,
+        }));
 
         assert_eq!(
-            IpStaking::ip_info(ip_id),
-            Some(IpInfo {
-                account: account(ip_id),
-                metadata: IpMetadata {
+            OcifStaking::core_info(core_id),
+            Some(CoreInfo {
+                account: account(core_id),
+                metadata: CoreMetadata {
                     name: BoundedVec::default(),
                     description: BoundedVec::default(),
                     image: BoundedVec::default()
@@ -257,22 +261,22 @@ fn change_metadata() {
             })
         );
 
-        let new_metadata: IpMetadataOf<Test> = IpMetadata {
-            name: b"Test IP".to_vec().try_into().unwrap(),
-            description: b"Description of the test IP".to_vec().try_into().unwrap(),
-            image: b"https://test.ip".to_vec().try_into().unwrap(),
+        let new_metadata: CoreMetadataOf<Test> = CoreMetadata {
+            name: b"Test CORE".to_vec().try_into().unwrap(),
+            description: b"Description of the test CORE".to_vec().try_into().unwrap(),
+            image: b"https://test.core".to_vec().try_into().unwrap(),
         };
 
-        assert_ok!(IpStaking::change_ip_metadata(
-            Origin::signed(account(ip_id)),
-            ip_id,
+        assert_ok!(OcifStaking::change_core_metadata(
+            Origin::signed(account(core_id)),
+            core_id,
             new_metadata.clone()
         ));
 
         assert_eq!(
-            IpStaking::ip_info(ip_id),
-            Some(IpInfo {
-                account: account(ip_id),
+            OcifStaking::core_info(core_id),
+            Some(CoreInfo {
+                account: account(core_id),
                 metadata: new_metadata
             })
         );
@@ -290,7 +294,7 @@ fn unregister_after_register_is_ok() {
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
 
         assert_noop!(
-            IpStaking::unregister_ip(Origin::signed(account(A)), A),
+            OcifStaking::unregister_core(Origin::signed(account(A)), A),
             Error::<Test>::NotRegistered
         );
     })
@@ -310,11 +314,11 @@ fn unregister_stake_and_unstake_is_not_ok() {
         assert_unregister(A);
 
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker), A, 100),
+            OcifStaking::stake(Origin::signed(staker), A, 100),
             Error::<Test>::NotRegistered
         );
         assert_noop!(
-            IpStaking::unstake(Origin::signed(staker), A, 100),
+            OcifStaking::unstake(Origin::signed(staker), A, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -329,40 +333,40 @@ fn withdraw_from_unregistered_is_ok() {
         let staker_2 = account(E);
         let staked_value_1 = 150;
         let staked_value_2 = 330;
-        let ip_id = A;
-        let dummy_ip_id = B;
+        let core_id = A;
+        let dummy_core_id = B;
 
-        assert_register(ip_id);
-        assert_register(dummy_ip_id);
-        assert_stake(staker_1, &ip_id, staked_value_1);
-        assert_stake(staker_2, &ip_id, staked_value_2);
+        assert_register(core_id);
+        assert_register(dummy_core_id);
+        assert_stake(staker_1, &core_id, staked_value_1);
+        assert_stake(staker_2, &core_id, staked_value_2);
 
-        assert_stake(staker_1, &dummy_ip_id, staked_value_1);
+        assert_stake(staker_1, &dummy_core_id, staked_value_1);
 
         advance_to_era(5);
 
-        assert_unregister(ip_id);
+        assert_unregister(core_id);
 
-        for era in 1..IpStaking::current_era() {
-            assert_claim_staker(staker_1, ip_id);
-            assert_claim_staker(staker_2, ip_id);
+        for era in 1..OcifStaking::current_era() {
+            assert_claim_staker(staker_1, core_id);
+            assert_claim_staker(staker_2, core_id);
 
-            assert_claim_ip(ip_id, era);
+            assert_claim_core(core_id, era);
         }
 
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker_1), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker_1), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker_2), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker_2), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            IpStaking::ip_claim_rewards(
-                Origin::signed(account(ip_id)),
-                ip_id,
-                IpStaking::current_era()
+            OcifStaking::core_claim_rewards(
+                Origin::signed(account(core_id)),
+                core_id,
+                OcifStaking::current_era()
             ),
             Error::<Test>::IncorrectEra
         );
@@ -380,39 +384,39 @@ fn bond_and_stake_different_eras_is_ok() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
-        let current_era = IpStaking::current_era();
-        assert!(IpStaking::ip_stake_info(&ip_id, current_era).is_none());
+        let current_era = OcifStaking::current_era();
+        assert!(OcifStaking::core_stake_info(&core_id, current_era).is_none());
 
-        assert_stake(staker_id, &ip_id, 100);
+        assert_stake(staker_id, &core_id, 100);
 
         advance_to_era(current_era + 2);
 
-        assert_stake(staker_id, &ip_id, 300);
+        assert_stake(staker_id, &core_id, 300);
     })
 }
 
 #[test]
-fn bond_and_stake_two_different_ip_is_ok() {
+fn bond_and_stake_two_different_core_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker_id = account(B);
-        let first_ip_id = A;
-        let second_ip_id = C;
+        let first_core_id = A;
+        let second_core_id = C;
 
-        assert_register(first_ip_id);
-        assert_register(second_ip_id);
+        assert_register(first_core_id);
+        assert_register(second_core_id);
 
-        assert_stake(staker_id, &first_ip_id, 100);
-        assert_stake(staker_id, &second_ip_id, 300);
+        assert_stake(staker_id, &first_core_id, 100);
+        assert_stake(staker_id, &second_core_id, 300);
     })
 }
 
 #[test]
-fn bond_and_stake_two_stakers_one_ip_is_ok() {
+fn bond_and_stake_two_stakers_one_core_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
@@ -420,12 +424,12 @@ fn bond_and_stake_two_stakers_one_ip_is_ok() {
         let second_staker_id = account(C);
         let first_stake_value = 50;
         let second_stake_value = 235;
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
+        assert_register(core_id);
 
-        assert_stake(first_staker_id, &ip_id, first_stake_value);
-        assert_stake(second_staker_id, &ip_id, second_stake_value);
+        assert_stake(first_staker_id, &core_id, first_stake_value);
+        assert_stake(second_staker_id, &core_id, second_stake_value);
     })
 }
 
@@ -435,19 +439,19 @@ fn bond_and_stake_different_value_is_ok() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
+        assert_register(core_id);
 
         let staker_free_balance =
             Balances::free_balance(&staker_id).saturating_sub(EXISTENTIAL_DEPOSIT);
-        assert_stake(staker_id, &ip_id, staker_free_balance - 1);
+        assert_stake(staker_id, &core_id, staker_free_balance - 1);
 
-        assert_stake(staker_id, &ip_id, 1);
+        assert_stake(staker_id, &core_id, 1);
 
         let staker_id = account(C);
         let staker_free_balance = Balances::free_balance(&staker_id);
-        assert_stake(staker_id, &ip_id, staker_free_balance + 1);
+        assert_stake(staker_id, &core_id, staker_free_balance + 1);
 
         let transferable_balance =
             Balances::free_balance(&staker_id) - Ledger::<Test>::get(staker_id).locked;
@@ -456,23 +460,23 @@ fn bond_and_stake_different_value_is_ok() {
         let staker_id = account(D);
         let staker_free_balance =
             Balances::free_balance(&staker_id).saturating_sub(EXISTENTIAL_DEPOSIT);
-        assert_stake(staker_id, &ip_id, staker_free_balance - 200);
+        assert_stake(staker_id, &core_id, staker_free_balance - 200);
 
-        assert_stake(staker_id, &ip_id, 500);
+        assert_stake(staker_id, &core_id, 500);
     })
 }
 
 #[test]
-fn bond_and_stake_on_unregistered_ip_fails() {
+fn bond_and_stake_on_unregistered_core_fails() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker_id = account(B);
         let stake_value = 100;
 
-        let ip_id = A;
+        let core_id = A;
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker_id), ip_id, stake_value),
+            OcifStaking::stake(Origin::signed(staker_id), core_id, stake_value),
             Error::<Test>::NotRegistered
         );
     })
@@ -483,41 +487,45 @@ fn bond_and_stake_insufficient_value() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
         let staker_id = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
+        assert_register(core_id);
 
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker_id), ip_id, MINIMUM_STAKING_AMOUNT - 1),
+            OcifStaking::stake(
+                Origin::signed(staker_id),
+                core_id,
+                MINIMUM_STAKING_AMOUNT - 1
+            ),
             Error::<Test>::InsufficientBalance
         );
 
         let staker_free_balance = Balances::free_balance(&staker_id);
-        assert_stake(staker_id, &ip_id, staker_free_balance);
+        assert_stake(staker_id, &core_id, staker_free_balance);
 
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker_id), ip_id, 1),
+            OcifStaking::stake(Origin::signed(staker_id), core_id, 1),
             Error::<Test>::StakingNothing
         );
     })
 }
 
 #[test]
-fn bond_and_stake_too_many_stakers_per_ip() {
+fn bond_and_stake_too_many_stakers_per_core() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         for staker_id in 1..=MAX_NUMBER_OF_STAKERS {
-            assert_stake(account(staker_id.into()), &ip_id, 100);
+            assert_stake(account(staker_id.into()), &core_id, 100);
         }
 
         assert_noop!(
-            IpStaking::stake(
+            OcifStaking::stake(
                 Origin::signed(account((1 + MAX_NUMBER_OF_STAKERS).into())),
-                ip_id,
+                core_id,
                 100
             ),
             Error::<Test>::MaxStakersReached
@@ -531,17 +539,17 @@ fn bond_and_stake_too_many_era_stakes() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
-        let start_era = IpStaking::current_era();
+        let start_era = OcifStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
-            assert_stake(staker_id, &ip_id, 100);
+            assert_stake(staker_id, &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker_id.into()), ip_id, 100),
+            OcifStaking::stake(Origin::signed(staker_id.into()), core_id, 100),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -553,19 +561,19 @@ fn unbond_and_unstake_multiple_time_is_ok() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
+        let core_id = A;
         let original_staked_value = 300 + EXISTENTIAL_DEPOSIT;
-        let old_era = IpStaking::current_era();
+        let old_era = OcifStaking::current_era();
 
-        assert_register(ip_id);
-        assert_stake(staker_id, &ip_id, original_staked_value);
+        assert_register(core_id);
+        assert_stake(staker_id, &core_id, original_staked_value);
         advance_to_era(old_era + 1);
 
         let unstaked_value = 100;
-        assert_unstake(staker_id, &ip_id, unstaked_value);
+        assert_unstake(staker_id, &core_id, unstaked_value);
 
         let unstaked_value = 50;
-        assert_unstake(staker_id, &ip_id, unstaked_value);
+        assert_unstake(staker_id, &core_id, unstaked_value);
     })
 }
 
@@ -575,16 +583,16 @@ fn unbond_and_unstake_value_below_staking_threshold() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
+        let core_id = A;
         let first_value_to_unstake = 300;
         let staked_value = first_value_to_unstake + MINIMUM_STAKING_AMOUNT;
 
-        assert_register(ip_id);
-        assert_stake(staker_id, &ip_id, staked_value);
+        assert_register(core_id);
+        assert_stake(staker_id, &core_id, staked_value);
 
-        assert_unstake(staker_id, &ip_id, first_value_to_unstake);
+        assert_unstake(staker_id, &core_id, first_value_to_unstake);
 
-        assert_unstake(staker_id, &ip_id, 1);
+        assert_unstake(staker_id, &core_id, 1);
     })
 }
 
@@ -594,19 +602,19 @@ fn unbond_and_unstake_in_different_eras() {
         initialize_first_block();
 
         let (first_staker_id, second_staker_id) = (account(B), account(C));
-        let ip_id = A;
+        let core_id = A;
         let staked_value = 500;
 
-        assert_register(ip_id);
-        assert_stake(first_staker_id, &ip_id, staked_value);
-        assert_stake(second_staker_id, &ip_id, staked_value);
+        assert_register(core_id);
+        assert_stake(first_staker_id, &core_id, staked_value);
+        assert_stake(second_staker_id, &core_id, staked_value);
 
-        advance_to_era(IpStaking::current_era() + 10);
-        let current_era = IpStaking::current_era();
-        assert_unstake(first_staker_id, &ip_id, 100);
+        advance_to_era(OcifStaking::current_era() + 10);
+        let current_era = OcifStaking::current_era();
+        assert_unstake(first_staker_id, &core_id, 100);
 
         advance_to_era(current_era + 10);
-        assert_unstake(second_staker_id, &ip_id, 333);
+        assert_unstake(second_staker_id, &core_id, 333);
     })
 }
 
@@ -615,14 +623,14 @@ fn unbond_and_unstake_calls_in_same_era_can_exceed_max_chunks() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         let staker = account(B);
-        assert_stake(staker, &ip_id, 200 * MAX_UNLOCKING as Balance);
+        assert_stake(staker, &core_id, 200 * MAX_UNLOCKING as Balance);
 
         for _ in 0..MAX_UNLOCKING * 2 {
-            assert_unstake(staker, &ip_id, 10);
+            assert_unstake(staker, &core_id, 10);
             assert_eq!(1, Ledger::<Test>::get(&staker).unbonding_info.len());
         }
     })
@@ -633,24 +641,24 @@ fn unbond_and_unstake_with_zero_value_is_not_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         assert_noop!(
-            IpStaking::unstake(Origin::signed(account(B)), ip_id, 0),
+            OcifStaking::unstake(Origin::signed(account(B)), core_id, 0),
             Error::<Test>::UnstakingNothing
         );
     })
 }
 
 #[test]
-fn unbond_and_unstake_on_not_registered_ip_is_not_ok() {
+fn unbond_and_unstake_on_not_registered_core_is_not_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
+        let core_id = A;
         assert_noop!(
-            IpStaking::unstake(Origin::signed(account(B)), ip_id, 100),
+            OcifStaking::unstake(Origin::signed(account(B)), core_id, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -661,44 +669,44 @@ fn unbond_and_unstake_too_many_unlocking_chunks_is_not_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         let staker = account(B);
         let unstake_amount = 10;
         let stake_amount = MINIMUM_STAKING_AMOUNT * 10 + unstake_amount * MAX_UNLOCKING as Balance;
 
-        assert_stake(staker, &ip_id, stake_amount);
+        assert_stake(staker, &core_id, stake_amount);
 
         for _ in 0..MAX_UNLOCKING {
-            advance_to_era(IpStaking::current_era() + 1);
-            assert_unstake(staker, &ip_id, unstake_amount);
+            advance_to_era(OcifStaking::current_era() + 1);
+            assert_unstake(staker, &core_id, unstake_amount);
         }
 
         assert_eq!(
             MAX_UNLOCKING,
-            IpStaking::ledger(&staker).unbonding_info.len()
+            OcifStaking::ledger(&staker).unbonding_info.len()
         );
-        assert_unstake(staker, &ip_id, unstake_amount);
+        assert_unstake(staker, &core_id, unstake_amount);
 
-        advance_to_era(IpStaking::current_era() + 1);
+        advance_to_era(OcifStaking::current_era() + 1);
         assert_noop!(
-            IpStaking::unstake(Origin::signed(staker), ip_id.clone(), unstake_amount),
+            OcifStaking::unstake(Origin::signed(staker), core_id.clone(), unstake_amount),
             Error::<Test>::TooManyUnlockingChunks,
         );
     })
 }
 
 #[test]
-fn unbond_and_unstake_on_not_staked_ip_is_not_ok() {
+fn unbond_and_unstake_on_not_staked_core_is_not_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         assert_noop!(
-            IpStaking::unstake(Origin::signed(account(B)), ip_id, 10),
+            OcifStaking::unstake(Origin::signed(account(B)), core_id, 10),
             Error::<Test>::NoStakeAvailable,
         );
     })
@@ -710,17 +718,17 @@ fn unbond_and_unstake_too_many_era_stakes() {
         initialize_first_block();
 
         let staker_id = account(B);
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
-        let start_era = IpStaking::current_era();
+        let start_era = OcifStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
-            assert_stake(staker_id, &ip_id, 100);
+            assert_stake(staker_id, &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
         assert_noop!(
-            IpStaking::unstake(Origin::signed(staker_id), ip_id, 10),
+            OcifStaking::unstake(Origin::signed(staker_id), core_id, 10),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -731,44 +739,44 @@ fn withdraw_unbonded_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         let staker_id = account(B);
-        assert_stake(staker_id, &ip_id, 1000);
+        assert_stake(staker_id, &core_id, 1000);
 
         let first_unbond_value = 75;
         let second_unbond_value = 39;
-        let initial_era = IpStaking::current_era();
+        let initial_era = OcifStaking::current_era();
 
-        assert_unstake(staker_id, &ip_id, first_unbond_value);
+        assert_unstake(staker_id, &core_id, first_unbond_value);
 
         advance_to_era(initial_era + 1);
-        assert_unstake(staker_id, &ip_id, second_unbond_value);
+        assert_unstake(staker_id, &core_id, second_unbond_value);
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            IpStaking::withdraw_unstaked(Origin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(Origin::signed(staker_id)),
             Error::<Test>::NothingToWithdraw
         );
 
-        advance_to_era(IpStaking::current_era() + 1);
-        assert_ok!(IpStaking::withdraw_unstaked(Origin::signed(staker_id),));
-        System::assert_last_event(mock::Event::IpStaking(Event::Withdrawn {
+        advance_to_era(OcifStaking::current_era() + 1);
+        assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker_id),));
+        System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
             staker: staker_id,
             amount: first_unbond_value,
         }));
 
-        advance_to_era(IpStaking::current_era() + 1);
-        assert_ok!(IpStaking::withdraw_unstaked(Origin::signed(staker_id),));
-        System::assert_last_event(mock::Event::IpStaking(Event::Withdrawn {
+        advance_to_era(OcifStaking::current_era() + 1);
+        assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker_id),));
+        System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
             staker: staker_id,
             amount: second_unbond_value,
         }));
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            IpStaking::withdraw_unstaked(Origin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(Origin::signed(staker_id)),
             Error::<Test>::NothingToWithdraw
         );
     })
@@ -779,16 +787,16 @@ fn withdraw_unbonded_full_vector_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         let staker_id = account(B);
-        assert_stake(staker_id, &ip_id, 1000);
+        assert_stake(staker_id, &core_id, 1000);
 
         let init_unbonding_amount = 15;
         for x in 1..=MAX_UNLOCKING {
-            assert_unstake(staker_id, &ip_id, init_unbonding_amount * x as u128);
-            advance_to_era(IpStaking::current_era() + 1);
+            assert_unstake(staker_id, &core_id, init_unbonding_amount * x as u128);
+            advance_to_era(OcifStaking::current_era() + 1);
         }
 
         assert_withdraw_unbonded(staker_id);
@@ -796,7 +804,7 @@ fn withdraw_unbonded_full_vector_is_ok() {
         assert!(!Ledger::<Test>::get(&staker_id).unbonding_info.is_empty());
 
         while !Ledger::<Test>::get(&staker_id).unbonding_info.is_empty() {
-            advance_to_era(IpStaking::current_era() + 1);
+            advance_to_era(OcifStaking::current_era() + 1);
             assert_withdraw_unbonded(staker_id);
         }
     })
@@ -808,58 +816,58 @@ fn withdraw_unbonded_no_value_is_not_ok() {
         initialize_first_block();
 
         assert_noop!(
-            IpStaking::withdraw_unstaked(Origin::signed(account(B))),
+            OcifStaking::withdraw_unstaked(Origin::signed(account(B))),
             Error::<Test>::NothingToWithdraw,
         );
     })
 }
 
 #[test]
-fn claim_not_staked_ip() {
+fn claim_not_staked_core() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
+        assert_register(core_id);
 
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
-        advance_to_era(IpStaking::current_era() + 1);
+        advance_to_era(OcifStaking::current_era() + 1);
         assert_noop!(
-            IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, 1),
+            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 1),
             Error::<Test>::NoStakeAvailable
         );
     })
 }
 
 #[test]
-fn claim_not_registered_ip() {
+fn claim_not_registered_core() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        assert_register(ip_id);
-        assert_stake(staker, &ip_id, 100);
+        assert_register(core_id);
+        assert_stake(staker, &core_id, 100);
 
-        advance_to_era(IpStaking::current_era() + 1);
-        assert_unregister(ip_id);
+        advance_to_era(OcifStaking::current_era() + 1);
+        assert_unregister(core_id);
 
-        assert_claim_staker(staker, ip_id);
+        assert_claim_staker(staker, core_id);
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
-        assert_claim_ip(ip_id, 1);
+        assert_claim_core(core_id, 1);
         assert_noop!(
-            IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, 2),
+            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 2),
             Error::<Test>::IncorrectEra
         );
     })
@@ -871,27 +879,27 @@ fn claim_invalid_era() {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
-        assert_stake(staker, &ip_id, 100);
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
+        assert_stake(staker, &core_id, 100);
         advance_to_era(start_era + 5);
 
-        for era in start_era..IpStaking::current_era() {
-            assert_claim_staker(staker, ip_id);
-            assert_claim_ip(ip_id, era);
+        for era in start_era..OcifStaking::current_era() {
+            assert_claim_staker(staker, core_id);
+            assert_claim_core(core_id, era);
         }
 
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
-            IpStaking::ip_claim_rewards(
-                Origin::signed(account(ip_id)),
-                ip_id,
-                IpStaking::current_era()
+            OcifStaking::core_claim_rewards(
+                Origin::signed(account(core_id)),
+                core_id,
+                OcifStaking::current_era()
             ),
             Error::<Test>::IncorrectEra
         );
@@ -899,21 +907,21 @@ fn claim_invalid_era() {
 }
 
 #[test]
-fn claim_ip_same_era_twice() {
+fn claim_core_same_era_twice() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
-        assert_stake(staker, &ip_id, 100);
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
+        assert_stake(staker, &core_id, 100);
         advance_to_era(start_era + 1);
 
-        assert_claim_ip(ip_id, start_era);
+        assert_claim_core(core_id, start_era);
         assert_noop!(
-            IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, start_era),
+            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, start_era),
             Error::<Test>::RewardAlreadyClaimed
         );
     })
@@ -926,43 +934,43 @@ fn claim_is_ok() {
 
         let first_staker = account(D);
         let second_staker = account(E);
-        let first_ip_id = A;
-        let second_ip_id = B;
+        let first_core_id = A;
+        let second_core_id = B;
 
-        let start_era = IpStaking::current_era();
+        let start_era = OcifStaking::current_era();
 
-        assert_register(first_ip_id);
-        assert_register(second_ip_id);
-        assert_stake(first_staker, &first_ip_id, 100);
-        assert_stake(second_staker, &first_ip_id, 45);
+        assert_register(first_core_id);
+        assert_register(second_core_id);
+        assert_stake(first_staker, &first_core_id, 100);
+        assert_stake(second_staker, &first_core_id, 45);
 
-        assert_stake(first_staker, &second_ip_id, 33);
-        assert_stake(second_staker, &second_ip_id, 22);
+        assert_stake(first_staker, &second_core_id, 33);
+        assert_stake(second_staker, &second_core_id, 22);
 
         let eras_advanced = 3;
         advance_to_era(start_era + eras_advanced);
 
         for x in 0..eras_advanced.into() {
-            assert_stake(first_staker, &first_ip_id, 20 + x * 3);
-            assert_stake(second_staker, &first_ip_id, 5 + x * 5);
-            advance_to_era(IpStaking::current_era() + 1);
+            assert_stake(first_staker, &first_core_id, 20 + x * 3);
+            assert_stake(second_staker, &first_core_id, 5 + x * 5);
+            advance_to_era(OcifStaking::current_era() + 1);
         }
 
-        let current_era = IpStaking::current_era();
+        let current_era = OcifStaking::current_era();
         for era in start_era..current_era {
-            assert_claim_staker(first_staker, first_ip_id);
-            assert_claim_ip(first_ip_id, era);
-            assert_claim_staker(second_staker, first_ip_id);
+            assert_claim_staker(first_staker, first_core_id);
+            assert_claim_core(first_core_id, era);
+            assert_claim_staker(second_staker, first_core_id);
         }
 
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(first_staker), first_ip_id.clone()),
+            OcifStaking::staker_claim_rewards(Origin::signed(first_staker), first_core_id.clone()),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
-            IpStaking::ip_claim_rewards(
-                Origin::signed(account(first_ip_id)),
-                first_ip_id,
+            OcifStaking::core_claim_rewards(
+                Origin::signed(account(first_core_id)),
+                first_core_id,
                 current_era
             ),
             Error::<Test>::IncorrectEra
@@ -975,22 +983,22 @@ fn claim_check_amount() {
     ExternalityBuilder::build().execute_with(|| {
         assert_eq!(System::block_number(), 1 as BlockNumber);
 
-        IpStaking::on_initialize(System::block_number());
+        OcifStaking::on_initialize(System::block_number());
 
         let first_staker = account(C);
         let second_staker = account(D);
-        let first_ip_id = A;
-        let second_ip_id = B;
+        let first_core_id = A;
+        let second_core_id = B;
 
-        assert_eq!(IpStaking::current_era(), 1);
+        assert_eq!(OcifStaking::current_era(), 1);
 
         // Make sure current block is 1.
         assert_eq!(System::block_number(), 1);
 
-        assert_register(first_ip_id);
-        assert_register(second_ip_id);
+        assert_register(first_core_id);
+        assert_register(second_core_id);
 
-        // 130 for stakers, 130 for Ip.
+        // 130 for stakers, 130 for Core.
         issue_rewards(260);
 
         run_to_block_no_rewards(2);
@@ -999,23 +1007,23 @@ fn claim_check_amount() {
         assert_eq!(System::block_number(), 2);
 
         // User stakes in the middle of era 1, their stake should not account for era 1.
-        assert_stake(first_staker, &first_ip_id, 100);
-        assert_stake(second_staker, &second_ip_id, 30);
+        assert_stake(first_staker, &first_core_id, 100);
+        assert_stake(second_staker, &second_core_id, 30);
 
         advance_to_era_no_rewards(2);
 
         // Make sure current era is 2.
-        assert_eq!(IpStaking::current_era(), 2);
+        assert_eq!(OcifStaking::current_era(), 2);
 
-        // 130 for stakers, 130 for Ip.
+        // 130 for stakers, 130 for Core.
         issue_rewards(260);
 
         // Nothing else happens in era 2.
         advance_to_era_no_rewards(3);
 
         assert_eq!(
-            IpStaking::ip_stake_info(first_ip_id, 1),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(first_core_id, 1),
+            Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
                 reward_claimed: false,
@@ -1024,8 +1032,8 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::ip_stake_info(second_ip_id, 1),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(second_core_id, 1),
+            Some(CoreStakeInfo {
                 total: 30,
                 number_of_stakers: 1,
                 reward_claimed: false,
@@ -1034,11 +1042,11 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::general_era_info(1),
+            OcifStaking::general_era_info(1),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 130,
-                    ip: 130
+                    core: 130
                 },
                 staked: 130,
                 active_stake: 0,
@@ -1047,8 +1055,8 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::ip_stake_info(first_ip_id, 2),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(first_core_id, 2),
+            Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
                 reward_claimed: false,
@@ -1057,8 +1065,8 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::ip_stake_info(second_ip_id, 2),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(second_core_id, 2),
+            Some(CoreStakeInfo {
                 total: 30,
                 number_of_stakers: 1,
                 reward_claimed: false,
@@ -1067,11 +1075,11 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::general_era_info(2),
+            OcifStaking::general_era_info(2),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 130,
-                    ip: 130
+                    core: 130
                 },
                 staked: 130,
                 active_stake: 100,
@@ -1079,83 +1087,83 @@ fn claim_check_amount() {
             })
         );
 
-        // Let's try claiming rewards for era 1 for the first ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(first_ip_id)),
-            first_ip_id,
+        // Let's try claiming rewards for era 1 for the first core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(first_core_id)),
+            first_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: first_ip_id,
-            destination_account: account(first_ip_id),
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: first_core_id,
+            destination_account: account(first_core_id),
             era: 1,
             amount: 0,
         }));
 
-        // Let's try claiming rewards for era 1 for the second ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(second_ip_id)),
-            second_ip_id,
+        // Let's try claiming rewards for era 1 for the second core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(second_core_id)),
+            second_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: second_ip_id,
-            destination_account: account(second_ip_id),
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: second_core_id,
+            destination_account: account(second_core_id),
             era: 1,
             amount: 0,
         }));
 
-        // Now let's try claiming rewards for era 2 for the first ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(first_ip_id)),
-            first_ip_id,
+        // Now let's try claiming rewards for era 2 for the first core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(first_core_id)),
+            first_core_id,
             2
         ));
 
-        // ...there should be 130 since it's 50% of the issue 260 and the second ip shouldn't be active yet.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: first_ip_id,
-            destination_account: account(first_ip_id),
+        // ...there should be 130 since it's 50% of the issue 260 and the second core shouldn't be active yet.
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: first_core_id,
+            destination_account: account(first_core_id),
             era: 2,
             amount: 130,
         }));
 
-        // Now let's try claiming rewards for era 2 for the second ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(second_ip_id)),
-            second_ip_id,
+        // Now let's try claiming rewards for era 2 for the second core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(second_core_id)),
+            second_core_id,
             2
         ));
 
         // ...there should be 0 since the current stake is 30, which is below the active threshold.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: second_ip_id,
-            destination_account: account(second_ip_id),
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: second_core_id,
+            destination_account: account(second_core_id),
             era: 2,
             amount: 0,
         }));
 
         // User stakes in the middle of era 3, their stake should not account for era 3.
-        assert_stake(first_staker, &second_ip_id, 20);
+        assert_stake(first_staker, &second_core_id, 20);
 
         advance_to_era_no_rewards(4);
 
         // Make sure current era is 4.
-        assert_eq!(IpStaking::current_era(), 4);
+        assert_eq!(OcifStaking::current_era(), 4);
 
-        // 150 for stakers, 150 for Ip.
+        // 150 for stakers, 150 for Core.
         issue_rewards(300);
 
         // Nothing else happens in era 4.
         advance_to_era_no_rewards(5);
 
         assert_eq!(
-            IpStaking::ip_stake_info(first_ip_id, 4),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(first_core_id, 4),
+            Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
                 reward_claimed: false,
@@ -1164,8 +1172,8 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::ip_stake_info(second_ip_id, 4),
-            Some(IpStakeInfo {
+            OcifStaking::core_stake_info(second_core_id, 4),
+            Some(CoreStakeInfo {
                 total: 50,
                 number_of_stakers: 2,
                 reward_claimed: false,
@@ -1174,11 +1182,11 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::general_era_info(4),
+            OcifStaking::general_era_info(4),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 150,
-                    ip: 150
+                    core: 150
                 },
                 staked: 150,
                 active_stake: 150,
@@ -1186,40 +1194,40 @@ fn claim_check_amount() {
             })
         );
 
-        // Let's try claiming rewards for era 4 for the first ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(first_ip_id)),
-            first_ip_id,
+        // Let's try claiming rewards for era 4 for the first core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(first_core_id)),
+            first_core_id,
             4
         ));
 
-        // ...there should be 100 out of the 150, because the second ip should be active now.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: first_ip_id,
-            destination_account: account(first_ip_id),
+        // ...there should be 100 out of the 150, because the second core should be active now.
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: first_core_id,
+            destination_account: account(first_core_id),
             era: 4,
             amount: 100,
         }));
 
-        // Let's try claiming rewards for era 4 for the second ip...
-        assert_ok!(IpStaking::ip_claim_rewards(
-            Origin::signed(account(second_ip_id)),
-            second_ip_id,
+        // Let's try claiming rewards for era 4 for the second core...
+        assert_ok!(OcifStaking::core_claim_rewards(
+            Origin::signed(account(second_core_id)),
+            second_core_id,
             4
         ));
 
-        // ...there should be 50 out of the 150, because the second ip should be active now.
-        System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-            ip: second_ip_id,
-            destination_account: account(second_ip_id),
+        // ...there should be 50 out of the 150, because the second core should be active now.
+        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+            core: second_core_id,
+            destination_account: account(second_core_id),
             era: 4,
             amount: 50,
         }));
 
-        // Now let's check the same stuff for the stakers instead of the ip.
+        // Now let's check the same stuff for the stakers instead of the core.
 
         assert_eq!(
-            IpStaking::staker_info(first_ip_id, first_staker),
+            OcifStaking::staker_info(first_core_id, first_staker),
             StakerInfo {
                 stakes: vec![EraStake {
                     staked: 100,
@@ -1229,168 +1237,168 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            IpStaking::staker_info(second_ip_id, first_staker),
+            OcifStaking::staker_info(second_core_id, first_staker),
             StakerInfo {
                 stakes: vec![EraStake { staked: 20, era: 3 }]
             }
         );
 
         assert_eq!(
-            IpStaking::staker_info(second_ip_id, second_staker),
+            OcifStaking::staker_info(second_core_id, second_staker),
             StakerInfo {
                 stakes: vec![EraStake { staked: 30, era: 1 }]
             }
         );
 
         assert_eq!(
-            IpStaking::staker_info(first_ip_id, second_staker),
+            OcifStaking::staker_info(first_core_id, second_staker),
             StakerInfo { stakes: vec![] }
         );
 
         // Era 1:
 
-        // Let's try claiming rewards for the first staker in the first ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the first core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            first_ip_id,
+            first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 1.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: first_ip_id,
+            core: first_core_id,
             era: 1,
             amount: 100,
         }));
 
-        // Let's try claiming rewards for the second staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the second staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(second_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 1.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 1,
             amount: 30,
         }));
 
         // Era 2:
 
-        // Let's try claiming rewards for the first staker in the first ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the first core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            first_ip_id,
+            first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 2.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: first_ip_id,
+            core: first_core_id,
             era: 2,
             amount: 100,
         }));
 
-        // Let's try claiming rewards for the second staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the second staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(second_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 2.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 2,
             amount: 30,
         }));
 
         // Era 3:
 
-        // Let's try claiming rewards for the first staker in the first ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the first core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            first_ip_id,
+            first_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: first_ip_id,
+            core: first_core_id,
             era: 3,
             amount: 0,
         }));
 
-        // Let's try claiming rewards for the first staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 3,
             amount: 0,
         }));
 
-        // Let's try claiming rewards for the second staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the second staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(second_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 3,
             amount: 0,
         }));
 
         // Era 4:
 
-        // Let's try claiming rewards for the first staker in the first ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the first core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            first_ip_id,
+            first_core_id,
         ));
 
-        // ...there should be 100 out of the 150, because the second staker had 30 staked in era 4 and first staker had 20 in the second ip.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        // ...there should be 100 out of the 150, because the second staker had 30 staked in era 4 and first staker had 20 in the second core.
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: first_ip_id,
+            core: first_core_id,
             era: 4,
             amount: 100,
         }));
 
-        // Let's try claiming rewards for the first staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the first staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(first_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
-        // ...there should be 20 out of the 150, because the second staker had 30 staked in era 4 and first staker had 100 in the first ip.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        // ...there should be 20 out of the 150, because the second staker had 30 staked in era 4 and first staker had 100 in the first core.
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 4,
             amount: 20,
         }));
 
-        // Let's try claiming rewards for the second staker in the second ip...
-        assert_ok!(IpStaking::staker_claim_rewards(
+        // Let's try claiming rewards for the second staker in the second core...
+        assert_ok!(OcifStaking::staker_claim_rewards(
             Origin::signed(second_staker),
-            second_ip_id,
+            second_core_id,
         ));
 
         // ...there should be 30 out of the 150, because the first staker had 120 staked in era 4.
-        System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
-            ip: second_ip_id,
+            core: second_core_id,
             era: 4,
             amount: 30,
         }));
@@ -1403,45 +1411,49 @@ fn claim_after_unregister_is_ok() {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &ip_id, stake_value);
+        assert_stake(staker, &core_id, stake_value);
 
         advance_to_era(start_era + 5);
-        assert_unstake(staker, &ip_id, stake_value);
-        let full_unstake_era = IpStaking::current_era();
+        assert_unstake(staker, &core_id, stake_value);
+        let full_unstake_era = OcifStaking::current_era();
         let number_of_staking_eras = full_unstake_era - start_era;
 
-        advance_to_era(IpStaking::current_era() + 3);
+        advance_to_era(OcifStaking::current_era() + 3);
         let stake_value = 75;
-        let restake_era = IpStaking::current_era();
-        assert_stake(staker, &ip_id, stake_value);
+        let restake_era = OcifStaking::current_era();
+        assert_stake(staker, &core_id, stake_value);
 
-        advance_to_era(IpStaking::current_era() + 3);
-        assert_unregister(ip_id);
-        let unregister_era = IpStaking::current_era();
+        advance_to_era(OcifStaking::current_era() + 3);
+        assert_unregister(core_id);
+        let unregister_era = OcifStaking::current_era();
         let number_of_staking_eras = number_of_staking_eras + unregister_era - restake_era;
-        advance_to_era(IpStaking::current_era() + 2);
+        advance_to_era(OcifStaking::current_era() + 2);
 
         for _ in 0..number_of_staking_eras {
-            assert_claim_staker(staker, ip_id);
+            assert_claim_staker(staker, core_id);
         }
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker), ip_id.clone()),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id.clone()),
             Error::<Test>::NoStakeAvailable
         );
 
         for era in start_era..unregister_era {
             if era >= full_unstake_era && era < restake_era {
                 assert_noop!(
-                    IpStaking::ip_claim_rewards(Origin::signed(account(A)), ip_id.clone(), era),
+                    OcifStaking::core_claim_rewards(
+                        Origin::signed(account(A)),
+                        core_id.clone(),
+                        era
+                    ),
                     Error::<Test>::NoStakeAvailable
                 );
             } else {
-                assert_claim_ip(ip_id, era);
+                assert_claim_core(core_id, era);
             }
         }
     })
@@ -1453,16 +1465,16 @@ fn claim_only_payout_is_ok() {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &ip_id, stake_value);
+        assert_stake(staker, &core_id, stake_value);
 
         advance_to_era(start_era + 1);
 
-        assert_claim_staker(staker, ip_id);
+        assert_claim_staker(staker, core_id);
     })
 }
 
@@ -1472,93 +1484,97 @@ fn claim_with_zero_staked_is_ok() {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
+        let core_id = A;
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
 
         let stake_value = 100;
-        assert_stake(staker, &ip_id, stake_value);
+        assert_stake(staker, &core_id, stake_value);
         advance_to_era(start_era + 1);
 
-        assert_unstake(staker, &ip_id, stake_value);
+        assert_unstake(staker, &core_id, stake_value);
 
-        assert_claim_staker(staker, ip_id);
+        assert_claim_staker(staker, core_id);
     })
 }
 
 #[test]
-fn claim_ip_with_zero_stake_periods_is_ok() {
+fn claim_core_with_zero_stake_periods_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
         let staker = account(B);
-        let ip_id = A;
+        let core_id = A;
 
-        let start_era = IpStaking::current_era();
-        assert_register(ip_id);
+        let start_era = OcifStaking::current_era();
+        assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &ip_id, stake_value);
+        assert_stake(staker, &core_id, stake_value);
 
         advance_to_era(start_era + 5);
-        let first_full_unstake_era = IpStaking::current_era();
-        assert_unstake(staker, &ip_id, stake_value);
+        let first_full_unstake_era = OcifStaking::current_era();
+        assert_unstake(staker, &core_id, stake_value);
 
-        advance_to_era(IpStaking::current_era() + 7);
-        let restake_era = IpStaking::current_era();
-        assert_stake(staker, &ip_id, stake_value);
+        advance_to_era(OcifStaking::current_era() + 7);
+        let restake_era = OcifStaking::current_era();
+        assert_stake(staker, &core_id, stake_value);
 
-        advance_to_era(IpStaking::current_era() + 4);
-        let second_full_unstake_era = IpStaking::current_era();
-        assert_unstake(staker, &ip_id, stake_value);
-        advance_to_era(IpStaking::current_era() + 10);
+        advance_to_era(OcifStaking::current_era() + 4);
+        let second_full_unstake_era = OcifStaking::current_era();
+        assert_unstake(staker, &core_id, stake_value);
+        advance_to_era(OcifStaking::current_era() + 10);
 
         for era in start_era..first_full_unstake_era {
-            assert_claim_ip(ip_id, era);
+            assert_claim_core(core_id, era);
         }
 
         for era in first_full_unstake_era..restake_era {
             assert_noop!(
-                IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id.clone(), era),
+                OcifStaking::core_claim_rewards(
+                    Origin::signed(account(core_id)),
+                    core_id.clone(),
+                    era
+                ),
                 Error::<Test>::NoStakeAvailable
             );
         }
 
         for era in restake_era..second_full_unstake_era {
-            assert_claim_ip(ip_id, era);
+            assert_claim_core(core_id, era);
         }
 
         assert_noop!(
-            IpStaking::ip_claim_rewards(
-                Origin::signed(account(ip_id)),
-                ip_id.clone(),
+            OcifStaking::core_claim_rewards(
+                Origin::signed(account(core_id)),
+                core_id.clone(),
                 second_full_unstake_era
             ),
             Error::<Test>::NoStakeAvailable
         );
 
-        let last_claim_era = IpStaking::current_era();
-        assert_stake(staker, &ip_id, stake_value);
+        let last_claim_era = OcifStaking::current_era();
+        assert_stake(staker, &core_id, stake_value);
         advance_to_era(last_claim_era + 1);
-        assert_claim_ip(ip_id, last_claim_era);
+        assert_claim_core(core_id, last_claim_era);
     })
 }
 
 #[test]
-fn ip_stakers_split_util() {
-    let ip_rewards = 420;
+fn core_stakers_split_util() {
+    let core_rewards = 420;
     let stakers_rewards = 1337;
-    let staked_on_ip = 123456;
-    let total_staked = staked_on_ip * 2;
+    let staked_on_core = 123456;
+    let total_staked = staked_on_core * 2;
 
-    let staking_points_active = IpStakeInfo::<Balance> {
-        total: staked_on_ip,
+    let staking_points_active = CoreStakeInfo::<Balance> {
+        total: staked_on_core,
         number_of_stakers: 10,
         reward_claimed: false,
         active: true,
     };
 
-    let staking_points_inactive = IpStakeInfo::<Balance> {
-        total: staked_on_ip,
+    let staking_points_inactive = CoreStakeInfo::<Balance> {
+        total: staked_on_core,
         number_of_stakers: 10,
         reward_claimed: false,
         active: false,
@@ -1566,57 +1582,57 @@ fn ip_stakers_split_util() {
 
     let era_info = EraInfo::<Balance> {
         rewards: RewardInfo {
-            ip: ip_rewards,
+            core: core_rewards,
             stakers: stakers_rewards,
         },
         staked: total_staked,
         locked: total_staked,
-        active_stake: staked_on_ip,
+        active_stake: staked_on_core,
     };
 
-    let (ip_reward, stakers_reward) =
-        IpStaking::ip_stakers_split(&staking_points_active, &era_info);
+    let (core_reward, stakers_reward) =
+        OcifStaking::core_stakers_split(&staking_points_active, &era_info);
 
-    let ip_stake_ratio = Perbill::from_rational(staked_on_ip, total_staked);
-    let calculated_stakers_reward = ip_stake_ratio * stakers_rewards;
-    assert_eq!(ip_rewards, ip_reward);
+    let core_stake_ratio = Perbill::from_rational(staked_on_core, total_staked);
+    let calculated_stakers_reward = core_stake_ratio * stakers_rewards;
+    assert_eq!(core_rewards, core_reward);
     assert_eq!(calculated_stakers_reward, stakers_reward);
 
     assert_eq!(
-        calculated_stakers_reward + ip_rewards,
-        ip_reward + stakers_reward
+        calculated_stakers_reward + core_rewards,
+        core_reward + stakers_reward
     );
 
-    let (ip_reward, stakers_reward) =
-        IpStaking::ip_stakers_split(&staking_points_inactive, &era_info);
+    let (core_reward, stakers_reward) =
+        OcifStaking::core_stakers_split(&staking_points_inactive, &era_info);
 
-    let ip_stake_ratio = Perbill::from_rational(staked_on_ip, total_staked);
-    let calculated_stakers_reward = ip_stake_ratio * stakers_rewards;
-    assert_eq!(Balance::zero(), ip_reward);
+    let core_stake_ratio = Perbill::from_rational(staked_on_core, total_staked);
+    let calculated_stakers_reward = core_stake_ratio * stakers_rewards;
+    assert_eq!(Balance::zero(), core_reward);
     assert_eq!(calculated_stakers_reward, stakers_reward);
 
-    assert_eq!(calculated_stakers_reward, ip_reward + stakers_reward);
+    assert_eq!(calculated_stakers_reward, core_reward + stakers_reward);
 }
 
 #[test]
 pub fn tvl_util_test() {
     ExternalityBuilder::build().execute_with(|| {
-        assert!(IpStaking::tvl().is_zero());
+        assert!(OcifStaking::tvl().is_zero());
         initialize_first_block();
-        assert!(IpStaking::tvl().is_zero());
+        assert!(OcifStaking::tvl().is_zero());
 
-        let ip_id = A;
-        assert_register(ip_id);
+        let core_id = A;
+        assert_register(core_id);
 
         let iterations = 10;
         let stake_value = 100;
         for x in 1..=iterations {
-            assert_stake(account(ip_id), &ip_id, stake_value);
-            assert_eq!(IpStaking::tvl(), stake_value * x);
+            assert_stake(account(core_id), &core_id, stake_value);
+            assert_eq!(OcifStaking::tvl(), stake_value * x);
         }
 
         advance_to_era(5);
-        assert_eq!(IpStaking::tvl(), stake_value * iterations);
+        assert_eq!(OcifStaking::tvl(), stake_value * iterations);
     })
 }
 
@@ -1883,19 +1899,19 @@ fn new_era_is_handled_with_halt_enabled() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
+        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
         run_for_blocks(BLOCKS_PER_ERA * 3);
 
-        assert!(System::block_number() > IpStaking::next_era_starting_block());
-        assert_eq!(IpStaking::current_era(), 1);
+        assert!(System::block_number() > OcifStaking::next_era_starting_block());
+        assert_eq!(OcifStaking::current_era(), 1);
 
-        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
+        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), false));
+        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -1903,8 +1919,8 @@ fn new_era_is_handled_with_halt_enabled() {
 
         assert_eq!(System::block_number(), (4 * BLOCKS_PER_ERA) + 2); // 2 from initialization, advanced 4 eras worth of blocks
 
-        assert_eq!(IpStaking::current_era(), 2);
-        assert_eq!(IpStaking::next_era_starting_block(), (5 * BLOCKS_PER_ERA));
+        assert_eq!(OcifStaking::current_era(), 2);
+        assert_eq!(OcifStaking::next_era_starting_block(), (5 * BLOCKS_PER_ERA));
     })
 }
 
@@ -1913,23 +1929,23 @@ fn pallet_halt_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(IpStaking::ensure_not_halted());
+        assert_ok!(OcifStaking::ensure_not_halted());
         assert!(!Halted::<Test>::exists());
 
-        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
+        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
         let staker_account = account(B);
-        let ip_id = A;
+        let core_id = A;
 
         assert_noop!(
-            IpStaking::register_ip(
-                Origin::signed(account(ip_id)),
-                ip_id,
-                IpMetadata {
+            OcifStaking::register_core(
+                Origin::signed(account(core_id)),
+                core_id,
+                CoreMetadata {
                     name: BoundedVec::default(),
                     description: BoundedVec::default(),
                     image: BoundedVec::default()
@@ -1939,15 +1955,15 @@ fn pallet_halt_is_ok() {
         );
 
         assert_noop!(
-            IpStaking::unregister_ip(Origin::signed(account(ip_id)), ip_id),
+            OcifStaking::unregister_core(Origin::signed(account(core_id)), core_id),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            IpStaking::change_ip_metadata(
-                Origin::signed(account(ip_id)),
-                ip_id,
-                IpMetadata {
+            OcifStaking::change_core_metadata(
+                Origin::signed(account(core_id)),
+                core_id,
+                CoreMetadata {
                     name: BoundedVec::default(),
                     description: BoundedVec::default(),
                     image: BoundedVec::default()
@@ -1957,38 +1973,38 @@ fn pallet_halt_is_ok() {
         );
 
         assert_noop!(
-            IpStaking::withdraw_unstaked(Origin::signed(staker_account)),
+            OcifStaking::withdraw_unstaked(Origin::signed(staker_account)),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            IpStaking::stake(Origin::signed(staker_account), ip_id, 100),
+            OcifStaking::stake(Origin::signed(staker_account), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            IpStaking::unstake(Origin::signed(staker_account), ip_id, 100),
+            OcifStaking::unstake(Origin::signed(staker_account), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            IpStaking::ip_claim_rewards(Origin::signed(account(ip_id)), ip_id, 5),
+            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 5),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            IpStaking::staker_claim_rewards(Origin::signed(staker_account), ip_id),
+            OcifStaking::staker_claim_rewards(Origin::signed(staker_account), core_id),
             Error::<Test>::Halted
         );
 
-        assert_eq!(IpStaking::on_initialize(3), Weight::zero());
+        assert_eq!(OcifStaking::on_initialize(3), Weight::zero());
 
-        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::IpStaking(Event::HaltChanged {
+        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), false));
+        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
-        assert_register(ip_id);
+        assert_register(core_id);
     })
 }
 
@@ -1997,15 +2013,15 @@ fn halted_no_change() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(IpStaking::ensure_not_halted());
+        assert_ok!(OcifStaking::ensure_not_halted());
         assert_noop!(
-            IpStaking::halt_unhalt_pallet(Origin::root(), false),
+            OcifStaking::halt_unhalt_pallet(Origin::root(), false),
             Error::<Test>::NoHaltChange
         );
 
-        assert_ok!(IpStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
         assert_noop!(
-            IpStaking::halt_unhalt_pallet(Origin::root(), true),
+            OcifStaking::halt_unhalt_pallet(Origin::root(), true),
             Error::<Test>::NoHaltChange
         );
     })

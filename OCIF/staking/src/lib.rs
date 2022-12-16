@@ -25,7 +25,7 @@ use primitives::*;
 #[cfg(test)]
 mod testing;
 
-const LOCK_ID: LockIdentifier = *b"ip-stake";
+const LOCK_ID: LockIdentifier = *b"ocif-stk";
 
 pub use pallet::*;
 
@@ -46,13 +46,13 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    pub type IpMetadataOf<T> = IpMetadata<
+    pub type CoreMetadataOf<T> = CoreMetadata<
         BoundedVec<u8, <T as Config>::MaxNameLength>,
         BoundedVec<u8, <T as Config>::MaxDescriptionLength>,
         BoundedVec<u8, <T as Config>::MaxImageUrlLength>,
     >;
 
-    pub type IpInfoOf<T> = IpInfo<<T as frame_system::Config>::AccountId, IpMetadataOf<T>>;
+    pub type CoreInfoOf<T> = CoreInfo<<T as frame_system::Config>::AccountId, CoreMetadataOf<T>>;
 
     pub type Era = u32;
 
@@ -63,7 +63,7 @@ pub mod pallet {
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>;
 
-        type IpId: Parameter
+        type CoreId: Parameter
             + Member
             + AtLeast32BitUnsigned
             + Default
@@ -79,7 +79,7 @@ pub mod pallet {
         type RegisterDeposit: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
-        type MaxStakersPerIp: Get<u32>;
+        type MaxStakersPerCore: Get<u32>;
 
         #[pallet::constant]
         type MinimumStakingAmount: Get<BalanceOf<Self>>;
@@ -103,7 +103,7 @@ pub mod pallet {
         type RewardRatio: Get<(u32, u32)>;
 
         #[pallet::constant]
-        type StakeThresholdForActiveIp: Get<BalanceOf<Self>>;
+        type StakeThresholdForActiveCore: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
         type MaxNameLength: Get<u32>;
@@ -133,22 +133,23 @@ pub mod pallet {
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn ip_info)]
-    pub(crate) type RegisteredIp<T: Config> = StorageMap<_, Blake2_128Concat, T::IpId, IpInfoOf<T>>;
+    #[pallet::getter(fn core_info)]
+    pub(crate) type RegisteredCore<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn general_era_info)]
     pub type GeneralEraInfo<T: Config> = StorageMap<_, Twox64Concat, Era, EraInfo<BalanceOf<T>>>;
 
     #[pallet::storage]
-    #[pallet::getter(fn ip_stake_info)]
-    pub type IpEraStake<T: Config> = StorageDoubleMap<
+    #[pallet::getter(fn core_stake_info)]
+    pub type CoreEraStake<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::IpId,
+        T::CoreId,
         Twox64Concat,
         Era,
-        IpStakeInfo<BalanceOf<T>>,
+        CoreStakeInfo<BalanceOf<T>>,
     >;
 
     #[pallet::storage]
@@ -156,7 +157,7 @@ pub mod pallet {
     pub type GeneralStakerInfo<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::IpId,
+        T::CoreId,
         Blake2_128Concat,
         T::AccountId,
         StakerInfo<BalanceOf<T>>,
@@ -172,35 +173,35 @@ pub mod pallet {
     pub enum Event<T: Config> {
         Staked {
             staker: T::AccountId,
-            ip: <T as Config>::IpId,
+            core: <T as Config>::CoreId,
             amount: BalanceOf<T>,
         },
         Unstaked {
             staker: T::AccountId,
-            ip: <T as Config>::IpId,
+            core: <T as Config>::CoreId,
             amount: BalanceOf<T>,
         },
         Withdrawn {
             staker: T::AccountId,
             amount: BalanceOf<T>,
         },
-        IpRegistered {
-            ip: <T as Config>::IpId,
+        CoreRegistered {
+            core: <T as Config>::CoreId,
         },
-        IpUnregistered {
-            ip: <T as Config>::IpId,
+        CoreUnregistered {
+            core: <T as Config>::CoreId,
         },
         NewEra {
             era: u32,
         },
         StakerClaimed {
             staker: T::AccountId,
-            ip: <T as Config>::IpId,
+            core: <T as Config>::CoreId,
             era: u32,
             amount: BalanceOf<T>,
         },
-        IpClaimed {
-            ip: <T as Config>::IpId,
+        CoreClaimed {
+            core: <T as Config>::CoreId,
             destination_account: T::AccountId,
             era: u32,
             amount: BalanceOf<T>,
@@ -209,9 +210,9 @@ pub mod pallet {
             is_halted: bool,
         },
         MetadataChanged {
-            ip: <T as Config>::IpId,
-            old_metadata: IpMetadataOf<T>,
-            new_metadata: IpMetadataOf<T>,
+            core: <T as Config>::CoreId,
+            old_metadata: CoreMetadataOf<T>,
+            new_metadata: CoreMetadataOf<T>,
         },
     }
 
@@ -220,13 +221,13 @@ pub mod pallet {
         StakingNothing,
         InsufficientBalance,
         MaxStakersReached,
-        IpNotFound,
+        CoreNotFound,
         NoStakeAvailable,
-        NotUnregisteredIp,
+        NotUnregisteredCore,
         UnclaimedRewardsAvailable,
         UnstakingNothing,
         NothingToWithdraw,
-        IpAlreadyRegistered,
+        CoreAlreadyRegistered,
         UnknownEraReward,
         UnexpectedStakeInfoEra,
         TooManyUnlockingChunks,
@@ -275,10 +276,10 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(1000000000)]
-        pub fn register_ip(
+        pub fn register_core(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
-            metadata: IpMetadataOf<T>,
+            core_id: <T as pallet::Config>::CoreId,
+            metadata: CoreMetadataOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -286,36 +287,36 @@ pub mod pallet {
 
             ensure!(
                 caller
-                    == pallet_inv4::util::derive_ips_account::<T, T::IpId, T::AccountId>(
-                        ip_id, None
+                    == pallet_inv4::util::derive_ips_account::<T, T::CoreId, T::AccountId>(
+                        core_id, None
                     ),
                 Error::<T>::NoPermission
             );
 
             ensure!(
-                !RegisteredIp::<T>::contains_key(&ip_id),
-                Error::<T>::IpAlreadyRegistered,
+                !RegisteredCore::<T>::contains_key(&core_id),
+                Error::<T>::CoreAlreadyRegistered,
             );
 
             T::Currency::reserve(&caller, T::RegisterDeposit::get())?;
 
-            RegisteredIp::<T>::insert(
-                ip_id,
-                IpInfo {
+            RegisteredCore::<T>::insert(
+                core_id,
+                CoreInfo {
                     account: caller,
                     metadata,
                 },
             );
 
-            Self::deposit_event(Event::<T>::IpRegistered { ip: ip_id });
+            Self::deposit_event(Event::<T>::CoreRegistered { core: core_id });
 
             Ok(().into())
         }
 
         #[pallet::weight(1000000000)]
-        pub fn unregister_ip(
+        pub fn unregister_core(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -323,32 +324,32 @@ pub mod pallet {
 
             ensure!(
                 caller
-                    == pallet_inv4::util::derive_ips_account::<T, T::IpId, T::AccountId>(
-                        ip_id, None
+                    == pallet_inv4::util::derive_ips_account::<T, T::CoreId, T::AccountId>(
+                        core_id, None
                     ),
                 Error::<T>::NoPermission
             );
 
             ensure!(
-                RegisteredIp::<T>::get(&ip_id).is_some(),
+                RegisteredCore::<T>::get(&core_id).is_some(),
                 Error::<T>::NotRegistered
             );
 
             let current_era = Self::current_era();
 
-            let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(ip_id);
+            let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(core_id);
 
             for staker in staker_info_prefix {
-                let mut ip_stake_info =
-                    Self::ip_stake_info(&ip_id, current_era).unwrap_or_default();
+                let mut core_stake_info =
+                    Self::core_stake_info(&core_id, current_era).unwrap_or_default();
 
-                let mut staker_info = Self::staker_info(&ip_id, &staker);
+                let mut staker_info = Self::staker_info(&core_id, &staker);
 
                 let latest_staked_value = staker_info.latest_staked_value();
 
                 let value_to_unstake = Self::internal_unstake(
                     &mut staker_info,
-                    &mut ip_stake_info,
+                    &mut core_stake_info,
                     latest_staked_value,
                     current_era,
                 )?;
@@ -371,30 +372,30 @@ pub mod pallet {
                         x.staked = x.staked.saturating_sub(value_to_unstake);
                     }
                 });
-                Self::update_staker_info(&staker, ip_id, staker_info);
-                IpEraStake::<T>::insert(&ip_id, current_era, ip_stake_info);
+                Self::update_staker_info(&staker, core_id, staker_info);
+                CoreEraStake::<T>::insert(&core_id, current_era, core_stake_info);
 
                 Self::deposit_event(Event::<T>::Unstaked {
                     staker,
-                    ip: ip_id,
+                    core: core_id,
                     amount: value_to_unstake,
                 });
             }
 
-            RegisteredIp::<T>::remove(&ip_id);
+            RegisteredCore::<T>::remove(&core_id);
 
             T::Currency::unreserve(&caller, T::RegisterDeposit::get());
 
-            Self::deposit_event(Event::<T>::IpUnregistered { ip: ip_id });
+            Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
 
             Ok(().into())
         }
 
         #[pallet::weight(1000000000)]
-        pub fn change_ip_metadata(
+        pub fn change_core_metadata(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
-            new_metadata: IpMetadataOf<T>,
+            core_id: <T as pallet::Config>::CoreId,
+            new_metadata: CoreMetadataOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -402,23 +403,23 @@ pub mod pallet {
 
             ensure!(
                 caller
-                    == pallet_inv4::util::derive_ips_account::<T, T::IpId, T::AccountId>(
-                        ip_id, None
+                    == pallet_inv4::util::derive_ips_account::<T, T::CoreId, T::AccountId>(
+                        core_id, None
                     ),
                 Error::<T>::NoPermission
             );
 
-            RegisteredIp::<T>::try_mutate(ip_id, |ip| {
-                let mut new_ip = ip.take().ok_or(Error::<T>::NotRegistered)?;
+            RegisteredCore::<T>::try_mutate(core_id, |core| {
+                let mut new_core = core.take().ok_or(Error::<T>::NotRegistered)?;
 
-                let old_metadata = new_ip.metadata;
+                let old_metadata = new_core.metadata;
 
-                new_ip.metadata = new_metadata.clone();
+                new_core.metadata = new_metadata.clone();
 
-                *ip = Some(new_ip);
+                *core = Some(new_core);
 
                 Self::deposit_event(Event::<T>::MetadataChanged {
-                    ip: ip_id,
+                    core: core_id,
                     old_metadata,
                     new_metadata,
                 });
@@ -430,14 +431,17 @@ pub mod pallet {
         #[pallet::weight(1000000000)]
         pub fn stake(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
             let staker = ensure_signed(origin)?;
 
-            ensure!(Self::ip_info(&ip_id).is_some(), Error::<T>::NotRegistered);
+            ensure!(
+                Self::core_info(&core_id).is_some(),
+                Error::<T>::NotRegistered
+            );
 
             let mut ledger = Self::ledger(&staker);
             let available_balance = Self::available_staking_balance(&staker, &ledger);
@@ -446,8 +450,8 @@ pub mod pallet {
             ensure!(value_to_stake > Zero::zero(), Error::<T>::StakingNothing);
 
             let current_era = Self::current_era();
-            let mut staking_info = Self::ip_stake_info(&ip_id, current_era).unwrap_or_default();
-            let mut staker_info = Self::staker_info(&ip_id, &staker);
+            let mut staking_info = Self::core_stake_info(&core_id, current_era).unwrap_or_default();
+            let mut staker_info = Self::staker_info(&core_id, &staker);
 
             Self::internal_stake(
                 &mut staker_info,
@@ -466,12 +470,12 @@ pub mod pallet {
             });
 
             Self::update_ledger(&staker, ledger);
-            Self::update_staker_info(&staker, ip_id, staker_info);
-            IpEraStake::<T>::insert(&ip_id, current_era, staking_info);
+            Self::update_staker_info(&staker, core_id, staker_info);
+            CoreEraStake::<T>::insert(&core_id, current_era, staking_info);
 
             Self::deposit_event(Event::<T>::Staked {
                 staker,
-                ip: ip_id,
+                core: core_id,
                 amount: value_to_stake,
             });
             Ok(().into())
@@ -480,7 +484,7 @@ pub mod pallet {
         #[pallet::weight(1000000000)]
         pub fn unstake(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -488,14 +492,18 @@ pub mod pallet {
             let staker = ensure_signed(origin)?;
 
             ensure!(value > Zero::zero(), Error::<T>::UnstakingNothing);
-            ensure!(Self::ip_info(&ip_id).is_some(), Error::<T>::NotRegistered);
+            ensure!(
+                Self::core_info(&core_id).is_some(),
+                Error::<T>::NotRegistered
+            );
 
             let current_era = Self::current_era();
-            let mut staker_info = Self::staker_info(&ip_id, &staker);
-            let mut ip_stake_info = Self::ip_stake_info(&ip_id, current_era).unwrap_or_default();
+            let mut staker_info = Self::staker_info(&core_id, &staker);
+            let mut core_stake_info =
+                Self::core_stake_info(&core_id, current_era).unwrap_or_default();
 
             let value_to_unstake =
-                Self::internal_unstake(&mut staker_info, &mut ip_stake_info, value, current_era)?;
+                Self::internal_unstake(&mut staker_info, &mut core_stake_info, value, current_era)?;
 
             let mut ledger = Self::ledger(&staker);
             ledger.unbonding_info.add(UnlockingChunk {
@@ -515,12 +523,12 @@ pub mod pallet {
                     x.staked = x.staked.saturating_sub(value_to_unstake);
                 }
             });
-            Self::update_staker_info(&staker, ip_id, staker_info);
-            IpEraStake::<T>::insert(&ip_id, current_era, ip_stake_info);
+            Self::update_staker_info(&staker, core_id, staker_info);
+            CoreEraStake::<T>::insert(&core_id, current_era, core_stake_info);
 
             Self::deposit_event(Event::<T>::Unstaked {
                 staker,
-                ip: ip_id,
+                core: core_id,
                 amount: value_to_unstake,
             });
 
@@ -562,25 +570,25 @@ pub mod pallet {
         #[pallet::weight(1000000000)]
         pub fn staker_claim_rewards(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
             let staker = ensure_signed(origin)?;
 
-            let mut staker_info = Self::staker_info(&ip_id, &staker);
+            let mut staker_info = Self::staker_info(&core_id, &staker);
             let (era, staked) = staker_info.claim();
             ensure!(staked > Zero::zero(), Error::<T>::NoStakeAvailable);
 
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
-            let staking_info = Self::ip_stake_info(&ip_id, era).unwrap_or_default();
+            let staking_info = Self::core_stake_info(&core_id, era).unwrap_or_default();
             let reward_and_stake =
                 Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
 
             let (_, stakers_joint_reward) =
-                Self::ip_stakers_split(&staking_info, &reward_and_stake);
+                Self::core_stakers_split(&staking_info, &reward_and_stake);
             let staker_reward =
                 Perbill::from_rational(staked, staking_info.total) * stakers_joint_reward;
 
@@ -592,10 +600,10 @@ pub mod pallet {
             )?;
 
             T::Currency::resolve_creating(&staker, reward_imbalance);
-            Self::update_staker_info(&staker, ip_id, staker_info);
+            Self::update_staker_info(&staker, core_id, staker_info);
             Self::deposit_event(Event::<T>::StakerClaimed {
                 staker,
-                ip: ip_id,
+                core: core_id,
                 era,
                 amount: staker_reward,
             });
@@ -604,9 +612,9 @@ pub mod pallet {
         }
 
         #[pallet::weight(1000000000)]
-        pub fn ip_claim_rewards(
+        pub fn core_claim_rewards(
             origin: OriginFor<T>,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
             #[pallet::compact] era: Era,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -616,20 +624,20 @@ pub mod pallet {
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
-            let mut ip_stake_info = Self::ip_stake_info(&ip_id, era).unwrap_or_default();
+            let mut core_stake_info = Self::core_stake_info(&core_id, era).unwrap_or_default();
             ensure!(
-                !ip_stake_info.reward_claimed,
+                !core_stake_info.reward_claimed,
                 Error::<T>::RewardAlreadyClaimed,
             );
             ensure!(
-                ip_stake_info.total > Zero::zero(),
+                core_stake_info.total > Zero::zero(),
                 Error::<T>::NoStakeAvailable,
             );
 
             let reward_and_stake =
                 Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
 
-            let (reward, _) = Self::ip_stakers_split(&ip_stake_info, &reward_and_stake);
+            let (reward, _) = Self::core_stakers_split(&core_stake_info, &reward_and_stake);
 
             let reward_imbalance = T::Currency::withdraw(
                 &Self::account_id(),
@@ -638,18 +646,18 @@ pub mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            let ip_account = derive_ips_account::<T, T::IpId, T::AccountId>(ip_id, None);
+            let core_account = derive_ips_account::<T, T::CoreId, T::AccountId>(core_id, None);
 
-            T::Currency::resolve_creating(&ip_account, reward_imbalance);
-            Self::deposit_event(Event::<T>::IpClaimed {
-                ip: ip_id,
-                destination_account: ip_account,
+            T::Currency::resolve_creating(&core_account, reward_imbalance);
+            Self::deposit_event(Event::<T>::CoreClaimed {
+                core: core_id,
+                destination_account: core_account,
                 era,
                 amount: reward,
             });
 
-            ip_stake_info.reward_claimed = true;
-            IpEraStake::<T>::insert(&ip_id, era, ip_stake_info);
+            core_stake_info.reward_claimed = true;
+            CoreEraStake::<T>::insert(&core_id, era, core_stake_info);
 
             Ok(().into())
         }
@@ -673,13 +681,13 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         fn internal_stake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
-            staking_info: &mut IpStakeInfo<BalanceOf<T>>,
+            staking_info: &mut CoreStakeInfo<BalanceOf<T>>,
             amount: BalanceOf<T>,
             current_era: Era,
         ) -> Result<(), Error<T>> {
             ensure!(
                 !staker_info.latest_staked_value().is_zero()
-                    || staking_info.number_of_stakers < T::MaxStakersPerIp::get(),
+                    || staking_info.number_of_stakers < T::MaxStakersPerCore::get(),
                 Error::<T>::MaxStakersReached
             );
             if staker_info.latest_staked_value().is_zero() {
@@ -707,7 +715,7 @@ pub mod pallet {
 
         fn internal_unstake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
-            ip_stake_info: &mut IpStakeInfo<BalanceOf<T>>,
+            core_stake_info: &mut CoreStakeInfo<BalanceOf<T>>,
             amount: BalanceOf<T>,
             current_era: Era,
         ) -> Result<BalanceOf<T>, Error<T>> {
@@ -716,15 +724,16 @@ pub mod pallet {
 
             let remaining = staked_value.saturating_sub(amount);
             let value_to_unstake = if remaining < T::MinimumStakingAmount::get() {
-                ip_stake_info.number_of_stakers = ip_stake_info.number_of_stakers.saturating_sub(1);
+                core_stake_info.number_of_stakers =
+                    core_stake_info.number_of_stakers.saturating_sub(1);
                 staked_value
             } else {
                 amount
             };
 
-            let new_total = ip_stake_info.total.saturating_sub(value_to_unstake);
+            let new_total = core_stake_info.total.saturating_sub(value_to_unstake);
 
-            ip_stake_info.total = new_total;
+            core_stake_info.total = new_total;
 
             ensure!(
                 value_to_unstake > Zero::zero(),
@@ -779,28 +788,28 @@ pub mod pallet {
         }
 
         pub fn rewards(inflation: NegativeImbalanceOf<T>) {
-            let (ip_part, stakers_part) = <T as Config>::RewardRatio::get();
+            let (core_part, stakers_part) = <T as Config>::RewardRatio::get();
 
-            let (ip, stakers) = inflation.ration(ip_part, stakers_part);
+            let (core, stakers) = inflation.ration(core_part, stakers_part);
 
             RewardAccumulator::<T>::mutate(|accumulated_reward| {
-                accumulated_reward.ip = accumulated_reward.ip.saturating_add(ip.peek());
+                accumulated_reward.core = accumulated_reward.core.saturating_add(core.peek());
                 accumulated_reward.stakers =
                     accumulated_reward.stakers.saturating_add(stakers.peek());
             });
 
-            T::Currency::resolve_creating(&Self::account_id(), stakers.merge(ip));
+            T::Currency::resolve_creating(&Self::account_id(), stakers.merge(core));
         }
 
         fn update_staker_info(
             staker: &T::AccountId,
-            ip_id: <T as pallet::Config>::IpId,
+            core_id: <T as pallet::Config>::CoreId,
             staker_info: StakerInfo<BalanceOf<T>>,
         ) {
             if staker_info.is_empty() {
-                GeneralStakerInfo::<T>::remove(ip_id, staker)
+                GeneralStakerInfo::<T>::remove(core_id, staker)
             } else {
-                GeneralStakerInfo::<T>::insert(ip_id, staker, staker_info)
+                GeneralStakerInfo::<T>::insert(core_id, staker, staker_info)
             }
         }
 
@@ -823,21 +832,21 @@ pub mod pallet {
             }
         }
 
-        pub(crate) fn ip_stakers_split(
-            ip_info: &IpStakeInfo<BalanceOf<T>>,
+        pub(crate) fn core_stakers_split(
+            core_info: &CoreStakeInfo<BalanceOf<T>>,
             era_info: &EraInfo<BalanceOf<T>>,
         ) -> (BalanceOf<T>, BalanceOf<T>) {
-            let ip_stake_portion = if ip_info.active {
-                Perbill::from_rational(ip_info.total, era_info.active_stake)
+            let core_stake_portion = if core_info.active {
+                Perbill::from_rational(core_info.total, era_info.active_stake)
             } else {
                 Perbill::zero()
             };
-            let stakers_stake_portion = Perbill::from_rational(ip_info.total, era_info.staked);
+            let stakers_stake_portion = Perbill::from_rational(core_info.total, era_info.staked);
 
-            let ip_reward_part = ip_stake_portion * era_info.rewards.ip;
+            let core_reward_part = core_stake_portion * era_info.rewards.core;
             let stakers_joint_reward = stakers_stake_portion * era_info.rewards.stakers;
 
-            (ip_reward_part, stakers_joint_reward)
+            (core_reward_part, stakers_joint_reward)
         }
 
         fn rotate_staking_info(current_era: Era) -> (Weight, BalanceOf<T>) {
@@ -847,11 +856,11 @@ pub mod pallet {
 
             let mut new_active_stake: BalanceOf<T> = Zero::zero();
 
-            for ip_id in RegisteredIp::<T>::iter_keys() {
+            for core_id in RegisteredCore::<T>::iter_keys() {
                 consumed_weight = consumed_weight.saturating_add(T::DbWeight::get().reads(1));
 
-                if let Some(mut staking_info) = Self::ip_stake_info(&ip_id, current_era) {
-                    if staking_info.total >= <T as Config>::StakeThresholdForActiveIp::get() {
+                if let Some(mut staking_info) = Self::core_stake_info(&core_id, current_era) {
+                    if staking_info.total >= <T as Config>::StakeThresholdForActiveCore::get() {
                         staking_info.active = true;
                         new_active_stake += staking_info.total;
                     } else {
@@ -859,7 +868,7 @@ pub mod pallet {
                     }
 
                     staking_info.reward_claimed = false;
-                    IpEraStake::<T>::insert(&ip_id, next_era, staking_info);
+                    CoreEraStake::<T>::insert(&core_id, next_era, staking_info);
 
                     consumed_weight =
                         consumed_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
