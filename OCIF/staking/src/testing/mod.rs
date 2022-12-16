@@ -8,42 +8,42 @@ pub mod test;
 pub(crate) struct MemorySnapshot {
     era_info: EraInfo<Balance>,
     staker_info: StakerInfo<Balance>,
-    ip_stake_info: IpStakeInfo<Balance>,
+    core_stake_info: CoreStakeInfo<Balance>,
     free_balance: Balance,
     ledger: AccountLedger<Balance>,
 }
 
 impl MemorySnapshot {
-    pub(crate) fn all(era: EraIndex, ip: &IpId, account: AccountId) -> Self {
+    pub(crate) fn all(era: EraIndex, core: &CoreId, account: AccountId) -> Self {
         Self {
-            era_info: IpStaking::general_era_info(era).unwrap(),
-            staker_info: GeneralStakerInfo::<Test>::get(ip, &account),
-            ip_stake_info: IpStaking::ip_stake_info(ip, era).unwrap_or_default(),
-            ledger: IpStaking::ledger(&account),
+            era_info: OcifStaking::general_era_info(era).unwrap(),
+            staker_info: GeneralStakerInfo::<Test>::get(core, &account),
+            core_stake_info: OcifStaking::core_stake_info(core, era).unwrap_or_default(),
+            ledger: OcifStaking::ledger(&account),
             free_balance: <Test as Config>::Currency::free_balance(&account),
         }
     }
 }
 
-pub(crate) fn assert_register(ip: mock::IpId) {
-    let account = derive_ips_account::<Test, IpId, AccountId>(ip, None);
+pub(crate) fn assert_register(core: mock::CoreId) {
+    let account = derive_ips_account::<Test, CoreId, AccountId>(core, None);
 
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account);
 
-    assert!(!RegisteredIp::<Test>::contains_key(ip));
+    assert!(!RegisteredCore::<Test>::contains_key(core));
 
-    assert_ok!(IpStaking::register_ip(
+    assert_ok!(OcifStaking::register_core(
         Origin::signed(account),
-        ip,
-        IpMetadata {
+        core,
+        CoreMetadata {
             name: BoundedVec::default(),
             description: BoundedVec::default(),
             image: BoundedVec::default()
         }
     ));
 
-    let ip_info = RegisteredIp::<Test>::get(ip).unwrap();
-    assert_eq!(ip_info.account, account);
+    let core_info = RegisteredCore::<Test>::get(core).unwrap();
+    assert_eq!(core_info.account, account);
 
     let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account);
     assert_eq!(
@@ -52,29 +52,33 @@ pub(crate) fn assert_register(ip: mock::IpId) {
     );
 }
 
-pub(crate) fn assert_stake(staker: AccountId, ip: &IpId, value: Balance) {
-    let current_era = IpStaking::current_era();
-    let init_state = MemorySnapshot::all(current_era, &ip, staker);
+pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
+    let current_era = OcifStaking::current_era();
+    let init_state = MemorySnapshot::all(current_era, &core, staker);
 
     let available_for_staking = init_state.free_balance
         - init_state.ledger.locked
         - <Test as Config>::ExistentialDeposit::get();
     let staking_value = available_for_staking.min(value);
 
-    assert_ok!(IpStaking::stake(Origin::signed(staker), ip.clone(), value));
-    System::assert_last_event(mock::Event::IpStaking(Event::Staked {
+    assert_ok!(OcifStaking::stake(
+        Origin::signed(staker),
+        core.clone(),
+        value
+    ));
+    System::assert_last_event(mock::Event::OcifStaking(Event::Staked {
         staker,
-        ip: ip.clone(),
+        core: core.clone(),
         amount: staking_value,
     }));
 
-    let final_state = MemorySnapshot::all(current_era, &ip, staker);
+    let final_state = MemorySnapshot::all(current_era, &core, staker);
 
     if init_state.staker_info.latest_staked_value() == 0 {
-        assert!(GeneralStakerInfo::<Test>::contains_key(ip, &staker));
+        assert!(GeneralStakerInfo::<Test>::contains_key(core, &staker));
         assert_eq!(
-            final_state.ip_stake_info.number_of_stakers,
-            init_state.ip_stake_info.number_of_stakers + 1
+            final_state.core_stake_info.number_of_stakers,
+            init_state.core_stake_info.number_of_stakers + 1
         );
     }
 
@@ -87,8 +91,8 @@ pub(crate) fn assert_stake(staker: AccountId, ip: &IpId, value: Balance) {
         init_state.era_info.locked + staking_value
     );
     assert_eq!(
-        final_state.ip_stake_info.total,
-        init_state.ip_stake_info.total + staking_value
+        final_state.core_stake_info.total,
+        init_state.core_stake_info.total + staking_value
     );
     assert_eq!(
         final_state.staker_info.latest_staked_value(),
@@ -100,9 +104,9 @@ pub(crate) fn assert_stake(staker: AccountId, ip: &IpId, value: Balance) {
     );
 }
 
-pub(crate) fn assert_unstake(staker: AccountId, ip: &IpId, value: Balance) {
-    let current_era = IpStaking::current_era();
-    let init_state = MemorySnapshot::all(current_era, &ip, staker);
+pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
+    let current_era = OcifStaking::current_era();
+    let init_state = MemorySnapshot::all(current_era, &core, staker);
 
     let remaining_staked = init_state
         .staker_info
@@ -115,18 +119,18 @@ pub(crate) fn assert_unstake(staker: AccountId, ip: &IpId, value: Balance) {
     };
     let remaining_staked = init_state.staker_info.latest_staked_value() - expected_unbond_amount;
 
-    assert_ok!(IpStaking::unstake(
+    assert_ok!(OcifStaking::unstake(
         Origin::signed(staker),
-        ip.clone(),
+        core.clone(),
         value
     ));
-    System::assert_last_event(mock::Event::IpStaking(Event::Unstaked {
+    System::assert_last_event(mock::Event::OcifStaking(Event::Unstaked {
         staker,
-        ip: ip.clone(),
+        core: core.clone(),
         amount: expected_unbond_amount,
     }));
 
-    let final_state = MemorySnapshot::all(current_era, &ip, staker);
+    let final_state = MemorySnapshot::all(current_era, &core, staker);
     let expected_unlock_era = current_era + UNBONDING_PERIOD;
     match init_state
         .ledger
@@ -161,8 +165,8 @@ pub(crate) fn assert_unstake(staker: AccountId, ip: &IpId, value: Balance) {
     }
 
     assert_eq!(
-        init_state.ip_stake_info.total - expected_unbond_amount,
-        final_state.ip_stake_info.total
+        init_state.core_stake_info.total - expected_unbond_amount,
+        final_state.core_stake_info.total
     );
     assert_eq!(
         init_state.staker_info.latest_staked_value() - expected_unbond_amount,
@@ -171,8 +175,8 @@ pub(crate) fn assert_unstake(staker: AccountId, ip: &IpId, value: Balance) {
 
     let delta = if remaining_staked > 0 { 0 } else { 1 };
     assert_eq!(
-        init_state.ip_stake_info.number_of_stakers - delta,
-        final_state.ip_stake_info.number_of_stakers
+        init_state.core_stake_info.number_of_stakers - delta,
+        final_state.core_stake_info.number_of_stakers
     );
 
     assert_eq!(
@@ -183,7 +187,7 @@ pub(crate) fn assert_unstake(staker: AccountId, ip: &IpId, value: Balance) {
 }
 
 pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
-    let current_era = IpStaking::current_era();
+    let current_era = OcifStaking::current_era();
 
     let init_era_info = GeneralEraInfo::<Test>::get(current_era).unwrap();
     let init_ledger = Ledger::<Test>::get(&staker);
@@ -191,8 +195,8 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
     let (valid_info, remaining_info) = init_ledger.unbonding_info.partition(current_era);
     let expected_unbond_amount = valid_info.sum();
 
-    assert_ok!(IpStaking::withdraw_unstaked(Origin::signed(staker),));
-    System::assert_last_event(mock::Event::IpStaking(Event::Withdrawn {
+    assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker),));
+    System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
         staker,
         amount: expected_unbond_amount,
     }));
@@ -215,46 +219,49 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
     );
 }
 
-pub(crate) fn assert_unregister(ip: IpId) {
-    let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(ip));
+pub(crate) fn assert_unregister(core: CoreId) {
+    let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
 
-    assert_ok!(IpStaking::unregister_ip(
-        Origin::signed(account(ip)),
-        ip.clone()
+    assert_ok!(OcifStaking::unregister_core(
+        Origin::signed(account(core)),
+        core.clone()
     ));
-    System::assert_last_event(mock::Event::IpStaking(Event::IpUnregistered { ip }));
+    System::assert_last_event(mock::Event::OcifStaking(Event::CoreUnregistered { core }));
 
-    let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(ip));
+    let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
     assert_eq!(
         final_reserved_balance,
         init_reserved_balance - <Test as Config>::RegisterDeposit::get()
     );
 }
 
-pub(crate) fn assert_claim_staker(claimer: AccountId, ip: IpId) {
-    let (claim_era, _) = IpStaking::staker_info(ip, &claimer).claim();
-    let current_era = IpStaking::current_era();
+pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
+    let (claim_era, _) = OcifStaking::staker_info(core, &claimer).claim();
+    let current_era = OcifStaking::current_era();
 
     System::reset_events();
 
-    let init_state_claim_era = MemorySnapshot::all(claim_era, &ip, claimer);
-    let init_state_current_era = MemorySnapshot::all(current_era, &ip, claimer);
+    let init_state_claim_era = MemorySnapshot::all(claim_era, &core, claimer);
+    let init_state_current_era = MemorySnapshot::all(current_era, &core, claimer);
 
-    let (_, stakers_joint_reward) = IpStaking::ip_stakers_split(
-        &init_state_claim_era.ip_stake_info,
+    let (_, stakers_joint_reward) = OcifStaking::core_stakers_split(
+        &init_state_claim_era.core_stake_info,
         &init_state_claim_era.era_info,
     );
 
     let (claim_era, staked) = init_state_claim_era.staker_info.clone().claim();
 
     let calculated_reward =
-        Perbill::from_rational(staked, init_state_claim_era.ip_stake_info.total)
+        Perbill::from_rational(staked, init_state_claim_era.core_stake_info.total)
             * stakers_joint_reward;
     let issuance_before_claim = <Test as Config>::Currency::total_issuance();
 
-    assert_ok!(IpStaking::staker_claim_rewards(Origin::signed(claimer), ip));
+    assert_ok!(OcifStaking::staker_claim_rewards(
+        Origin::signed(claimer),
+        core
+    ));
 
-    let final_state_current_era = MemorySnapshot::all(current_era, &ip, claimer);
+    let final_state_current_era = MemorySnapshot::all(current_era, &core, claimer);
 
     assert_reward(
         &init_state_current_era,
@@ -262,9 +269,9 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, ip: IpId) {
         calculated_reward,
     );
 
-    System::assert_last_event(mock::Event::IpStaking(Event::StakerClaimed {
+    System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
         staker: claimer,
-        ip,
+        core,
         era: claim_era,
         amount: calculated_reward,
     }));
@@ -272,7 +279,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, ip: IpId) {
     let (new_era, _) = final_state_current_era.staker_info.clone().claim();
     if final_state_current_era.staker_info.is_empty() {
         assert!(new_era.is_zero());
-        assert!(!GeneralStakerInfo::<Test>::contains_key(ip, &claimer));
+        assert!(!GeneralStakerInfo::<Test>::contains_key(core, &claimer));
     } else {
         assert!(new_era > claim_era);
     }
@@ -281,39 +288,39 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, ip: IpId) {
     let issuance_after_claim = <Test as Config>::Currency::total_issuance();
     assert_eq!(issuance_before_claim, issuance_after_claim);
 
-    let final_state_claim_era = MemorySnapshot::all(claim_era, &ip, claimer);
+    let final_state_claim_era = MemorySnapshot::all(claim_era, &core, claimer);
     assert_eq!(
-        init_state_claim_era.ip_stake_info,
-        final_state_claim_era.ip_stake_info
+        init_state_claim_era.core_stake_info,
+        final_state_claim_era.core_stake_info
     );
 }
 
-pub(crate) fn assert_claim_ip(ip: IpId, claim_era: EraIndex) {
-    let init_state = MemorySnapshot::all(claim_era, &ip, account(ip));
-    assert!(!init_state.ip_stake_info.reward_claimed);
+pub(crate) fn assert_claim_core(core: CoreId, claim_era: EraIndex) {
+    let init_state = MemorySnapshot::all(claim_era, &core, account(core));
+    assert!(!init_state.core_stake_info.reward_claimed);
 
     let (calculated_reward, _) =
-        IpStaking::ip_stakers_split(&init_state.ip_stake_info, &init_state.era_info);
+        OcifStaking::core_stakers_split(&init_state.core_stake_info, &init_state.era_info);
 
-    assert_ok!(IpStaking::ip_claim_rewards(
-        Origin::signed(account(ip)),
-        ip,
+    assert_ok!(OcifStaking::core_claim_rewards(
+        Origin::signed(account(core)),
+        core,
         claim_era,
     ));
-    System::assert_last_event(mock::Event::IpStaking(Event::IpClaimed {
-        ip,
-        destination_account: account(ip),
+    System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        core,
+        destination_account: account(core),
         era: claim_era,
         amount: calculated_reward,
     }));
 
-    let final_state = MemorySnapshot::all(claim_era, &ip, account(ip));
+    let final_state = MemorySnapshot::all(claim_era, &core, account(core));
     assert_eq!(
         init_state.free_balance + calculated_reward,
         final_state.free_balance
     );
 
-    assert!(final_state.ip_stake_info.reward_claimed);
+    assert!(final_state.core_stake_info.reward_claimed);
 
     assert_eq!(init_state.staker_info, final_state.staker_info);
     assert_eq!(init_state.ledger, final_state.ledger);
@@ -337,7 +344,7 @@ fn assert_reward(
         final_state_current_era.era_info.locked
     );
     assert_eq!(
-        init_state_current_era.ip_stake_info,
-        final_state_current_era.ip_stake_info
+        init_state_current_era.core_stake_info,
+        final_state_current_era.core_stake_info
     );
 }

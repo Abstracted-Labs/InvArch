@@ -15,14 +15,14 @@ pub type BalanceOf<T> =
 const MAX_ASSUMED_VEC_LEN: u32 = 10;
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct IpMetadata<Name, Description, Image> {
+pub struct CoreMetadata<Name, Description, Image> {
     pub name: Name,
     pub description: Description,
     pub image: Image,
 }
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct IpInfo<AccountId, Metadata> {
+pub struct CoreInfo<AccountId, Metadata> {
     pub account: AccountId,
     pub metadata: Metadata,
 }
@@ -32,7 +32,7 @@ pub struct RewardInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
     pub(crate) stakers: Balance,
     #[codec(compact)]
-    pub(crate) ip: Balance,
+    pub(crate) core: Balance,
 }
 
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -47,7 +47,7 @@ pub struct EraInfo<Balance: HasCompact + MaxEncodedLen> {
 }
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct IpStakeInfo<Balance: HasCompact + MaxEncodedLen> {
+pub struct CoreStakeInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
     pub(crate) total: Balance,
     #[codec(compact)]

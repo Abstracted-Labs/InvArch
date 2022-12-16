@@ -1,8 +1,8 @@
 [package]
-name = 'pallet-ip-staking'
+name = 'pallet-ocif-staking'
 authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'FRAME pallet to IP staking'
-edition = '2018'
+description = 'FRAME pallet for OCIF staking'
+edition = '2021'
 homepage = 'https://invarch.network'
 license = 'GPLv3'
 repository = 'https://github.com/InvArch/InvArch-Pallet-Library/'

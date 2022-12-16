@@ -4,6 +4,6 @@ members = [
     "INV4/pallet-inv4",
     "INV4/pallet-ipf",
 
-    "OCIF/ip-staking",
+    "OCIF/staking",
     "pallet-checked-inflation"
 ]
