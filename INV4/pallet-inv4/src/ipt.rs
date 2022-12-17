@@ -287,7 +287,7 @@ impl<T: Config> Pallet<T> {
                 voter: owner,
                 call_hash,
                 call: opaque_call,
-                result: dispatch_result.is_ok(),
+                result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
             // `caller` does not have enough balance to execute.
@@ -509,7 +509,7 @@ impl<T: Config> Pallet<T> {
                     voter: owner,
                     call_hash,
                     call: old_data.actual_call,
-                    result: dispatch_result.is_ok(),
+                    result: dispatch_result.map(|_| ()).map_err(|e| e.error),
                 });
             } else {
                 // `caller`s votes were not enough to pass the vote
