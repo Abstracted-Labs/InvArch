@@ -3364,7 +3364,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=aa49541cde864dd8a8d0659e01c3987118309e0e#aa49541cde864dd8a8d0659e01c3987118309e0e"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5405,7 +5405,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=aa49541cde864dd8a8d0659e01c3987118309e0e#aa49541cde864dd8a8d0659e01c3987118309e0e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5686,7 +5686,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=aa49541cde864dd8a8d0659e01c3987118309e0e#aa49541cde864dd8a8d0659e01c3987118309e0e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5708,32 +5708,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-ip-staking"
-version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
-dependencies = [
- "frame-support",
- "frame-system",
- "num-traits",
- "pallet-balances",
- "pallet-inv4",
- "pallet-session",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-staking",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-inflation#eddc26335ba81537b5874a11fbed5cc06dbf1ab4"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=aa49541cde864dd8a8d0659e01c3987118309e0e#aa49541cde864dd8a8d0659e01c3987118309e0e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5871,6 +5848,29 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc
 dependencies = [
  "parity-scale-codec",
  "sp-api",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ocif-staking"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=aa49541cde864dd8a8d0659e01c3987118309e0e#aa49541cde864dd8a8d0659e01c3987118309e0e"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-balances",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
  "sp-std",
 ]
 
@@ -11207,10 +11207,10 @@ dependencies = [
  "pallet-collator-selection",
  "pallet-identity",
  "pallet-inv4",
- "pallet-ip-staking",
  "pallet-ipf",
  "pallet-maintenance-mode",
  "pallet-multisig",
+ "pallet-ocif-staking",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
  "pallet-rmrk-core",

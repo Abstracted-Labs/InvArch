@@ -25,15 +25,15 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation", default-features = false }
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation",  default-features = false }
-pallet-ip-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation", default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-inflation", default-features = false }
+pallet-ipf = { git = "https://github.com/InvArch/InvArch-Frames", rev = "aa49541cde864dd8a8d0659e01c3987118309e0e", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "aa49541cde864dd8a8d0659e01c3987118309e0e",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "aa49541cde864dd8a8d0659e01c3987118309e0e", default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "aa49541cde864dd8a8d0659e01c3987118309e0e", default-features = false }
 
-#pallet-inv4 = { path = "../../../InvArch-Pallet-Library/INV4/pallet-inv4", default-features = false }
-#pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default-features = false }
-#pallet-ip-staking = { path = "../../../InvArch-Pallet-Library/OCIF/ip-staking", default-features = false }
-#pallet-checked-inflation = { path = "../../../InvArch-Pallet-Library/pallet-checked-inflation", default-features = false }
+#pallet-inv4 = { path = "../../../InvArch-Frames-staking/INV4/pallet-inv4", default-features = false }
+#pallet-ipf = { path = "../../../InvArch-Frames-staking/INV4/pallet-ipf", default-features = false }
+#pallet-ocif-staking = { path = "../../../InvArch-Frames-staking/OCIF/staking", default-features = false }
+#pallet-checked-inflation = { path = "../../../InvArch-Frames-staking/pallet-checked-inflation", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
@@ -193,7 +193,7 @@ std = [
     "pallet-ipf/std",
     "pallet-inv4/std",
     "pallet-maintenance-mode/std",
-    "pallet-ip-staking/std"
+    "pallet-ocif-staking/std"
 ]
 
 runtime-benchmarks = [ 

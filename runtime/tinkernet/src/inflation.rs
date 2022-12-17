@@ -1,20 +1,23 @@
-use crate::{Balance, Balances, BlockNumber, Event, IpStaking, NegativeImbalance, Runtime, DAYS};
+use crate::{Balance, Balances, BlockNumber, Event, NegativeImbalance, OcifStaking, Runtime, DAYS};
 use frame_support::{parameter_types, traits::OnUnbalanced};
 use sp_runtime::Perbill;
 
 pub const TEN_PERCENT_PER_YEAR: pallet_checked_inflation::InflationMethod<Balance> =
     pallet_checked_inflation::InflationMethod::Rate(Perbill::from_percent(10));
 
+const _YEAR: u32 = 365;
+const MONTH: u32 = 30;
+
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
-    pub const ErasPerYear: u32 = 365;
+    pub const ErasPerYear: u32 = MONTH;
     pub const Inflation: pallet_checked_inflation::InflationMethod<Balance> = TEN_PERCENT_PER_YEAR;
 }
 
 pub struct DealWithInflation;
 impl OnUnbalanced<NegativeImbalance> for DealWithInflation {
     fn on_unbalanced(amount: NegativeImbalance) {
-        IpStaking::rewards(amount);
+        OcifStaking::rewards(amount);
     }
 }
 
