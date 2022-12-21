@@ -940,6 +940,8 @@ impl inv4::Config for Runtime {
     type WeightToFee = WeightToFee;
     type MaxSubAssets = MaxCallers;
     type Licenses = InvArchLicenses;
+
+    type PermissionSource = R;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1182,7 +1184,24 @@ impl pallet_rules::Config for Runtime {
     type Event = Event;
     type Call = Call;
 
-    type RulesetId = CommonId;
+    type Id = CommonId;
+}
+
+use sp_runtime::{DispatchResult, DispatchResultWithInfo};
+
+pub struct R;
+
+impl inv4::Permissions for R {
+    type Id = (CommonId, CommonId);
+    type Call = Call;
+
+    fn check_permission(id: Self::Id, call: Box<Self::Call>) -> DispatchResultWithInfo<bool> {
+        Rules::check_rule(id, call)
+    }
+
+    fn initialize_permission_set(id: Self::Id) -> DispatchResult {
+        Rules::initialize_rule_set(id)
+    }
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
