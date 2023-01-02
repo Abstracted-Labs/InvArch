@@ -188,7 +188,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 15,
+    spec_version: 14,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -1045,7 +1045,7 @@ impl pallet_uniques::Config for Runtime {
 
 parameter_types! {
     pub const MinVestedTransfer: Balance = UNIT;
-    pub const MaxVestingSchedules: u32 = 500u32;
+    pub const MaxVestingSchedules: u32 = 50u32;
 }
 
 parameter_types! {
