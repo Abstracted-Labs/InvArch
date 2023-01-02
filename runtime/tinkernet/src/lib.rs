@@ -1045,7 +1045,7 @@ impl pallet_uniques::Config for Runtime {
 
 parameter_types! {
     pub const MinVestedTransfer: Balance = UNIT;
-    pub const MaxVestingSchedules: u32 = 50u32;
+    pub const MaxVestingSchedules: u32 = 500u32;
 }
 
 parameter_types! {
