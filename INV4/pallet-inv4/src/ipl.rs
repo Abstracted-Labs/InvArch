@@ -7,16 +7,6 @@ use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use primitives::{OneOrPercent, Parentage};
 
-/// Trait for getting license information
-pub trait LicenseList<T: Config> {
-    fn get_hash_and_metadata(
-        &self,
-    ) -> (
-        BoundedVec<u8, <T as Config>::MaxMetadata>,
-        <T as frame_system::Config>::Hash,
-    );
-}
-
 impl<T: Config> Pallet<T>
 where
     Result<

@@ -39,7 +39,7 @@ pub enum BoolOrWasm<Wasm> {
 
 /// Core IP Set struct
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
+pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance> {
     /// IPS parentage
     pub parentage: Parentage<AccountId, IpId>,
     /// IPS metadata
@@ -53,7 +53,6 @@ pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata
     /// Specifically, the supply of IPT0 (ownership) tokens.
     pub supply: Balance,
 
-    pub license: (LicenseMetadata, Hash),
     /// Aye vote percentage required to execute a multisig call.
     ///
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve

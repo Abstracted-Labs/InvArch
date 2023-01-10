@@ -54,7 +54,7 @@ pub mod pallet {
 
     pub use super::{ipl, ips, ipt};
 
-    use crate::{dispatch::DispatchAs, ipl::LicenseList, origin::INV4Origin};
+    use crate::{dispatch::DispatchAs, origin::INV4Origin};
 
     use rmrk_traits::primitives::{CollectionId, NftId};
 
@@ -98,8 +98,6 @@ pub mod pallet {
 
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
-
-        type Licenses: Parameter + LicenseList<Self>;
 
         /// The overarching call type.
         type Call: Parameter
@@ -145,8 +143,6 @@ pub mod pallet {
         ips::IpsMetadataOf<T>,
         <T as Config>::IpId,
         <T as Config>::Balance,
-        BoundedVec<u8, <T as Config>::MaxMetadata>,
-        <T as frame_system::Config>::Hash,
     >;
 
     /// Valid types that an IP Set can hold
@@ -466,7 +462,6 @@ pub mod pallet {
             metadata: Vec<u8>,
             assets: Vec<AnyIdOf<T>>,
             allow_replica: bool,
-            ipl_license: <T as Config>::Licenses,
             ipl_execution_threshold: OneOrPercent,
             ipl_default_asset_weight: OneOrPercent,
             ipl_default_permission: bool,
@@ -476,7 +471,6 @@ pub mod pallet {
                 metadata,
                 assets,
                 allow_replica,
-                ipl_license,
                 ipl_execution_threshold,
                 ipl_default_asset_weight,
                 ipl_default_permission,

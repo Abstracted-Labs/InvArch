@@ -1,6 +1,5 @@
 use super::pallet::{self, *};
 use crate::{
-    ipl::LicenseList,
     origin::{ensure_multisig, INV4Origin},
     util::derive_ips_account,
 };
@@ -29,7 +28,6 @@ where
         metadata: Vec<u8>,
         assets: Vec<AnyIdOf<T>>,
         allow_replica: bool,
-        ipl_license: <T as Config>::Licenses,
         ipl_execution_threshold: OneOrPercent,
         ipl_default_asset_weight: OneOrPercent,
         ipl_default_permission: bool,
@@ -157,7 +155,6 @@ where
 
                 supply: 1_000_000u128.into(),
 
-                license: ipl_license.get_hash_and_metadata(),
                 execution_threshold: ipl_execution_threshold,
                 default_asset_weight: ipl_default_asset_weight,
                 default_permission: ipl_default_permission,
@@ -373,7 +370,6 @@ where
 
                 supply: info.supply,
 
-                license: info.license,
                 execution_threshold: info.execution_threshold,
                 default_asset_weight: info.default_asset_weight,
                 default_permission: info.default_permission,
@@ -500,7 +496,6 @@ where
 
                 supply: info.supply,
 
-                license: info.license,
                 execution_threshold: info.execution_threshold,
                 default_asset_weight: info.default_asset_weight,
                 default_permission: info.default_permission,
