@@ -10,15 +10,11 @@ pub fn dispatch_call<T: Config>(
     original_caller: Option<<T as frame_system::Config>::AccountId>,
     call: <T as Config>::Call,
 ) -> DispatchResultWithPostInfo {
-    let origin = if <T as Config>::DispatchAsMultisigWhen::contains(&call) {
-        super::Origin::<T>::Multisig(MultisigInternalOrigin {
-            id: ips_id,
-            original_caller,
-        })
-        .into()
-    } else {
-        RawOrigin::Signed(derive_ips_account::<T>(ips_id, original_caller.as_ref())).into()
-    };
+    let origin = call.dispatch_as((ips_id, original_caller));
 
     call.dispatch(origin)
+}
+
+pub trait DispatchAs<Origin, Id> {
+    fn dispatch_as(&self, id: Id) -> Origin;
 }

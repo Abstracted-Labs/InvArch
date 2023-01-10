@@ -55,7 +55,7 @@ pub mod pallet {
 
     pub use super::{ipl, ips, ipt};
 
-    use crate::{ipl::LicenseList, origin::INV4Origin};
+    use crate::{dispatch::DispatchAs, ipl::LicenseList, origin::INV4Origin};
 
     use rmrk_traits::primitives::{CollectionId, NftId};
 
@@ -108,9 +108,14 @@ pub mod pallet {
             + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
-            + Encode;
-
-        //  type WeightToFee: WeightToFee;
+            + Encode
+            + DispatchAs<
+                <Self as pallet::Config>::Origin,
+                (
+                    <Self as pallet::Config>::IpId,
+                    Option<<Self as frame_system::Config>::AccountId>,
+                ),
+            >;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
@@ -126,8 +131,6 @@ pub mod pallet {
         type Origin: From<Origin<Self>>
             + From<<Self as frame_system::Config>::Origin>
             + From<RawOrigin<<Self as frame_system::Config>::AccountId>>;
-
-        type DispatchAsMultisigWhen: Contains<<Self as pallet::Config>::Call>;
     }
 
     #[pallet::origin]
