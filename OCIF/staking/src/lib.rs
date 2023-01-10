@@ -83,7 +83,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use pallet_inv4::util::derive_ips_account;
+    use pallet_inv4::{
+        origin::{ensure_multisig, INV4Origin},
+        util::derive_ips_account,
+    };
 
     use super::*;
 
@@ -109,7 +112,7 @@ pub mod pallet {
     pub type Era = u32;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_inv4::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
@@ -122,7 +125,8 @@ pub mod pallet {
             + Copy
             + Display
             + MaxEncodedLen
-            + Clone;
+            + Clone
+            + From<<Self as pallet_inv4::Config>::IpId>;
 
         #[pallet::constant]
         type BlocksPerEra: Get<BlockNumberFor<Self>>;
@@ -326,36 +330,35 @@ pub mod pallet {
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T>
+    where
+        Result<
+            INV4Origin<T, <T as pallet_inv4::Config>::IpId, <T as frame_system::Config>::AccountId>,
+            <T as frame_system::Config>::Origin,
+        >: From<<T as frame_system::Config>::Origin>,
+    {
         #[pallet::weight(1000000000)]
         pub fn register_core(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
             metadata: CoreMetadataOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let caller = ensure_signed(origin)?;
-
-            ensure!(
-                caller
-                    == pallet_inv4::util::derive_ips_account::<T, T::CoreId, T::AccountId>(
-                        core_id, None
-                    ),
-                Error::<T>::NoPermission
-            );
+            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core_account = core.to_account_id();
+            let core_id = core.id.into();
 
             ensure!(
                 !RegisteredCore::<T>::contains_key(&core_id),
                 Error::<T>::CoreAlreadyRegistered,
             );
 
-            T::Currency::reserve(&caller, T::RegisterDeposit::get())?;
+            <T as pallet::Config>::Currency::reserve(&core_account, T::RegisterDeposit::get())?;
 
             RegisteredCore::<T>::insert(
                 core_id,
                 CoreInfo {
-                    account: caller,
+                    account: core_account,
                     metadata,
                 },
             );
@@ -366,21 +369,12 @@ pub mod pallet {
         }
 
         #[pallet::weight(1000000000)]
-        pub fn unregister_core(
-            origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
-        ) -> DispatchResultWithPostInfo {
+        pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let caller = ensure_signed(origin)?;
-
-            ensure!(
-                caller
-                    == pallet_inv4::util::derive_ips_account::<T, T::CoreId, T::AccountId>(
-                        core_id, None
-                    ),
-                Error::<T>::NoPermission
-            );
+            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core_account = core.to_account_id();
+            let core_id = core.id.into();
 
             ensure!(
                 RegisteredCore::<T>::get(&core_id).is_some(),
@@ -436,7 +430,7 @@ pub mod pallet {
 
             RegisteredCore::<T>::remove(&core_id);
 
-            T::Currency::unreserve(&caller, T::RegisterDeposit::get());
+            <T as pallet::Config>::Currency::unreserve(&core_account, T::RegisterDeposit::get());
 
             Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
 
@@ -644,14 +638,14 @@ pub mod pallet {
             let staker_reward =
                 Perbill::from_rational(staked, staking_info.total) * stakers_joint_reward;
 
-            let reward_imbalance = T::Currency::withdraw(
+            let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
                 &Self::account_id(),
                 staker_reward,
                 WithdrawReasons::TRANSFER,
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            T::Currency::resolve_creating(&staker, reward_imbalance);
+            <T as pallet::Config>::Currency::resolve_creating(&staker, reward_imbalance);
             Self::update_staker_info(&staker, core_id, staker_info);
             Self::deposit_event(Event::<T>::StakerClaimed {
                 staker,
@@ -691,7 +685,7 @@ pub mod pallet {
 
             let (reward, _) = Self::core_stakers_split(&core_stake_info, &reward_and_stake);
 
-            let reward_imbalance = T::Currency::withdraw(
+            let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
                 &Self::account_id(),
                 reward,
                 WithdrawReasons::TRANSFER,
@@ -700,7 +694,7 @@ pub mod pallet {
 
             let core_account = derive_ips_account::<T, T::CoreId, T::AccountId>(core_id, None);
 
-            T::Currency::resolve_creating(&core_account, reward_imbalance);
+            <T as pallet::Config>::Currency::resolve_creating(&core_account, reward_imbalance);
             Self::deposit_event(Event::<T>::CoreClaimed {
                 core: core_id,
                 destination_account: core_account,
@@ -810,9 +804,14 @@ pub mod pallet {
         fn update_ledger(staker: &T::AccountId, ledger: AccountLedger<BalanceOf<T>>) {
             if ledger.is_empty() {
                 Ledger::<T>::remove(&staker);
-                T::Currency::remove_lock(LOCK_ID, staker);
+                <T as pallet::Config>::Currency::remove_lock(LOCK_ID, staker);
             } else {
-                T::Currency::set_lock(LOCK_ID, staker, ledger.locked, WithdrawReasons::all());
+                <T as pallet::Config>::Currency::set_lock(
+                    LOCK_ID,
+                    staker,
+                    ledger.locked,
+                    WithdrawReasons::all(),
+                );
                 Ledger::<T>::insert(staker, ledger);
             }
         }
@@ -850,7 +849,10 @@ pub mod pallet {
                     accumulated_reward.stakers.saturating_add(stakers.peek());
             });
 
-            T::Currency::resolve_creating(&Self::account_id(), stakers.merge(core));
+            <T as pallet::Config>::Currency::resolve_creating(
+                &Self::account_id(),
+                stakers.merge(core),
+            );
         }
 
         fn update_staker_info(
@@ -869,8 +871,8 @@ pub mod pallet {
             staker: &T::AccountId,
             ledger: &AccountLedger<BalanceOf<T>>,
         ) -> BalanceOf<T> {
-            let free_balance =
-                T::Currency::free_balance(staker).saturating_sub(T::ExistentialDeposit::get());
+            let free_balance = <T as pallet::Config>::Currency::free_balance(staker)
+                .saturating_sub(<T as pallet::Config>::ExistentialDeposit::get());
 
             free_balance.saturating_sub(ledger.locked)
         }

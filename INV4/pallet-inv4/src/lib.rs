@@ -47,7 +47,6 @@ pub mod util;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::Contains;
     use frame_system::RawOrigin;
     use primitives::{OneOrPercent, SubIptInfo};
     use scale_info::prelude::fmt::Display;
@@ -135,7 +134,7 @@ pub mod pallet {
 
     #[pallet::origin]
     pub type Origin<T> =
-        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>;
+        INV4Origin<T, <T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -456,7 +455,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T>
     where
         Result<
-            INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+            INV4Origin<T, <T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
             <T as frame_system::Config>::Origin,
         >: From<<T as frame_system::Config>::Origin>,
     {

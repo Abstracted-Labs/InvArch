@@ -52,7 +52,7 @@ pub type SubAssetsWithEndowment<T> = Vec<(
 impl<T: Config> Pallet<T>
 where
     Result<
-        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+        INV4Origin<T, <T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
         <T as frame_system::Config>::Origin,
     >: From<<T as frame_system::Config>::Origin>,
 {
@@ -72,7 +72,12 @@ where
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(
-                    ips_account == &derive_ips_account::<T>(ip_set.id, None),
+                    ips_account
+                        == &derive_ips_account::<
+                            T,
+                            <T as pallet::Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(ip_set.id, None),
                     Error::<T>::NoPermission
                 )
             }
@@ -115,7 +120,12 @@ where
         match &ip.parentage {
             Parentage::Parent(ips_account) => {
                 ensure!(
-                    ips_account == &derive_ips_account::<T>(ip_set.id, None),
+                    ips_account
+                        == &derive_ips_account::<
+                            T,
+                            <T as pallet::Config>::IpId,
+                            <T as frame_system::Config>::AccountId,
+                        >(ip_set.id, None),
                     Error::<T>::NoPermission
                 )
             }
@@ -628,7 +638,12 @@ where
             match old_ips.parentage {
                 Parentage::Parent(ips_account) => {
                     ensure!(
-                        ips_account == derive_ips_account::<T>(ip_set.id, None),
+                        ips_account
+                            == derive_ips_account::<
+                                T,
+                                <T as pallet::Config>::IpId,
+                                <T as frame_system::Config>::AccountId,
+                            >(ip_set.id, None),
                         Error::<T>::NoPermission
                     )
                 }

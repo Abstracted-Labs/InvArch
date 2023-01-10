@@ -19,7 +19,7 @@ pub type IpsMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 impl<T: Config> Pallet<T>
 where
     Result<
-        INV4Origin<<T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+        INV4Origin<T, <T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
         <T as frame_system::Config>::Origin,
     >: From<<T as frame_system::Config>::Origin>,
 {
@@ -380,7 +380,11 @@ where
             });
 
             Self::deposit_event(Event::AppendedToIPS {
-                caller_account: derive_ips_account::<T>(ip_set.id, ip_set.original_caller.as_ref()),
+                caller_account: derive_ips_account::<
+                    T,
+                    <T as pallet::Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(ip_set.id, ip_set.original_caller.as_ref()),
                 ips_id: ip_set.id,
                 new_metadata,
                 assets,
@@ -503,7 +507,11 @@ where
             });
 
             Self::deposit_event(Event::RemovedFromIPS {
-                caller_account: derive_ips_account::<T>(ip_set.id, ip_set.original_caller.as_ref()),
+                caller_account: derive_ips_account::<
+                    T,
+                    <T as pallet::Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(ip_set.id, ip_set.original_caller.as_ref()),
                 ips_id: ip_set.id,
                 new_metadata,
                 assets_and_new_owners: assets,
