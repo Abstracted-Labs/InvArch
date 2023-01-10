@@ -346,7 +346,7 @@ pub mod pallet {
             voter: T::AccountId,
             call_hash: [u8; 32],
             call: crate::ipt::OpaqueCall<T>,
-            result: bool,
+            result: DispatchResult,
         },
         /// The vote on a multisig call was cancelled/withdrawn
         ///

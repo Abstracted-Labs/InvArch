@@ -4,3 +4,5 @@
 
 #local dependencies
 **/Cargo.lock
+.idea/vcs.xml
+.idea/workspace.xml

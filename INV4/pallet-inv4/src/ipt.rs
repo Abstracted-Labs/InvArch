@@ -269,14 +269,17 @@ where
 
             Self::deposit_event(Event::MultisigExecuted {
                 ips_id: ipt_id.0,
-                executor_account: derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
+                executor_account: derive_ips_account::<
+                    T,
+                    <T as Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(
+                    ipt_id.0, if include_caller { Some(&owner) } else { None }
                 ),
                 voter: owner,
                 call_hash,
                 call: opaque_call,
-                result: dispatch_result.is_ok(),
+                result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
             // Multisig call is now in the voting stage, so update storage.
@@ -298,9 +301,12 @@ where
 
             Self::deposit_event(Event::MultisigVoteStarted {
                 ips_id: ipt_id.0,
-                executor_account: derive_ips_account::<T>(
-                    ipt_id.0,
-                    if include_caller { Some(&owner) } else { None },
+                executor_account: derive_ips_account::<
+                    T,
+                    <T as Config>::IpId,
+                    <T as frame_system::Config>::AccountId,
+                >(
+                    ipt_id.0, if include_caller { Some(&owner) } else { None }
                 ),
                 voter: owner,
                 votes_added: owner_balance,
@@ -421,10 +427,13 @@ where
                         .try_decode()
                         .ok_or(Error::<T>::CouldntDecodeCall)?,
                 );
-
                 Self::deposit_event(Event::MultisigExecuted {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -435,7 +444,7 @@ where
                     voter: owner,
                     call_hash,
                     call: old_data.actual_call,
-                    result: dispatch_result.is_ok(),
+                    result: dispatch_result.map(|_| ()).map_err(|e| e.error),
                 });
             } else {
                 // `caller`s votes were not enough to pass the vote
@@ -450,7 +459,11 @@ where
 
                 Self::deposit_event(Event::MultisigVoteAdded {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -499,7 +512,11 @@ where
 
                 Self::deposit_event(Event::MultisigCanceled {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)
@@ -572,7 +589,11 @@ where
 
                 Self::deposit_event(Event::MultisigVoteWithdrawn {
                     ips_id: ipt_id.0,
-                    executor_account: derive_ips_account::<T>(
+                    executor_account: derive_ips_account::<
+                        T,
+                        <T as Config>::IpId,
+                        <T as frame_system::Config>::AccountId,
+                    >(
                         ipt_id.0,
                         if old_data.include_original_caller {
                             Some(&old_data.original_caller)

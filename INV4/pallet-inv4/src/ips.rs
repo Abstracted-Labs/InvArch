@@ -96,7 +96,11 @@ where
             }
 
             // Generate new `AccountId` to represent new IP Set being created
-            let ips_account = derive_ips_account::<T>(current_id, None);
+            let ips_account = derive_ips_account::<
+                T,
+                <T as Config>::IpId,
+                <T as frame_system::Config>::AccountId,
+            >(current_id, None);
 
             // Transfer ownership (issuer for `RmrkCollection`) to `ips_account` for each item in `assets`
             for asset in assets.clone() {
