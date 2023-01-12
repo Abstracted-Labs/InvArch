@@ -26,8 +26,11 @@ pub mod xcm_config;
 
 use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
 pub use frame_support::{
-    construct_runtime, match_types, parameter_types,
+    // construct_runtime,
+    match_types,
+    parameter_types,
     traits::{
         AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
         Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
@@ -37,9 +40,10 @@ pub use frame_support::{
         ConstantMultiplier, DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient,
         WeightToFeeCoefficients, WeightToFeePolynomial,
     },
-    BoundedVec, ConsensusEngineId, PalletId,
+    BoundedVec,
+    ConsensusEngineId,
+    PalletId,
 };
-use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
 use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
@@ -76,7 +80,11 @@ pub use pallet_ipf as ipf;
 /// Import the inv4 pallet.
 pub use pallet_inv4 as inv4;
 
-use inv4::ipl::LicenseList;
+use inv4::{
+    dispatch::DispatchAs,
+    origin::{INV4Origin, MultisigInternalOrigin},
+    util::derive_ips_account,
+};
 
 // Weights
 mod weights;
@@ -599,320 +607,6 @@ impl ipf::Config for Runtime {
     type Event = Event;
 }
 
-#[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Encode, Decode, TypeInfo, Eq, PartialEq)]
-pub enum InvArchLicenses {
-    /// Apache License 2.0 | https://choosealicense.com/licenses/apache-2.0/
-    Apache2,
-    /// GNU General Public License v3.0 | https://choosealicense.com/licenses/gpl-3.0/
-    GPLv3,
-    /// GNU General Public License v2.0 | https://choosealicense.com/licenses/gpl-2.0/
-    GPLv2,
-    /// GNU Affero General Public License v3.0 | https://choosealicense.com/licenses/agpl-3.0/
-    AGPLv3,
-    /// GNU Lesser General Public License v3.0 | https://choosealicense.com/licenses/lgpl-3.0/
-    LGPLv3,
-    /// MIT License | https://choosealicense.com/licenses/mit/
-    MIT,
-    /// ISC License | https://choosealicense.com/licenses/isc/
-    ISC,
-    /// Mozilla Public License 2.0 | https://choosealicense.com/licenses/mpl-2.0/
-    MPLv2,
-    /// Boost Software License 1.0 | https://choosealicense.com/licenses/bsl-1.0/
-    BSLv1,
-    /// The Unlicense | https://choosealicense.com/licenses/unlicense/
-    Unlicense,
-    /// Creative Commons Zero v1.0 Universal | https://choosealicense.com/licenses/cc0-1.0/
-    CC0_1,
-    /// Creative Commons Attribution 4.0 International | https://choosealicense.com/licenses/cc-by-4.0/
-    CC_BY_4,
-    /// Creative Commons Attribution Share Alike 4.0 International | https://choosealicense.com/licenses/cc-by-sa-4.0/
-    CC_BY_SA_4,
-    /// Creative Commons Attribution-NoDerivatives 4.0 International | https://creativecommons.org/licenses/by-nd/4.0/
-    CC_BY_ND_4,
-    /// Creative Commons Attribution-NonCommercial 4.0 International | http://creativecommons.org/licenses/by-nc/4.0/
-    CC_BY_NC_4,
-    /// Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International | http://creativecommons.org/licenses/by-nc-sa/4.0/
-    CC_BY_NC_SA_4,
-    /// Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International | http://creativecommons.org/licenses/by-nc-nd/4.0/
-    CC_BY_NC_ND_4,
-    /// SIL Open Font License 1.1 | https://choosealicense.com/licenses/ofl-1.1/
-    OFL_1_1,
-    /// Dapper Labs' NFT License Version 2.0 | https://www.nftlicense.org/
-    NFT_License_2,
-    Custom(
-        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
-        <Runtime as frame_system::Config>::Hash,
-    ),
-}
-
-impl LicenseList<Runtime> for InvArchLicenses {
-    /// Returns the license name as bytes and the IPFS hash of the licence on IPFS
-    fn get_hash_and_metadata(
-        &self,
-    ) -> (
-        BoundedVec<u8, <Runtime as inv4::Config>::MaxMetadata>,
-        <Runtime as frame_system::Config>::Hash,
-    ) {
-        match self {
-            InvArchLicenses::Apache2 => (
-                vec![
-                    65, 112, 97, 99, 104, 101, 32, 76, 105, 99, 101, 110, 115, 101, 32, 50, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    7, 57, 92, 251, 234, 183, 217, 144, 220, 196, 201, 132, 176, 249, 18, 224, 237,
-                    201, 2, 113, 146, 78, 111, 152, 92, 71, 16, 228, 87, 39, 81, 142,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::GPLv3 => (
-                vec![
-                    71, 78, 85, 32, 71, 101, 110, 101, 114, 97, 108, 32, 80, 117, 98, 108, 105, 99,
-                    32, 76, 105, 99, 101, 110, 115, 101, 32, 118, 51, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    72, 7, 169, 24, 30, 7, 200, 69, 232, 27, 10, 138, 130, 253, 91, 158, 210, 95,
-                    127, 37, 85, 41, 106, 136, 66, 116, 64, 35, 252, 195, 69, 253,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::GPLv2 => (
-                vec![
-                    71, 78, 85, 32, 71, 101, 110, 101, 114, 97, 108, 32, 80, 117, 98, 108, 105, 99,
-                    32, 76, 105, 99, 101, 110, 115, 101, 32, 118, 50, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    83, 11, 214, 48, 75, 23, 172, 31, 175, 110, 63, 110, 178, 73, 2, 178, 184, 21,
-                    246, 188, 76, 84, 217, 226, 18, 136, 59, 165, 230, 221, 238, 176,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::AGPLv3 => (
-                vec![
-                    71, 78, 85, 32, 65, 102, 102, 101, 114, 111, 32, 71, 101, 110, 101, 114, 97,
-                    108, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105, 99, 101, 110, 115, 101, 32,
-                    118, 51, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    16, 157, 152, 89, 106, 226, 188, 217, 72, 112, 106, 206, 65, 165, 183, 196, 92,
-                    139, 38, 166, 5, 26, 115, 178, 28, 146, 161, 129, 62, 94, 35, 237,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::LGPLv3 => (
-                vec![
-                    71, 78, 85, 32, 76, 101, 115, 115, 101, 114, 32, 71, 101, 110, 101, 114, 97,
-                    108, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105, 99, 101, 110, 115, 101, 32,
-                    118, 51, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    41, 113, 123, 121, 57, 73, 217, 57, 239, 157, 246, 130, 231, 72, 190, 228, 200,
-                    196, 32, 236, 163, 234, 84, 132, 137, 143, 25, 250, 176, 138, 20, 72,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::MIT => (
-                vec![77, 73, 84, 32, 76, 105, 99, 101, 110, 115, 101]
-                    .try_into()
-                    .unwrap(),
-                [
-                    30, 110, 34, 127, 171, 16, 29, 6, 239, 45, 145, 39, 222, 102, 84, 140, 102,
-                    230, 120, 249, 189, 170, 34, 83, 199, 156, 9, 49, 150, 152, 11, 200,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::ISC => (
-                vec![73, 83, 67, 32, 76, 105, 99, 101, 110, 115, 101]
-                    .try_into()
-                    .unwrap(),
-                [
-                    119, 124, 140, 27, 203, 222, 251, 174, 95, 70, 118, 187, 129, 69, 225, 96, 227,
-                    232, 195, 7, 229, 132, 185, 27, 190, 77, 151, 87, 106, 54, 147, 44,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::MPLv2 => (
-                vec![
-                    77, 111, 122, 105, 108, 108, 97, 32, 80, 117, 98, 108, 105, 99, 32, 76, 105,
-                    99, 101, 110, 115, 101, 32, 50, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    22, 230, 111, 228, 166, 207, 221, 50, 16, 229, 13, 232, 100, 77, 102, 184, 158,
-                    79, 129, 211, 209, 102, 176, 109, 87, 105, 70, 160, 64, 123, 111, 125,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::BSLv1 => (
-                vec![
-                    66, 111, 111, 115, 116, 32, 83, 111, 102, 116, 119, 97, 114, 101, 32, 76, 105,
-                    99, 101, 110, 115, 101, 32, 49, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    174, 124, 16, 124, 106, 249, 123, 122, 241, 56, 223, 75, 59, 68, 65, 204, 73,
-                    69, 88, 196, 145, 163, 233, 220, 238, 63, 99, 237, 91, 2, 44, 204,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::Unlicense => (
-                vec![84, 104, 101, 32, 85, 110, 108, 105, 99, 101, 110, 115, 101]
-                    .try_into()
-                    .unwrap(),
-                [
-                    208, 213, 16, 2, 240, 247, 235, 52, 119, 223, 47, 248, 137, 215, 165, 255, 76,
-                    216, 178, 1, 189, 80, 159, 6, 76, 219, 36, 87, 18, 95, 66, 69,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC0_1 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    90, 101, 114, 111, 32, 118, 49, 46, 48, 32, 85, 110, 105, 118, 101, 114, 115,
-                    97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    157, 190, 198, 99, 94, 106, 166, 7, 57, 110, 33, 230, 148, 72, 5, 109, 159,
-                    142, 83, 41, 164, 67, 188, 195, 189, 191, 36, 11, 61, 171, 27, 20,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 32, 52, 46, 48, 32, 73,
-                    110, 116, 101, 114, 110, 97, 116, 105, 111, 110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    40, 210, 60, 93, 221, 27, 242, 205, 66, 90, 61, 65, 117, 72, 161, 102, 0, 242,
-                    255, 168, 0, 82, 46, 245, 187, 126, 239, 220, 22, 231, 141, 195,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_SA_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 32, 83, 104, 97, 114, 101,
-                    32, 65, 108, 105, 107, 101, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110,
-                    97, 116, 105, 111, 110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    250, 189, 246, 254, 64, 139, 178, 19, 24, 92, 176, 241, 128, 91, 98, 105, 205,
-                    149, 22, 98, 175, 178, 74, 187, 181, 189, 44, 158, 64, 117, 224, 61,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_ND_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 68, 101, 114,
-                    105, 118, 97, 116, 105, 118, 101, 115, 32, 52, 46, 48, 32, 73, 110, 116, 101,
-                    114, 110, 97, 116, 105, 111, 110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    50, 75, 4, 246, 125, 55, 242, 42, 183, 14, 224, 101, 36, 251, 72, 169, 71, 35,
-                    92, 129, 50, 38, 165, 223, 90, 240, 205, 149, 113, 56, 115, 85,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_NC_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
-                    109, 109, 101, 114, 99, 105, 97, 108, 32, 52, 46, 48, 32, 73, 110, 116, 101,
-                    114, 110, 97, 116, 105, 111, 110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    30, 62, 213, 3, 26, 115, 233, 140, 111, 241, 54, 179, 119, 44, 203, 198, 240,
-                    172, 227, 68, 101, 15, 57, 156, 29, 234, 167, 155, 66, 200, 219, 146,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_NC_SA_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
-                    109, 109, 101, 114, 99, 105, 97, 108, 45, 83, 104, 97, 114, 101, 65, 108, 105,
-                    107, 101, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110, 97, 116, 105, 111,
-                    110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    52, 186, 173, 229, 107, 225, 22, 146, 198, 254, 191, 247, 180, 34, 43, 39, 219,
-                    40, 4, 143, 186, 8, 23, 44, 210, 224, 186, 201, 166, 41, 158, 121,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::CC_BY_NC_ND_4 => (
-                vec![
-                    67, 114, 101, 97, 116, 105, 118, 101, 32, 67, 111, 109, 109, 111, 110, 115, 32,
-                    65, 116, 116, 114, 105, 98, 117, 116, 105, 111, 110, 45, 78, 111, 110, 67, 111,
-                    109, 109, 101, 114, 99, 105, 97, 108, 45, 78, 111, 68, 101, 114, 105, 118, 97,
-                    116, 105, 118, 101, 115, 32, 52, 46, 48, 32, 73, 110, 116, 101, 114, 110, 97,
-                    116, 105, 111, 110, 97, 108,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    127, 207, 189, 44, 174, 24, 37, 236, 169, 209, 80, 31, 171, 44, 32, 63, 200,
-                    40, 59, 177, 185, 27, 199, 7, 96, 93, 98, 43, 219, 226, 216, 52,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::OFL_1_1 => (
-                vec![
-                    83, 73, 76, 32, 79, 112, 101, 110, 32, 70, 111, 110, 116, 32, 76, 105, 99, 101,
-                    110, 115, 101, 32, 49, 46, 49,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    44, 228, 173, 234, 177, 180, 217, 203, 36, 28, 127, 255, 113, 162, 181, 151,
-                    240, 101, 203, 142, 246, 219, 177, 3, 77, 139, 82, 210, 87, 200, 140, 196,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::NFT_License_2 => (
-                vec![
-                    78, 70, 84, 32, 76, 105, 99, 101, 110, 115, 101, 32, 86, 101, 114, 115, 105,
-                    111, 110, 32, 50, 46, 48,
-                ]
-                .try_into()
-                .unwrap(),
-                [
-                    126, 111, 159, 224, 78, 176, 72, 197, 201, 197, 30, 50, 31, 166, 61, 182, 81,
-                    131, 149, 233, 202, 149, 92, 62, 241, 34, 86, 196, 64, 243, 112, 152,
-                ]
-                .into(),
-            ),
-            InvArchLicenses::Custom(metadata, hash) => (metadata.clone(), *hash),
-        }
-    }
-}
-
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
@@ -935,9 +629,31 @@ impl inv4::Config for Runtime {
 
     type Call = Call;
     type MaxCallers = MaxCallers;
-    type WeightToFee = WeightToFee;
+    // type WeightToFee = WeightToFee;
     type MaxSubAssets = MaxCallers;
-    type Licenses = InvArchLicenses;
+
+    type Origin = Origin;
+}
+
+impl DispatchAs<Origin, (CommonId, Option<AccountId>)> for Call {
+    fn dispatch_as(&self, id: (CommonId, Option<AccountId>)) -> Origin {
+        match self {
+            Call::INV4(_) | Call::Ipf(_) => INV4Origin::Multisig(MultisigInternalOrigin::<
+                Runtime,
+                <Runtime as pallet_inv4::Config>::IpId,
+                <Runtime as frame_system::Config>::AccountId,
+            >::new(id))
+            .into(),
+            _ => Origin::signed(
+                MultisigInternalOrigin::<
+                    Runtime,
+                    <Runtime as pallet_inv4::Config>::IpId,
+                    <Runtime as frame_system::Config>::AccountId,
+                >::new(id)
+                .to_account_id(),
+            ),
+        }
+    }
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1174,6 +890,8 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
+use frame_support_procedural_modified::construct_runtime;
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -1219,7 +937,7 @@ construct_runtime!(
 
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
-        INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+        INV4: inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,

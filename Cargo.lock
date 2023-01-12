@@ -2472,8 +2472,32 @@ source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc
 dependencies = [
  "Inflector",
  "cfg-expr",
- "frame-support-procedural-tools",
+ "frame-support-procedural-tools 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "frame-support-procedural-modified"
+version = "4.0.0-dev"
+dependencies = [
+ "Inflector",
+ "cfg-expr",
+ "frame-support-procedural-tools 4.0.0-dev",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "frame-support-procedural-tools"
+version = "4.0.0-dev"
+dependencies = [
+ "frame-support-procedural-tools-derive 3.0.0",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -2484,8 +2508,17 @@ name = "frame-support-procedural-tools"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
 dependencies = [
- "frame-support-procedural-tools-derive",
+ "frame-support-procedural-tools-derive 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29)",
  "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "frame-support-procedural-tools-derive"
+version = "3.0.0"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -3263,7 +3296,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=590777fa17e8e94c5620265a12c4aff5104b2d5c#590777fa17e8e94c5620265a12c4aff5104b2d5c"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5133,20 +5165,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-assets"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-aura"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.29#cc370aa61e15c18d23a2f686b812fd576a630afe"
@@ -5574,12 +5592,10 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=590777fa17e8e94c5620265a12c4aff5104b2d5c#590777fa17e8e94c5620265a12c4aff5104b2d5c"
 dependencies = [
  "frame-support",
  "frame-system",
  "invarch-primitives",
- "pallet-assets",
  "pallet-balances",
  "pallet-ipf",
  "pallet-rmrk-core",
@@ -5599,7 +5615,6 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=590777fa17e8e94c5620265a12c4aff5104b2d5c#590777fa17e8e94c5620265a12c4aff5104b2d5c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -11056,6 +11071,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
+ "frame-support-procedural-modified",
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
