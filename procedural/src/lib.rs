@@ -40,8 +40,8 @@ use std::{cell::RefCell, str::FromStr};
 pub(crate) use storage::INHERENT_INSTANCE_NAME;
 
 thread_local! {
-	/// A global counter, can be used to generate a relatively unique identifier.
-	static COUNTER: RefCell<Counter> = RefCell::new(Counter(0));
+    /// A global counter, can be used to generate a relatively unique identifier.
+    static COUNTER: RefCell<Counter> = RefCell::new(Counter(0));
 }
 
 /// Counter to generate a relatively unique identifier for macros. This is necessary because
@@ -50,21 +50,21 @@ thread_local! {
 struct Counter(u64);
 
 impl Counter {
-	fn inc(&mut self) -> u64 {
-		let ret = self.0;
-		self.0 += 1;
-		ret
-	}
+    fn inc(&mut self) -> u64 {
+        let ret = self.0;
+        self.0 += 1;
+        ret
+    }
 }
 
 /// Get the value from the given environment variable set by cargo.
 ///
 /// The value is parsed into the requested destination type.
 fn get_cargo_env_var<T: FromStr>(version_env: &str) -> std::result::Result<T, ()> {
-	let version = std::env::var(version_env)
-		.unwrap_or_else(|_| panic!("`{}` is always set by cargo; qed", version_env));
+    let version = std::env::var(version_env)
+        .unwrap_or_else(|_| panic!("`{}` is always set by cargo; qed", version_env));
 
-	T::from_str(&version).map_err(drop)
+    T::from_str(&version).map_err(drop)
 }
 
 /// Declares strongly-typed wrappers around codec-compatible types in storage.
@@ -289,7 +289,7 @@ fn get_cargo_env_var<T: FromStr>(version_env: &str) -> std::result::Result<T, ()
 /// ```
 #[proc_macro]
 pub fn decl_storage(input: TokenStream) -> TokenStream {
-	storage::decl_storage_impl(input)
+    storage::decl_storage_impl(input)
 }
 
 /// Construct a runtime, with the given name and the given pallets.
@@ -398,14 +398,14 @@ pub fn decl_storage(input: TokenStream) -> TokenStream {
 /// * The macro generates a type alias for each pallet to their `Pallet`. E.g. `type System =
 ///   frame_system::Pallet<Runtime>`
 #[proc_macro]
-pub fn construct_runtime(input: TokenStream) -> TokenStream {
-	construct_runtime::construct_runtime(input)
+pub fn construct_runtime_modified(input: TokenStream) -> TokenStream {
+    construct_runtime::construct_runtime_modified(input)
 }
 
 /// Macro to define a pallet. Docs are at `frame_support::pallet`.
 #[proc_macro_attribute]
 pub fn pallet(attr: TokenStream, item: TokenStream) -> TokenStream {
-	pallet::pallet(attr, item)
+    pallet::pallet(attr, item)
 }
 
 /// Execute the annotated function in a new storage transaction.
@@ -430,25 +430,25 @@ pub fn pallet(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn transactional(attr: TokenStream, input: TokenStream) -> TokenStream {
-	transactional::transactional(attr, input).unwrap_or_else(|e| e.to_compile_error().into())
+    transactional::transactional(attr, input).unwrap_or_else(|e| e.to_compile_error().into())
 }
 
 #[proc_macro_attribute]
 pub fn require_transactional(attr: TokenStream, input: TokenStream) -> TokenStream {
-	transactional::require_transactional(attr, input)
-		.unwrap_or_else(|e| e.to_compile_error().into())
+    transactional::require_transactional(attr, input)
+        .unwrap_or_else(|e| e.to_compile_error().into())
 }
 
 /// Derive [`Clone`] but do not bound any generic. Docs are at `frame_support::CloneNoBound`.
 #[proc_macro_derive(CloneNoBound)]
 pub fn derive_clone_no_bound(input: TokenStream) -> TokenStream {
-	clone_no_bound::derive_clone_no_bound(input)
+    clone_no_bound::derive_clone_no_bound(input)
 }
 
 /// Derive [`Debug`] but do not bound any generics. Docs are at `frame_support::DebugNoBound`.
 #[proc_macro_derive(DebugNoBound)]
 pub fn derive_debug_no_bound(input: TokenStream) -> TokenStream {
-	debug_no_bound::derive_debug_no_bound(input)
+    debug_no_bound::derive_debug_no_bound(input)
 }
 
 /// Derive [`Debug`], if `std` is enabled it uses `frame_support::DebugNoBound`, if `std` is not
@@ -456,71 +456,71 @@ pub fn derive_debug_no_bound(input: TokenStream) -> TokenStream {
 /// This behaviour is useful to prevent bloating the runtime WASM blob from unneeded code.
 #[proc_macro_derive(RuntimeDebugNoBound)]
 pub fn derive_runtime_debug_no_bound(input: TokenStream) -> TokenStream {
-	#[cfg(not(feature = "std"))]
-	{
-		let input: syn::DeriveInput = match syn::parse(input) {
-			Ok(input) => input,
-			Err(e) => return e.to_compile_error().into(),
-		};
+    #[cfg(not(feature = "std"))]
+    {
+        let input: syn::DeriveInput = match syn::parse(input) {
+            Ok(input) => input,
+            Err(e) => return e.to_compile_error().into(),
+        };
 
-		let name = &input.ident;
-		let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+        let name = &input.ident;
+        let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-		quote::quote!(
-			const _: () = {
-				impl #impl_generics core::fmt::Debug for #name #ty_generics #where_clause {
-					fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
-						fmt.write_str("<stripped>")
-					}
-				}
-			};
-		)
-		.into()
-	}
+        quote::quote!(
+            const _: () = {
+                impl #impl_generics core::fmt::Debug for #name #ty_generics #where_clause {
+                    fn fmt(&self, fmt: &mut core::fmt::Formatter) -> core::fmt::Result {
+                        fmt.write_str("<stripped>")
+                    }
+                }
+            };
+        )
+        .into()
+    }
 
-	#[cfg(feature = "std")]
-	{
-		debug_no_bound::derive_debug_no_bound(input)
-	}
+    #[cfg(feature = "std")]
+    {
+        debug_no_bound::derive_debug_no_bound(input)
+    }
 }
 
 /// Derive [`PartialEq`] but do not bound any generic. Docs are at
 /// `frame_support::PartialEqNoBound`.
 #[proc_macro_derive(PartialEqNoBound)]
 pub fn derive_partial_eq_no_bound(input: TokenStream) -> TokenStream {
-	partial_eq_no_bound::derive_partial_eq_no_bound(input)
+    partial_eq_no_bound::derive_partial_eq_no_bound(input)
 }
 
 /// derive Eq but do no bound any generic. Docs are at `frame_support::EqNoBound`.
 #[proc_macro_derive(EqNoBound)]
 pub fn derive_eq_no_bound(input: TokenStream) -> TokenStream {
-	let input: syn::DeriveInput = match syn::parse(input) {
-		Ok(input) => input,
-		Err(e) => return e.to_compile_error().into(),
-	};
+    let input: syn::DeriveInput = match syn::parse(input) {
+        Ok(input) => input,
+        Err(e) => return e.to_compile_error().into(),
+    };
 
-	let name = &input.ident;
-	let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let name = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-	quote::quote_spanned!(name.span() =>
-		const _: () = {
-			impl #impl_generics core::cmp::Eq for #name #ty_generics #where_clause {}
-		};
-	)
-	.into()
+    quote::quote_spanned!(name.span() =>
+        const _: () = {
+            impl #impl_generics core::cmp::Eq for #name #ty_generics #where_clause {}
+        };
+    )
+    .into()
 }
 
 /// derive `Default` but do no bound any generic. Docs are at `frame_support::DefaultNoBound`.
 #[proc_macro_derive(DefaultNoBound)]
 pub fn derive_default_no_bound(input: TokenStream) -> TokenStream {
-	default_no_bound::derive_default_no_bound(input)
+    default_no_bound::derive_default_no_bound(input)
 }
 
 #[proc_macro]
 pub fn crate_to_crate_version(input: TokenStream) -> TokenStream {
-	crate_version::crate_to_crate_version(input)
-		.unwrap_or_else(|e| e.to_compile_error())
-		.into()
+    crate_version::crate_to_crate_version(input)
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }
 
 /// The number of module instances supported by the runtime, starting at index 1,
@@ -531,15 +531,15 @@ pub(crate) const NUMBER_OF_INSTANCE: u8 = 16;
 /// It implements the trait `HasKeyPrefix` and `HasReversibleKeyPrefix` for tuple of `Key`.
 #[proc_macro]
 pub fn impl_key_prefix_for_tuples(input: TokenStream) -> TokenStream {
-	key_prefix::impl_key_prefix_for_tuples(input)
-		.unwrap_or_else(syn::Error::into_compile_error)
-		.into()
+    key_prefix::impl_key_prefix_for_tuples(input)
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 /// Internal macro use by frame_support to generate dummy part checker for old pallet declaration
 #[proc_macro]
 pub fn __generate_dummy_part_checker(input: TokenStream) -> TokenStream {
-	dummy_part_checker::generate_dummy_part_checker(input)
+    dummy_part_checker::generate_dummy_part_checker(input)
 }
 
 /// Macro that inserts some tokens after the first match of some pattern.
@@ -563,23 +563,23 @@ pub fn __generate_dummy_part_checker(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn match_and_insert(input: TokenStream) -> TokenStream {
-	match_and_insert::match_and_insert(input)
+    match_and_insert::match_and_insert(input)
 }
 
 #[proc_macro_derive(PalletError, attributes(codec))]
 pub fn derive_pallet_error(input: TokenStream) -> TokenStream {
-	pallet_error::derive_pallet_error(input)
+    pallet_error::derive_pallet_error(input)
 }
 
 /// Internal macro used by `frame_support` to create tt-call-compliant macros
 #[proc_macro]
 pub fn __create_tt_macro(input: TokenStream) -> TokenStream {
-	tt_macro::create_tt_return_macro(input)
+    tt_macro::create_tt_return_macro(input)
 }
 
 #[proc_macro_attribute]
 pub fn storage_alias(_: TokenStream, input: TokenStream) -> TokenStream {
-	storage_alias::storage_alias(input.into())
-		.unwrap_or_else(|r| r.into_compile_error())
-		.into()
+    storage_alias::storage_alias(input.into())
+        .unwrap_or_else(|r| r.into_compile_error())
+        .into()
 }

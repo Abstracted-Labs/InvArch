@@ -278,21 +278,21 @@ pub fn expand_outer_origin(
             }
         }
 
-        impl From<Origin> for #scrate::sp_std::result::Result<#system_path::Origin<#runtime>, Origin> {
-            /// NOTE: converting to pallet origin loses the origin filter information.
-            fn from(val: Origin) -> Self {
-          match val.caller {
-              OriginCaller::system(l) => Ok(l),
-              OriginCaller::INV4(l) => Ok(l.to_account_id()),
-              _ => Err(val)
-          }
-            //	if let OriginCaller::system(l) = val.caller {
-        //			Ok(l)
-        //		} else {
-    //				Err(val)
-    //			}
-            }
-        }
+     //    impl From<Origin> for #scrate::sp_std::result::Result<#system_path::Origin<#runtime>, Origin> {
+    //         /// NOTE: converting to pallet origin loses the origin filter information.
+    //         fn from(val: Origin) -> Self {
+    //       match val.caller {
+    //           OriginCaller::system(l) => Ok(l),
+    //           OriginCaller::Inv4(l) => Ok(l.to_account_id()),
+    //           _ => Err(val)
+    //       }
+    //         //	if let OriginCaller::system(l) = val.caller {
+    //     //			Ok(l)
+    //     //		} else {
+    // //				Err(val)
+    // //			}
+    //         }
+    //     }
         impl From<Option<<#runtime as #system_path::Config>::AccountId>> for Origin {
             #[doc = #doc_string_runtime_origin_with_caller]
             fn from(x: Option<<#runtime as #system_path::Config>::AccountId>) -> Self {

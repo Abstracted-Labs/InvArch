@@ -24,11 +24,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod xcm_config;
 
-use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
 pub use frame_support::{
-    // construct_runtime,
+    //  construct_runtime,
     match_types,
     parameter_types,
     traits::{
@@ -50,7 +49,6 @@ use frame_system::{
 };
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
-use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -80,11 +78,7 @@ pub use pallet_ipf as ipf;
 /// Import the inv4 pallet.
 pub use pallet_inv4 as inv4;
 
-use inv4::{
-    dispatch::DispatchAs,
-    origin::{INV4Origin, MultisigInternalOrigin},
-    util::derive_ips_account,
-};
+use inv4::origin::INV4Origin;
 
 // Weights
 mod weights;
@@ -635,26 +629,26 @@ impl inv4::Config for Runtime {
     type Origin = Origin;
 }
 
-impl DispatchAs<Origin, (CommonId, Option<AccountId>)> for Call {
-    fn dispatch_as(&self, id: (CommonId, Option<AccountId>)) -> Origin {
-        match self {
-            Call::INV4(_) | Call::Ipf(_) => INV4Origin::Multisig(MultisigInternalOrigin::<
-                Runtime,
-                <Runtime as pallet_inv4::Config>::IpId,
-                <Runtime as frame_system::Config>::AccountId,
-            >::new(id))
-            .into(),
-            _ => Origin::signed(
-                MultisigInternalOrigin::<
-                    Runtime,
-                    <Runtime as pallet_inv4::Config>::IpId,
-                    <Runtime as frame_system::Config>::AccountId,
-                >::new(id)
-                .to_account_id(),
-            ),
-        }
-    }
-}
+// impl DispatchAs<Origin, (CommonId, Option<AccountId>)> for Call {
+//     fn dispatch_as(&self, id: (CommonId, Option<AccountId>)) -> Origin {
+//         match self {
+//             Call::INV4(_) | Call::Ipf(_) => INV4Origin::Multisig(MultisigInternalOrigin::<
+//                 Runtime,
+//                 <Runtime as pallet_inv4::Config>::IpId,
+//                 <Runtime as frame_system::Config>::AccountId,
+//             >::new(id))
+//             .into(),
+//             _ => Origin::signed(
+//                 MultisigInternalOrigin::<
+//                     Runtime,
+//                     <Runtime as pallet_inv4::Config>::IpId,
+//                     <Runtime as frame_system::Config>::AccountId,
+//                 >::new(id)
+//                 .to_account_id(),
+//             ),
+//         }
+//     }
+// }
 
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
@@ -890,10 +884,22 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use frame_support_procedural_modified::construct_runtime;
+use frame_support_procedural_modified::construct_runtime_modified;
+
+impl From<Origin> for Result<frame_system::RawOrigin<AccountId>, Origin> {
+    fn from(val: Origin) -> Self {
+        match val.caller {
+            OriginCaller::system(l) => Ok(l),
+            OriginCaller::INV4(INV4Origin::Multisig(l)) => {
+                Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
+            }
+            _ => Err(val),
+        }
+    }
+}
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
-construct_runtime!(
+construct_runtime_modified!(
     pub enum Runtime where
         Block = Block,
         NodeBlock = opaque::Block,
