@@ -5856,6 +5856,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-rings"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
 source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=f2191fda8c6e7e79c154fa46791e4c1f37e8d86e#f2191fda8c6e7e79c154fa46791e4c1f37e8d86e"
@@ -11099,6 +11120,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
+ "pallet-rings",
  "pallet-rmrk-core",
  "pallet-rmrk-equip",
  "pallet-scheduler",

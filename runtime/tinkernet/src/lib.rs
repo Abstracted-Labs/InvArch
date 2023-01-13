@@ -24,6 +24,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod xcm_config;
 
+use codec::{Decode, Encode, MaxEncodedLen};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{dispatch::RawOrigin, pallet_prelude::EnsureOrigin};
 pub use frame_support::{
@@ -31,7 +32,7 @@ pub use frame_support::{
     match_types,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Get,
         Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
@@ -47,8 +48,10 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
 };
+use pallet_rings::ParachainList;
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
+use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -885,6 +888,47 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum Parachains {
+    Basilisk,
+}
+
+impl ParachainList for Parachains {
+    fn get_location(&self) -> xcm::latest::MultiLocation {
+        match self {
+            Self::Basilisk => xcm::latest::MultiLocation {
+                parents: 1,
+                interior: xcm::latest::Junctions::X1(xcm::latest::Junction::Parachain(2090)),
+            },
+        }
+    }
+
+    fn get_asset(&self) -> xcm::latest::AssetId {
+        match self {
+            Self::Basilisk => xcm::latest::AssetId::Concrete(xcm::latest::MultiLocation {
+                parents: 0,
+                interior: xcm::latest::Junctions::Here,
+            }),
+        }
+    }
+
+    fn get_weight_to_fee(&self) -> u128 {
+        match self {
+            Self::Basilisk => 100000000,
+        }
+    }
+}
+
+parameter_types! {
+    pub ParaId: u32 = ParachainInfo::get().into();
+}
+
+impl pallet_rings::Config for Runtime {
+    type Event = Event;
+    type ParaId = ParaId;
+    type Parachains = Parachains;
+}
+
 use modified_construct_runtime::construct_runtime_modified;
 
 impl From<Origin> for Result<frame_system::RawOrigin<AccountId>, Origin> {
@@ -945,6 +989,7 @@ construct_runtime_modified!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
         INV4: inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
+        Rings: pallet_rings::{Pallet, Call, Event<T>} = 72,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
