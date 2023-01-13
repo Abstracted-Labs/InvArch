@@ -5858,7 +5858,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=20d8a3c12e8958f6c55616f65655d40359f7f841#20d8a3c12e8958f6c55616f65655d40359f7f841"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=f2191fda8c6e7e79c154fa46791e4c1f37e8d86e#f2191fda8c6e7e79c154fa46791e4c1f37e8d86e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5875,7 +5875,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-equip"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=20d8a3c12e8958f6c55616f65655d40359f7f841#20d8a3c12e8958f6c55616f65655d40359f7f841"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=f2191fda8c6e7e79c154fa46791e4c1f37e8d86e#f2191fda8c6e7e79c154fa46791e4c1f37e8d86e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8173,7 +8173,7 @@ dependencies = [
 [[package]]
 name = "rmrk-traits"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=20d8a3c12e8958f6c55616f65655d40359f7f841#20d8a3c12e8958f6c55616f65655d40359f7f841"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=f2191fda8c6e7e79c154fa46791e4c1f37e8d86e#f2191fda8c6e7e79c154fa46791e4c1f37e8d86e"
 dependencies = [
  "frame-support",
  "frame-system",

@@ -693,23 +693,24 @@ impl pallet_treasury::Config for Runtime {
 }
 
 parameter_types! {
-      pub const MaxRecursions: u32 = 10;
-      pub const ResourceSymbolLimit: u32 = 10;
-      pub const PartsLimit: u32 = 25;
-      pub const MaxPriorities: u32 = 25;
-      pub const CollectionSymbolLimit: u32 = 100;
-      pub const MaxResourcesOnMint: u32 = 100;
+    pub const ResourceSymbolLimit: u32 = 10;
+    pub const PartsLimit: u32 = 25;
+    pub const MaxPriorities: u32 = 25;
+    pub const CollectionSymbolLimit: u32 = 100;
+    pub const MaxResourcesOnMint: u32 = 100;
+    pub const NestingBudget: u32 = 20;
 }
 
 impl pallet_rmrk_core::Config for Runtime {
     type Event = Event;
     type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
-    type MaxRecursions = MaxRecursions;
     type ResourceSymbolLimit = ResourceSymbolLimit;
     type PartsLimit = PartsLimit;
     type MaxPriorities = MaxPriorities;
     type CollectionSymbolLimit = CollectionSymbolLimit;
     type MaxResourcesOnMint = MaxResourcesOnMint;
+    type NestingBudget = NestingBudget;
+    type WeightInfo = pallet_rmrk_core::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
