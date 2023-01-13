@@ -54,7 +54,7 @@ pub mod pallet {
 
     pub use super::{ipl, ips, ipt};
 
-    use crate::{dispatch::DispatchAs, origin::INV4Origin};
+    use crate::origin::INV4Origin;
 
     use rmrk_traits::primitives::{CollectionId, NftId};
 
@@ -105,14 +105,7 @@ pub mod pallet {
             + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
-            + Encode
-            + DispatchAs<
-                <Self as pallet::Config>::Origin,
-                (
-                    <Self as pallet::Config>::IpId,
-                    Option<<Self as frame_system::Config>::AccountId>,
-                ),
-            >;
+            + Encode;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]

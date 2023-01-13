@@ -36,6 +36,14 @@ impl<
         AccountId: Decode + Encode + Clone,
     > MultisigInternalOrigin<T, IpId, AccountId>
 {
+    pub fn new(id: (IpId, Option<AccountId>)) -> Self {
+        Self {
+            id: id.0,
+            original_caller: id.1,
+            t: PhantomData::default(),
+        }
+    }
+
     pub fn to_account_id(&self) -> AccountId {
         derive_ips_account::<T, IpId, AccountId>(self.id.clone(), self.original_caller.as_ref())
     }

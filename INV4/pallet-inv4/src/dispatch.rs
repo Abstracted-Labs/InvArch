@@ -1,4 +1,7 @@
-use crate::Config;
+use crate::{
+    origin::{INV4Origin, MultisigInternalOrigin},
+    Config,
+};
 use frame_support::{dispatch::Dispatchable, pallet_prelude::*};
 
 pub fn dispatch_call<T: Config>(
@@ -6,11 +9,8 @@ pub fn dispatch_call<T: Config>(
     original_caller: Option<<T as frame_system::Config>::AccountId>,
     call: <T as Config>::Call,
 ) -> DispatchResultWithPostInfo {
-    let origin = call.dispatch_as((ips_id, original_caller));
+    let origin =
+        INV4Origin::Multisig(MultisigInternalOrigin::new((ips_id, original_caller))).into();
 
     call.dispatch(origin)
-}
-
-pub trait DispatchAs<Origin, Id> {
-    fn dispatch_as(&self, id: Id) -> Origin;
 }

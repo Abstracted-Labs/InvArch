@@ -160,7 +160,7 @@ where
         metadata: Option<Vec<u8>>,
         call: Box<<T as pallet::Config>::Call>,
     ) -> DispatchResultWithPostInfo {
-        let owner = ensure_signed(caller.clone())?;
+        let owner = ensure_signed(caller)?;
 
         // These extrinsics must be called only through InvArch functions or storage will become out of sync
         ensure!(
