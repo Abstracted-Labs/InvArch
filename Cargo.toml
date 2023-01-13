@@ -4,7 +4,7 @@ members = [
     'runtime/tinkernet',
    # 'runtime/brainstorm',
 
-   'procedural',
+   'modified-construct-runtime',
 ]
 [profile.release]
 panic = 'unwind'

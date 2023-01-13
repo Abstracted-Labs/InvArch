@@ -885,7 +885,7 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use frame_support_procedural_modified::construct_runtime_modified;
+use modified_construct_runtime::construct_runtime_modified;
 
 impl From<Origin> for Result<frame_system::RawOrigin<AccountId>, Origin> {
     fn from(val: Origin) -> Self {

@@ -1,5 +1,5 @@
 [package]
-name = "frame-support-procedural-modified"
+name = "modified-construct-runtime"
 version = "4.0.0-dev"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2021"

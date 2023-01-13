@@ -191,7 +191,7 @@ fn construct_runtime_intermediary_expansion(
 ) -> Result<TokenStream2> {
     let frame_support = generate_crate_access_2018("frame-support")?;
     let mut expansion =
-        quote::quote!(frame_support_procedural_modified::construct_runtime_modified! { #input });
+        quote::quote!(modified_construct_runtime::construct_runtime_modified! { #input });
     for pallet in definition
         .pallets
         .iter()

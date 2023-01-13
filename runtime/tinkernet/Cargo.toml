@@ -32,7 +32,7 @@ pallet-ipf = { path = "../../../InvArch-Pallet-Library/INV4/pallet-ipf", default
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
-frame-support-procedural-modified = { path = "../../procedural", default-features = false }
+modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
 
 ## Parity's Unique + RMRK Pallets
 pallet-rmrk-core = { git = "https://github.com/rmrk-team/rmrk-substrate", default-features = false, rev = "f2191fda8c6e7e79c154fa46791e4c1f37e8d86e" }
