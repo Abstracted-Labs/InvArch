@@ -33,6 +33,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         SendingFailed,
+        WeightTooHigh,
     }
 
     #[pallet::event]
@@ -59,29 +60,35 @@ pub mod pallet {
         pub fn send_call(
             origin: OriginFor<T>,
             destination: <T as pallet::Config>::Parachains,
-            weight: u64,
+            weight: Weight,
             call: Vec<u8>,
         ) -> DispatchResult {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
 
-            let interior = Junctions::X2(
-                Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                Junction::Plurality {
-                    id: BodyId::Index(core_id),
-                    part: BodyPart::Voice,
-                },
-            );
+            let interior = Junctions::X1(Junction::Plurality {
+                id: BodyId::Index(core_id),
+                part: BodyPart::Voice,
+            });
 
             let dest = destination.get_location();
             let dest_asset = destination.get_asset();
-            let weight_to_fee = destination.get_weight_to_fee();
-
-            let fee = weight as u128 * weight_to_fee;
+            let fee = destination.weight_to_fee(&weight);
 
             let fee_multiasset = MultiAsset {
                 id: dest_asset,
-                fun: Fungibility::Fungible(fee),
+                fun: Fungibility::Fungible(fee.into()),
+            };
+
+            let beneficiary: MultiLocation = MultiLocation {
+                parents: 1,
+                interior: Junctions::X2(
+                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
+                    Junction::Plurality {
+                        id: BodyId::Index(core_id),
+                        part: BodyPart::Voice,
+                    },
+                ),
             };
 
             let message = Xcm(vec![
@@ -92,14 +99,17 @@ pub mod pallet {
                 },
                 Instruction::Transact {
                     origin_type: OriginKind::Native,
-                    require_weight_at_most: weight * 2,
+                    require_weight_at_most: weight
+                        .checked_mul(2)
+                        .ok_or(Error::<T>::WeightTooHigh)?
+                        .ref_time(),
                     call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
                 },
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
                     assets: MultiAssetFilter::Wild(WildMultiAsset::All),
                     max_assets: 1,
-                    beneficiary: interior.clone().into(),
+                    beneficiary,
                 },
             ]);
 
