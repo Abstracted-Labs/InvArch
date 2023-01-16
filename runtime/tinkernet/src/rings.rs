@@ -22,6 +22,15 @@ pub enum Parachains {
 impl ParachainList for Parachains {
     type Balance = Balance;
 
+    fn from_para_id(para_id: u32) -> Option<Self> {
+        match para_id {
+            2090 => Some(Self::Basilisk),
+            2126 => Some(Self::TinkernetTest),
+
+            _ => None,
+        }
+    }
+
     fn get_location(&self) -> MultiLocation {
         match self {
             Self::Basilisk => MultiLocation {

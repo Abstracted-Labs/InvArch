@@ -946,7 +946,7 @@ construct_runtime_modified!(
         // InvArch stuff
         Ipf: ipf::{Pallet, Call, Storage, Event<T>} = 70,
         INV4: inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
-        Rings: pallet_rings::{Pallet, Call, Event<T>} = 72,
+        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>, Inherent} = 72,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,

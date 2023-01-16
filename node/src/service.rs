@@ -29,6 +29,7 @@ use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface, RelayC
 use cumulus_relay_chain_rpc_interface::{create_client_and_start_worker, RelayChainRpcInterface};
 use jsonrpsee::RpcModule;
 use polkadot_service::CollatorPair;
+use rings_inherent_provider::CodeHashes;
 use sc_client_api::ExecutorProvider;
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::{NetworkBlock, NetworkService};
@@ -537,7 +538,15 @@ pub async fn start_parachain_node(
                                 "Failed to create parachain inherent",
                             )
                         })?;
-                        Ok((time, slot, parachain_inherent))
+
+                        let code_hashes = CodeHashes::get_hashes(relay_parent, &relay_chain_interface).await;
+                        let code_hashes = code_hashes.ok_or_else(|| {
+                            Box::<dyn std::error::Error + Send + Sync>::from(
+                                "Failed to create code_hash inherent",
+                            )
+                        })?;
+
+                        Ok((time, slot, parachain_inherent, code_hashes))
                     }
                 },
                 block_import: client.clone(),

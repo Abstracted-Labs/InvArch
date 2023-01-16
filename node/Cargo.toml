@@ -25,6 +25,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.132", features = ["derive"] }
 hex-literal = "0.3.4"
 async-trait = { version = "0.1.48" }
+scale-info = { version = "2.0.0", default-features = false, features = ["derive"] }
 
 ## RPC related Dependencies
 jsonrpsee = { version = "0.15.1", features = ["server"] }
@@ -34,6 +35,7 @@ futures = "0.3.24"
 tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
 #brainstorm-runtime = { path = "../runtime/brainstorm", optional = true }
 
+rings-inherent-provider = { path = "../../InvArch-Pallet-Library/rings-inherent-provider" }
 
 ## Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
@@ -102,9 +104,6 @@ cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/cumul
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
-
-## InvArch Dependencies
-pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29"}
 
 
 [features]
