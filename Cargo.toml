@@ -6,5 +6,6 @@ members = [
 
     "OCIF/staking",
     "pallet-checked-inflation",
-    "pallet-rings"
+    "pallet-rings",
+    "rings-inherent-provider",
 ]
