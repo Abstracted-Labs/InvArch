@@ -540,11 +540,6 @@ pub async fn start_parachain_node(
                         })?;
 
                         let code_hashes = CodeHashes::get_hashes(relay_parent, &relay_chain_interface).await;
-                        let code_hashes = code_hashes.ok_or_else(|| {
-                            Box::<dyn std::error::Error + Send + Sync>::from(
-                                "Failed to create code_hash inherent",
-                            )
-                        })?;
 
                         Ok((time, slot, parachain_inherent, code_hashes))
                     }
