@@ -7,7 +7,7 @@ use frame_support::{
         Weight, WeightToFee, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
     },
 };
-use pallet_rings::ParachainList;
+use pallet_rings::{ParachainAssetsList, ParachainList};
 use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_runtime::Perbill;
@@ -19,8 +19,53 @@ pub enum Parachains {
     TinkernetTest,
 }
 
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum ParachainAssets {
+    Basilisk(BasiliskAssets),
+    TinkernetTest(TinkernetTestAssets),
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum BasiliskAssets {
+    BSX,
+    TNKR,
+    KSM,
+    AUSD,
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
+pub enum TinkernetTestAssets {
+    TNKR,
+}
+
+impl ParachainAssetsList for ParachainAssets {
+    type Parachains = Parachains;
+
+    fn get_parachain(&self) -> Self::Parachains {
+        match self {
+            Self::Basilisk(_) => Parachains::Basilisk,
+            Self::TinkernetTest(_) => Parachains::TinkernetTest,
+        }
+    }
+
+    fn get_asset_id(&self) -> AssetId {
+        match self {
+            Self::Basilisk(_) => AssetId::Concrete(MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::GeneralIndex(0u128)),
+            }),
+
+            Self::TinkernetTest(_) => AssetId::Concrete(MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::GeneralIndex(CORE_ASSET_ID as u128)),
+            }),
+        }
+    }
+}
+
 impl ParachainList for Parachains {
     type Balance = Balance;
+    type ParachainAssets = ParachainAssets;
 
     fn from_para_id(para_id: u32) -> Option<Self> {
         match para_id {
@@ -45,17 +90,10 @@ impl ParachainList for Parachains {
         }
     }
 
-    fn get_asset(&self) -> AssetId {
+    fn get_main_asset(&self) -> Self::ParachainAssets {
         match self {
-            Self::Basilisk => AssetId::Concrete(MultiLocation {
-                parents: 0,
-                interior: Junctions::X1(Junction::GeneralIndex(0u128)),
-            }),
-
-            Self::TinkernetTest => AssetId::Concrete(MultiLocation {
-                parents: 0,
-                interior: Junctions::X1(Junction::GeneralIndex(CORE_ASSET_ID as u128)),
-            }),
+            Self::Basilisk => ParachainAssets::Basilisk(BasiliskAssets::BSX),
+            Self::TinkernetTest => ParachainAssets::TinkernetTest(TinkernetTestAssets::TNKR),
         }
     }
 
