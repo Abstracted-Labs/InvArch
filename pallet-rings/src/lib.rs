@@ -122,11 +122,6 @@ pub mod pallet {
             let dest_asset = destination.get_main_asset().get_asset_id();
             let fee = destination.weight_to_fee(&weight);
 
-            let fee_multiasset = MultiAsset {
-                id: dest_asset,
-                fun: Fungibility::Fungible(fee.into()),
-            };
-
             let beneficiary: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
@@ -136,6 +131,41 @@ pub mod pallet {
                         part: BodyPart::Voice,
                     },
                 ),
+            };
+
+            let xcm_fee = destination
+                .xcm_fee(&mut Xcm(vec![
+                    // Pay execution fees
+                    Instruction::WithdrawAsset(MultiAssets::new()),
+                    Instruction::BuyExecution {
+                        fees: MultiAsset {
+                            id: dest_asset.clone(),
+                            fun: Fungibility::Fungible(Default::default()),
+                        },
+                        weight_limit: WeightLimit::Unlimited,
+                    },
+                    // Actual transfer instruction
+                    Instruction::Transact {
+                        origin_type: OriginKind::Native,
+                        require_weight_at_most: weight
+                            .checked_mul(2)
+                            .ok_or(Error::<T>::WeightTooHigh)?
+                            .ref_time(),
+                        call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
+                    },
+                    // Refund unused fees
+                    Instruction::RefundSurplus,
+                    Instruction::DepositAsset {
+                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                        max_assets: 1,
+                        beneficiary: beneficiary.clone(),
+                    },
+                ]))
+                .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
+
+            let fee_multiasset = MultiAsset {
+                id: dest_asset,
+                fun: Fungibility::Fungible(xcm_fee.into()),
             };
 
             let message = Xcm(vec![
