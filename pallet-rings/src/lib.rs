@@ -7,7 +7,7 @@ use sp_std::convert::TryInto;
 mod traits;
 
 pub use pallet::*;
-pub use traits::ParachainList;
+pub use traits::{ParachainAssetsList, ParachainList};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -51,6 +51,14 @@ pub mod pallet {
             destination: <T as pallet::Config>::Parachains,
             call: Vec<u8>,
         },
+
+        AssetsTransferred {
+            parachain: <<<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets as ParachainAssetsList>::Parachains,
+            asset: <<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets,
+            amount: u128,
+            from: <T as pallet_inv4::Config>::IpId,
+            to: <T as frame_system::Config>::AccountId,
+        },
     }
 
     #[pallet::inherent]
@@ -62,19 +70,19 @@ pub mod pallet {
         >: From<<T as frame_system::Config>::Origin>,
 
         <T as pallet_inv4::Config>::IpId: Into<u32>,
+
+        [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     {
         type Call = Call<T>;
         type Error = sp_inherents::MakeFatalError<()>;
         const INHERENT_IDENTIFIER: InherentIdentifier = *b"codehash";
 
         fn create_inherent(data: &InherentData) -> Option<Self::Call> {
-            let hashes: CodeHashes = data
-                .get_data(&Self::INHERENT_IDENTIFIER)
-                .ok()
-                .flatten()
-                .expect("code_hashes data not here");
-
-            Some(Call::set_storage { hashes })
+            if let Some(hashes) = data.get_data(&Self::INHERENT_IDENTIFIER).ok().flatten() {
+                Some(Call::set_storage { hashes })
+            } else {
+                None
+            }
         }
 
         fn is_inherent(call: &Self::Call) -> bool {
@@ -91,6 +99,8 @@ pub mod pallet {
         >: From<<T as frame_system::Config>::Origin>,
 
         <T as pallet_inv4::Config>::IpId: Into<u32>,
+
+        [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     {
         #[pallet::weight(100_000_000)]
         pub fn send_call(
@@ -108,7 +118,7 @@ pub mod pallet {
             });
 
             let dest = destination.get_location();
-            let dest_asset = destination.get_asset();
+            let dest_asset = destination.get_main_asset().get_asset_id();
             let fee = destination.weight_to_fee(&weight);
 
             let fee_multiasset = MultiAsset {
@@ -156,6 +166,59 @@ pub mod pallet {
                 sender: core.id,
                 destination,
                 call,
+            });
+
+            Ok(())
+        }
+
+        #[pallet::weight(100_000_000)]
+        pub fn transfer_assets(
+            origin: OriginFor<T>,
+            asset: <<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets,
+            amount: u128,
+            to: <T as frame_system::Config>::AccountId,
+        ) -> DispatchResult {
+            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core_id = core.id.into();
+
+            let interior = Junctions::X1(Junction::Plurality {
+                id: BodyId::Index(core_id),
+                part: BodyPart::Voice,
+            });
+
+            let parachain = asset.get_parachain();
+
+            let dest = parachain.get_location();
+
+            let asset_id = asset.get_asset_id();
+
+            let multi_asset = MultiAsset {
+                id: asset_id,
+                fun: Fungibility::Fungible(amount),
+            };
+
+            let beneficiary: MultiLocation = MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::AccountId32 {
+                    network: NetworkId::Any,
+                    id: to.clone().into(),
+                }),
+            };
+
+            let message = Xcm(vec![Instruction::TransferAsset {
+                assets: multi_asset.into(),
+                beneficiary,
+            }]);
+
+            pallet_xcm::Pallet::<T>::send_xcm(interior, dest, message)
+                .map_err(|_| Error::<T>::SendingFailed)?;
+
+            Self::deposit_event(Event::AssetsTransferred {
+                parachain,
+                asset,
+                amount,
+                from: core.id,
+                to,
             });
 
             Ok(())
