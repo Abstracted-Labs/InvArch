@@ -1,4 +1,8 @@
-use crate::{assets::CORE_ASSET_ID, Balance, Event, ParachainInfo, Runtime};
+use crate::{
+    assets::CORE_ASSET_ID,
+    xcm_config::{BaseXcmWeight, MaxInstructions},
+    Balance, Call, Event, ParachainInfo, Runtime,
+};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     parameter_types,
@@ -12,6 +16,8 @@ use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_runtime::Perbill;
 use xcm::prelude::*;
+use xcm_builder::FixedWeightBounds;
+use xcm_executor::traits::WeightBounds;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Parachains {
@@ -66,6 +72,7 @@ impl ParachainAssetsList for ParachainAssets {
 impl ParachainList for Parachains {
     type Balance = Balance;
     type ParachainAssets = ParachainAssets;
+    type Call = Call;
 
     fn from_para_id(para_id: u32) -> Option<Self> {
         match para_id {
@@ -102,6 +109,20 @@ impl ParachainList for Parachains {
             Self::Basilisk => BasiliskWeightToFee::weight_to_fee(weight),
 
             Self::TinkernetTest => crate::WeightToFee::weight_to_fee(weight),
+        }
+    }
+
+    fn xcm_fee(&self, message: &mut Xcm<Self::Call>) -> Result<Self::Balance, ()> {
+        match self {
+            Self::TinkernetTest => {
+                FixedWeightBounds::<BaseXcmWeight, Call, MaxInstructions>::weight(message).map(
+                    |weight| {
+                        self.weight_to_fee(&Weight::from_ref_time(weight + BaseXcmWeight::get()))
+                    },
+                )
+            }
+
+            _ => Err(()),
         }
     }
 }

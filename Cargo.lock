@@ -5848,6 +5848,7 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
