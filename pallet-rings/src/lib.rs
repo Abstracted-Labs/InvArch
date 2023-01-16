@@ -41,6 +41,7 @@ pub mod pallet {
     pub enum Error<T> {
         SendingFailed,
         WeightTooHigh,
+        FailedToCalculateXcmFee,
     }
 
     #[pallet::event]
@@ -205,11 +206,6 @@ pub mod pallet {
                 }),
             };
 
-            let fee_multiasset = MultiAsset {
-                id: parachain.get_main_asset().get_asset_id(),
-                fun: Fungibility::Fungible(1000000000000u128),
-            };
-
             let core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
@@ -219,6 +215,37 @@ pub mod pallet {
                         part: BodyPart::Voice,
                     },
                 ),
+            };
+
+            let xcm_fee = parachain
+                .xcm_fee(&mut Xcm(vec![
+                    // Pay execution fees
+                    Instruction::WithdrawAsset(MultiAssets::new()),
+                    Instruction::BuyExecution {
+                        fees: MultiAsset {
+                            id: asset.get_asset_id(),
+                            fun: Fungibility::Fungible(Default::default()),
+                        },
+                        weight_limit: WeightLimit::Unlimited,
+                    },
+                    // Actual transfer instruction
+                    Instruction::TransferAsset {
+                        assets: multi_asset.clone().into(),
+                        beneficiary: beneficiary.clone(),
+                    },
+                    // Refund unused fees
+                    Instruction::RefundSurplus,
+                    Instruction::DepositAsset {
+                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                        max_assets: 1,
+                        beneficiary: core_multilocation.clone(),
+                    },
+                ]))
+                .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
+
+            let fee_multiasset = MultiAsset {
+                id: parachain.get_main_asset().get_asset_id(),
+                fun: Fungibility::Fungible(xcm_fee.into()),
             };
 
             let message = Xcm(vec![

@@ -1,10 +1,12 @@
 use codec::MaxEncodedLen;
 use frame_support::{weights::Weight, Parameter};
-use xcm::latest::{AssetId, MultiLocation};
+use xcm::latest::{AssetId, Instruction, MultiLocation, Xcm};
+use xcm_executor::traits::WeightBounds;
 
 pub trait ParachainList: Parameter + MaxEncodedLen {
     type Balance: Into<u128>;
     type ParachainAssets: ParachainAssetsList;
+    type Call;
 
     fn from_para_id(para_id: u32) -> Option<Self>;
 
@@ -13,6 +15,8 @@ pub trait ParachainList: Parameter + MaxEncodedLen {
     fn get_main_asset(&self) -> Self::ParachainAssets;
 
     fn weight_to_fee(&self, weight: &Weight) -> Self::Balance;
+
+    fn xcm_fee(&self, message: &mut Xcm<Self::Call>) -> Result<Self::Balance, ()>;
 }
 
 pub trait ParachainAssetsList: Parameter + MaxEncodedLen {
