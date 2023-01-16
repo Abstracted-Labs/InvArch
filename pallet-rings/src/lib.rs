@@ -15,7 +15,7 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::{ensure_none, pallet_prelude::OriginFor};
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
-    use rings_inherent_provider::CodeHashes;
+    use rings_inherent_provider::{CodeHashes, InnerCodeHashes};
     use sp_std::{vec, vec::Vec};
     use xcm::{latest::prelude::*, DoubleEncoded};
 
@@ -78,11 +78,11 @@ pub mod pallet {
         const INHERENT_IDENTIFIER: InherentIdentifier = *b"codehash";
 
         fn create_inherent(data: &InherentData) -> Option<Self::Call> {
-            if let Some(hashes) = data.get_data(&Self::INHERENT_IDENTIFIER).ok().flatten() {
-                Some(Call::set_storage { hashes })
-            } else {
-                None
-            }
+            data.get_data::<CodeHashes>(&Self::INHERENT_IDENTIFIER)
+                .ok()
+                .flatten()?
+                .0
+                .map(|hashes| Call::set_storage { hashes })
         }
 
         fn is_inherent(call: &Self::Call) -> bool {
@@ -205,10 +205,42 @@ pub mod pallet {
                 }),
             };
 
-            let message = Xcm(vec![Instruction::TransferAsset {
-                assets: multi_asset.into(),
-                beneficiary,
-            }]);
+            let fee_multiasset = MultiAsset {
+                id: parachain.get_main_asset().get_asset_id(),
+                fun: Fungibility::Fungible(1000000000000u128),
+            };
+
+            let core_multilocation: MultiLocation = MultiLocation {
+                parents: 1,
+                interior: Junctions::X2(
+                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
+                    Junction::Plurality {
+                        id: BodyId::Index(core_id),
+                        part: BodyPart::Voice,
+                    },
+                ),
+            };
+
+            let message = Xcm(vec![
+                // Pay execution fees
+                Instruction::WithdrawAsset(fee_multiasset.clone().into()),
+                Instruction::BuyExecution {
+                    fees: fee_multiasset,
+                    weight_limit: WeightLimit::Unlimited,
+                },
+                // Actual transfer instruction
+                Instruction::TransferAsset {
+                    assets: multi_asset.into(),
+                    beneficiary,
+                },
+                // Refund unused fees
+                Instruction::RefundSurplus,
+                Instruction::DepositAsset {
+                    assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                    max_assets: 1,
+                    beneficiary: core_multilocation,
+                },
+            ]);
 
             pallet_xcm::Pallet::<T>::send_xcm(interior, dest, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
@@ -225,19 +257,14 @@ pub mod pallet {
         }
 
         #[pallet::weight(100_000_000)]
-        pub fn set_storage(origin: OriginFor<T>, hashes: CodeHashes) -> DispatchResult {
+        pub fn set_storage(origin: OriginFor<T>, hashes: InnerCodeHashes) -> DispatchResult {
             ensure_none(origin)?;
 
-            hashes
-                .0
-                .into_iter()
-                .for_each(|(para_id, hash): (u32, H256)| {
-                    if let Some(parachain) =
-                        <T as pallet::Config>::Parachains::from_para_id(para_id)
-                    {
-                        CurrentCodeHashes::<T>::insert(parachain, hash);
-                    }
-                });
+            hashes.into_iter().for_each(|(para_id, hash): (u32, H256)| {
+                if let Some(parachain) = <T as pallet::Config>::Parachains::from_para_id(para_id) {
+                    CurrentCodeHashes::<T>::insert(parachain, hash);
+                }
+            });
 
             Ok(())
         }
