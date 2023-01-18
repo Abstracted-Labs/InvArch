@@ -16,7 +16,7 @@
 // limitations under the License.
 
 #[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{Block, RuntimeApi, VERSION};
+use tinkernet_runtime::{Block, VERSION};
 
 //#[cfg(feature = "brainstorm")]
 //use brainstorm_runtime::{Block, RuntimeApi, VERSION};
@@ -24,7 +24,7 @@ use tinkernet_runtime::{Block, RuntimeApi, VERSION};
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, ChainIdentify, TemplateRuntimeExecutor},
+    service::{new_partial, ChainIdentify, ParachainNativeExecutor},
 };
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
@@ -143,8 +143,6 @@ macro_rules! construct_async_run {
 		let runner = $cli.create_runner($cmd)?;
 		runner.async_run(|$config| {
 			let $components = new_partial::<
-				RuntimeApi,
-				TemplateRuntimeExecutor,
 				_
 			>(
 				&$config,
@@ -263,28 +261,28 @@ pub fn run() -> Result<()> {
             match cmd {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
-                        runner.sync_run(|config| cmd.run::<Block, TemplateRuntimeExecutor>(config))
+                        runner.sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
                             .into())
                     }
                 }
-                BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-                        &config,
-                        crate::service::parachain_build_import_queue,
-                    )?;
-                    cmd.run(partials.client)
-                }),
+                #[cfg(not(feature = "runtime-benchmarks"))]
+                BenchmarkCmd::Storage(_) => {
+                    return Err(sc_cli::Error::Input(
+                        "Compile with --features=runtime-benchmarks \
+						             to enable storage benchmarks."
+                            .into(),
+                    )
+                    .into())
+                }
+                #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-                        &config,
-                        crate::service::parachain_build_import_queue,
-                    )?;
+                    let partials =
+                        new_partial::<_>(&config, crate::service::parachain_build_import_queue)?;
                     let db = partials.backend.expose_db();
                     let storage = partials.backend.expose_storage();
-
                     cmd.run(config, partials.client.clone(), db, storage)
                 }),
                 BenchmarkCmd::Machine(cmd) => {
@@ -344,7 +342,7 @@ pub fn run() -> Result<()> {
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
                 if is_solo_dev {
-                    return crate::service::start_solo_dev::<RuntimeApi, TemplateRuntimeExecutor>(
+                    return crate::service::start_solo_dev(
                         config,
                     )
                     .map_err(Into::into);
