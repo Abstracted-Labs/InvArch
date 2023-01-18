@@ -5,16 +5,14 @@ use frame_support::{
     dispatch::{CallMetadata, Dispatchable, GetCallMetadata, GetDispatchInfo, RawOrigin},
     pallet_prelude::*,
     traits::WrapperKeepOpaque,
-    weights::WeightToFee,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, Parentage, SubIptInfo};
-use sp_arithmetic::traits::Zero;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedSub, StaticLookup};
+use sp_runtime::traits::{CheckedAdd, CheckedSub};
 use sp_std::{boxed::Box, vec, vec::Vec};
 
-pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::Call>;
+pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::RuntimeCall>;
 
 /// Details of a multisig operation
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -34,7 +32,7 @@ pub type MultisigOperationOf<T> = MultisigOperation<
         (
             <T as frame_system::Config>::AccountId,
             // Token account voted with???
-            Option<<T as pallet::Config>::IpId>,
+            Option<<T as pallet::Config>::CoreId>,
         ),
         <T as Config>::MaxCallers,
     >,
@@ -43,7 +41,7 @@ pub type MultisigOperationOf<T> = MultisigOperation<
 >;
 
 pub type SubAssetsWithEndowment<T> = Vec<(
-    SubIptInfo<<T as pallet::Config>::IpId, BoundedVec<u8, <T as pallet::Config>::MaxMetadata>>,
+    SubIptInfo<<T as pallet::Config>::CoreId, BoundedVec<u8, <T as pallet::Config>::MaxMetadata>>,
     (
         <T as frame_system::Config>::AccountId,
         <T as pallet::Config>::Balance,
@@ -54,14 +52,14 @@ impl<T: Config> Pallet<T> {
     /// Mint `amount` of specified token to `target` account
     pub(crate) fn inner_ipt_mint(
         owner: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         amount: <T as pallet::Config>::Balance,
         target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
         // IP Set must exist for there to be a token
-        let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = CoreStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Cannot mint IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
@@ -94,14 +92,14 @@ impl<T: Config> Pallet<T> {
     /// Burn `amount` of specified token from `target` account
     pub(crate) fn inner_ipt_burn(
         owner: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         amount: <T as pallet::Config>::Balance,
         target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
 
         // IP Set must exist for their to be a token
-        let ip = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+        let ip = CoreStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
         // Cannot burn IP Tokens on `Parentage::Child` assets or `IpsType::Replica` IP Sets
         match &ip.parentage {
@@ -135,9 +133,9 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_operate_multisig(
         caller: OriginFor<T>,
         include_caller: bool,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         metadata: Option<Vec<u8>>,
-        call: Box<<T as pallet::Config>::Call>,
+        call: Box<<T as pallet::Config>::RuntimeCall>,
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller.clone())?;
 
@@ -160,7 +158,7 @@ impl<T: Config> Pallet<T> {
         );
 
         // Get IPS/IPT info
-        let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+        let ipt = CoreStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
         let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
             Some(
@@ -245,29 +243,11 @@ impl<T: Config> Pallet<T> {
 
         // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
         if owner_balance >= total_per_threshold {
-            // Transfer the extrinsic fee for `call` from `caller` to the IP Set account
-            pallet_balances::Pallet::<T>::transfer(
-                caller,
-                // Recompute IP Set AccountId
-                <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                    derive_ips_account::<
-                        T,
-                        <T as Config>::IpId,
-                        <T as frame_system::Config>::AccountId,
-                    >(ipt_id.0, None),
-                ),
-                // Calculate fee from the `call` weight
-                <T as pallet::Config>::Balance::from(T::WeightToFee::weight_to_fee(
-                    &call.get_dispatch_info().weight,
-                ))
-                .into(),
-            )?;
-
             // Actually dispatch this call and return the result of it
             let dispatch_result = call.dispatch(
                 RawOrigin::Signed(derive_ips_account::<
                     T,
-                    <T as Config>::IpId,
+                    <T as Config>::CoreId,
                     <T as frame_system::Config>::AccountId,
                 >(
                     ipt_id.0, if include_caller { Some(&owner) } else { None }
@@ -279,7 +259,7 @@ impl<T: Config> Pallet<T> {
                 ips_id: ipt_id.0,
                 executor_account: derive_ips_account::<
                     T,
-                    <T as Config>::IpId,
+                    <T as Config>::CoreId,
                     <T as frame_system::Config>::AccountId,
                 >(
                     ipt_id.0, if include_caller { Some(&owner) } else { None }
@@ -290,30 +270,6 @@ impl<T: Config> Pallet<T> {
                 result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
-            // `caller` does not have enough balance to execute.
-            if owner_balance > Zero::zero() {
-                // Transfer the `caller`s portion of the extrinsic fee to the IP Set account
-                pallet_balances::Pallet::<T>::transfer(
-                    caller,
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<
-                            T,
-                            <T as Config>::IpId,
-                            <T as frame_system::Config>::AccountId,
-                        >(ipt_id.0, None),
-                    ),
-                    // `caller`s balance is x percent of `total_per_threshold`,
-                    // So they pay x percent of the fee
-                    <T as pallet::Config>::Balance::from(
-                        (T::WeightToFee::weight_to_fee(&call.get_dispatch_info().weight)
-                            .checked_div(&total_per_threshold.into())
-                            .ok_or(Error::<T>::DivisionByZero)?)
-                            * owner_balance.into(),
-                    )
-                    .into(),
-                )?;
-            }
-
             // Multisig call is now in the voting stage, so update storage.
             Multisig::<T>::insert(
                 ipt_id.0,
@@ -335,7 +291,7 @@ impl<T: Config> Pallet<T> {
                 ips_id: ipt_id.0,
                 executor_account: derive_ips_account::<
                     T,
-                    <T as Config>::IpId,
+                    <T as Config>::CoreId,
                     <T as frame_system::Config>::AccountId,
                 >(
                     ipt_id.0, if include_caller { Some(&owner) } else { None }
@@ -354,13 +310,13 @@ impl<T: Config> Pallet<T> {
     /// Vote on a multisig transaction that has not been executed yet
     pub(crate) fn inner_vote_multisig(
         caller: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         call_hash: [u8; 32],
     ) -> DispatchResultWithPostInfo {
         Multisig::<T>::try_mutate_exists(ipt_id.0, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
-            let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+            let ipt = CoreStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
             let mut old_data = data
                 .take()
@@ -393,7 +349,7 @@ impl<T: Config> Pallet<T> {
                 .signers
                 .clone()
                 .into_iter()
-                .map(|(voter, asset): (T::AccountId, Option<T::IpId>)| {
+                .map(|(voter, asset): (T::AccountId, Option<T::CoreId>)| {
                     Balance::<T>::get((ipt_id.0, asset), voter).map(|balance| {
                         if let OneOrPercent::ZeroPoint(percent) = if let Some(sub_asset) = asset {
                             Pallet::<T>::asset_weight(ipt_id.0, sub_asset).unwrap()
@@ -441,33 +397,8 @@ impl<T: Config> Pallet<T> {
                     total_issuance
                 };
 
-            // Calculate fee from call weight
-            let fee: <T as pallet::Config>::Balance =
-                T::WeightToFee::weight_to_fee(&old_data.call_weight).into();
-
             // If already cast votes + `caller` weighted votes are enough to meet/exeed the threshold, then go ahead and execute the `call` now.
             if (total_in_operation + voter_balance) >= total_per_threshold {
-                // Transfer the extrinsic fee for `call` from `caller` to the IP Set account
-                pallet_balances::Pallet::<T>::transfer(
-                    caller,
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                        derive_ips_account::<
-                            T,
-                            <T as Config>::IpId,
-                            <T as frame_system::Config>::AccountId,
-                        >(ipt_id.0, None),
-                    ),
-                    // Voter will pay the remainder of the fee after subtracting the total IPTs already in the operation converted to real fee value.
-                    fee.checked_sub(
-                        &(total_in_operation
-                            * (fee
-                                .checked_div(&total_per_threshold)
-                                .ok_or(Error::<T>::DivisionByZero)?)),
-                    )
-                    .ok_or(Error::<T>::NotEnoughAmount)?
-                    .into(),
-                )?;
-
                 // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
@@ -479,7 +410,7 @@ impl<T: Config> Pallet<T> {
                     .dispatch(
                         RawOrigin::Signed(derive_ips_account::<
                             T,
-                            <T as Config>::IpId,
+                            <T as Config>::CoreId,
                             <T as frame_system::Config>::AccountId,
                         >(
                             ipt_id.0,
@@ -496,7 +427,7 @@ impl<T: Config> Pallet<T> {
                     ips_id: ipt_id.0,
                     executor_account: derive_ips_account::<
                         T,
-                        <T as Config>::IpId,
+                        <T as Config>::CoreId,
                         <T as frame_system::Config>::AccountId,
                     >(
                         ipt_id.0,
@@ -512,30 +443,6 @@ impl<T: Config> Pallet<T> {
                     result: dispatch_result.map(|_| ()).map_err(|e| e.error),
                 });
             } else {
-                // `caller`s votes were not enough to pass the vote
-                if voter_balance > Zero::zero() {
-                    // Transfer the callers portion of the transaction fee to the IP Set account
-                    pallet_balances::Pallet::<T>::transfer(
-                        caller,
-                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                            derive_ips_account::<
-                                T,
-                                <T as Config>::IpId,
-                                <T as frame_system::Config>::AccountId,
-                            >(ipt_id.0, None),
-                        ),
-                        // callers balance is x percent of `total_per_threshold`,
-                        // So they pay x percent of the fee
-                        <T as pallet::Config>::Balance::from(
-                            (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                                .checked_div(&total_per_threshold.into())
-                                .ok_or(Error::<T>::DivisionByZero)?)
-                                * voter_balance.into(),
-                        )
-                        .into(),
-                    )?;
-                }
-
                 // Update storage
                 old_data.signers = {
                     let mut v = old_data.signers.to_vec();
@@ -548,7 +455,7 @@ impl<T: Config> Pallet<T> {
                     ips_id: ipt_id.0,
                     executor_account: derive_ips_account::<
                         T,
-                        <T as Config>::IpId,
+                        <T as Config>::CoreId,
                         <T as frame_system::Config>::AccountId,
                     >(
                         ipt_id.0,
@@ -574,13 +481,13 @@ impl<T: Config> Pallet<T> {
     /// Withdraw vote from an ongoing multisig operation
     pub(crate) fn inner_withdraw_vote_multisig(
         caller: OriginFor<T>,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         call_hash: [u8; 32],
     ) -> DispatchResultWithPostInfo {
         Multisig::<T>::try_mutate_exists(ipt_id.0, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
-            let ipt = IpStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
+            let ipt = CoreStorage::<T>::get(ipt_id.0).ok_or(Error::<T>::IpDoesntExist)?;
 
             let mut old_data = data
                 .take()
@@ -594,63 +501,6 @@ impl<T: Config> Pallet<T> {
 
             // if `caller` is the account who created this vote, they can dissolve it immediately
             if owner == old_data.original_caller {
-                // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
-                let total_issuance = ipt.supply
-                    + SubAssets::<T>::iter_prefix_values(ipt_id.0)
-                        .map(|sub_asset| {
-                            let supply =
-                                Balance::<T>::iter_prefix_values((ipt_id.0, Some(sub_asset.id)))
-                                    .sum();
-
-                            if let OneOrPercent::ZeroPoint(weight) =
-                                Pallet::<T>::asset_weight(ipt_id.0, sub_asset.id)?
-                            {
-                                Some(weight * supply)
-                            } else {
-                                Some(supply)
-                            }
-                        })
-                        .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                        .ok_or(Error::<T>::IpDoesntExist)?
-                        .into_iter()
-                        .sum();
-
-                // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call.
-                let total_per_threshold: <T as pallet::Config>::Balance =
-                    if let OneOrPercent::ZeroPoint(percent) =
-                        Pallet::<T>::execution_threshold(ipt_id.0)
-                            .ok_or(Error::<T>::IpDoesntExist)?
-                    {
-                        percent * total_issuance
-                    } else {
-                        total_issuance
-                    };
-
-                // Send funds held in IPS account for the transaction fee back to the individual signers
-                for signer in old_data.signers {
-                    pallet_balances::Pallet::<T>::transfer(
-                        <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                            derive_ips_account::<
-                                T,
-                                <T as Config>::IpId,
-                                <T as frame_system::Config>::AccountId,
-                            >(ipt_id.0, None),
-                        )),
-                        <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(
-                            signer.0.clone(),
-                        ),
-                        <T as pallet::Config>::Balance::from(
-                            (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                                .checked_div(&total_per_threshold.into())
-                                .ok_or(Error::<T>::DivisionByZero)?)
-                                * Balance::<T>::get((ipt_id.0, signer.1), signer.0)
-                                    .ok_or(Error::<T>::UnknownError)?
-                                    .into(),
-                        )
-                        .into(),
-                    )?;
-                }
-
                 // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
                 *data = None;
 
@@ -658,7 +508,7 @@ impl<T: Config> Pallet<T> {
                     ips_id: ipt_id.0,
                     executor_account: derive_ips_account::<
                         T,
-                        <T as Config>::IpId,
+                        <T as Config>::CoreId,
                         <T as frame_system::Config>::AccountId,
                     >(
                         ipt_id.0,
@@ -725,28 +575,9 @@ impl<T: Config> Pallet<T> {
                     .signers
                     .into_iter()
                     .filter(|signer| signer.0 != owner)
-                    .collect::<Vec<(T::AccountId, Option<T::IpId>)>>()
+                    .collect::<Vec<(T::AccountId, Option<T::CoreId>)>>()
                     .try_into()
                     .map_err(|_| Error::<T>::TooManySignatories)?;
-
-                // Transfer the callers portion of the transaction fee from the IP Set account back to the caller
-                pallet_balances::Pallet::<T>::transfer(
-                    <T as frame_system::Config>::Origin::from(RawOrigin::Signed(
-                        derive_ips_account::<
-                            T,
-                            <T as Config>::IpId,
-                            <T as frame_system::Config>::AccountId,
-                        >(ipt_id.0, None),
-                    )),
-                    <<T as frame_system::Config>::Lookup as StaticLookup>::unlookup(owner.clone()),
-                    <T as pallet::Config>::Balance::from(
-                        (T::WeightToFee::weight_to_fee(&old_data.call_weight)
-                            .checked_div(&total_per_threshold.into())
-                            .ok_or(Error::<T>::DivisionByZero)?)
-                            * voter_balance.into(),
-                    )
-                    .into(),
-                )?;
 
                 *data = Some(old_data.clone());
 
@@ -754,7 +585,7 @@ impl<T: Config> Pallet<T> {
                     ips_id: ipt_id.0,
                     executor_account: derive_ips_account::<
                         T,
-                        <T as Config>::IpId,
+                        <T as Config>::CoreId,
                         <T as frame_system::Config>::AccountId,
                     >(
                         ipt_id.0,
@@ -779,10 +610,10 @@ impl<T: Config> Pallet<T> {
     /// Create one or more sub tokens for an IP Set
     pub(crate) fn inner_create_sub_token(
         caller: OriginFor<T>,
-        ipt_id: T::IpId,
+        ipt_id: T::CoreId,
         sub_tokens: SubAssetsWithEndowment<T>,
     ) -> DispatchResultWithPostInfo {
-        IpStorage::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
+        CoreStorage::<T>::try_mutate_exists(ipt_id, |ipt| -> DispatchResultWithPostInfo {
             let caller = ensure_signed(caller.clone())?;
 
             let old_ipt = ipt.clone().ok_or(Error::<T>::IpDoesntExist)?;
@@ -821,11 +652,11 @@ impl<T: Config> Pallet<T> {
 
     /// Mint `amount` of specified token to `target` account
     pub fn internal_mint(
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         target: T::AccountId,
         amount: <T as pallet::Config>::Balance,
     ) -> DispatchResult {
-        IpStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
+        CoreStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
             Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
                 // Increase `target` account's balance of `ipt_id` sub token by `amount`
@@ -855,10 +686,10 @@ impl<T: Config> Pallet<T> {
     /// Burn `amount` of specified token from `target` account
     pub fn internal_burn(
         target: T::AccountId,
-        ipt_id: (T::IpId, Option<T::IpId>),
+        ipt_id: (T::CoreId, Option<T::CoreId>),
         amount: <T as pallet::Config>::Balance,
     ) -> DispatchResult {
-        IpStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
+        CoreStorage::<T>::try_mutate(ipt_id.0, |ipt| -> DispatchResult {
             Balance::<T>::try_mutate(ipt_id, target, |balance| -> DispatchResult {
                 let old_balance = balance.take().ok_or(Error::<T>::IpDoesntExist)?;
                 // Decrease `target` account's balance of `ipt_id` sub token by `amount`

@@ -25,7 +25,6 @@ use frame_support::{
     dispatch::Dispatchable,
     pallet_prelude::*,
     traits::{Currency as FSCurrency, Get, GetCallMetadata},
-    weights::{GetDispatchInfo, PostDispatchInfo, WeightToFee},
     BoundedVec, Parameter,
 };
 use frame_system::pallet_prelude::*;
@@ -33,7 +32,7 @@ use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
 use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
 /// Import the primitives crate
-use primitives::IpInfo;
+use primitives::CoreInfo;
 
 pub use pallet::*;
 
@@ -45,31 +44,19 @@ pub mod util;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
     use primitives::{OneOrPercent, SubIptInfo};
     use scale_info::prelude::fmt::Display;
     use sp_std::iter::Sum;
 
     pub use super::{ipl, ips, ipt};
 
-    use crate::ipl::LicenseList;
-
-    use rmrk_traits::primitives::{CollectionId, NftId};
-
     #[pallet::config]
-    pub trait Config:
-        frame_system::Config
-        + ipf::Config
-        + pallet_balances::Config
-        + pallet_rmrk_core::Config
-        + pallet_uniques::Config<
-            CollectionId = rmrk_traits::primitives::CollectionId,
-            ItemId = rmrk_traits::primitives::NftId,
-        >
-    {
+    pub trait Config: frame_system::Config + pallet_balances::Config {
         /// The IPS Pallet Events
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The IPS ID type
-        type IpId: Parameter
+        type CoreId: Parameter
             + Member
             + AtLeast32BitUnsigned
             + Default
@@ -91,23 +78,20 @@ pub mod pallet {
             + TypeInfo
             + Sum<<Self as pallet::Config>::Balance>
             + IsType<<Self as pallet_balances::Config>::Balance>
-            + IsType<<<Self as pallet::Config>::WeightToFee as WeightToFee>::Balance>
             + From<u128>;
 
         #[pallet::constant]
         type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
 
-        type Licenses: Parameter + LicenseList<Self>;
-
         /// The overarching call type.
-        type Call: Parameter
-            + Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+        type RuntimeCall: Parameter
+            + Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
             + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
             + Encode;
 
-        type WeightToFee: WeightToFee;
+        // type WeightToFee: WeightToFee;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
@@ -123,29 +107,12 @@ pub mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    pub type IpInfoOf<T> = IpInfo<
+    pub type CoreInfoOf<T> = CoreInfo<
         <T as frame_system::Config>::AccountId,
-        BoundedVec<AnyIdOf<T>, <T as Config>::MaxMetadata>,
-        ips::IpsMetadataOf<T>,
-        <T as Config>::IpId,
+        ips::CoreMetadataOf<T>,
+        <T as Config>::CoreId,
         <T as Config>::Balance,
-        BoundedVec<u8, <T as Config>::MaxMetadata>,
-        <T as frame_system::Config>::Hash,
     >;
-
-    /// Valid types that an IP Set can hold
-    #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-    pub enum AnyId<IpsId, IpfId, RmrkNftTuple, RmrkCollectionId> {
-        IpfId(IpfId),
-        RmrkNft(RmrkNftTuple),
-        RmrkCollection(RmrkCollectionId),
-        IpsId(IpsId),
-    }
-
-    pub type AnyIdOf<T> =
-        AnyId<<T as Config>::IpId, <T as ipf::Config>::IpfId, (CollectionId, NftId), CollectionId>;
-
-    pub type AnyIdWithNewOwner<T> = (AnyIdOf<T>, <T as frame_system::Config>::AccountId);
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -153,27 +120,20 @@ pub mod pallet {
 
     /// Next available IPS ID.
     #[pallet::storage]
-    #[pallet::getter(fn next_ips_id)]
-    pub type NextIpId<T: Config> = StorageValue<_, T::IpId, ValueQuery>;
+    #[pallet::getter(fn next_core_id)]
+    pub type NextCoreId<T: Config> = StorageValue<_, T::CoreId, ValueQuery>;
 
     /// Store IPS info. Core IP Set storage
     ///
     /// Return `None` if IPS info not set or removed
     #[pallet::storage]
-    #[pallet::getter(fn ips_storage)]
-    pub type IpStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::IpId, IpInfoOf<T>>;
+    #[pallet::getter(fn core_storage)]
+    pub type CoreStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
     /// IPS existence check by owner and IPS ID
     #[pallet::storage]
-    #[pallet::getter(fn ips_by_owner)]
-    pub type IpsByOwner<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        T::AccountId, // owner
-        Blake2_128Concat,
-        T::IpId,
-        (),
-    >;
+    #[pallet::getter(fn core_by_account)]
+    pub type CoreByAccount<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::CoreId>;
 
     /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
     ///
@@ -183,7 +143,7 @@ pub mod pallet {
     pub type Multisig<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::IpId,
+        T::CoreId,
         Blake2_128Concat,
         [u8; 32],
         crate::ipt::MultisigOperationOf<T>,
@@ -197,10 +157,10 @@ pub mod pallet {
     pub type SubAssets<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::IpId,
+        T::CoreId,
         Blake2_128Concat,
-        T::IpId,
-        SubIptInfo<T::IpId, BoundedVec<u8, T::MaxMetadata>>,
+        T::CoreId,
+        SubIptInfo<T::CoreId, BoundedVec<u8, T::MaxMetadata>>,
     >;
 
     /// The holdings of a specific account for a specific token.
@@ -213,7 +173,7 @@ pub mod pallet {
     pub type Balance<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        (T::IpId, Option<T::IpId>),
+        (T::CoreId, Option<T::CoreId>),
         Blake2_128Concat,
         T::AccountId,
         <T as pallet::Config>::Balance,
@@ -225,15 +185,21 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn asset_weight_storage)]
     pub type AssetWeight<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::IpId, Blake2_128Concat, T::IpId, OneOrPercent>;
+        StorageDoubleMap<_, Blake2_128Concat, T::CoreId, Blake2_128Concat, T::CoreId, OneOrPercent>;
 
     /// What pallet functions a sub token has permission to call
     ///
     /// Key: (Ip Set ID, sub token ID), call metadata
     #[pallet::storage]
     #[pallet::getter(fn permissions)]
-    pub type Permissions<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, (T::IpId, T::IpId), Blake2_128Concat, [u8; 2], bool>;
+    pub type Permissions<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        (T::CoreId, T::CoreId),
+        Blake2_128Concat,
+        [u8; 2],
+        bool,
+    >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -241,48 +207,45 @@ pub mod pallet {
         /// An IP Set was created
         IPSCreated {
             ips_account: T::AccountId,
-            ips_id: T::IpId,
-            assets: Vec<AnyIdOf<T>>,
+            ips_id: T::CoreId,
         },
         /// An IP Set was destroyed/deleted
         IPSDestroyed {
             ips_account: T::AccountId,
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
         },
         /// IpInfo (IPS) struct updated in storage to hold either new assets, new metadata, or both
         AppendedToIPS {
             caller_account: T::AccountId,
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             new_metadata: Option<Vec<u8>>,
-            assets: Vec<AnyIdOf<T>>,
         },
         /// IpInfo (IPS) struct updated: assets removed from IPS. Optionally, new metadata set
         RemovedFromIPS {
             caller_account: T::AccountId,
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             new_metadata: Option<Vec<u8>>,
-            assets_and_new_owners: Vec<AnyIdWithNewOwner<T>>,
         },
         /// Replicas of this IP Set are now allowed
-        AllowedReplica { ips_id: T::IpId },
+        AllowedReplica { ips_id: T::CoreId },
         /// Replicas of this IP Set are no longer allowed
-        DisallowedReplica { ips_id: T::IpId },
+        DisallowedReplica { ips_id: T::CoreId },
         /// A replica of this IP Set was created
         ReplicaCreated {
             ips_account: T::AccountId,
-            ips_id: T::IpId,
-            replica_id: T::IpId,
+            ips_id: T::CoreId,
+            replica_id: T::CoreId,
         },
 
         /// IP Tokens were minted
         Minted {
-            token: (T::IpId, Option<T::IpId>),
+            token: (T::CoreId, Option<T::CoreId>),
             target: T::AccountId,
             amount: <T as pallet::Config>::Balance,
         },
         /// IP Tokens were burned
         Burned {
-            token: (T::IpId, Option<T::IpId>),
+            token: (T::CoreId, Option<T::CoreId>),
             target: T::AccountId,
             amount: <T as pallet::Config>::Balance,
         },
@@ -290,7 +253,7 @@ pub mod pallet {
         ///
         /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteStarted {
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
             votes_added: <T as pallet::Config>::Balance,
@@ -302,7 +265,7 @@ pub mod pallet {
         ///
         /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
         MultisigVoteAdded {
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
             votes_added: <T as pallet::Config>::Balance,
@@ -312,7 +275,7 @@ pub mod pallet {
             call: crate::ipt::OpaqueCall<T>,
         },
         MultisigVoteWithdrawn {
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
             votes_removed: <T as pallet::Config>::Balance,
@@ -324,7 +287,7 @@ pub mod pallet {
         ///
         /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
         MultisigExecuted {
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
             call_hash: [u8; 32],
@@ -335,14 +298,14 @@ pub mod pallet {
         ///
         /// Params: caller derived account ID, the call hash
         MultisigCanceled {
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             executor_account: T::AccountId,
             call_hash: [u8; 32],
         },
         /// One of more sub tokens were created
         SubTokenCreated {
             sub_tokens_with_endowment: Vec<(
-                (T::IpId, T::IpId),
+                (T::CoreId, T::CoreId),
                 T::AccountId,
                 <T as pallet::Config>::Balance,
             )>,
@@ -351,8 +314,8 @@ pub mod pallet {
         ///
         /// Params: IP Set ID, Sub token ID, call_metadata(pallet index, function index), true/false permission
         PermissionSet {
-            ips_id: T::IpId,
-            sub_token_id: T::IpId,
+            ips_id: T::CoreId,
+            sub_token_id: T::CoreId,
             call_index: [u8; 2],
             permission: bool,
         },
@@ -360,8 +323,8 @@ pub mod pallet {
         ///
         /// Params: IP Set ID, Sub token ID, voting power percentage
         WeightSet {
-            ips_id: T::IpId,
-            sub_token_id: T::IpId,
+            ips_id: T::CoreId,
+            sub_token_id: T::CoreId,
             voting_weight: OneOrPercent,
         },
     }
@@ -370,8 +333,8 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// No available IP ID
-        NoAvailableIpId,
-        /// IPF (IpId, IpfId) not found
+        NoAvailableCoreId,
+        /// IPF (CoreId, IpfId) not found
         IpfNotFound,
         /// IPS not found
         IpsNotFound,
@@ -438,13 +401,11 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Create IP (Intellectual Property) Set (IPS)
+        #[pallet::call_index(0)]
         #[pallet::weight(900_000_000)]
-        pub fn create_ips(
+        pub fn create_core(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            assets: Vec<AnyIdOf<T>>,
-            allow_replica: bool,
-            ipl_license: <T as Config>::Licenses,
             ipl_execution_threshold: OneOrPercent,
             ipl_default_asset_weight: OneOrPercent,
             ipl_default_permission: bool,
@@ -452,98 +413,18 @@ pub mod pallet {
             Pallet::<T>::inner_create_ips(
                 owner,
                 metadata,
-                assets,
-                allow_replica,
-                ipl_license,
                 ipl_execution_threshold,
                 ipl_default_asset_weight,
                 ipl_default_permission,
             )
         }
 
-        // /// Delete an IP Set and all of its contents
-        // #[pallet::weight(100_000 + T::DbWeight::get().reads_writes(1, 2))]
-        // pub fn destroy(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-        //     IpStorage::<T>::try_mutate_exists(ips_id, |ips_info| -> DispatchResult {
-        //         let owner = ensure_signed(owner)?;
-        //         let info = ips_info.take().ok_or(Error::<T>::IpsNotFound)?;
-
-        //         match info.parentage {
-        //             Parentage::Parent(ips_account) => {
-        //                 ensure!(ips_account == owner, Error::<T>::NoPermission)
-        //             }
-        //             Parentage::Child(..) => return Err(Error::<T>::NotParent.into()),
-        //         }
-
-        //         IpsByOwner::<T>::remove(owner.clone(), ips_id);
-
-        //         Self::deposit_event(Event::Destroyed(owner, ips_id));
-
-        //         Ok(())
-        //     })
-        // }
-        // TODO: Rewrite
-
-        /// Append new assets to an IP Set
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
-        pub fn append(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
-            original_caller: Option<T::AccountId>,
-            assets: Vec<AnyIdOf<T>>,
-            new_metadata: Option<Vec<u8>>,
-        ) -> DispatchResult {
-            Pallet::<T>::inner_append(owner, ips_id, original_caller, assets, new_metadata)
-        }
-
-        /// Remove assets from an IP Set
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
-        pub fn remove(
-            owner: OriginFor<T>,
-            ips_id: T::IpId,
-            original_caller: Option<T::AccountId>,
-            assets: Vec<AnyIdWithNewOwner<T>>,
-            new_metadata: Option<Vec<u8>>,
-        ) -> DispatchResult {
-            Pallet::<T>::inner_remove(owner, ips_id, original_caller, assets, new_metadata)
-        }
-
-        /// Allows replicas of this IPS to be made.
-        #[pallet::weight(200_000_000)]
-        pub fn allow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-            Pallet::<T>::inner_allow_replica(owner, ips_id)
-        }
-
-        /// Disallows replicas of this IPS to be made.
-        #[pallet::weight(200_000_000)]
-        pub fn disallow_replica(owner: OriginFor<T>, ips_id: T::IpId) -> DispatchResult {
-            Pallet::<T>::inner_disallow_replica(owner, ips_id)
-        }
-
-        // #[pallet::weight(100_000)]
-        // pub fn create_replica(
-        //     owner: OriginFor<T>,
-        //     original_ips_id: T::IpId,
-        //     ipl_license: <T as Config>::Licenses,
-        //     ipl_execution_threshold: OneOrPercent,
-        //     ipl_default_asset_weight: OneOrPercent,
-        //     ipl_default_permission: bool,
-        // ) -> DispatchResultWithPostInfo {
-        //     Pallet::<T>::inner_create_replica(
-        //         owner,
-        //         original_ips_id,
-        //         ipl_license,
-        //         ipl_execution_threshold,
-        //         ipl_default_asset_weight,
-        //         ipl_default_permission,
-        //     )
-        // }
-
         /// Mint `amount` of specified token to `target` account
+        #[pallet::call_index(1)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_mint(
             owner: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            ipt_id: (T::CoreId, Option<T::CoreId>),
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
@@ -551,71 +432,78 @@ pub mod pallet {
         }
 
         /// Burn `amount` of specified token from `target` account
+        #[pallet::call_index(2)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn ipt_burn(
             owner: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            ipt_id: (T::CoreId, Option<T::CoreId>),
             amount: <T as pallet::Config>::Balance,
             target: T::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_ipt_burn(owner, ipt_id, amount, target)
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(400_000_000)]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             include_caller: bool,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            ipt_id: (T::CoreId, Option<T::CoreId>),
             metadata: Option<Vec<u8>>,
-            call: Box<<T as pallet::Config>::Call>,
+            call: Box<<T as pallet::Config>::RuntimeCall>,
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_operate_multisig(caller, include_caller, ipt_id, metadata, call)
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(350_000_000)]
         pub fn vote_multisig(
             caller: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            ipt_id: (T::CoreId, Option<T::CoreId>),
             call_hash: [u8; 32],
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_vote_multisig(caller, ipt_id, call_hash)
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(250_000_000)]
         pub fn withdraw_vote_multisig(
             caller: OriginFor<T>,
-            ipt_id: (T::IpId, Option<T::IpId>),
+            ipt_id: (T::CoreId, Option<T::CoreId>),
             call_hash: [u8; 32],
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, ipt_id, call_hash)
         }
 
         /// Create one or more sub tokens for an IP Set
+        #[pallet::call_index(6)]
         #[pallet::weight(200_000_000)]
         pub fn create_sub_token(
             caller: OriginFor<T>,
-            ips_id: T::IpId,
+            ips_id: T::CoreId,
             sub_tokens: crate::ipt::SubAssetsWithEndowment<T>,
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_create_sub_token(caller, ips_id, sub_tokens)
         }
 
+        #[pallet::call_index(7)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_permission(
             owner: OriginFor<T>,
-            ips_id: T::IpId,
-            sub_token_id: T::IpId,
+            ips_id: T::CoreId,
+            sub_token_id: T::CoreId,
             call_index: [u8; 2],
             permission: bool,
         ) -> DispatchResult {
             Pallet::<T>::inner_set_permission(owner, ips_id, sub_token_id, call_index, permission)
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_sub_token_weight(
             owner: OriginFor<T>,
-            ips_id: T::IpId,
-            sub_token_id: T::IpId,
+            ips_id: T::CoreId,
+            sub_token_id: T::CoreId,
             voting_weight: OneOrPercent,
         ) -> DispatchResult {
             Pallet::<T>::inner_set_sub_token_weight(owner, ips_id, sub_token_id, voting_weight)

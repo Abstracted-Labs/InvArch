@@ -39,21 +39,14 @@ pub enum BoolOrWasm<Wasm> {
 
 /// Core IP Set struct
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance, LicenseMetadata, Hash> {
+pub struct CoreInfo<AccountId, CoreMetadataOf, CoreId, Balance> {
     /// IPS parentage
-    pub parentage: Parentage<AccountId, IpId>,
+    pub parentage: Parentage<AccountId, CoreId>,
     /// IPS metadata
-    pub metadata: IpsMetadataOf,
-    /// IPS children. Holds list of all items the IP Set directly owns.
-    pub data: Data,
-    /// IPS Type
-    pub ips_type: IpsType<IpId>,
-    /// If this IPS allows replicas
-    pub allow_replica: bool,
+    pub metadata: CoreMetadataOf,
     /// Specifically, the supply of IPT0 (ownership) tokens.
     pub supply: Balance,
 
-    pub license: (LicenseMetadata, Hash),
     /// Aye vote percentage required to execute a multisig call.
     ///
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve
