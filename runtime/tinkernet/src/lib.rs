@@ -45,7 +45,7 @@ use frame_support::{
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot, EnsureSigned,
+    EnsureRoot,
 };
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
@@ -55,9 +55,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{
-        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify,
-    },
+    traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
 };
@@ -74,6 +72,8 @@ use xcm::latest::prelude::BodyId;
 
 /// Import the inv4 pallet.
 pub use pallet_inv4 as inv4;
+
+use pallet_inv4::INV4Lookup;
 
 // Weights
 mod weights;
@@ -99,6 +99,7 @@ use constants::currency::*;
 mod common_types;
 use common_types::*;
 mod assets;
+mod rmrk;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -120,7 +121,7 @@ pub type Hash = sp_core::H256;
 pub type BlockNumber = u32;
 
 /// The address format for describing accounts.
-pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
+pub type Address = sp_runtime::MultiAddress<AccountId, CommonId>;
 /// Block header type as expected by this runtime.
 ///
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -362,7 +363,7 @@ impl frame_system::Config for Runtime {
     /// The aggregated dispatch type that is available for extrinsics.
     type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = AccountIdLookup<AccountId, ()>;
+    type Lookup = INV4Lookup<Runtime>;
     /// The index type for storing how many extrinsics an account has signed.
     type Index = Index;
     /// The index type for blocks.
@@ -651,91 +652,6 @@ impl pallet_treasury::Config for Runtime {
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
     type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
-}
-
-parameter_types! {
-      pub const ResourceSymbolLimit: u32 = 10;
-      pub const PartsLimit: u32 = 25;
-      pub const MaxPriorities: u32 = 25;
-      pub const CollectionSymbolLimit: u32 = 100;
-      pub const MaxResourcesOnMint: u32 = 100;
-      pub const NestingBudget: u32 = 20;
-}
-
-#[cfg(feature = "runtime-benchmarks")]
-use pallet_rmrk_core::RmrkBenchmark;
-
-impl pallet_rmrk_core::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
-    type ResourceSymbolLimit = ResourceSymbolLimit;
-    type PartsLimit = PartsLimit;
-    type MaxPriorities = MaxPriorities;
-    type CollectionSymbolLimit = CollectionSymbolLimit;
-    type MaxResourcesOnMint = MaxResourcesOnMint;
-    type NestingBudget = NestingBudget;
-    type WeightInfo = pallet_rmrk_core::weights::SubstrateWeight<Runtime>;
-    #[cfg(feature = "runtime-benchmarks")]
-    type Helper = RmrkBenchmark;
-    type TransferHooks = ();
-}
-
-parameter_types! {
-      pub const MaxPropertiesPerTheme: u32 = 100;
-      pub const MaxCollectionsEquippablePerPart: u32 = 100;
-}
-
-impl pallet_rmrk_equip::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
-    type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
-    type WeightInfo = pallet_rmrk_equip::weights::SubstrateWeight<Runtime>;
-    #[cfg(feature = "runtime-benchmarks")]
-    type Helper = RmrkBenchmark;
-}
-
-parameter_types! {
-      pub const MinimumOfferAmount: Balance = UNIT / 10_000;
-}
-
-impl pallet_rmrk_market::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
-    type Currency = Balances;
-    type MinimumOfferAmount = MinimumOfferAmount;
-    type WeightInfo = pallet_rmrk_market::weights::SubstrateWeight<Runtime>;
-    #[cfg(feature = "runtime-benchmarks")]
-    type Helper = RmrkBenchmark;
-}
-
-parameter_types! {
-      pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
-      pub const ItemDeposit: Balance = UNIT;
-      pub const KeyLimit: u32 = 32;
-      pub const ValueLimit: u32 = 256;
-      pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
-      pub const AttributeDepositBase: Balance = 10 * MILLIUNIT;
-      pub const DepositPerByte: Balance = MILLIUNIT;
-      pub const UniquesStringLimit: u32 = 128;
-}
-
-impl pallet_uniques::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type CollectionId = CommonId;
-    type ItemId = CommonId;
-    type Currency = Balances;
-    type ForceOrigin = EnsureRoot<AccountId>;
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-    type Locker = pallet_rmrk_core::Pallet<Runtime>;
-    type CollectionDeposit = CollectionDeposit;
-    type ItemDeposit = ItemDeposit;
-    type MetadataDepositBase = UniquesMetadataDepositBase;
-    type AttributeDepositBase = AttributeDepositBase;
-    type DepositPerByte = DepositPerByte;
-    type StringLimit = UniquesStringLimit;
-    type KeyLimit = KeyLimit;
-    type ValueLimit = ValueLimit;
-    type WeightInfo = ();
 }
 
 parameter_types! {
