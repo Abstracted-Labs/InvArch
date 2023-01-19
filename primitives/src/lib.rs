@@ -39,9 +39,9 @@ pub enum BoolOrWasm<Wasm> {
 
 /// Core IP Set struct
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct CoreInfo<AccountId, CoreMetadataOf, CoreId, Balance> {
+pub struct CoreInfo<AccountId, CoreMetadataOf, Balance> {
     /// IPS parentage
-    pub parentage: Parentage<AccountId, CoreId>,
+    pub account: AccountId,
     /// IPS metadata
     pub metadata: CoreMetadataOf,
     /// Specifically, the supply of IPT0 (ownership) tokens.
@@ -70,7 +70,7 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
 
 // This is a struct in preparation for having more fields in the future.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct SubIptInfo<IptId, SubAssetMetadata> {
+pub struct SubTokenInfo<IptId, SubAssetMetadata> {
     pub id: IptId,
     pub metadata: SubAssetMetadata,
 }
