@@ -44,11 +44,7 @@ impl<T: Config> Pallet<T> {
             // Send IP Set `creator` 1,000,000 "IPT0" tokens
             // Token has 6 decimal places: 1,000,000 / 10^6 = 1 IPTO token
             // This allows for token divisiblity
-            Balance::<T>::insert::<
-                (<T as Config>::CoreId, Option<<T as Config>::CoreId>),
-                T::AccountId,
-                BalanceOf<T>,
-            >((current_id, None), creator, seed_balance);
+            Balances::<T>::insert((current_id, None::<T::CoreId>, creator), seed_balance);
 
             TotalIssuance::<T>::insert(current_id, None::<T::CoreId>, seed_balance);
 
@@ -69,6 +65,38 @@ impl<T: Config> Pallet<T> {
                 core_account,
                 core_id: current_id,
             });
+
+            Ok(())
+        })
+    }
+
+    pub(crate) fn inner_set_parameters(
+        owner: OriginFor<T>,
+        core_id: T::CoreId,
+        execution_threshold: Option<OneOrPercent>,
+        default_asset_weight: Option<OneOrPercent>,
+        default_permission: Option<bool>,
+    ) -> DispatchResult {
+        let signer = ensure_signed(owner)?;
+
+        CoreStorage::<T>::try_mutate(core_id, |core| {
+            let mut c = core.take().ok_or(Error::<T>::CoreNotFound)?;
+
+            ensure!(c.account == signer, Error::<T>::NoPermission);
+
+            if let Some(et) = execution_threshold {
+                c.execution_threshold = et;
+            }
+
+            if let Some(daw) = default_asset_weight {
+                c.default_asset_weight = daw;
+            }
+
+            if let Some(dp) = default_permission {
+                c.default_permission = dp;
+            }
+
+            *core = Some(c);
 
             Ok(())
         })

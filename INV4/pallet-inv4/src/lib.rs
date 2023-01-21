@@ -40,6 +40,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
+        storage::Key,
         traits::{Currency, Get, GetCallMetadata, ReservableCurrency},
         BoundedVec, Parameter,
     };
@@ -156,12 +157,13 @@ pub mod pallet {
     /// Replace `None` with `Some(id234)` to get specific sub token balance
     #[pallet::storage]
     #[pallet::getter(fn balance)]
-    pub type Balance<T: Config> = StorageDoubleMap<
+    pub type Balances<T: Config> = StorageNMap<
         _,
-        Blake2_128Concat,
-        (T::CoreId, Option<T::CoreId>),
-        Blake2_128Concat,
-        T::AccountId,
+        (
+            Key<Blake2_128Concat, T::CoreId>,
+            Key<Blake2_128Concat, Option<T::CoreId>>,
+            Key<Blake2_128Concat, T::AccountId>,
+        ),
         BalanceOf<T>,
     >;
 
@@ -463,6 +465,18 @@ pub mod pallet {
             voting_weight: OneOrPercent,
         ) -> DispatchResult {
             Pallet::<T>::inner_set_sub_token_weight(owner, core_id, sub_token_id, voting_weight)
+        }
+
+        #[pallet::call_index(9)]
+        #[pallet::weight(200_000_000)] // TODO: Set correct weight
+        pub fn set_parameters(
+            owner: OriginFor<T>,
+            core_id: T::CoreId,
+            execution_threshold: Option<OneOrPercent>,
+            default_asset_weight: Option<OneOrPercent>,
+            default_permission: Option<bool>,
+        ) -> DispatchResult {
+            Pallet::<T>::inner_set_parameters(owner, core_id, execution_threshold, default_asset_weight, default_permission)
         }
     }
 

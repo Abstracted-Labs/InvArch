@@ -184,11 +184,11 @@ where
         } {
             // `ZeroPoint` sub token, so apply asset weight to caller balance
             percent
-                * Balance::<T>::get((core_id, sub_token), owner.clone())
+                * Balances::<T>::get((core_id, sub_token, owner.clone()))
                     .ok_or(Error::<T>::NoPermission)?
         } else {
             // Either IPT0 token or 100% asset weight sub token
-            Balance::<T>::get((core_id, sub_token), owner.clone())
+            Balances::<T>::get((core_id, sub_token, owner.clone()))
                 .ok_or(Error::<T>::NoPermission)?
         };
 
@@ -293,10 +293,10 @@ where
                 }
             } {
                 percent
-                    * Balance::<T>::get((core_id, sub_token), owner.clone())
+                    * Balances::<T>::get((core_id, sub_token, owner.clone()))
                         .ok_or(Error::<T>::NoPermission)?
             } else {
-                Balance::<T>::get((core_id, sub_token), owner.clone())
+                Balances::<T>::get((core_id, sub_token, owner.clone()))
                     .ok_or(Error::<T>::NoPermission)?
             };
 
@@ -306,7 +306,7 @@ where
                 .clone()
                 .into_iter()
                 .map(|(voter, asset): (T::AccountId, Option<T::CoreId>)| {
-                    Balance::<T>::get((core_id, asset), voter).map(|balance| {
+                    Balances::<T>::get((core_id, asset, voter)).map(|balance| {
                         if let OneOrPercent::ZeroPoint(percent) = if let Some(sub_asset) = asset {
                             Pallet::<T>::asset_weight(core_id, sub_asset).unwrap()
                         } else {
@@ -456,10 +456,10 @@ where
                     }
                 } {
                     percent
-                        * Balance::<T>::get((core_id, sub_token), owner.clone())
+                        * Balances::<T>::get((core_id, sub_token, owner.clone()))
                             .ok_or(Error::<T>::NoPermission)?
                 } else {
-                    Balance::<T>::get((core_id, sub_token), owner.clone())
+                    Balances::<T>::get((core_id, sub_token, owner.clone()))
                         .ok_or(Error::<T>::NoPermission)?
                 };
 
@@ -540,7 +540,7 @@ where
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
-            Balance::<T>::try_mutate((core_id, token), target, |balance| -> DispatchResult {
+            Balances::<T>::try_mutate((core_id, token, target), |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
                 // Increase `target` account's balance of `ipt_id` sub token by `amount`
                 *balance = Some(
@@ -564,7 +564,7 @@ where
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
-            Balance::<T>::try_mutate((core_id, token), target, |balance| -> DispatchResult {
+            Balances::<T>::try_mutate((core_id, token, target), |balance| -> DispatchResult {
                 let old_balance = balance.take().ok_or(Error::<T>::CoreDoesntExist)?;
                 // Decrease `target` account's balance of `ipt_id` sub token by `amount`
                 *balance = Some(
