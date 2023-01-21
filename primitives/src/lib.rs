@@ -39,13 +39,11 @@ pub enum BoolOrWasm<Wasm> {
 
 /// Core IP Set struct
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct CoreInfo<AccountId, CoreMetadataOf, Balance> {
+pub struct CoreInfo<AccountId, CoreMetadataOf> {
     /// IPS parentage
     pub account: AccountId,
     /// IPS metadata
     pub metadata: CoreMetadataOf,
-    /// Specifically, the supply of IPT0 (ownership) tokens.
-    pub supply: Balance,
 
     /// Aye vote percentage required to execute a multisig call.
     ///

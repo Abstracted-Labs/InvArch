@@ -1,10 +1,10 @@
 use super::pallet::{self, *};
 use crate::util::derive_core_account;
-use core::convert::TryInto;
+use core::{convert::TryInto, iter::Sum};
 use frame_support::{
     dispatch::{Dispatchable, GetDispatchInfo, RawOrigin},
     pallet_prelude::*,
-    traits::WrapperKeepOpaque,
+    traits::{Currency, WrapperKeepOpaque},
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::{OneOrPercent, SubTokenInfo};
@@ -39,13 +39,16 @@ pub type MultisigOperationOf<T> = MultisigOperation<
     BoundedVec<u8, <T as pallet::Config>::MaxMetadata>,
 >;
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+{
     /// Mint `amount` of specified token to `target` account
     pub(crate) fn inner_token_mint(
         owner: OriginFor<T>,
         core_id: T::CoreId,
         token: Option<T::CoreId>,
-        amount: <T as pallet::Config>::Balance,
+        amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
@@ -80,7 +83,7 @@ impl<T: Config> Pallet<T> {
         owner: OriginFor<T>,
         core_id: T::CoreId,
         token: Option<T::CoreId>,
-        amount: <T as pallet::Config>::Balance,
+        amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
         let owner = ensure_signed(owner)?;
@@ -120,9 +123,6 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller.clone())?;
 
-        // Get IPS/IPT info
-        let core = CoreStorage::<T>::get(core_id).ok_or(Error::<T>::CoreDoesntExist)?;
-
         let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
             Some(
                 vec.try_into()
@@ -132,36 +132,32 @@ impl<T: Config> Pallet<T> {
             None
         };
 
-        // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
-        let total_issuance = core.supply
-            + SubAssets::<T>::iter_prefix_values(core_id)
-                .map(|sub_asset| {
-                    let supply =
-                        Balance::<T>::iter_prefix_values((core_id, Some(sub_asset.id))).sum();
-
+        let total_issuance: BalanceOf<T> = TotalIssuance::<T>::iter_prefix(core_id)
+            .map(|(asset, total)| {
+                Some(if let Some(sub_asset) = asset {
                     // Take into account that some sub tokens have full weight while others may have partial weight or none at all
                     if let OneOrPercent::ZeroPoint(weight) =
-                        Pallet::<T>::asset_weight(core_id, sub_asset.id)?
+                        Pallet::<T>::asset_weight(core_id, sub_asset)?
                     {
-                        Some(weight * supply)
+                        weight * total
                     } else {
-                        Some(supply)
+                        total
                     }
+                } else {
+                    total
                 })
-                .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                .ok_or(Error::<T>::CoreDoesntExist)?
-                .into_iter()
-                .sum();
+            })
+            .sum::<Option<BalanceOf<T>>>()
+            .ok_or(Error::<T>::SubAssetNotFound)?;
 
         // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call
-        let total_per_threshold: <T as pallet::Config>::Balance =
-            if let OneOrPercent::ZeroPoint(percent) =
-                Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
-            {
-                percent * total_issuance
-            } else {
-                total_issuance
-            };
+        let total_per_threshold: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) =
+            Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
+        {
+            percent * total_issuance
+        } else {
+            total_issuance
+        };
 
         // Get call metadata
         let call_metadata: [u8; 2] = call
@@ -172,7 +168,7 @@ impl<T: Config> Pallet<T> {
             .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
         // Get caller balance of `ipt_id` token, weight adjusted
-        let owner_balance: <T as Config>::Balance = if let OneOrPercent::ZeroPoint(percent) = {
+        let owner_balance: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) = {
             // Function called with some sub token
             if let Some(sub_asset) = sub_token {
                 ensure!(
@@ -249,7 +245,7 @@ impl<T: Config> Pallet<T> {
             );
 
             Self::deposit_event(Event::MultisigVoteStarted {
-                core_id: core_id,
+                core_id,
                 executor_account: derive_core_account::<
                     T,
                     <T as Config>::CoreId,
@@ -275,8 +271,6 @@ impl<T: Config> Pallet<T> {
     ) -> DispatchResultWithPostInfo {
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
-
-            let core = CoreStorage::<T>::get(core_id).ok_or(Error::<T>::CoreDoesntExist)?;
 
             let mut old_data = data
                 .take()
@@ -307,7 +301,7 @@ impl<T: Config> Pallet<T> {
             };
 
             // Get total # of votes cast so far towards this multisig call
-            let total_in_operation: <T as pallet::Config>::Balance = old_data
+            let total_in_operation: BalanceOf<T> = old_data
                 .signers
                 .clone()
                 .into_iter()
@@ -324,40 +318,37 @@ impl<T: Config> Pallet<T> {
                         }
                     })
                 })
-                .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
+                .collect::<Option<Vec<BalanceOf<T>>>>()
                 .ok_or(Error::<T>::NoPermission)?
                 .into_iter()
                 .sum();
 
-            // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
-            let total_issuance = core.supply
-                + SubAssets::<T>::iter_prefix_values(core_id)
-                    .map(|sub_asset| {
-                        let supply =
-                            Balance::<T>::iter_prefix_values((core_id, Some(sub_asset.id))).sum();
-
+            let total_issuance: BalanceOf<T> = TotalIssuance::<T>::iter_prefix(core_id)
+                .map(|(asset, total)| {
+                    Some(if let Some(sub_asset) = asset {
+                        // Take into account that some sub tokens have full weight while others may have partial weight or none at all
                         if let OneOrPercent::ZeroPoint(weight) =
-                            Pallet::<T>::asset_weight(core_id, sub_asset.id)?
+                            Pallet::<T>::asset_weight(core_id, sub_asset)?
                         {
-                            Some(weight * supply)
+                            weight * total
                         } else {
-                            Some(supply)
+                            total
                         }
+                    } else {
+                        total
                     })
-                    .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                    .ok_or(Error::<T>::CoreDoesntExist)?
-                    .into_iter()
-                    .sum();
+                })
+                .sum::<Option<BalanceOf<T>>>()
+                .ok_or(Error::<T>::SubAssetNotFound)?;
 
             // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call.
-            let total_per_threshold: <T as pallet::Config>::Balance =
-                if let OneOrPercent::ZeroPoint(percent) =
-                    Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
-                {
-                    percent * total_issuance
-                } else {
-                    total_issuance
-                };
+            let total_per_threshold: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) =
+                Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
+            {
+                percent * total_issuance
+            } else {
+                total_issuance
+            };
 
             // If already cast votes + `caller` weighted votes are enough to meet/exeed the threshold, then go ahead and execute the `call` now.
             if (total_in_operation + voter_balance) >= total_per_threshold {
@@ -429,8 +420,6 @@ impl<T: Config> Pallet<T> {
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
-            let core = CoreStorage::<T>::get(core_id).ok_or(Error::<T>::CoreDoesntExist)?;
-
             let mut old_data = data
                 .take()
                 .ok_or(Error::<T>::MultisigOperationUninitialized)?;
@@ -474,38 +463,6 @@ impl<T: Config> Pallet<T> {
                         .ok_or(Error::<T>::NoPermission)?
                 };
 
-                // Get total IP Set token issuance (IPT0 + all sub tokens), weight adjusted (meaning `ZeroPoint(0)` tokens count for 0)
-                let total_issuance = core.supply
-                    + SubAssets::<T>::iter_prefix_values(core_id)
-                        .map(|sub_asset| {
-                            let supply =
-                                Balance::<T>::iter_prefix_values((core_id, Some(sub_asset.id)))
-                                    .sum();
-
-                            if let OneOrPercent::ZeroPoint(weight) =
-                                Pallet::<T>::asset_weight(core_id, sub_asset.id)?
-                            {
-                                Some(weight * supply)
-                            } else {
-                                Some(supply)
-                            }
-                        })
-                        .collect::<Option<Vec<<T as pallet::Config>::Balance>>>()
-                        .ok_or(Error::<T>::CoreDoesntExist)?
-                        .into_iter()
-                        .sum();
-
-                // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call
-                let total_per_threshold: <T as pallet::Config>::Balance =
-                    if let OneOrPercent::ZeroPoint(percent) =
-                        Pallet::<T>::execution_threshold(core_id)
-                            .ok_or(Error::<T>::CoreDoesntExist)?
-                    {
-                        percent * total_issuance
-                    } else {
-                        total_issuance
-                    };
-
                 // Remove caller from the list of signers
                 old_data.signers = old_data
                     .signers
@@ -518,7 +475,7 @@ impl<T: Config> Pallet<T> {
                 *data = Some(old_data.clone());
 
                 Self::deposit_event(Event::MultisigVoteWithdrawn {
-                    core_id: core_id,
+                    core_id,
                     executor_account: derive_core_account::<
                         T,
                         <T as Config>::CoreId,
@@ -526,7 +483,6 @@ impl<T: Config> Pallet<T> {
                     >(core_id),
                     voter: owner,
                     votes_removed: voter_balance,
-                    votes_required: total_per_threshold,
                     call_hash,
                     call: old_data.actual_call,
                 });
@@ -581,9 +537,9 @@ impl<T: Config> Pallet<T> {
         core_id: T::CoreId,
         token: Option<T::CoreId>,
         target: T::AccountId,
-        amount: <T as pallet::Config>::Balance,
+        amount: BalanceOf<T>,
     ) -> DispatchResult {
-        CoreStorage::<T>::try_mutate(core_id, |core| -> DispatchResult {
+        TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
             Balance::<T>::try_mutate((core_id, token), target, |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
                 // Increase `target` account's balance of `ipt_id` sub token by `amount`
@@ -593,17 +549,7 @@ impl<T: Config> Pallet<T> {
                         .ok_or(Error::<T>::Overflow)?,
                 );
 
-                let mut old_core = core.take().ok_or(Error::<T>::CoreDoesntExist)?;
-
-                // If minting IPT0 tokens, update supply
-                if token.is_none() {
-                    old_core.supply = old_core
-                        .supply
-                        .checked_add(&amount)
-                        .ok_or(Error::<T>::Overflow)?;
-                }
-
-                *core = Some(old_core);
+                *issuance = issuance.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
                 Ok(())
             })
@@ -615,29 +561,19 @@ impl<T: Config> Pallet<T> {
         target: T::AccountId,
         core_id: T::CoreId,
         token: Option<T::CoreId>,
-        amount: <T as pallet::Config>::Balance,
+        amount: BalanceOf<T>,
     ) -> DispatchResult {
-        CoreStorage::<T>::try_mutate(core_id, |core| -> DispatchResult {
+        TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
             Balance::<T>::try_mutate((core_id, token), target, |balance| -> DispatchResult {
                 let old_balance = balance.take().ok_or(Error::<T>::CoreDoesntExist)?;
                 // Decrease `target` account's balance of `ipt_id` sub token by `amount`
                 *balance = Some(
                     old_balance
                         .checked_sub(&amount)
-                        .ok_or(Error::<T>::NotEnoughAmount)?,
+                        .ok_or(Error::<T>::Underflow)?,
                 );
 
-                let mut old_core = core.take().ok_or(Error::<T>::CoreDoesntExist)?;
-
-                // If burning IPT0 tokens, update supply
-                if token.is_none() {
-                    old_core.supply = old_core
-                        .supply
-                        .checked_sub(&amount)
-                        .ok_or(Error::<T>::NotEnoughAmount)?;
-                }
-
-                *core = Some(old_core);
+                *issuance = issuance.checked_sub(&amount).ok_or(Error::<T>::Underflow)?;
 
                 Ok(())
             })

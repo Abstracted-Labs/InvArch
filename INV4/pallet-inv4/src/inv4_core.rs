@@ -39,20 +39,22 @@ impl<T: Config> Pallet<T> {
                 <T as frame_system::Config>::AccountId,
             >(current_id);
 
+            let seed_balance = <T as Config>::CoreSeedBalance::get();
+
             // Send IP Set `creator` 1,000,000 "IPT0" tokens
             // Token has 6 decimal places: 1,000,000 / 10^6 = 1 IPTO token
             // This allows for token divisiblity
             Balance::<T>::insert::<
                 (<T as Config>::CoreId, Option<<T as Config>::CoreId>),
                 T::AccountId,
-                <T as Config>::Balance,
-            >((current_id, None), creator, 1_000_000u128.into());
+                BalanceOf<T>,
+            >((current_id, None), creator, seed_balance);
+
+            TotalIssuance::<T>::insert(current_id, None::<T::CoreId>, seed_balance);
 
             let info = CoreInfo {
                 account: core_account.clone(),
                 metadata: bounded_metadata,
-
-                supply: 1_000_000u128.into(),
 
                 execution_threshold: execution_threshold,
                 default_asset_weight: default_asset_weight,

@@ -21,23 +21,11 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 
-use frame_support::{
-    dispatch::Dispatchable,
-    pallet_prelude::*,
-    traits::{Currency as FSCurrency, Get, GetCallMetadata},
-    BoundedVec, Parameter,
-};
-use frame_system::pallet_prelude::*;
-use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
-use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
-
-/// Import the primitives crate
-use primitives::CoreInfo;
-
 pub use pallet::*;
 
 pub mod inv4_core;
 mod lookup;
+pub mod migrations;
 pub mod multisig;
 pub mod permissions;
 pub mod util;
@@ -46,13 +34,29 @@ pub use lookup::INV4Lookup;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use core::iter::Sum;
+
     use super::*;
-    use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
+    use frame_support::{
+        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        pallet_prelude::*,
+        traits::{Currency, Get, GetCallMetadata, ReservableCurrency},
+        BoundedVec, Parameter,
+    };
+    use frame_system::pallet_prelude::*;
+    use primitives::CoreInfo;
     use primitives::{OneOrPercent, SubTokenInfo};
     use scale_info::prelude::fmt::Display;
-    use sp_std::iter::Sum;
+    use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
+    use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
     pub use super::{inv4_core, multisig, permissions};
+
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    pub type CoreInfoOf<T> =
+        CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
@@ -68,23 +72,7 @@ pub mod pallet {
             + MaxEncodedLen
             + Clone;
 
-        /// Currency
-        type Currency: FSCurrency<Self::AccountId>;
-
-        type Balance: Member
-            + Parameter
-            + AtLeast32BitUnsigned
-            + Default
-            + Copy
-            + MaybeSerializeDeserialize
-            + MaxEncodedLen
-            + TypeInfo
-            + Sum<<Self as pallet::Config>::Balance>
-            + IsType<<Self as pallet_balances::Config>::Balance>
-            + From<u128>;
-
-        #[pallet::constant]
-        type ExistentialDeposit: Get<<Self as pallet::Config>::Balance>;
+        type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
         /// The overarching call type.
         type RuntimeCall: Parameter
@@ -93,8 +81,6 @@ pub mod pallet {
             + From<frame_system::Call<Self>>
             + GetCallMetadata
             + Encode;
-
-        // type WeightToFee: WeightToFee;
 
         /// The maximum numbers of caller accounts on a single Multisig call
         #[pallet::constant]
@@ -105,19 +91,17 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
+
+        #[pallet::constant]
+        type CoreSeedBalance: Get<BalanceOf<Self>>;
     }
 
-    pub type BalanceOf<T> =
-        <<T as Config>::Currency as FSCurrency<<T as frame_system::Config>::AccountId>>::Balance;
-
-    pub type CoreInfoOf<T> = CoreInfo<
-        <T as frame_system::Config>::AccountId,
-        inv4_core::CoreMetadataOf<T>,
-        <T as Config>::Balance,
-    >;
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     /// Next available IPS ID.
@@ -178,7 +162,20 @@ pub mod pallet {
         (T::CoreId, Option<T::CoreId>),
         Blake2_128Concat,
         T::AccountId,
-        <T as pallet::Config>::Balance,
+        BalanceOf<T>,
+    >;
+
+    /// The total issuance of a main token or sub_token.
+    #[pallet::storage]
+    #[pallet::getter(fn total_issuance)]
+    pub type TotalIssuance<T: Config> = StorageDoubleMap<
+        _,
+        Twox64Concat,
+        T::CoreId,
+        Twox64Concat,
+        Option<T::CoreId>,
+        BalanceOf<T>,
+        ValueQuery,
     >;
 
     /// Sub asset voting weight (non IPT0).
@@ -215,13 +212,13 @@ pub mod pallet {
         Minted {
             token: (T::CoreId, Option<T::CoreId>),
             target: T::AccountId,
-            amount: <T as pallet::Config>::Balance,
+            amount: BalanceOf<T>,
         },
         /// IP Tokens were burned
         Burned {
             token: (T::CoreId, Option<T::CoreId>),
             target: T::AccountId,
-            amount: <T as pallet::Config>::Balance,
+            amount: BalanceOf<T>,
         },
         /// A vote to execute a call has begun. The call needs more votes to pass.
         ///
@@ -230,8 +227,8 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_added: <T as pallet::Config>::Balance,
-            votes_required: <T as pallet::Config>::Balance,
+            votes_added: BalanceOf<T>,
+            votes_required: BalanceOf<T>,
             call_hash: [u8; 32],
             call: crate::multisig::OpaqueCall<T>,
         },
@@ -242,9 +239,9 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_added: <T as pallet::Config>::Balance,
-            current_votes: <T as pallet::Config>::Balance,
-            votes_required: <T as pallet::Config>::Balance,
+            votes_added: BalanceOf<T>,
+            current_votes: BalanceOf<T>,
+            votes_required: BalanceOf<T>,
             call_hash: [u8; 32],
             call: crate::multisig::OpaqueCall<T>,
         },
@@ -252,8 +249,7 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_removed: <T as pallet::Config>::Balance,
-            votes_required: <T as pallet::Config>::Balance,
+            votes_removed: BalanceOf<T>,
             call_hash: [u8; 32],
             call: crate::multisig::OpaqueCall<T>,
         },
@@ -345,13 +341,16 @@ pub mod pallet {
 
         /// Division by 0 happened somewhere, maybe you have IPT assets with no decimal points?
         DivisionByZero,
-
         Overflow,
+        Underflow,
     }
 
     /// Dispatch functions
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T>
+    where
+        <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+    {
         /// Create IP (Intellectual Property) Set (IPS)
         #[pallet::call_index(0)]
         #[pallet::weight(900_000_000)]
@@ -378,7 +377,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             core_id: T::CoreId,
             sub_token: Option<T::CoreId>,
-            amount: <T as pallet::Config>::Balance,
+            amount: BalanceOf<T>,
             target: T::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_token_mint(owner, core_id, sub_token, amount, target)
@@ -391,7 +390,7 @@ pub mod pallet {
             owner: OriginFor<T>,
             core_id: T::CoreId,
             sub_token: Option<T::CoreId>,
-            amount: <T as pallet::Config>::Balance,
+            amount: BalanceOf<T>,
             target: T::AccountId,
         ) -> DispatchResult {
             Pallet::<T>::inner_token_burn(owner, core_id, sub_token, amount, target)
