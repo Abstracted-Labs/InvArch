@@ -121,7 +121,7 @@ where
         metadata: Option<Vec<u8>>,
         call: Box<<T as pallet::Config>::RuntimeCall>,
     ) -> DispatchResultWithPostInfo {
-        let owner = ensure_signed(caller.clone())?;
+        let owner = ensure_signed(caller)?;
 
         let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
             Some(

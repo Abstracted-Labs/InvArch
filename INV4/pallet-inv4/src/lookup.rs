@@ -1,8 +1,7 @@
 use crate::{Config, CoreByAccount, CoreStorage, Pallet};
 use core::marker::PhantomData;
 use frame_support::error::LookupError;
-use sp_runtime::traits::StaticLookup;
-use sp_runtime::MultiAddress;
+use sp_runtime::{traits::StaticLookup, MultiAddress};
 
 impl<T: Config> Pallet<T> {
     pub fn lookup_core(core_id: T::CoreId) -> Option<T::AccountId> {

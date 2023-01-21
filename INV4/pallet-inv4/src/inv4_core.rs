@@ -52,9 +52,9 @@ impl<T: Config> Pallet<T> {
                 account: core_account.clone(),
                 metadata: bounded_metadata,
 
-                execution_threshold: execution_threshold,
-                default_asset_weight: default_asset_weight,
-                default_permission: default_permission,
+                execution_threshold,
+                default_asset_weight,
+                default_permission,
             };
 
             // Update core IPS storage

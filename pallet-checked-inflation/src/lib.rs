@@ -5,7 +5,8 @@ use sp_arithmetic::traits::Zero;
 use sp_std::convert::TryInto;
 
 mod inflation;
-pub mod migrations;
+// TODO: Refactor.
+// pub mod migrations;
 
 #[cfg(test)]
 pub(crate) mod mock;
@@ -41,7 +42,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>
@@ -254,6 +255,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn set_first_year_supply(root: OriginFor<T>) -> DispatchResult {
             ensure_root(root)?;
@@ -265,6 +267,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn halt_unhalt_pallet(root: OriginFor<T>, halt: bool) -> DispatchResult {
             ensure_root(root)?;

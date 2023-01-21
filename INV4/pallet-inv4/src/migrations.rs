@@ -11,13 +11,11 @@ pub mod v1 {
     use core::convert::TryInto;
     use frame_support::BoundedVec;
     use primitives::{CoreInfo, OneOrPercent};
-    use rmrk_traits::collection::Collection;
-    use rmrk_traits::nft::Nft;
-    use rmrk_traits::primitives::CollectionId;
-    use rmrk_traits::ResourceInfoMin;
+    use rmrk_traits::{
+        collection::Collection, nft::Nft, primitives::CollectionId, ResourceInfoMin,
+    };
     use sp_core::H256;
     use sp_std::vec;
-    use sp_std::vec::Vec;
 
     use super::*;
 
@@ -374,7 +372,7 @@ pub mod v1 {
         [u8; 32]: Into<T::AccountId>,
     {
         #[cfg(feature = "try-runtime")]
-        fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+        fn pre_upgrade() -> Result<sp_std::vec::Vec<u8>, &'static str> {
             frame_support::ensure!(
                 Pallet::<T>::current_storage_version() == 0,
                 "Required v0 before upgrading to v1"
@@ -403,7 +401,7 @@ pub mod v1 {
         }
 
         #[cfg(feature = "try-runtime")]
-        fn post_upgrade(_state: Vec<u8>) -> Result<(), &'static str> {
+        fn post_upgrade(_state: sp_std::vec::Vec<u8>) -> Result<(), &'static str> {
             frame_support::ensure!(
                 Pallet::<T>::on_chain_storage_version() == 1,
                 "v1 not applied"

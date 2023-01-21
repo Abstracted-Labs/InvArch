@@ -45,8 +45,7 @@ pub mod pallet {
         BoundedVec, Parameter,
     };
     use frame_system::pallet_prelude::*;
-    use primitives::CoreInfo;
-    use primitives::{OneOrPercent, SubTokenInfo};
+    use primitives::{CoreInfo, OneOrPercent, SubTokenInfo};
     use scale_info::prelude::fmt::Display;
     use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};

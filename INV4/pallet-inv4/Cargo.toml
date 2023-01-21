@@ -29,8 +29,6 @@ pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "po
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 
-pallet-ipf = { path = "../pallet-ipf", default-features = false }
-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
