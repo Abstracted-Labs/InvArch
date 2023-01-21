@@ -5499,7 +5499,6 @@ dependencies = [
  "invarch-primitives",
  "log",
  "pallet-balances",
- "pallet-ipf",
  "pallet-rmrk-core",
  "pallet-uniques",
  "parity-scale-codec",
@@ -5508,21 +5507,6 @@ dependencies = [
  "serde",
  "smallvec",
  "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-ipf"
-version = "0.1.0-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "invarch-primitives",
- "parity-scale-codec",
- "scale-info",
  "sp-core",
  "sp-io",
  "sp-runtime",

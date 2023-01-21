@@ -6,8 +6,9 @@ use tinkernet_runtime::{api, native_version as _native_version, opaque::Block, H
 
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
-use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
-use cumulus_client_consensus_common::ParachainConsensus;
+use cumulus_client_consensus_common::{
+    ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
+};
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
     build_relay_chain_interface as other_build_relay_chain_interface, prepare_node_config,
