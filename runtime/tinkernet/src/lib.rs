@@ -157,6 +157,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    (pallet_inv4::migrations::v1::MigrateToV1<Runtime>,),
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -316,13 +317,13 @@ impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
         AllPalletsWithSystem::on_runtime_upgrade()
     }
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<(), &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
         AllPalletsWithSystem::pre_upgrade()
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade() -> Result<(), &'static str> {
-        AllPalletsWithSystem::post_upgrade()
+    fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+        AllPalletsWithSystem::post_upgrade(state)
     }
 }
 
@@ -591,6 +592,7 @@ impl pallet_collator_selection::Config for Runtime {
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
+    pub const CoreSeedBalance: Balance = 1000000u128;
 }
 
 impl inv4::Config for Runtime {
@@ -602,14 +604,12 @@ impl inv4::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     // Currency
     type Currency = Balances;
-    // The ExistentialDeposit
-    type ExistentialDeposit = ExistentialDeposit;
-
-    type Balance = Balance;
 
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
     type MaxSubAssets = MaxCallers;
+
+    type CoreSeedBalance = CoreSeedBalance;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -967,24 +967,24 @@ impl_runtime_apis! {
         }
     }
 
-    #[cfg(feature = "try-runtime")]
-    impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (Weight, Weight) {
-            log::info!("try-runtime::on_runtime_upgrade.");
-            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
-            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
-            // right here and right now.
-            let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
-                err
-            }).unwrap();
-            (weight, RuntimeBlockWeights::get().max_block)
-        }
+      #[cfg(feature = "try-runtime")]
+      impl frame_try_runtime::TryRuntime<Block> for Runtime {
+            fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
+                  let weight = Executive::try_runtime_upgrade(checks).unwrap();
+                  (weight, RuntimeBlockWeights::get().max_block)
+            }
 
-        fn execute_block_no_check(block: Block) -> Weight {
-            Executive::execute_block_no_check(block)
-        }
-    }
+            fn execute_block(
+                  block: Block,
+                  state_root_check: bool,
+                  signature_check: bool,
+                  select: frame_try_runtime::TryStateSelect,
+            ) -> Weight {
+                  // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+                  // have a backtrace here.
+                  Executive::try_execute_block(block, state_root_check, signature_check, select).unwrap()
+            }
+      }
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {

@@ -112,5 +112,5 @@ runtime-benchmarks = [
 
 try-runtime = [
     "tinkernet-runtime?/try-runtime",
-    "try-runtime-cli",
+    "try-runtime-cli/try-runtime",
 ]

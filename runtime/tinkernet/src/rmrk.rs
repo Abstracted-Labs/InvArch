@@ -62,8 +62,8 @@ impl pallet_rmrk_market::Config for Runtime {
 }
 
 parameter_types! {
-      pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
-      pub const ItemDeposit: Balance = UNIT;
+      pub const CollectionDeposit: Balance = 0; //10 * MILLIUNIT;
+      pub const ItemDeposit: Balance = 0; //UNIT;
       pub const KeyLimit: u32 = 32;
       pub const ValueLimit: u32 = 256;
       pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
