@@ -10,33 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup for checks
-        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
-
   build:
-    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Build
-        run: cargo build --verbose
-      
-  test:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run tests
-        run: cargo test --verbose
-      
-  fmt:
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run cargofmt
-        run: cargo +stable fmt --all -- --check
+    - uses: actions/checkout@v2
+    - name: Cache cargo
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo
+
+    - name: Setup for checks
+      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Run cargofmt
+      run: cargo +stable fmt --all -- --check
