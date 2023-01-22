@@ -3376,6 +3376,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-rmrk#1192d78f25108f8f8e13a24df0fff3709bf35e6b"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5493,6 +5494,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-rmrk#1192d78f25108f8f8e13a24df0fff3709bf35e6b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5783,7 +5785,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-core"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=a3867f0dd2c752f5cb742e79022d76632232b0b8#a3867f0dd2c752f5cb742e79022d76632232b0b8"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=9c538c23aa53293691833b80e890e67aa524b062#9c538c23aa53293691833b80e890e67aa524b062"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5800,7 +5802,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-equip"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=a3867f0dd2c752f5cb742e79022d76632232b0b8#a3867f0dd2c752f5cb742e79022d76632232b0b8"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=9c538c23aa53293691833b80e890e67aa524b062#9c538c23aa53293691833b80e890e67aa524b062"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5818,7 +5820,7 @@ dependencies = [
 [[package]]
 name = "pallet-rmrk-market"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=a3867f0dd2c752f5cb742e79022d76632232b0b8#a3867f0dd2c752f5cb742e79022d76632232b0b8"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=9c538c23aa53293691833b80e890e67aa524b062#9c538c23aa53293691833b80e890e67aa524b062"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8158,7 +8160,7 @@ dependencies = [
 [[package]]
 name = "rmrk-traits"
 version = "0.0.1"
-source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=a3867f0dd2c752f5cb742e79022d76632232b0b8#a3867f0dd2c752f5cb742e79022d76632232b0b8"
+source = "git+https://github.com/rmrk-team/rmrk-substrate?rev=9c538c23aa53293691833b80e890e67aa524b062#9c538c23aa53293691833b80e890e67aa524b062"
 dependencies = [
  "frame-support",
  "frame-system",
