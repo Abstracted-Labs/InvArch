@@ -21,6 +21,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Build
         run: cargo build --verbose
       
@@ -28,6 +29,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Run tests
         run: cargo test --verbose
       
@@ -35,5 +37,6 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Run cargofmt
         run: cargo +stable fmt --all -- --check
