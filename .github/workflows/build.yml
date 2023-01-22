@@ -10,31 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-05-01
-        target: wasm32-unknown-unknown
-    - name: Build
-      run: cargo build --verbose
-      
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-05-01
-        target: wasm32-unknown-unknown
-    - name: Run tests
-      run: cargo test --verbose
-      
-  fmt:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Setup for checks
+        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build
+        run: cargo build --verbose
+      
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run tests
+        run: cargo test --verbose
+      
+  fmt:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
       - name: Run cargofmt
         run: cargo +stable fmt --all -- --check
