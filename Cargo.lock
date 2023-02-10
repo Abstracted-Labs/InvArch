@@ -3376,7 +3376,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-rmrk#1192d78f25108f8f8e13a24df0fff3709bf35e6b"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5494,7 +5493,6 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-rmrk#1192d78f25108f8f8e13a24df0fff3709bf35e6b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -11197,6 +11195,7 @@ dependencies = [
  "getrandom 0.2.8",
  "hex-literal",
  "log",
+ "once_cell",
  "orml-asset-registry",
  "orml-currencies",
  "orml-tokens",
@@ -11216,6 +11215,7 @@ dependencies = [
  "pallet-multisig",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
+ "pallet-referenda",
  "pallet-rmrk-core",
  "pallet-rmrk-equip",
  "pallet-rmrk-market",

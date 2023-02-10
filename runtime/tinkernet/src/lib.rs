@@ -70,9 +70,6 @@ pub use sp_runtime::BuildStorage;
 
 use xcm::latest::prelude::BodyId;
 
-/// Import the inv4 pallet.
-pub use pallet_inv4 as inv4;
-
 use pallet_inv4::INV4Lookup;
 
 // Weights
@@ -99,6 +96,7 @@ use constants::currency::*;
 mod common_types;
 use common_types::*;
 mod assets;
+mod inv4;
 mod rmrk;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
@@ -157,7 +155,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (pallet_inv4::migrations::v1::MigrateToV1<Runtime>,),
+    //  (pallet_inv4::migrations::v1::MigrateToV1<Runtime>,),
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -589,29 +587,6 @@ impl pallet_collator_selection::Config for Runtime {
     type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const MaxMetadata: u32 = 10000;
-    pub const MaxCallers: u32 = 10000;
-    pub const CoreSeedBalance: Balance = 1000000u128;
-}
-
-impl inv4::Config for Runtime {
-    // The maximum size of an IPS's metadata
-    type MaxMetadata = MaxMetadata;
-    // The IPS ID type
-    type CoreId = CommonId;
-    // The IPS Pallet Events
-    type RuntimeEvent = RuntimeEvent;
-    // Currency
-    type Currency = Balances;
-
-    type RuntimeCall = RuntimeCall;
-    type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
-
-    type CoreSeedBalance = CoreSeedBalance;
-}
-
 impl pallet_sudo::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
@@ -827,7 +802,7 @@ construct_runtime!(
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
 
         // InvArch stuff
-        INV4: inv4::{Pallet, Call, Storage, Event<T>} = 71,
+        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>} = 71,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
         RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
