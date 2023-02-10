@@ -2,6 +2,7 @@ use super::pallet::*;
 use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::OneOrPercent;
+use sp_runtime::Perbill;
 
 impl<T: Config> Pallet<T> {
     /// Set yes/no permission for a sub token to start/vote on a specific multisig call
@@ -55,14 +56,8 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Return `execution_threshold` setting for sub tokens in a given IP Set
-    pub fn execution_threshold(core_id: T::CoreId) -> Option<OneOrPercent> {
-        CoreStorage::<T>::get(core_id).map(|core| core.execution_threshold)
-    }
-
-    /// Get the voting weight for a sub token. If none is found, returns the default voting weight
-    pub fn asset_weight(core_id: T::CoreId, sub_token_id: T::CoreId) -> Option<OneOrPercent> {
-        AssetWeight::<T>::get(core_id, sub_token_id)
-            .or_else(|| CoreStorage::<T>::get(core_id).map(|core| core.default_asset_weight))
+    pub fn minimum_support_and_required_approval(core_id: T::CoreId) -> Option<(Perbill, Perbill)> {
+        CoreStorage::<T>::get(core_id).map(|core| (core.minimum_support, core.required_approval))
     }
 
     /// Check if a sub token has permission to iniate/vote on an extrinsic via the multisig.

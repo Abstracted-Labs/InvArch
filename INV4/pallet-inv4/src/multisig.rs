@@ -1,40 +1,38 @@
 use super::pallet::{self, *};
-use crate::util::derive_core_account;
+use crate::{
+    util::derive_core_account,
+    voting::{Tally, Vote},
+};
 use core::{convert::TryInto, iter::Sum};
 use frame_support::{
     dispatch::{Dispatchable, GetDispatchInfo, RawOrigin},
     pallet_prelude::*,
-    traits::{Currency, WrapperKeepOpaque},
+    traits::{Currency, VoteTally, WrapperKeepOpaque},
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use primitives::{OneOrPercent, SubTokenInfo};
-use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{CheckedAdd, CheckedSub};
-use sp_std::{boxed::Box, vec, vec::Vec};
+use primitives::SubTokenInfo;
+use sp_runtime::{
+    traits::{CheckedAdd, CheckedSub, Hash, Zero},
+    Perbill, Saturating,
+};
+use sp_std::{boxed::Box, vec::Vec};
 
 pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::RuntimeCall>;
 
 /// Details of a multisig operation
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct MultisigOperation<AccountId, Signers, Call, Metadata> {
-    signers: Signers,
-    original_caller: AccountId,
-    actual_call: Call,
-    call_metadata: [u8; 2],
-    call_weight: Weight,
-    metadata: Option<Metadata>,
+pub struct MultisigOperation<AccountId, TallyOf, Call, Metadata> {
+    pub tally: TallyOf,
+    pub original_caller: AccountId,
+    pub actual_call: Call,
+    pub call_metadata: [u8; 2],
+    pub call_weight: Weight,
+    pub metadata: Option<Metadata>,
 }
 
 pub type MultisigOperationOf<T> = MultisigOperation<
     <T as frame_system::Config>::AccountId,
-    BoundedVec<
-        (
-            <T as frame_system::Config>::AccountId,
-            // Token account voted with???
-            Option<<T as pallet::Config>::CoreId>,
-        ),
-        <T as Config>::MaxCallers,
-    >,
+    Tally<T>,
     OpaqueCall<T>,
     BoundedVec<u8, <T as pallet::Config>::MaxMetadata>,
 >;
@@ -132,32 +130,8 @@ where
             None
         };
 
-        let total_issuance: BalanceOf<T> = TotalIssuance::<T>::iter_prefix(core_id)
-            .map(|(asset, total)| {
-                Some(if let Some(sub_asset) = asset {
-                    // Take into account that some sub tokens have full weight while others may have partial weight or none at all
-                    if let OneOrPercent::ZeroPoint(weight) =
-                        Pallet::<T>::asset_weight(core_id, sub_asset)?
-                    {
-                        weight * total
-                    } else {
-                        total
-                    }
-                } else {
-                    total
-                })
-            })
-            .sum::<Option<BalanceOf<T>>>()
-            .ok_or(Error::<T>::SubAssetNotFound)?;
-
-        // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call
-        let total_per_threshold: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) =
-            Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
-        {
-            percent * total_issuance
-        } else {
-            total_issuance
-        };
+        let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(core_id)
+            .ok_or(Error::<T>::CoreDoesntExist)?;
 
         // Get call metadata
         let call_metadata: [u8; 2] = call
@@ -168,26 +142,14 @@ where
             .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
 
         // Get caller balance of `ipt_id` token, weight adjusted
-        let owner_balance: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) = {
-            // Function called with some sub token
+        let owner_balance: BalanceOf<T> = {
             if let Some(sub_asset) = sub_token {
                 ensure!(
                     Pallet::<T>::has_permission(core_id, sub_asset, call_metadata,)?,
                     Error::<T>::SubAssetHasNoPermission
                 );
-
-                Pallet::<T>::asset_weight(core_id, sub_asset).ok_or(Error::<T>::CoreDoesntExist)?
-            } else {
-                // Function called with IPT0 token
-                OneOrPercent::One
             }
-        } {
-            // `ZeroPoint` sub token, so apply asset weight to caller balance
-            percent
-                * Balances::<T>::get((core_id, sub_token, owner.clone()))
-                    .ok_or(Error::<T>::NoPermission)?
-        } else {
-            // Either IPT0 token or 100% asset weight sub token
+
             Balances::<T>::get((core_id, sub_token, owner.clone()))
                 .ok_or(Error::<T>::NoPermission)?
         };
@@ -195,16 +157,17 @@ where
         let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
         // Compute the `call` hash
-        let call_hash: [u8; 32] = blake2_256(&call.encode());
+        let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call);
 
-        // Ensure that this exact `call` has not been executed before???
         ensure!(
             Multisig::<T>::get(core_id, call_hash).is_none(),
             Error::<T>::MultisigOperationAlreadyExists
         );
 
         // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
-        if owner_balance >= total_per_threshold {
+        if Perbill::from_rational(owner_balance, TotalIssuance::<T>::get(core_id))
+            >= minimum_support
+        {
             // Actually dispatch this call and return the result of it
             let dispatch_result = call.dispatch(
                 RawOrigin::Signed(derive_core_account::<
@@ -228,14 +191,17 @@ where
                 result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
+            VoteStorage::<T>::insert(
+                (core_id, call_hash, (owner.clone(), sub_token)),
+                Vote::Aye(owner_balance),
+            );
+
             // Multisig call is now in the voting stage, so update storage.
             Multisig::<T>::insert(
                 core_id,
                 call_hash,
                 MultisigOperation {
-                    signers: vec![(owner.clone(), sub_token)]
-                        .try_into()
-                        .map_err(|_| Error::<T>::TooManySignatories)?,
+                    tally: Tally::from_parts(owner_balance, Zero::zero()),
                     original_caller: owner.clone(),
                     actual_call: opaque_call.clone(),
                     call_metadata,
@@ -252,8 +218,7 @@ where
                     <T as frame_system::Config>::AccountId,
                 >(core_id),
                 voter: owner,
-                votes_added: owner_balance,
-                votes_required: total_per_threshold,
+                votes_added: Vote::Aye(owner_balance),
                 call_hash,
                 call: opaque_call,
             });
@@ -267,7 +232,8 @@ where
         caller: OriginFor<T>,
         core_id: T::CoreId,
         sub_token: Option<T::CoreId>,
-        call_hash: [u8; 32],
+        call_hash: T::Hash,
+        aye: bool,
     ) -> DispatchResultWithPostInfo {
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
@@ -276,137 +242,121 @@ where
                 .take()
                 .ok_or(Error::<T>::MultisigOperationUninitialized)?;
 
-            // Get caller balance of `ipt_id` token, weight adjusted
-            let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
-                // Function called with some sub token
-                if let Some(sub_asset) = sub_token {
-                    ensure!(
-                        Pallet::<T>::has_permission(core_id, sub_asset, old_data.call_metadata,)?,
-                        Error::<T>::SubAssetHasNoPermission
-                    );
+            VoteStorage::<T>::try_mutate(
+                (core_id, call_hash, (owner.clone(), sub_token)),
+                |vote_record| {
+                    let old_vote_record = vote_record.take();
 
-                    Pallet::<T>::asset_weight(core_id, sub_asset)
-                        .ok_or(Error::<T>::CoreDoesntExist)?
-                } else {
-                    // Function called with IPT0 token
-                    OneOrPercent::One
-                }
-            } {
-                percent
-                    * Balances::<T>::get((core_id, sub_token, owner.clone()))
-                        .ok_or(Error::<T>::NoPermission)?
-            } else {
-                Balances::<T>::get((core_id, sub_token, owner.clone()))
-                    .ok_or(Error::<T>::NoPermission)?
-            };
-
-            // Get total # of votes cast so far towards this multisig call
-            let total_in_operation: BalanceOf<T> = old_data
-                .signers
-                .clone()
-                .into_iter()
-                .map(|(voter, asset): (T::AccountId, Option<T::CoreId>)| {
-                    Balances::<T>::get((core_id, asset, voter)).map(|balance| {
-                        if let OneOrPercent::ZeroPoint(percent) = if let Some(sub_asset) = asset {
-                            Pallet::<T>::asset_weight(core_id, sub_asset).unwrap()
-                        } else {
-                            OneOrPercent::One
-                        } {
-                            percent * balance
-                        } else {
-                            balance
+                    match old_vote_record {
+                        Some(Vote::Aye(old_votes)) => {
+                            old_data.tally.ayes = old_data.tally.ayes.saturating_sub(old_votes)
                         }
-                    })
-                })
-                .collect::<Option<Vec<BalanceOf<T>>>>()
-                .ok_or(Error::<T>::NoPermission)?
-                .into_iter()
-                .sum();
-
-            let total_issuance: BalanceOf<T> = TotalIssuance::<T>::iter_prefix(core_id)
-                .map(|(asset, total)| {
-                    Some(if let Some(sub_asset) = asset {
-                        // Take into account that some sub tokens have full weight while others may have partial weight or none at all
-                        if let OneOrPercent::ZeroPoint(weight) =
-                            Pallet::<T>::asset_weight(core_id, sub_asset)?
-                        {
-                            weight * total
-                        } else {
-                            total
+                        Some(Vote::Nay(old_votes)) => {
+                            old_data.tally.nays = old_data.tally.nays.saturating_sub(old_votes)
                         }
+                        None => (),
+                    }
+
+                    // Get caller balance of `sub_token` token
+                    let voter_balance = {
+                        if let Some(sub_asset) = sub_token {
+                            ensure!(
+                                Pallet::<T>::has_permission(
+                                    core_id,
+                                    sub_asset,
+                                    old_data.call_metadata
+                                )?,
+                                Error::<T>::SubAssetHasNoPermission
+                            );
+                        }
+
+                        Balances::<T>::get((core_id, sub_token, owner.clone()))
+                            .ok_or(Error::<T>::NoPermission)?
+                    };
+
+                    let (minimum_support, required_approval) =
+                        Pallet::<T>::minimum_support_and_required_approval(core_id)
+                            .ok_or(Error::<T>::CoreDoesntExist)?;
+
+                    let new_vote_record = if aye {
+                        old_data.tally.ayes = old_data.tally.ayes.saturating_add(voter_balance);
+
+                        Vote::Aye(voter_balance)
                     } else {
-                        total
-                    })
-                })
-                .sum::<Option<BalanceOf<T>>>()
-                .ok_or(Error::<T>::SubAssetNotFound)?;
+                        old_data.tally.nays = old_data.tally.nays.saturating_add(voter_balance);
 
-            // Get minimum # of votes (tokens w/non-zero weight) required to execute a multisig call.
-            let total_per_threshold: BalanceOf<T> = if let OneOrPercent::ZeroPoint(percent) =
-                Pallet::<T>::execution_threshold(core_id).ok_or(Error::<T>::CoreDoesntExist)?
-            {
-                percent * total_issuance
-            } else {
-                total_issuance
-            };
+                        Vote::Nay(voter_balance)
+                    };
 
-            // If already cast votes + `caller` weighted votes are enough to meet/exeed the threshold, then go ahead and execute the `call` now.
-            if (total_in_operation + voter_balance) >= total_per_threshold {
-                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
-                *data = None;
+                    let support = old_data.tally.support(core_id);
+                    let approval = old_data.tally.approval(core_id);
 
-                // Actually dispatch this call and return the result of it
-                let dispatch_result = old_data
-                    .actual_call
-                    .try_decode()
-                    .ok_or(Error::<T>::CouldntDecodeCall)?
-                    .dispatch(
-                        RawOrigin::Signed(derive_core_account::<
-                            T,
-                            <T as Config>::CoreId,
-                            <T as frame_system::Config>::AccountId,
-                        >(core_id))
-                        .into(),
-                    );
+                    if (support >= minimum_support) && (approval >= required_approval) {
+                        if VoteStorage::<T>::clear_prefix(
+                            (core_id, call_hash),
+                            T::MaxCallers::get(),
+                            None,
+                        )
+                        .maybe_cursor
+                        .is_some()
+                        {
+                            Err(Error::<T>::IncompleteVoteCleanup)
+                        } else {
+                            Ok(())
+                        }?;
 
-                Self::deposit_event(Event::MultisigExecuted {
-                    core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
-                    voter: owner,
-                    call_hash,
-                    call: old_data.actual_call,
-                    result: dispatch_result.map(|_| ()).map_err(|e| e.error),
-                });
-            } else {
-                // Update storage
-                old_data.signers = {
-                    let mut v = old_data.signers.to_vec();
-                    v.push((owner.clone(), sub_token));
-                    v.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?
-                };
-                *data = Some(old_data.clone());
+                        // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
+                        *data = None;
 
-                Self::deposit_event(Event::MultisigVoteAdded {
-                    core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
-                    voter: owner,
-                    votes_added: voter_balance,
-                    current_votes: (total_in_operation + voter_balance),
-                    votes_required: total_per_threshold,
-                    call_hash,
-                    call: old_data.actual_call,
-                });
-            }
+                        // Actually dispatch this call and return the result of it
+                        let dispatch_result = old_data
+                            .actual_call
+                            .try_decode()
+                            .ok_or(Error::<T>::CouldntDecodeCall)?
+                            .dispatch(
+                                RawOrigin::Signed(derive_core_account::<
+                                    T,
+                                    <T as Config>::CoreId,
+                                    <T as frame_system::Config>::AccountId,
+                                >(core_id))
+                                .into(),
+                            );
 
-            Ok(().into())
+                        Self::deposit_event(Event::MultisigExecuted {
+                            core_id,
+                            executor_account: derive_core_account::<
+                                T,
+                                <T as Config>::CoreId,
+                                <T as frame_system::Config>::AccountId,
+                            >(core_id),
+                            voter: owner,
+                            call_hash,
+                            call: old_data.actual_call,
+                            result: dispatch_result.map(|_| ()).map_err(|e| e.error),
+                        });
+                    } else {
+                        *vote_record = Some(new_vote_record);
+
+                        *data = Some(old_data.clone());
+
+                        Self::deposit_event(Event::MultisigVoteAdded {
+                            core_id,
+                            executor_account: derive_core_account::<
+                                T,
+                                <T as Config>::CoreId,
+                                <T as frame_system::Config>::AccountId,
+                            >(core_id),
+                            voter: owner,
+                            votes_added: new_vote_record,
+                            current_votes: old_data.tally,
+                            call_hash,
+                            call: old_data.actual_call,
+                        });
+                    }
+
+                    Ok(().into())
+                },
+            )
         })
     }
 
@@ -415,7 +365,7 @@ where
         caller: OriginFor<T>,
         core_id: T::CoreId,
         sub_token: Option<T::CoreId>,
-        call_hash: [u8; 32],
+        call_hash: T::Hash,
     ) -> DispatchResultWithPostInfo {
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
@@ -426,69 +376,40 @@ where
 
             // Can only withdraw your vote if you have already voted on this multisig operation
             ensure!(
-                old_data.signers.iter().any(|signer| signer.0 == owner),
+                VoteStorage::<T>::contains_key((core_id, call_hash, (owner.clone(), sub_token))),
                 Error::<T>::NotAVoter
             );
 
-            // if `caller` is the account who created this vote, they can dissolve it immediately
-            if owner == old_data.original_caller {
-                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
-                *data = None;
+            VoteStorage::<T>::try_mutate(
+                (core_id, call_hash, (owner.clone(), sub_token)),
+                |vote_record| {
+                    let old_vote = vote_record.take().ok_or(Error::<T>::NotAVoter)?;
 
-                Self::deposit_event(Event::MultisigCanceled {
-                    core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
-                    call_hash,
-                });
-            } else {
-                // caller is not the creator of this vote
-                // Get caller balance of `ipt_id` token, weight adjusted
-                let voter_balance = if let OneOrPercent::ZeroPoint(percent) = {
-                    if let Some(sub_asset) = sub_token {
-                        Pallet::<T>::asset_weight(core_id, sub_asset)
-                            .ok_or(Error::<T>::CoreDoesntExist)?
-                    } else {
-                        OneOrPercent::One
-                    }
-                } {
-                    percent
-                        * Balances::<T>::get((core_id, sub_token, owner.clone()))
-                            .ok_or(Error::<T>::NoPermission)?
-                } else {
-                    Balances::<T>::get((core_id, sub_token, owner.clone()))
-                        .ok_or(Error::<T>::NoPermission)?
-                };
+                    match old_vote {
+                        Vote::Aye(v) => old_data.tally.ayes = old_data.tally.ayes.saturating_sub(v),
+                        Vote::Nay(v) => old_data.tally.nays = old_data.tally.nays.saturating_sub(v),
+                    };
 
-                // Remove caller from the list of signers
-                old_data.signers = old_data
-                    .signers
-                    .into_iter()
-                    .filter(|signer| signer.0 != owner)
-                    .collect::<Vec<(T::AccountId, Option<T::CoreId>)>>()
-                    .try_into()
-                    .map_err(|_| Error::<T>::TooManySignatories)?;
+                    *vote_record = None;
 
-                *data = Some(old_data.clone());
+                    *data = Some(old_data.clone());
 
-                Self::deposit_event(Event::MultisigVoteWithdrawn {
-                    core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
-                    voter: owner,
-                    votes_removed: voter_balance,
-                    call_hash,
-                    call: old_data.actual_call,
-                });
-            }
+                    Self::deposit_event(Event::MultisigVoteWithdrawn {
+                        core_id,
+                        executor_account: derive_core_account::<
+                            T,
+                            <T as Config>::CoreId,
+                            <T as frame_system::Config>::AccountId,
+                        >(core_id),
+                        voter: owner,
+                        votes_removed: old_vote,
+                        call_hash,
+                        call: old_data.actual_call,
+                    });
 
-            Ok(().into())
+                    Ok(().into())
+                },
+            )
         })
     }
 
@@ -539,7 +460,7 @@ where
         target: T::AccountId,
         amount: BalanceOf<T>,
     ) -> DispatchResult {
-        TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
+        TotalIssuance::<T>::try_mutate(core_id, |issuance| {
             Balances::<T>::try_mutate((core_id, token, target), |balance| -> DispatchResult {
                 let old_balance = balance.take().unwrap_or_default();
                 // Increase `target` account's balance of `ipt_id` sub token by `amount`
@@ -563,7 +484,7 @@ where
         token: Option<T::CoreId>,
         amount: BalanceOf<T>,
     ) -> DispatchResult {
-        TotalIssuance::<T>::try_mutate(core_id, token, |issuance| {
+        TotalIssuance::<T>::try_mutate(core_id, |issuance| {
             Balances::<T>::try_mutate((core_id, token, target), |balance| -> DispatchResult {
                 let old_balance = balance.take().ok_or(Error::<T>::CoreDoesntExist)?;
                 // Decrease `target` account's balance of `ipt_id` sub token by `amount`

@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::Percent;
+use sp_runtime::{Perbill, Percent};
 
 /// Voting weight of an IPT
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
@@ -48,8 +48,9 @@ pub struct CoreInfo<AccountId, CoreMetadataOf> {
     /// Aye vote percentage required to execute a multisig call.
     ///
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve
-    pub execution_threshold: OneOrPercent,
-    pub default_asset_weight: OneOrPercent,
+    pub minimum_support: Perbill,
+    pub required_approval: Perbill,
+    //pub default_asset_weight: OneOrPercent,
     pub default_permission: bool,
 }
 

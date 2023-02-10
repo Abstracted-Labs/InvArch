@@ -15,6 +15,7 @@ pub mod v1 {
         collection::Collection, nft::Nft, primitives::CollectionId, ResourceInfoMin,
     };
     use sp_core::H256;
+    use sp_runtime::Perbill;
     use sp_std::vec;
 
     use super::*;
@@ -134,8 +135,11 @@ pub mod v1 {
                             .into_inner()
                             .try_into()
                             .expect("IPS metadata should always fit in Core metadata."),
-                        execution_threshold: ips.execution_threshold,
-                        default_asset_weight: ips.default_asset_weight,
+                        minimum_support: match ips.execution_threshold {
+                            OneOrPercent::One => Perbill::one(),
+                            OneOrPercent::ZeroPoint(percent) => Perbill::from_percent(percent * 1)
+                        },
+                        required_approval: Perbill::zero(),
                         default_permission: ips.default_permission,
                     },
                 );
@@ -347,7 +351,7 @@ pub mod v1 {
                 (ips_id.into(), token.map(|x| x.into()), account),
                 balance,
             );
-            TotalIssuance::<T>::mutate(ips_id.into(), token.map(|x| x.into()), |issuance| {
+            TotalIssuance::<T>::mutate(ips_id.into(), |issuance| {
                 *issuance += balance;
             });
 

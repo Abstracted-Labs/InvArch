@@ -2,8 +2,9 @@ use super::pallet::*;
 use crate::util::derive_core_account;
 use frame_support::pallet_prelude::*;
 use frame_system::{ensure_signed, pallet_prelude::*};
-use primitives::{CoreInfo, OneOrPercent};
+use primitives::CoreInfo;
 use sp_arithmetic::traits::{CheckedAdd, One};
+use sp_runtime::Perbill;
 use sp_std::{convert::TryInto, vec::Vec};
 
 pub type CoreIndexOf<T> = <T as Config>::CoreId;
@@ -15,8 +16,8 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_create_core(
         owner: OriginFor<T>,
         metadata: Vec<u8>,
-        execution_threshold: OneOrPercent,
-        default_asset_weight: OneOrPercent,
+        minimum_support: Perbill,
+        required_approval: Perbill,
         default_permission: bool,
     ) -> DispatchResult {
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
@@ -46,14 +47,14 @@ impl<T: Config> Pallet<T> {
             // This allows for token divisiblity
             Balances::<T>::insert((current_id, None::<T::CoreId>, creator), seed_balance);
 
-            TotalIssuance::<T>::insert(current_id, None::<T::CoreId>, seed_balance);
+            TotalIssuance::<T>::insert(current_id, seed_balance);
 
             let info = CoreInfo {
                 account: core_account.clone(),
                 metadata: bounded_metadata,
 
-                execution_threshold,
-                default_asset_weight,
+                minimum_support,
+                required_approval,
                 default_permission,
             };
 
@@ -73,8 +74,9 @@ impl<T: Config> Pallet<T> {
     pub(crate) fn inner_set_parameters(
         owner: OriginFor<T>,
         core_id: T::CoreId,
-        execution_threshold: Option<OneOrPercent>,
-        default_asset_weight: Option<OneOrPercent>,
+        metadata: Option<Vec<u8>>,
+        minimum_support: Option<Perbill>,
+        required_approval: Option<Perbill>,
         default_permission: Option<bool>,
     ) -> DispatchResult {
         let signer = ensure_signed(owner)?;
@@ -84,16 +86,20 @@ impl<T: Config> Pallet<T> {
 
             ensure!(c.account == signer, Error::<T>::NoPermission);
 
-            if let Some(et) = execution_threshold {
-                c.execution_threshold = et;
+            if let Some(ms) = minimum_support {
+                c.minimum_support = ms;
             }
 
-            if let Some(daw) = default_asset_weight {
-                c.default_asset_weight = daw;
+            if let Some(ra) = required_approval {
+                c.required_approval = ra;
             }
 
             if let Some(dp) = default_permission {
                 c.default_permission = dp;
+            }
+
+            if let Some(m) = metadata {
+                c.metadata = m.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
             }
 
             *core = Some(c);

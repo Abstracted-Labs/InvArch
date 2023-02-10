@@ -29,12 +29,15 @@ pub mod migrations;
 pub mod multisig;
 pub mod permissions;
 pub mod util;
+pub mod voting;
 
 pub use lookup::INV4Lookup;
 
 #[frame_support::pallet]
 pub mod pallet {
     use core::iter::Sum;
+
+    use crate::voting::{Tally, VoteRecord};
 
     use super::*;
     use frame_support::{
@@ -47,7 +50,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use primitives::{CoreInfo, OneOrPercent, SubTokenInfo};
     use scale_info::prelude::fmt::Display;
-    use sp_runtime::traits::{AtLeast32BitUnsigned, Member};
+    use sp_runtime::{
+        traits::{AtLeast32BitUnsigned, Member},
+        Perbill,
+    };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
     pub use super::{inv4_core, multisig, permissions};
@@ -131,8 +137,20 @@ pub mod pallet {
         Blake2_128Concat,
         T::CoreId,
         Blake2_128Concat,
-        [u8; 32],
+        T::Hash,
         crate::multisig::MultisigOperationOf<T>,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn votes)]
+    pub type VoteStorage<T: Config> = StorageNMap<
+        _,
+        (
+            Key<Blake2_128Concat, T::CoreId>,
+            Key<Blake2_128Concat, T::Hash>,
+            Key<Blake2_128Concat, (T::AccountId, Option<T::CoreId>)>,
+        ),
+        VoteRecord<T>,
     >;
 
     /// Details of a sub token.
@@ -169,15 +187,8 @@ pub mod pallet {
     /// The total issuance of a main token or sub_token.
     #[pallet::storage]
     #[pallet::getter(fn total_issuance)]
-    pub type TotalIssuance<T: Config> = StorageDoubleMap<
-        _,
-        Twox64Concat,
-        T::CoreId,
-        Twox64Concat,
-        Option<T::CoreId>,
-        BalanceOf<T>,
-        ValueQuery,
-    >;
+    pub type TotalIssuance<T: Config> =
+        StorageMap<_, Twox64Concat, T::CoreId, BalanceOf<T>, ValueQuery>;
 
     /// Sub asset voting weight (non IPT0).
     ///
@@ -228,9 +239,8 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_added: BalanceOf<T>,
-            votes_required: BalanceOf<T>,
-            call_hash: [u8; 32],
+            votes_added: VoteRecord<T>,
+            call_hash: T::Hash,
             call: crate::multisig::OpaqueCall<T>,
         },
         /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
@@ -240,18 +250,17 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_added: BalanceOf<T>,
-            current_votes: BalanceOf<T>,
-            votes_required: BalanceOf<T>,
-            call_hash: [u8; 32],
+            votes_added: VoteRecord<T>,
+            current_votes: Tally<T>,
+            call_hash: T::Hash,
             call: crate::multisig::OpaqueCall<T>,
         },
         MultisigVoteWithdrawn {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            votes_removed: BalanceOf<T>,
-            call_hash: [u8; 32],
+            votes_removed: VoteRecord<T>,
+            call_hash: T::Hash,
             call: crate::multisig::OpaqueCall<T>,
         },
         /// Multisig call was executed.
@@ -261,7 +270,7 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             voter: T::AccountId,
-            call_hash: [u8; 32],
+            call_hash: T::Hash,
             call: crate::multisig::OpaqueCall<T>,
             result: DispatchResult,
         },
@@ -271,7 +280,7 @@ pub mod pallet {
         MultisigCanceled {
             core_id: T::CoreId,
             executor_account: T::AccountId,
-            call_hash: [u8; 32],
+            call_hash: T::Hash,
         },
         /// One of more sub tokens were created
         SubTokenCreated { id: T::CoreId, metadata: Vec<u8> },
@@ -344,6 +353,8 @@ pub mod pallet {
         DivisionByZero,
         Overflow,
         Underflow,
+
+        IncompleteVoteCleanup,
     }
 
     /// Dispatch functions
@@ -358,16 +369,16 @@ pub mod pallet {
         pub fn create_core(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
-            ipl_execution_threshold: OneOrPercent,
-            ipl_default_asset_weight: OneOrPercent,
-            ipl_default_permission: bool,
+            minimum_support: Perbill,
+            required_approval: Perbill,
+            default_permission: bool,
         ) -> DispatchResult {
             Pallet::<T>::inner_create_core(
                 owner,
                 metadata,
-                ipl_execution_threshold,
-                ipl_default_asset_weight,
-                ipl_default_permission,
+                minimum_support,
+                required_approval,
+                default_permission,
             )
         }
 
@@ -415,9 +426,10 @@ pub mod pallet {
             caller: OriginFor<T>,
             core_id: T::CoreId,
             sub_token: Option<T::CoreId>,
-            call_hash: [u8; 32],
+            call_hash: T::Hash,
+            aye: bool,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_vote_multisig(caller, core_id, sub_token, call_hash)
+            Pallet::<T>::inner_vote_multisig(caller, core_id, sub_token, call_hash, aye)
         }
 
         #[pallet::call_index(5)]
@@ -426,7 +438,7 @@ pub mod pallet {
             caller: OriginFor<T>,
             core_id: T::CoreId,
             sub_token: Option<T::CoreId>,
-            call_hash: [u8; 32],
+            call_hash: T::Hash,
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, sub_token, call_hash)
         }
@@ -471,11 +483,12 @@ pub mod pallet {
         pub fn set_parameters(
             owner: OriginFor<T>,
             core_id: T::CoreId,
-            execution_threshold: Option<OneOrPercent>,
-            default_asset_weight: Option<OneOrPercent>,
+            metadata: Option<Vec<u8>>,
+            minimum_support: Option<Perbill>,
+            required_approval: Option<Perbill>,
             default_permission: Option<bool>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_parameters(owner, core_id, execution_threshold, default_asset_weight, default_permission)
+            Pallet::<T>::inner_set_parameters(owner, core_id, metadata, minimum_support, required_approval, default_permission)
         }
     }
 
