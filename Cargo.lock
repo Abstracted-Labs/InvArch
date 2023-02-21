@@ -3283,6 +3283,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparation#410e67a7a96a8ba608b104cedd24ac7dc33b45de"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5562,6 +5563,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparation#410e67a7a96a8ba608b104cedd24ac7dc33b45de"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5585,6 +5587,7 @@ dependencies = [
 [[package]]
 name = "pallet-ipf"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparation#410e67a7a96a8ba608b104cedd24ac7dc33b45de"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5828,6 +5831,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparation#410e67a7a96a8ba608b104cedd24ac7dc33b45de"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -8168,6 +8172,7 @@ dependencies = [
 [[package]]
 name = "rings-inherent-provider"
 version = "0.1.0"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparation#410e67a7a96a8ba608b104cedd24ac7dc33b45de"
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
