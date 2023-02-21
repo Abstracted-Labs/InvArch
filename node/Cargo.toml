@@ -35,8 +35,6 @@ futures = "0.3.24"
 tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
 #brainstorm-runtime = { path = "../runtime/brainstorm", optional = true }
 
-rings-inherent-provider = { path = "../../InvArch-Pallet-Library/rings-inherent-provider" }
-
 ## Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }

@@ -978,7 +978,20 @@ mod benches {
     );
 }
 
+sp_api::decl_runtime_apis! {
+    #[api_version(1)]
+    pub trait SaturnAccountDeriver<CoreId: codec::Encode, AccountId: codec::Decode> {
+        fn derive_account(core_id: CoreId) -> AccountId;
+    }
+}
+
 impl_runtime_apis! {
+    impl crate::SaturnAccountDeriver<Block, CommonId, AccountId> for Runtime {
+        fn derive_account(core_id: CommonId) -> AccountId {
+            invarch_xcm_builder::derivers::derive_tinkernet_multisig(core_id).into()
+        }
+    }
+
     impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
         fn slot_duration() -> sp_consensus_aura::SlotDuration {
             sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
