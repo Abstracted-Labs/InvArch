@@ -19,7 +19,6 @@
 //! Learn more about Substrate chain specifications at
 //! https://docs.substrate.io/v3/runtime/chain-specs/
 
-#[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{
     AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
     PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
@@ -339,9 +338,7 @@ fn testnet_genesis(
         treasury: Default::default(),
         vesting: Default::default(),
         maintenance_mode: Default::default(),
-        #[cfg(feature = "tinkernet")]
         asset_registry: Default::default(),
-        #[cfg(feature = "tinkernet")]
         tokens: Default::default(),
     }
 }

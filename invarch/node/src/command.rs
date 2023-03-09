@@ -15,16 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{Block, RuntimeApi, VERSION};
-
-//#[cfg(feature = "brainstorm")]
-//use brainstorm_runtime::{Block, RuntimeApi, VERSION};
+use invarch_runtime::{Block, VERSION};
 
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, ChainIdentify, TemplateRuntimeExecutor},
+    service::{new_partial, ChainIdentify, ParachainNativeExecutor},
 };
 use codec::Encode;
 use cumulus_client_cli::generate_genesis_block;
@@ -54,7 +50,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {
-        "InvArch Tinkernet Node".into()
+        "InvArch Node".into()
     }
 
     fn impl_version() -> String {
@@ -62,7 +58,7 @@ impl SubstrateCli for Cli {
     }
 
     fn description() -> String {
-        "InvArch Tinkernet Node\n\nThe command-line arguments provided first will be \
+        "InvArch Node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		parachain-collator <parachain-args> -- <relay-chain-args>"
@@ -92,7 +88,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
     fn impl_name() -> String {
-        "InvArch Tinkernet Collator".into()
+        "InvArch Collator".into()
     }
 
     fn impl_version() -> String {
@@ -100,7 +96,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn description() -> String {
-        "InvArch Tinkernet Collator\n\nThe command-line arguments provided first will be \
+        "InvArch Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		parachain-collator <parachain-args> -- <relay-chain-args>"
@@ -143,8 +139,6 @@ macro_rules! construct_async_run {
 		let runner = $cli.create_runner($cmd)?;
 		runner.async_run(|$config| {
 			let $components = new_partial::<
-				RuntimeApi,
-				TemplateRuntimeExecutor,
 				_
 			>(
 				&$config,
@@ -263,28 +257,28 @@ pub fn run() -> Result<()> {
             match cmd {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
-                        runner.sync_run(|config| cmd.run::<Block, TemplateRuntimeExecutor>(config))
+                        runner.sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
                             .into())
                     }
                 }
-                BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-                        &config,
-                        crate::service::parachain_build_import_queue,
-                    )?;
-                    cmd.run(partials.client)
-                }),
+                #[cfg(not(feature = "runtime-benchmarks"))]
+                BenchmarkCmd::Storage(_) => {
+                    return Err(sc_cli::Error::Input(
+                        "Compile with --features=runtime-benchmarks \
+						             to enable storage benchmarks."
+                            .into(),
+                    )
+                    .into())
+                }
+                #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-                    let partials = new_partial::<RuntimeApi, TemplateRuntimeExecutor, _>(
-                        &config,
-                        crate::service::parachain_build_import_queue,
-                    )?;
+                    let partials =
+                        new_partial::<_>(&config, crate::service::parachain_build_import_queue)?;
                     let db = partials.backend.expose_db();
                     let storage = partials.backend.expose_storage();
-
                     cmd.run(config, partials.client.clone(), db, storage)
                 }),
                 BenchmarkCmd::Machine(cmd) => {
@@ -299,24 +293,33 @@ pub fn run() -> Result<()> {
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                // we don't need any of the components of new_partial, just a runtime, or a task
-                // manager to do `async_run`.
-                let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                let task_manager =
-                    sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                        .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
 
+            use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
+            type HostFunctionsOf<E> = ExtendedHostFunctions<
+                sp_io::SubstrateHostFunctions,
+                <E as NativeExecutionDispatch>::ExtendHostFunctions,
+            >;
+
+            // grab the task manager.
+            let registry = &runner
+                .config()
+                .prometheus_config
+                .as_ref()
+                .map(|cfg| &cfg.registry);
+            let task_manager =
+                sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
+                    .map_err(|e| format!("Error: {:?}", e))?;
+
+            runner.async_run(|_| {
                 Ok((
-                    cmd.run::<Block, TemplateRuntimeExecutor>(config),
+                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>>(),
                     task_manager,
                 ))
             })
         }
-
         #[cfg(not(feature = "try-runtime"))]
-        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
-                 You can enable it with `--features try-runtime`."
+        Some(Subcommand::TryRuntime) => Err("Try-runtime was not enabled when building the node. \
+			                                       You can enable it with `--features try-runtime`."
             .into()),
         None => {
             let mut runner = cli.create_runner(&cli.run.normalize())?;
@@ -344,7 +347,7 @@ pub fn run() -> Result<()> {
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
                 if is_solo_dev {
-                    return crate::service::start_solo_dev::<RuntimeApi, TemplateRuntimeExecutor>(
+                    return crate::service::start_solo_dev(
                         config,
                     )
                     .map_err(Into::into);

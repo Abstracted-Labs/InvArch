@@ -1,5 +1,5 @@
 [package]
-name = "invarch-node"
+name = "tinkernet-node"
 version = "0.1.0"
 authors = ["InvArchitects <https://github.com/InvArch>"]
 description = "A Substrate-based InvArch Node."
@@ -14,7 +14,7 @@ build = "build.rs"
 # targets = ["x86_64-unknown-linux-gnu"]
 
 [[bin]]
-name = "invarch-collator"
+name = "tinkernet-collator"
 path = "src/main.rs"
 
 [dependencies]
@@ -31,8 +31,7 @@ jsonrpsee = { version = "0.15.1", features = ["server"] }
 futures = "0.3.24"
 
 ## Local Dependencies
-tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
-#brainstorm-runtime = { path = "../runtime/brainstorm", optional = true }
+tinkernet-runtime = { path = "../runtime" }
 
 
 ## Substrate Dependencies
@@ -103,24 +102,14 @@ cumulus-relay-chain-rpc-interface = { git = "https://github.com/paritytech/cumul
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 
-## InvArch Dependencies
-pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29"}
-
 
 [features]
-default = ["tinkernet"]
-
-tinkernet = ["tinkernet-runtime"]
-#brainstorm = ["brainstorm-runtime"]
-
 runtime-benchmarks = [
-    "tinkernet-runtime?/runtime-benchmarks",
-  #  "brainstorm-runtime?/runtime-benchmarks",
+    "tinkernet-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks"
     ]
 
 try-runtime = [
-    "tinkernet-runtime?/try-runtime",
- #   "brainstorm-runtime?/try-runtime",
+    "tinkernet-runtime/try-runtime",
     "try-runtime-cli",
 ]

@@ -1,8 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // Local Runtime Types
-#[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{
+use invarch_runtime::{
     api, native_version as _native_version, opaque::Block, AccountId, Balance, Hash,
     Index as Nonce, RuntimeApi,
 };
@@ -202,21 +201,21 @@ async fn build_relay_chain_interface(
     Arc<(dyn RelayChainInterface + 'static)>,
     Option<CollatorPair>,
 )> {
-    match collator_options.relay_chain_rpc_url {
-        Some(relay_chain_url) => {
-            let client = create_client_and_start_worker(relay_chain_url, task_manager).await?;
-            Ok((
-                Arc::new(RelayChainRpcInterface::new(client)) as Arc<_>,
-                None,
-            ))
-        }
-        None => build_inprocess_relay_chain(
+    if !collator_options.relay_chain_rpc_urls.is_empty() {
+        //   let client = create_client_and_start_worker(relay_chain_urls, task_manager).await?;
+        //   Ok((
+        //       Arc::new(RelayChainRpcInterface::new(client)) as Arc<_>,
+        //       None,
+        //   ))
+        unimplemented!("unsupported for now")
+    } else {
+        build_inprocess_relay_chain(
             polkadot_config,
             parachain_config,
             telemetry_worker_handle,
             task_manager,
             hwbench,
-        ),
+        )
     }
 }
 
