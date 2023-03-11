@@ -13,7 +13,7 @@
   "properties": {
     "ss58Format": 117,
     "tokenDecimals": 12,
-    "tokenSymbol": "VArch"
+    "tokenSymbol": "VARCH"
   },
   "relay_chain": "polkadot",
   "para_id": 3340,
