@@ -499,6 +499,7 @@ pub async fn start_parachain_node(
                                 "Failed to create parachain inherent",
                             )
                         })?;
+
                         Ok((slot, time, parachain_inherent))
                     }
                 },

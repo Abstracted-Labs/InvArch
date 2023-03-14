@@ -25,10 +25,17 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod xcm_config;
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use frame_support::{
+    dispatch::{DispatchClass, RawOrigin},
+    pallet_prelude::EnsureOrigin,
+    weights::constants::WEIGHT_REF_TIME_PER_SECOND,
+};
 pub use frame_support::{
-    construct_runtime, match_types, parameter_types,
+    //  construct_runtime,
+    match_types,
+    parameter_types,
     traits::{
-        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Get,
         Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
@@ -36,12 +43,9 @@ pub use frame_support::{
         ConstantMultiplier, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
         WeightToFeePolynomial,
     },
-    BoundedVec, ConsensusEngineId, PalletId,
-};
-use frame_support::{
-    dispatch::{DispatchClass, RawOrigin},
-    pallet_prelude::EnsureOrigin,
-    weights::constants::WEIGHT_REF_TIME_PER_SECOND,
+    BoundedVec,
+    ConsensusEngineId,
+    PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
@@ -70,7 +74,7 @@ pub use sp_runtime::BuildStorage;
 
 use xcm::latest::prelude::BodyId;
 
-use pallet_inv4::INV4Lookup;
+use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 
 // Weights
 mod weights;
@@ -97,7 +101,8 @@ mod common_types;
 use common_types::*;
 mod assets;
 mod inv4;
-mod rmrk;
+mod nft;
+mod rings;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -758,8 +763,22 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
+use modified_construct_runtime::construct_runtime_modified;
+
+impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeOrigin> {
+    fn from(val: RuntimeOrigin) -> Self {
+        match val.caller {
+            OriginCaller::system(l) => Ok(l),
+            OriginCaller::INV4(INV4Origin::Multisig(l)) => {
+                Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
+            }
+            _ => Err(val),
+        }
+    }
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
-construct_runtime!(
+construct_runtime_modified!(
     pub enum Runtime where
         Block = Block,
         NodeBlock = opaque::Block,
@@ -802,12 +821,11 @@ construct_runtime!(
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
 
         // InvArch stuff
-        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>} = 71,
+        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
+        CoreAssets: pallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 72,
+        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
-        RmrkCore: pallet_rmrk_core::{Pallet, Call, Event<T>, Storage} = 81,
-        RmrkEquip: pallet_rmrk_equip::{Pallet, Call, Event<T>, Storage} = 82,
-        RmrkMarket: pallet_rmrk_market::{Pallet, Call, Storage, Event<T>} = 83,
 
         OrmlXcm: orml_xcm = 90,
         Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,

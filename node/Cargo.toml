@@ -22,6 +22,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0" }
 serde = { version = "1.0.151", features = ["derive"] }
 hex-literal = "0.3.4"
 async-trait = { version = "0.1.48" }
+scale-info = { version = "2.0.0", default-features = false, features = ["derive"] }
 
 ## RPC related Dependencies
 jsonrpsee = { version = "0.16.2", features = ["server"] }
@@ -29,7 +30,6 @@ futures = "0.3.25"
 
 ## Local Dependencies
 tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
-
 
 ## Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36" }

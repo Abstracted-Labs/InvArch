@@ -343,5 +343,6 @@ fn testnet_genesis(
         asset_registry: Default::default(),
         #[cfg(feature = "tinkernet")]
         tokens: Default::default(),
+        core_assets: Default::default(),
     }
 }
