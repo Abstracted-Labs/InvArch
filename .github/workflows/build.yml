@@ -14,27 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
+    - name: Cache cargo
+      uses: actions/cache@v2
       with:
-        toolchain: nightly-2022-05-01
-        target: wasm32-unknown-unknown
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo
+
+    - name: Setup for checks
+      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
     - name: Build
       run: cargo build --verbose
-      
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-05-01
-        target: wasm32-unknown-unknown
+
     - name: Run tests
       run: cargo test --verbose
-      
-  fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run cargofmt
-        run: cargo +stable fmt --all -- --check
+
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Run cargofmt
+      run: cargo +stable fmt --all -- --check
