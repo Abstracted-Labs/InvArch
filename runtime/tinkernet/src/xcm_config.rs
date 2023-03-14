@@ -13,12 +13,6 @@ use frame_support::{
     traits::{Everything, Get, Nothing},
 };
 use frame_system::EnsureRoot;
-use invarch_xcm_builder::{
-    barriers::{AllowPaidDescendedOriginFrom, TinkernetMultisigMultiLocation},
-    derivers::{TinkernetPluralityAccountIdDeriver, TinkernetPluralitySignedDeriver},
-    location_conversion::PluralityAsAccountId,
-    origin_conversion::DeriveOriginFromPlurality,
-};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{
     location::AbsoluteReserveProvider, parameter_type_with_key, FixedConversionRateProvider,
@@ -53,8 +47,6 @@ pub type Barrier = (
     AllowKnownQueryResponses<PolkadotXcm>,
     // Subscriptions for version tracking are OK.
     AllowSubscriptionsFrom<Everything>,
-    // Allow Paid DescendOrigin instructions coming from Tinkernet multisigs.
-    AllowPaidDescendedOriginFrom<TinkernetMultisigMultiLocation>,
 );
 
 parameter_types! {
@@ -306,7 +298,6 @@ pub type LocationToAccountId = (
     SiblingParachainConvertsVia<Sibling, AccountId>,
     // Straight up local `AccountId32` origins just alias directly to `AccountId`.
     AccountId32Aliases<RelayNetwork, AccountId>,
-    PluralityAsAccountId<AccountId, TinkernetPluralityAccountIdDeriver<AccountId>>,
 );
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<

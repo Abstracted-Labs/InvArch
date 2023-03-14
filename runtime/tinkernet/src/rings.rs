@@ -1,7 +1,7 @@
 use crate::{
     assets::CORE_ASSET_ID,
     xcm_config::{BaseXcmWeight, MaxInstructions},
-    Balance, Call, Event, ParachainInfo, Runtime,
+    Balance, ParachainInfo, Runtime, RuntimeCall, RuntimeEvent,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
@@ -72,7 +72,7 @@ impl ParachainAssetsList for ParachainAssets {
 impl ParachainList for Parachains {
     type Balance = Balance;
     type ParachainAssets = ParachainAssets;
-    type Call = Call;
+    type Call = RuntimeCall;
 
     fn from_para_id(para_id: u32) -> Option<Self> {
         match para_id {
@@ -115,11 +115,10 @@ impl ParachainList for Parachains {
     fn xcm_fee(&self, message: &mut Xcm<Self::Call>) -> Result<Self::Balance, ()> {
         match self {
             Self::TinkernetTest => {
-                FixedWeightBounds::<BaseXcmWeight, Call, MaxInstructions>::weight(message).map(
-                    |weight| {
+                FixedWeightBounds::<BaseXcmWeight, RuntimeCall, MaxInstructions>::weight(message)
+                    .map(|weight| {
                         self.weight_to_fee(&Weight::from_ref_time(weight + BaseXcmWeight::get()))
-                    },
-                )
+                    })
             }
 
             _ => Err(()),
@@ -132,7 +131,7 @@ parameter_types! {
 }
 
 impl pallet_rings::Config for Runtime {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ParaId = ParaId;
     type Parachains = Parachains;
 }
@@ -142,9 +141,8 @@ impl WeightToFeePolynomial for BasiliskWeightToFee {
     type Balance = Balance;
 
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-        let p = 11 * 1_000_000_000_000;
-        let q =
-            Balance::from(200 * frame_support::weights::constants::WEIGHT_PER_MICROS.ref_time());
+        let p = crate::UNIT / 500;
+        let q = Balance::from(crate::ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: 1,
             negative: false,

@@ -25,19 +25,15 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparation",  default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparation",  default-features = false }
-
-#pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
-#pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+#pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparation",  default-features = false }
+#pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparation",  default-features = false }
 
 pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
+pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
 modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
-
-invarch-xcm-builder = { git = "https://github.com/InvArch/InvArch-XCM-Builder", default-features = false }
 
 ## Parity's Unique
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
@@ -64,6 +60,7 @@ frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate"
 frame-try-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.36" }
 
 # Substrate Pallet Dependencies
+pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
@@ -153,6 +150,7 @@ std = [
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
     "frame-try-runtime/std",
+    "pallet-assets/std",
     "pallet-aura/std",
     "pallet-authorship/std",
     "pallet-balances/std",
@@ -241,9 +239,6 @@ try-runtime = [
     "pallet-identity/try-runtime",
     "pallet-multisig/try-runtime",
     "pallet-uniques/try-runtime",
-    "pallet-rmrk-core/try-runtime",
-    "pallet-rmrk-equip/try-runtime",
-    "pallet-rmrk-market/try-runtime",
     "orml-xtokens/try-runtime",
     "orml-unknown-tokens/try-runtime",
     "orml-asset-registry/try-runtime",
