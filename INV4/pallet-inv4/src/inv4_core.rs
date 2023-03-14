@@ -1,6 +1,13 @@
 use super::pallet::*;
-use crate::util::derive_core_account;
-use frame_support::pallet_prelude::*;
+use crate::{
+    multisig::FreezeAsset,
+    origin::{ensure_multisig, INV4Origin},
+    util::derive_core_account,
+};
+use frame_support::{
+    pallet_prelude::*,
+    traits::fungibles::{Create, Mutate},
+};
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
 use sp_arithmetic::traits::{CheckedAdd, One};
@@ -11,17 +18,22 @@ pub type CoreIndexOf<T> = <T as Config>::CoreId;
 
 pub type CoreMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    Result<
+        INV4Origin<T, <T as crate::pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+        <T as frame_system::Config>::RuntimeOrigin,
+    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+{
     /// Create IP Set
     pub(crate) fn inner_create_core(
-        owner: OriginFor<T>,
+        origin: OriginFor<T>,
         metadata: Vec<u8>,
         minimum_support: Perbill,
         required_approval: Perbill,
-        default_permission: bool,
     ) -> DispatchResult {
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
-            let creator = ensure_signed(owner.clone())?;
+            let creator = ensure_signed(origin)?;
 
             let bounded_metadata: BoundedVec<u8, T::MaxMetadata> = metadata
                 .try_into()
@@ -42,20 +54,17 @@ impl<T: Config> Pallet<T> {
 
             let seed_balance = <T as Config>::CoreSeedBalance::get();
 
-            // Send IP Set `creator` 1,000,000 "IPT0" tokens
-            // Token has 6 decimal places: 1,000,000 / 10^6 = 1 IPTO token
-            // This allows for token divisiblity
-            Balances::<T>::insert((current_id, None::<T::CoreId>, creator), seed_balance);
+            T::AssetsProvider::create(current_id, core_account.clone(), true, One::one())?;
 
-            TotalIssuance::<T>::insert(current_id, seed_balance);
+            T::AssetsProvider::mint_into(current_id, &creator, seed_balance)?;
+
+            T::AssetsProvider::freeze_asset(current_id)?;
 
             let info = CoreInfo {
                 account: core_account.clone(),
                 metadata: bounded_metadata,
-
                 minimum_support,
                 required_approval,
-                default_permission,
             };
 
             // Update core IPS storage
@@ -72,19 +81,16 @@ impl<T: Config> Pallet<T> {
     }
 
     pub(crate) fn inner_set_parameters(
-        owner: OriginFor<T>,
-        core_id: T::CoreId,
+        origin: OriginFor<T>,
         metadata: Option<Vec<u8>>,
         minimum_support: Option<Perbill>,
         required_approval: Option<Perbill>,
-        default_permission: Option<bool>,
     ) -> DispatchResult {
-        let signer = ensure_signed(owner)?;
+        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let core_id = core_origin.id;
 
         CoreStorage::<T>::try_mutate(core_id, |core| {
             let mut c = core.take().ok_or(Error::<T>::CoreNotFound)?;
-
-            ensure!(c.account == signer, Error::<T>::NoPermission);
 
             if let Some(ms) = minimum_support {
                 c.minimum_support = ms;
@@ -92,10 +98,6 @@ impl<T: Config> Pallet<T> {
 
             if let Some(ra) = required_approval {
                 c.required_approval = ra;
-            }
-
-            if let Some(dp) = default_permission {
-                c.default_permission = dp;
             }
 
             if let Some(m) = metadata {

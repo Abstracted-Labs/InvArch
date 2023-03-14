@@ -25,9 +25,10 @@ pub use pallet::*;
 
 pub mod inv4_core;
 mod lookup;
-pub mod migrations;
+//pub mod migrations;
+mod dispatch;
 pub mod multisig;
-pub mod permissions;
+pub mod origin;
 pub mod util;
 pub mod voting;
 
@@ -44,11 +45,11 @@ pub mod pallet {
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
         storage::Key,
-        traits::{Currency, Get, GetCallMetadata, ReservableCurrency},
-        BoundedVec, Parameter,
+        traits::{fungibles, Currency, Get, GetCallMetadata, ReservableCurrency},
+        Parameter,
     };
-    use frame_system::pallet_prelude::*;
-    use primitives::{CoreInfo, OneOrPercent, SubTokenInfo};
+    use frame_system::{pallet_prelude::*, RawOrigin};
+    use primitives::CoreInfo;
     use scale_info::prelude::fmt::Display;
     use sp_runtime::{
         traits::{AtLeast32BitUnsigned, Member},
@@ -56,7 +57,9 @@ pub mod pallet {
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
-    pub use super::{inv4_core, multisig, permissions};
+    pub use super::{inv4_core, multisig};
+
+    use crate::origin::INV4Origin;
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -82,8 +85,10 @@ pub mod pallet {
 
         /// The overarching call type.
         type RuntimeCall: Parameter
-            + Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
-            + GetDispatchInfo
+            + Dispatchable<
+                RuntimeOrigin = <Self as pallet::Config>::RuntimeOrigin,
+                PostInfo = PostDispatchInfo,
+            > + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
             + Encode;
@@ -98,12 +103,29 @@ pub mod pallet {
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
 
+        /// The outer `Origin` type.
+        type RuntimeOrigin: From<Origin<Self>>
+            + From<<Self as frame_system::Config>::RuntimeOrigin>
+            + From<RawOrigin<<Self as frame_system::Config>::AccountId>>;
+
         #[pallet::constant]
         type CoreSeedBalance: Get<BalanceOf<Self>>;
+
+        type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
+            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
+            + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>
+            + fungibles::Create<Self::AccountId, AssetId = Self::CoreId>
+            + fungibles::Destroy<Self::AccountId, AssetId = Self::CoreId>
+            + fungibles::metadata::Mutate<Self::AccountId, AssetId = Self::CoreId>
+            + multisig::FreezeAsset<Self::CoreId>;
     }
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
+    #[pallet::origin]
+    pub type Origin<T> =
+        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -148,68 +170,9 @@ pub mod pallet {
         (
             Key<Blake2_128Concat, T::CoreId>,
             Key<Blake2_128Concat, T::Hash>,
-            Key<Blake2_128Concat, (T::AccountId, Option<T::CoreId>)>,
-        ),
-        VoteRecord<T>,
-    >;
-
-    /// Details of a sub token.
-    ///
-    /// Key: (IP Set ID, sub token ID)
-    #[pallet::storage]
-    #[pallet::getter(fn sub_assets)]
-    pub type SubAssets<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        T::CoreId,
-        Blake2_128Concat,
-        T::CoreId,
-        SubTokenInfo<T::CoreId, BoundedVec<u8, T::MaxMetadata>>,
-    >;
-
-    /// The holdings of a specific account for a specific token.
-    ///
-    /// Get `account123` balance for the primary token (IPT0) pegged to IP Set `id123`:
-    /// `Self::balance((id123, None), account123);`
-    /// Replace `None` with `Some(id234)` to get specific sub token balance
-    #[pallet::storage]
-    #[pallet::getter(fn balance)]
-    pub type Balances<T: Config> = StorageNMap<
-        _,
-        (
-            Key<Blake2_128Concat, T::CoreId>,
-            Key<Blake2_128Concat, Option<T::CoreId>>,
             Key<Blake2_128Concat, T::AccountId>,
         ),
-        BalanceOf<T>,
-    >;
-
-    /// The total issuance of a main token or sub_token.
-    #[pallet::storage]
-    #[pallet::getter(fn total_issuance)]
-    pub type TotalIssuance<T: Config> =
-        StorageMap<_, Twox64Concat, T::CoreId, BalanceOf<T>, ValueQuery>;
-
-    /// Sub asset voting weight (non IPT0).
-    ///
-    /// Key: (IP Set ID, sub token ID)
-    #[pallet::storage]
-    #[pallet::getter(fn asset_weight_storage)]
-    pub type AssetWeight<T: Config> =
-        StorageDoubleMap<_, Blake2_128Concat, T::CoreId, Blake2_128Concat, T::CoreId, OneOrPercent>;
-
-    /// What pallet functions a sub token has permission to call
-    ///
-    /// Key: (Ip Set ID, sub token ID), call metadata
-    #[pallet::storage]
-    #[pallet::getter(fn permissions)]
-    pub type Permissions<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        (T::CoreId, T::CoreId),
-        Blake2_128Concat,
-        [u8; 2],
-        bool,
+        VoteRecord<T>,
     >;
 
     #[pallet::event]
@@ -222,13 +185,13 @@ pub mod pallet {
         },
         /// IP Tokens were minted
         Minted {
-            token: (T::CoreId, Option<T::CoreId>),
+            core_id: T::CoreId,
             target: T::AccountId,
             amount: BalanceOf<T>,
         },
         /// IP Tokens were burned
         Burned {
-            token: (T::CoreId, Option<T::CoreId>),
+            core_id: T::CoreId,
             target: T::AccountId,
             amount: BalanceOf<T>,
         },
@@ -281,25 +244,6 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             call_hash: T::Hash,
-        },
-        /// One of more sub tokens were created
-        SubTokenCreated { id: T::CoreId, metadata: Vec<u8> },
-        /// Permission for a given function was just set for a sub token
-        ///
-        /// Params: IP Set ID, Sub token ID, call_metadata(pallet index, function index), true/false permission
-        PermissionSet {
-            core_id: T::CoreId,
-            sub_token_id: T::CoreId,
-            call_index: [u8; 2],
-            permission: bool,
-        },
-        /// The voting weight was set for a sub token
-        ///
-        /// Params: IP Set ID, Sub token ID, voting power percentage
-        WeightSet {
-            core_id: T::CoreId,
-            sub_token_id: T::CoreId,
-            voting_weight: OneOrPercent,
         },
     }
 
@@ -361,6 +305,10 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
+        Result<
+            INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+            <T as frame_system::Config>::RuntimeOrigin,
+        >: From<<T as frame_system::Config>::RuntimeOrigin>,
         <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     {
         /// Create IP (Intellectual Property) Set (IPS)
@@ -371,14 +319,12 @@ pub mod pallet {
             metadata: Vec<u8>,
             minimum_support: Perbill,
             required_approval: Perbill,
-            default_permission: bool,
         ) -> DispatchResult {
             Pallet::<T>::inner_create_core(
                 owner,
                 metadata,
                 minimum_support,
                 required_approval,
-                default_permission,
             )
         }
 
@@ -386,26 +332,22 @@ pub mod pallet {
         #[pallet::call_index(1)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn token_mint(
-            owner: OriginFor<T>,
-            core_id: T::CoreId,
-            sub_token: Option<T::CoreId>,
+            origin: OriginFor<T>,
             amount: BalanceOf<T>,
             target: T::AccountId,
         ) -> DispatchResult {
-            Pallet::<T>::inner_token_mint(owner, core_id, sub_token, amount, target)
+            Pallet::<T>::inner_token_mint(origin, amount, target)
         }
 
         /// Burn `amount` of specified token from `target` account
         #[pallet::call_index(2)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn token_burn(
-            owner: OriginFor<T>,
-            core_id: T::CoreId,
-            sub_token: Option<T::CoreId>,
+            origin: OriginFor<T>,
             amount: BalanceOf<T>,
             target: T::AccountId,
         ) -> DispatchResult {
-            Pallet::<T>::inner_token_burn(owner, core_id, sub_token, amount, target)
+            Pallet::<T>::inner_token_burn(origin, amount, target)
         }
 
         #[pallet::call_index(3)]
@@ -413,11 +355,10 @@ pub mod pallet {
         pub fn operate_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
-            sub_token: Option<T::CoreId>,
             metadata: Option<Vec<u8>>,
             call: Box<<T as pallet::Config>::RuntimeCall>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_operate_multisig(caller, core_id, sub_token, metadata, call)
+            Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, call)
         }
 
         #[pallet::call_index(4)]
@@ -425,11 +366,10 @@ pub mod pallet {
         pub fn vote_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
-            sub_token: Option<T::CoreId>,
             call_hash: T::Hash,
             aye: bool,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_vote_multisig(caller, core_id, sub_token, call_hash, aye)
+            Pallet::<T>::inner_vote_multisig(caller, core_id, call_hash, aye)
         }
 
         #[pallet::call_index(5)]
@@ -437,58 +377,20 @@ pub mod pallet {
         pub fn withdraw_vote_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
-            sub_token: Option<T::CoreId>,
             call_hash: T::Hash,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, sub_token, call_hash)
-        }
-
-        /// Create one or more sub tokens for an IP Set
-        #[pallet::call_index(6)]
-        #[pallet::weight(200_000_000)]
-        pub fn create_sub_token(
-            caller: OriginFor<T>,
-            core_id: T::CoreId,
-            sub_token_id: T::CoreId,
-            sub_token_metadata: Vec<u8>,
-        ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_create_sub_token(caller, core_id, sub_token_id, sub_token_metadata)
-        }
-
-        #[pallet::call_index(7)]
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
-        pub fn set_permission(
-            owner: OriginFor<T>,
-            core_id: T::CoreId,
-            sub_token_id: T::CoreId,
-            call_index: [u8; 2],
-            permission: bool,
-        ) -> DispatchResult {
-            Pallet::<T>::inner_set_permission(owner, core_id, sub_token_id, call_index, permission)
-        }
-
-        #[pallet::call_index(8)]
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
-        pub fn set_sub_token_weight(
-            owner: OriginFor<T>,
-            core_id: T::CoreId,
-            sub_token_id: T::CoreId,
-            voting_weight: OneOrPercent,
-        ) -> DispatchResult {
-            Pallet::<T>::inner_set_sub_token_weight(owner, core_id, sub_token_id, voting_weight)
+            Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, call_hash)
         }
 
         #[pallet::call_index(9)]
         #[pallet::weight(200_000_000)] // TODO: Set correct weight
         pub fn set_parameters(
-            owner: OriginFor<T>,
-            core_id: T::CoreId,
+            origin: OriginFor<T>,
             metadata: Option<Vec<u8>>,
             minimum_support: Option<Perbill>,
             required_approval: Option<Perbill>,
-            default_permission: Option<bool>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_parameters(owner, core_id, metadata, minimum_support, required_approval, default_permission)
+            Pallet::<T>::inner_set_parameters(origin, metadata, minimum_support, required_approval)
         }
     }
 

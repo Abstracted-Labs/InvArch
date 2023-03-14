@@ -50,8 +50,6 @@ pub struct CoreInfo<AccountId, CoreMetadataOf> {
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve
     pub minimum_support: Perbill,
     pub required_approval: Perbill,
-    //pub default_asset_weight: OneOrPercent,
-    pub default_permission: bool,
 }
 
 /// IPF Info

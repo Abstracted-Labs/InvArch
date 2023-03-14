@@ -2,7 +2,7 @@
 
 members = [
     "INV4/pallet-inv4",
-
     "OCIF/staking",
-    "pallet-checked-inflation"
+    "pallet-checked-inflation",
+    "pallet-rings"
 ]

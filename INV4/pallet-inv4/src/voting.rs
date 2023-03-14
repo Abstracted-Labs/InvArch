@@ -1,9 +1,9 @@
-use crate::{BalanceOf, Config, CoreStorage, Multisig, Pallet, TotalIssuance};
+use crate::{origin::INV4Origin, BalanceOf, Config, CoreStorage, Multisig, Pallet};
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Member,
-    traits::{PollStatus, VoteTally},
+    traits::{fungibles::Inspect, PollStatus, VoteTally},
     CloneNoBound, EqNoBound, Parameter, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
@@ -59,7 +59,7 @@ impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
     }
 
     fn support(&self, class: Core<T>) -> Perbill {
-        Perbill::from_rational(self.ayes, TotalIssuance::<T>::get(class))
+        Perbill::from_rational(self.ayes, T::AssetsProvider::total_issuance(class))
     }
 
     fn approval(&self, _: Core<T>) -> Perbill {
@@ -150,3 +150,15 @@ pub enum Vote<Votes> {
 }
 
 pub type VoteRecord<T> = Vote<Votes<T>>;
+
+impl<T: Config> Pallet<T>
+where
+    Result<
+        INV4Origin<T, <T as crate::pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+        <T as frame_system::Config>::RuntimeOrigin,
+    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+{
+    pub fn minimum_support_and_required_approval(core_id: T::CoreId) -> Option<(Perbill, Perbill)> {
+        CoreStorage::<T>::get(core_id).map(|core| (core.minimum_support, core.required_approval))
+    }
+}
