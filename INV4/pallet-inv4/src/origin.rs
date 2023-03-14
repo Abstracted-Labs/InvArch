@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use crate::{
     pallet::{self, Origin},
-    util::derive_ips_account,
+    util::derive_core_account,
     Config,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -13,46 +13,48 @@ use sp_runtime::traits::AtLeast32BitUnsigned;
 #[derive(PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen, Clone, RuntimeDebug)]
 pub enum INV4Origin<
     T: pallet::Config,
-    IpId: AtLeast32BitUnsigned + Encode,
+    CoreId: AtLeast32BitUnsigned + Encode,
     AccountId: Decode + Encode + Clone,
 > {
-    Multisig(MultisigInternalOrigin<T, IpId, AccountId>),
+    Multisig(MultisigInternalOrigin<T, CoreId, AccountId>),
 }
 
 #[derive(PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen, Clone, RuntimeDebug)]
 pub struct MultisigInternalOrigin<
     T: pallet::Config,
-    IpId: AtLeast32BitUnsigned + Encode,
+    CoreId: AtLeast32BitUnsigned + Encode,
     AccountId: Decode + Encode + Clone,
 > {
-    pub id: IpId,
-    pub original_caller: Option<AccountId>,
-    t: PhantomData<T>,
+    pub id: CoreId,
+    t: PhantomData<(T, AccountId)>,
 }
 
 impl<
         T: pallet::Config,
-        IpId: AtLeast32BitUnsigned + Encode,
+        CoreId: AtLeast32BitUnsigned + Encode,
         AccountId: Decode + Encode + Clone,
-    > MultisigInternalOrigin<T, IpId, AccountId>
+    > MultisigInternalOrigin<T, CoreId, AccountId>
 {
-    pub fn new(id: (IpId, Option<AccountId>)) -> Self {
+    pub fn new(id: CoreId) -> Self {
         Self {
-            id: id.0,
-            original_caller: id.1,
+            id,
             t: PhantomData::default(),
         }
     }
 
     pub fn to_account_id(&self) -> AccountId {
-        derive_ips_account::<T, IpId, AccountId>(self.id.clone(), self.original_caller.as_ref())
+        derive_core_account::<T, CoreId, AccountId>(self.id.clone())
     }
 }
 
 pub fn ensure_multisig<T: Config, OuterOrigin>(
     o: OuterOrigin,
 ) -> Result<
-    MultisigInternalOrigin<T, <T as pallet::Config>::IpId, <T as frame_system::Config>::AccountId>,
+    MultisigInternalOrigin<
+        T,
+        <T as pallet::Config>::CoreId,
+        <T as frame_system::Config>::AccountId,
+    >,
     BadOrigin,
 >
 where

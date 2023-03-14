@@ -2,7 +2,7 @@
 
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::Percent;
+use sp_runtime::{Perbill, Percent};
 
 /// Voting weight of an IPT
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
@@ -39,26 +39,17 @@ pub enum BoolOrWasm<Wasm> {
 
 /// Core IP Set struct
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub struct IpInfo<AccountId, Data, IpsMetadataOf, IpId, Balance> {
+pub struct CoreInfo<AccountId, CoreMetadataOf> {
     /// IPS parentage
-    pub parentage: Parentage<AccountId, IpId>,
+    pub account: AccountId,
     /// IPS metadata
-    pub metadata: IpsMetadataOf,
-    /// IPS children. Holds list of all items the IP Set directly owns.
-    pub data: Data,
-    /// IPS Type
-    pub ips_type: IpsType<IpId>,
-    /// If this IPS allows replicas
-    pub allow_replica: bool,
-    /// Specifically, the supply of IPT0 (ownership) tokens.
-    pub supply: Balance,
+    pub metadata: CoreMetadataOf,
 
     /// Aye vote percentage required to execute a multisig call.
     ///
     /// Invariant: If set to `One`, 100% of tokens that have non-zero voting weight must approve
-    pub execution_threshold: OneOrPercent,
-    pub default_asset_weight: OneOrPercent,
-    pub default_permission: bool,
+    pub minimum_support: Perbill,
+    pub required_approval: Perbill,
 }
 
 /// IPF Info
@@ -76,7 +67,7 @@ pub struct IpfInfo<AccountId, Data, IpfMetadataOf> {
 
 // This is a struct in preparation for having more fields in the future.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq, MaxEncodedLen, TypeInfo)]
-pub struct SubIptInfo<IptId, SubAssetMetadata> {
+pub struct SubTokenInfo<IptId, SubAssetMetadata> {
     pub id: IptId,
     pub metadata: SubAssetMetadata,
 }

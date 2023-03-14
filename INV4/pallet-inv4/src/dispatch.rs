@@ -5,12 +5,10 @@ use crate::{
 use frame_support::{dispatch::Dispatchable, pallet_prelude::*};
 
 pub fn dispatch_call<T: Config>(
-    ips_id: <T as Config>::IpId,
-    original_caller: Option<<T as frame_system::Config>::AccountId>,
-    call: <T as Config>::Call,
+    core_id: <T as Config>::CoreId,
+    call: <T as Config>::RuntimeCall,
 ) -> DispatchResultWithPostInfo {
-    let origin =
-        INV4Origin::Multisig(MultisigInternalOrigin::new((ips_id, original_caller))).into();
+    let origin = INV4Origin::Multisig(MultisigInternalOrigin::new(core_id)).into();
 
     call.dispatch(origin)
 }

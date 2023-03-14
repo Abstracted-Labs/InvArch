@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::Get;
-use sp_core::H256;
 use sp_std::convert::TryInto;
 
 mod traits;
@@ -13,9 +12,8 @@ pub use traits::{ParachainAssetsList, ParachainList};
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
-    use frame_system::{ensure_none, pallet_prelude::OriginFor};
+    use frame_system::pallet_prelude::OriginFor;
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
-    use rings_inherent_provider::{CodeHashes, InnerCodeHashes};
     use sp_std::{vec, vec::Vec};
     use xcm::{latest::prelude::*, DoubleEncoded};
 
@@ -24,18 +22,13 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_inv4::Config + pallet_xcm::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Parachains: ParachainList;
 
         #[pallet::constant]
         type ParaId: Get<u32>;
     }
-
-    #[pallet::storage]
-    #[pallet::getter(fn current_code_hashes)]
-    pub type CurrentCodeHashes<T: Config> =
-        StorageMap<_, Blake2_128Concat, <T as pallet::Config>::Parachains, H256>;
 
     #[pallet::error]
     pub enum Error<T> {
@@ -48,7 +41,7 @@ pub mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
         CallSent {
-            sender: <T as pallet_inv4::Config>::IpId,
+            sender: <T as pallet_inv4::Config>::CoreId,
             destination: <T as pallet::Config>::Parachains,
             call: Vec<u8>,
         },
@@ -57,52 +50,28 @@ pub mod pallet {
             parachain: <<<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets as ParachainAssetsList>::Parachains,
             asset: <<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets,
             amount: u128,
-            from: <T as pallet_inv4::Config>::IpId,
+            from: <T as pallet_inv4::Config>::CoreId,
             to: <T as frame_system::Config>::AccountId,
         },
-    }
-
-    #[pallet::inherent]
-    impl<T: Config> ProvideInherent for Pallet<T>
-    where
-        Result<
-            INV4Origin<T, <T as pallet_inv4::Config>::IpId, <T as frame_system::Config>::AccountId>,
-            <T as frame_system::Config>::Origin,
-        >: From<<T as frame_system::Config>::Origin>,
-
-        <T as pallet_inv4::Config>::IpId: Into<u32>,
-
-        [u8; 32]: From<<T as frame_system::Config>::AccountId>,
-    {
-        type Call = Call<T>;
-        type Error = sp_inherents::MakeFatalError<()>;
-        const INHERENT_IDENTIFIER: InherentIdentifier = *b"codehash";
-
-        fn create_inherent(data: &InherentData) -> Option<Self::Call> {
-            data.get_data::<CodeHashes>(&Self::INHERENT_IDENTIFIER)
-                .ok()
-                .flatten()?
-                .0
-                .map(|hashes| Call::set_storage { hashes })
-        }
-
-        fn is_inherent(call: &Self::Call) -> bool {
-            matches!(call, Call::set_storage { .. })
-        }
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
         Result<
-            INV4Origin<T, <T as pallet_inv4::Config>::IpId, <T as frame_system::Config>::AccountId>,
-            <T as frame_system::Config>::Origin,
-        >: From<<T as frame_system::Config>::Origin>,
+            INV4Origin<
+                T,
+                <T as pallet_inv4::Config>::CoreId,
+                <T as frame_system::Config>::AccountId,
+            >,
+            <T as frame_system::Config>::RuntimeOrigin,
+        >: From<<T as frame_system::Config>::RuntimeOrigin>,
 
-        <T as pallet_inv4::Config>::IpId: Into<u32>,
+        <T as pallet_inv4::Config>::CoreId: Into<u32>,
 
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     {
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn send_call(
             origin: OriginFor<T>,
@@ -120,7 +89,6 @@ pub mod pallet {
 
             let dest = destination.get_location();
             let dest_asset = destination.get_main_asset().get_asset_id();
-            let fee = destination.weight_to_fee(&weight);
 
             let beneficiary: MultiLocation = MultiLocation {
                 parents: 1,
@@ -202,6 +170,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn transfer_assets(
             origin: OriginFor<T>,
@@ -308,19 +277,6 @@ pub mod pallet {
                 amount,
                 from: core.id,
                 to,
-            });
-
-            Ok(())
-        }
-
-        #[pallet::weight(100_000_000)]
-        pub fn set_storage(origin: OriginFor<T>, hashes: InnerCodeHashes) -> DispatchResult {
-            ensure_none(origin)?;
-
-            hashes.into_iter().for_each(|(para_id, hash): (u32, H256)| {
-                if let Some(parachain) = <T as pallet::Config>::Parachains::from_para_id(para_id) {
-                    CurrentCodeHashes::<T>::insert(parachain, hash);
-                }
             });
 
             Ok(())
