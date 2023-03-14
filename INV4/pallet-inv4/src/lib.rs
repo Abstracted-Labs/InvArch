@@ -116,8 +116,9 @@ pub mod pallet {
             + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Create<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Destroy<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::metadata::Mutate<Self::AccountId, AssetId = Self::CoreId>
-            + multisig::FreezeAsset<Self::CoreId>;
+            + fungibles::metadata::Mutate<Self::AccountId, AssetId = Self::CoreId>;
+
+        type AssetFreezer: multisig::FreezeAsset<Self::CoreId>;
     }
 
     /// The current storage version.

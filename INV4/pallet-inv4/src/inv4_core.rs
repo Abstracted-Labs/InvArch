@@ -58,7 +58,7 @@ where
 
             T::AssetsProvider::mint_into(current_id, &creator, seed_balance)?;
 
-            T::AssetsProvider::freeze_asset(current_id)?;
+            T::AssetFreezer::freeze_asset(current_id)?;
 
             let info = CoreInfo {
                 account: core_account.clone(),
