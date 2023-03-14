@@ -15,7 +15,7 @@ pub trait ParachainList: Parameter + MaxEncodedLen {
 
     fn weight_to_fee(&self, weight: &Weight) -> Self::Balance;
 
-    fn xcm_fee(&self, message: &mut Xcm<Self::Call>) -> Result<Self::Balance, String>;
+    fn xcm_fee(&self, message: &mut Xcm<Self::Call>) -> Result<Self::Balance, ()>;
 }
 
 pub trait ParachainAssetsList: Parameter + MaxEncodedLen {
