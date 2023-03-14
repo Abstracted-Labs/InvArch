@@ -3391,6 +3391,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#501b201234c74770d5d972a4383ceb939655f868"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5536,6 +5537,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#501b201234c74770d5d972a4383ceb939655f868"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5823,6 +5825,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#501b201234c74770d5d972a4383ceb939655f868"
 dependencies = [
  "frame-support",
  "frame-system",
