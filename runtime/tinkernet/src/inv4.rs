@@ -1,6 +1,6 @@
 use crate::{
-    common_types::CommonId, AccountId, Balance, Balances, CoreAssets, Runtime, RuntimeCall,
-    RuntimeEvent, RuntimeOrigin,
+    common_types::CommonId, constants::currency::UNIT, AccountId, Balance, Balances, CoreAssets,
+    DealWithFees, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 };
 use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
 use frame_system::{EnsureNever, EnsureRoot, RawOrigin};
@@ -9,6 +9,7 @@ parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
+    pub const CoreCreationFee: Balance = UNIT * 100;
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -23,6 +24,8 @@ impl pallet_inv4::Config for Runtime {
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
     type AssetFreezer = AssetFreezer;
+    type CoreCreationFee = CoreCreationFee;
+    type CreationFeeHandler = DealWithFees;
 }
 
 parameter_types! {
