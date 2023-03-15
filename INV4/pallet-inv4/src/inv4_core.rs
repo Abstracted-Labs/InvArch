@@ -6,7 +6,10 @@ use crate::{
 };
 use frame_support::{
     pallet_prelude::*,
-    traits::fungibles::{Create, Mutate},
+    traits::{
+        fungibles::{Create, Mutate},
+        Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons,
+    },
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
@@ -67,7 +70,14 @@ where
                 required_approval,
             };
 
-            // Update core IPS storage
+            T::CreationFeeHandler::on_unbalanced(<T as Config>::Currency::withdraw(
+                &creator,
+                T::CoreCreationFee::get(),
+                WithdrawReasons::TRANSACTION_PAYMENT,
+                ExistenceRequirement::KeepAlive,
+            )?);
+
+            // Update core storage
             CoreStorage::<T>::insert(current_id, info);
             CoreByAccount::<T>::insert(core_account.clone(), current_id);
 

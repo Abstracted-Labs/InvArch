@@ -45,8 +45,8 @@ pub mod pallet {
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
         storage::Key,
-        traits::{fungibles, Currency, Get, GetCallMetadata, ReservableCurrency},
-        Parameter,
+        traits::{fungibles, Currency, Get, GetCallMetadata, OnUnbalanced, ReservableCurrency},
+        transactional, Parameter,
     };
     use frame_system::{pallet_prelude::*, RawOrigin};
     use primitives::CoreInfo;
@@ -111,6 +111,9 @@ pub mod pallet {
         #[pallet::constant]
         type CoreSeedBalance: Get<BalanceOf<Self>>;
 
+        #[pallet::constant]
+        type CoreCreationFee: Get<BalanceOf<Self>>;
+
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>
@@ -119,6 +122,10 @@ pub mod pallet {
             + fungibles::metadata::Mutate<Self::AccountId, AssetId = Self::CoreId>;
 
         type AssetFreezer: multisig::FreezeAsset<Self::CoreId>;
+
+        type CreationFeeHandler: OnUnbalanced<
+            <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
+        >;
     }
 
     /// The current storage version.
@@ -314,6 +321,7 @@ pub mod pallet {
     {
         /// Create IP (Intellectual Property) Set (IPS)
         #[pallet::call_index(0)]
+        #[transactional]
         #[pallet::weight(900_000_000)]
         pub fn create_core(
             owner: OriginFor<T>,
