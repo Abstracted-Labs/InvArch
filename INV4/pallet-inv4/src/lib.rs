@@ -27,6 +27,7 @@ pub mod inv4_core;
 mod lookup;
 //pub mod migrations;
 mod dispatch;
+pub mod fee_handling;
 pub mod multisig;
 pub mod origin;
 pub mod util;
@@ -38,7 +39,10 @@ pub use lookup::INV4Lookup;
 pub mod pallet {
     use core::iter::Sum;
 
-    use crate::voting::{Tally, VoteRecord};
+    use crate::{
+        fee_handling::MultisigFeeHandler,
+        voting::{Tally, VoteRecord},
+    };
 
     use super::*;
     use frame_support::{
@@ -52,7 +56,7 @@ pub mod pallet {
     use primitives::CoreInfo;
     use scale_info::prelude::fmt::Display;
     use sp_runtime::{
-        traits::{AtLeast32BitUnsigned, Member, SignedExtension},
+        traits::{AtLeast32BitUnsigned, Member},
         Perbill,
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
@@ -68,9 +72,7 @@ pub mod pallet {
         CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
 
     #[pallet::config]
-    pub trait Config:
-        frame_system::Config + pallet_balances::Config + pallet_transaction_payment::Config
-    {
+    pub trait Config: frame_system::Config + pallet_balances::Config {
         /// The IPS Pallet Events
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The IPS ID type
@@ -130,7 +132,10 @@ pub mod pallet {
             <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
         >;
 
-        type FeeCharger: SignedExtension<AccountId = Self::AccountId, Call = <Self as Config>::RuntimeCall, AdditionalSigned = (), Pre = (BalanceOf<Self>, Self::AccountId, <<Self as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<Self>>::LiquidityInfo)> + Default;
+        type FeeCharger: MultisigFeeHandler<
+            Call = <Self as Config>::RuntimeCall,
+            AccountId = Self::AccountId,
+        >;
     }
 
     /// The current storage version.

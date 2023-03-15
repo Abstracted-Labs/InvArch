@@ -1,4 +1,5 @@
 use crate::{
+    fee_handling::MultisigFeeHandler,
     origin::{INV4Origin, MultisigInternalOrigin},
     Config, Error,
 };
@@ -6,7 +7,6 @@ use frame_support::{
     dispatch::{Dispatchable, GetDispatchInfo},
     pallet_prelude::*,
 };
-use sp_runtime::traits::SignedExtension;
 
 pub fn dispatch_call<T: Config>(
     core_id: <T as Config>::CoreId,
@@ -19,14 +19,9 @@ pub fn dispatch_call<T: Config>(
     let info = call.get_dispatch_info();
     let len = call.encode().len();
 
-    let pre = <T::FeeCharger as SignedExtension>::pre_dispatch(
-        Default::default(),
-        &multisig_account,
-        &call,
-        &info,
-        len,
-    )
-    .map_err(|_| Error::<T>::CallFeePaymentFailed)?;
+    let pre =
+        <T::FeeCharger as MultisigFeeHandler>::pre_dispatch(&multisig_account, &call, &info, len)
+            .map_err(|_| Error::<T>::CallFeePaymentFailed)?;
 
     let dispatch_result = call.dispatch(origin);
 
@@ -35,7 +30,7 @@ pub fn dispatch_call<T: Config>(
         Err(e) => e.post_info,
     };
 
-    <T::FeeCharger as SignedExtension>::post_dispatch(
+    <T::FeeCharger as MultisigFeeHandler>::post_dispatch(
         Some(pre),
         &info,
         &post,
