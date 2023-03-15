@@ -52,7 +52,7 @@ pub mod pallet {
     use primitives::CoreInfo;
     use scale_info::prelude::fmt::Display;
     use sp_runtime::{
-        traits::{AtLeast32BitUnsigned, Member},
+        traits::{AtLeast32BitUnsigned, Member, SignedExtension},
         Perbill,
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
@@ -68,7 +68,9 @@ pub mod pallet {
         CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_balances::Config {
+    pub trait Config:
+        frame_system::Config + pallet_balances::Config + pallet_transaction_payment::Config
+    {
         /// The IPS Pallet Events
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The IPS ID type
@@ -86,6 +88,7 @@ pub mod pallet {
         /// The overarching call type.
         type RuntimeCall: Parameter
             + Dispatchable<
+                Info = frame_support::dispatch::DispatchInfo,
                 RuntimeOrigin = <Self as pallet::Config>::RuntimeOrigin,
                 PostInfo = PostDispatchInfo,
             > + GetDispatchInfo
@@ -126,6 +129,8 @@ pub mod pallet {
         type CreationFeeHandler: OnUnbalanced<
             <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
         >;
+
+        type FeeCharger: SignedExtension<AccountId = Self::AccountId, Call = <Self as Config>::RuntimeCall, AdditionalSigned = (), Pre = (BalanceOf<Self>, Self::AccountId, <<Self as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<Self>>::LiquidityInfo)> + Default;
     }
 
     /// The current storage version.
@@ -253,6 +258,10 @@ pub mod pallet {
             executor_account: T::AccountId,
             call_hash: T::Hash,
         },
+
+        Debug {
+            data: Vec<u8>,
+        },
     }
 
     /// Errors for IPF pallet
@@ -307,6 +316,8 @@ pub mod pallet {
         Underflow,
 
         IncompleteVoteCleanup,
+
+        CallFeePaymentFailed,
     }
 
     /// Dispatch functions
@@ -402,7 +413,4 @@ pub mod pallet {
             Pallet::<T>::inner_set_parameters(origin, metadata, minimum_support, required_approval)
         }
     }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 }
