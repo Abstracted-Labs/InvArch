@@ -673,6 +673,8 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureInvarchAccount {
 
     #[cfg(feature = "runtime-benchmarks")]
     fn successful_origin() -> RuntimeOrigin {
+        use codec::Decode;
+
         let zero_account_id =
             AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
                 .expect("infinite length input; no invalid inputs for type; qed");
@@ -854,6 +856,7 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
+        [pallet_inv4, INV4]
     );
 }
 

@@ -32,6 +32,7 @@ impl pallet_inv4::Config for Runtime {
     type CoreCreationFee = CoreCreationFee;
     type CreationFeeHandler = DealWithFees;
     type FeeCharger = FeeCharger;
+    type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
@@ -90,8 +91,6 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = ();
     type Extra = ();
     type RemoveItemsLimit = RemoveItemsList;
-    #[cfg(feature = "runtime-benchmarks")]
-    type BenchmarkHelper = ();
 }
 
 pub struct AssetFreezer;
