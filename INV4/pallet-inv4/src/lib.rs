@@ -23,6 +23,8 @@
 
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod inv4_core;
 mod lookup;
 //pub mod migrations;
@@ -32,8 +34,10 @@ pub mod multisig;
 pub mod origin;
 pub mod util;
 pub mod voting;
+pub mod weights;
 
 pub use lookup::INV4Lookup;
+pub use weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -136,6 +140,8 @@ pub mod pallet {
             Call = <Self as Config>::RuntimeCall,
             AccountId = Self::AccountId,
         >;
+
+        type WeightInfo: WeightInfo;
     }
 
     /// The current storage version.
@@ -200,6 +206,15 @@ pub mod pallet {
         CoreCreated {
             core_account: T::AccountId,
             core_id: T::CoreId,
+            metadata: Vec<u8>,
+            minimum_support: Perbill,
+            required_approval: Perbill,
+        },
+        ParametersSet {
+            core_id: T::CoreId,
+            metadata: Option<Vec<u8>>,
+            minimum_support: Option<Perbill>,
+            required_approval: Option<Perbill>,
         },
         /// IP Tokens were minted
         Minted {
@@ -262,10 +277,6 @@ pub mod pallet {
             core_id: T::CoreId,
             executor_account: T::AccountId,
             call_hash: T::Hash,
-        },
-
-        Debug {
-            data: Vec<u8>,
         },
     }
 
@@ -338,7 +349,7 @@ pub mod pallet {
         /// Create IP (Intellectual Property) Set (IPS)
         #[pallet::call_index(0)]
         #[transactional]
-        #[pallet::weight(900_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_core(metadata.len() as u32))]
         pub fn create_core(
             owner: OriginFor<T>,
             metadata: Vec<u8>,
@@ -355,7 +366,7 @@ pub mod pallet {
 
         /// Mint `amount` of specified token to `target` account
         #[pallet::call_index(1)]
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
+        #[pallet::weight(<T as Config>::WeightInfo::token_mint())]
         pub fn token_mint(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
@@ -366,7 +377,7 @@ pub mod pallet {
 
         /// Burn `amount` of specified token from `target` account
         #[pallet::call_index(2)]
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
+        #[pallet::weight(<T as Config>::WeightInfo::token_burn())]
         pub fn token_burn(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
@@ -376,7 +387,10 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(400_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::operate_multisig(
+            metadata.clone().map(|m| m.len()).unwrap_or(0) as u32,
+            call.using_encoded(|c| c.len() as u32)
+        ))]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
@@ -387,7 +401,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(350_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::vote_multisig())]
         pub fn vote_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
@@ -398,7 +412,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(250_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw_vote_multisig())]
         pub fn withdraw_vote_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
@@ -408,7 +422,9 @@ pub mod pallet {
         }
 
         #[pallet::call_index(9)]
-        #[pallet::weight(200_000_000)] // TODO: Set correct weight
+        #[pallet::weight(<T as Config>::WeightInfo::set_parameters(
+            metadata.clone().map(|m| m.len()).unwrap_or(0) as u32
+        ))]
         pub fn set_parameters(
             origin: OriginFor<T>,
             metadata: Option<Vec<u8>>,

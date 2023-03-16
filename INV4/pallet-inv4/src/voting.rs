@@ -68,6 +68,26 @@ impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
             <Votes<T> as One>::one().max(self.ayes + self.nays),
         )
     }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn unanimity(_: Core<T>) -> Self {
+        todo!()
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn rejection(_: Core<T>) -> Self {
+        todo!()
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn from_requirements(_: Perbill, _: Perbill, _: Core<T>) -> Self {
+        todo!()
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn setup(_: Core<T>, _: Perbill) {
+        todo!()
+    }
 }
 
 pub trait CustomPolling<Tally> {

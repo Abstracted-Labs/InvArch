@@ -39,6 +39,7 @@ where
             let creator = ensure_signed(origin)?;
 
             let bounded_metadata: BoundedVec<u8, T::MaxMetadata> = metadata
+                .clone()
                 .try_into()
                 .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
@@ -83,7 +84,10 @@ where
 
             Self::deposit_event(Event::CoreCreated {
                 core_account,
+                metadata,
                 core_id: current_id,
+                minimum_support,
+                required_approval,
             });
 
             Ok(())
@@ -110,11 +114,18 @@ where
                 c.required_approval = ra;
             }
 
-            if let Some(m) = metadata {
+            if let Some(m) = metadata.clone() {
                 c.metadata = m.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
             }
 
             *core = Some(c);
+
+            Self::deposit_event(Event::ParametersSet {
+                core_id,
+                metadata,
+                minimum_support,
+                required_approval,
+            });
 
             Ok(())
         })

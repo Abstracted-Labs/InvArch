@@ -10,6 +10,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         fungibles::{Inspect, Mutate},
+        tokens::WithdrawConsequence,
         Currency, VoteTally, WrapperKeepOpaque,
     },
 };
@@ -57,7 +58,15 @@ where
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
-        T::AssetsProvider::mint_into(core_id, &target, amount)?;
+        if T::AssetsProvider::can_withdraw(core_id, &target, Zero::zero())
+            == WithdrawConsequence::Frozen
+        {
+            T::AssetFreezer::thaw_asset(core_id)?;
+            T::AssetsProvider::mint_into(core_id, &target, amount)?;
+            T::AssetFreezer::freeze_asset(core_id)?;
+        } else {
+            T::AssetsProvider::mint_into(core_id, &target, amount)?;
+        }
 
         Self::deposit_event(Event::Minted {
             core_id,
@@ -77,7 +86,15 @@ where
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
-        T::AssetsProvider::burn_from(core_id, &target, amount)?;
+        if T::AssetsProvider::can_withdraw(core_id, &target, Zero::zero())
+            == WithdrawConsequence::Frozen
+        {
+            T::AssetFreezer::thaw_asset(core_id)?;
+            T::AssetsProvider::burn_from(core_id, &target, amount)?;
+            T::AssetFreezer::freeze_asset(core_id)?;
+        } else {
+            T::AssetsProvider::burn_from(core_id, &target, amount)?;
+        }
 
         Self::deposit_event(Event::Burned {
             core_id,
