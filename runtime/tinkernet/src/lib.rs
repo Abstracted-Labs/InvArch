@@ -857,6 +857,7 @@ mod benches {
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
         [pallet_inv4, INV4]
+        [pallet_rings, Rings]
     );
 }
 

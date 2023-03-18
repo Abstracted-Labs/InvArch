@@ -5825,6 +5825,7 @@ dependencies = [
 name = "pallet-rings"
 version = "0.1.0-dev"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "num-traits",
