@@ -3,18 +3,22 @@ use crate::{
     DealWithFees, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 };
 use codec::{Decode, Encode};
-use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
-use frame_system::{EnsureNever, EnsureRoot, RawOrigin};
+use frame_support::{parameter_types, traits::Contains};
 use pallet_inv4::fee_handling::MultisigFeeHandler;
 use pallet_transaction_payment::ChargeTransactionPayment;
 use scale_info::TypeInfo;
-use sp_runtime::traits::{SignedExtension, Zero};
+use sp_core::{ConstU32, H256};
+use sp_runtime::traits::{One, SignedExtension, Zero};
 
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT * 100;
+    pub const GenesisHash: <Runtime as frame_system::Config>::Hash = H256([
+        212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
+        243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
+    ]);
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -28,10 +32,11 @@ impl pallet_inv4::Config for Runtime {
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    type AssetFreezer = AssetFreezer;
+    // type AssetFreezer = AssetFreezer;
     type CoreCreationFee = CoreCreationFee;
     type CreationFeeHandler = DealWithFees;
     type FeeCharger = FeeCharger;
+    type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 }
 
@@ -63,59 +68,68 @@ impl MultisigFeeHandler for FeeCharger {
     }
 }
 
-parameter_types! {
-    pub const AssetDeposit: u32 = 0;
-    pub const AssetAccountDeposit: u32 = 0;
-    pub const MetadataDepositBase: u32 = 0;
-    pub const MetadataDepositPerByte: u32 = 0;
-    pub const ApprovalDeposit: u32 = 0;
-    pub const StringLimit: u32 = 100;
-    pub const RemoveItemsList: u32 = 5;
+orml_traits2::parameter_type_with_key! {
+    pub CoreExistentialDeposits: |_currency_id: <Runtime as pallet_inv4::Config>::CoreId| -> Balance {
+        Balance::one()
+    };
 }
 
-impl pallet_assets::Config for Runtime {
+pub struct CoreDustRemovalWhitelist;
+impl Contains<AccountId> for CoreDustRemovalWhitelist {
+    fn contains(_: &AccountId) -> bool {
+        true
+    }
+}
+
+pub struct DisallowIfFrozen;
+impl
+    orml_traits2::currency::OnTransfer<AccountId, <Runtime as pallet_inv4::Config>::CoreId, Balance>
+    for DisallowIfFrozen
+{
+    fn on_transfer(
+        currency_id: <Runtime as pallet_inv4::Config>::CoreId,
+        _from: &AccountId,
+        _to: &AccountId,
+        _amount: Balance,
+    ) -> sp_runtime::DispatchResult {
+        if let Some(false) = crate::INV4::is_asset_frozen(currency_id) {
+            Ok(())
+        } else {
+            Err(sp_runtime::DispatchError::Token(
+                sp_runtime::TokenError::Frozen,
+            ))
+        }
+    }
+}
+
+pub struct INV4TokenHooks;
+impl
+    orml_traits2::currency::MutationHooks<
+        AccountId,
+        <Runtime as pallet_inv4::Config>::CoreId,
+        Balance,
+    > for INV4TokenHooks
+{
+    type PreTransfer = DisallowIfFrozen;
+    type OnDust = ();
+    type OnSlash = ();
+    type PreDeposit = ();
+    type PostDeposit = ();
+    type PostTransfer = ();
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
+}
+
+impl orml_tokens2::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
-    type AssetId = CommonId;
-    type AssetIdParameter = CommonId;
-    type Currency = Balances;
-    type CreateOrigin = AsEnsureOriginWithArg<EnsureNever<AccountId>>;
-    type ForceOrigin = EnsureRoot<AccountId>;
-    type AssetDeposit = AssetDeposit;
-    type AssetAccountDeposit = AssetAccountDeposit;
-    type MetadataDepositBase = MetadataDepositBase;
-    type MetadataDepositPerByte = MetadataDepositPerByte;
-    type ApprovalDeposit = ApprovalDeposit;
-    type StringLimit = StringLimit;
-    type Freezer = ();
+    type Amount = i128;
+    type CurrencyId = <Runtime as pallet_inv4::Config>::CoreId;
     type WeightInfo = ();
-    type Extra = ();
-    type RemoveItemsLimit = RemoveItemsList;
-}
-
-pub struct AssetFreezer;
-impl pallet_inv4::multisig::FreezeAsset<CommonId> for AssetFreezer {
-    fn freeze_asset(asset_id: CommonId) -> frame_support::dispatch::DispatchResult {
-        CoreAssets::freeze_asset(
-            RawOrigin::Signed(pallet_inv4::util::derive_core_account::<
-                Runtime,
-                CommonId,
-                AccountId,
-            >(asset_id))
-            .into(),
-            asset_id,
-        )
-    }
-
-    fn thaw_asset(asset_id: CommonId) -> frame_support::dispatch::DispatchResult {
-        CoreAssets::thaw_asset(
-            RawOrigin::Signed(pallet_inv4::util::derive_core_account::<
-                Runtime,
-                CommonId,
-                AccountId,
-            >(asset_id))
-            .into(),
-            asset_id,
-        )
-    }
+    type ExistentialDeposits = CoreExistentialDeposits;
+    type MaxLocks = ConstU32<0u32>;
+    type MaxReserves = ConstU32<0u32>;
+    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
+    type ReserveIdentifier = [u8; 8];
+    type CurrencyHooks = ();
 }

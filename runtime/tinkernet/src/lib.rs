@@ -102,7 +102,7 @@ use common_types::*;
 mod assets;
 mod inv4;
 mod nft;
-mod rings;
+// mod rings;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -828,8 +828,8 @@ construct_runtime_modified!(
 
         // InvArch stuff
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
-        CoreAssets: pallet_assets::{Pallet, Call, Storage, Event<T>, Config<T>} = 72,
-        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
+        CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+       // Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
 
@@ -857,7 +857,7 @@ mod benches {
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
         [pallet_inv4, INV4]
-        [pallet_rings, Rings]
+       // [pallet_rings, Rings]
     );
 }
 
