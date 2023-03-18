@@ -50,7 +50,7 @@ impl RingsChain for Statemine {
 
     fn base_xcm_weight() -> Weight {
         // TODO: Set correct base xcm weight.
-        Weight::zero()
+        Weight::from_parts(1_000_000_000, 64 * 1024)
     }
 }
 

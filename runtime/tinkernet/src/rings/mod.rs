@@ -140,12 +140,11 @@ impl ChainList for Chains {
         }
     }
 
-    fn xcm_fee(&self, transact_weight: &Weight) -> Result<Self::Balance, ()> {
-        Ok(self.weight_to_fee(
-            &transact_weight
-                .checked_add(&self.base_xcm_weight())
-                .ok_or(())?,
-        ))
+    fn xcm_fee(&self, transact_weight: &Weight) -> Self::Balance {
+        self.weight_to_fee(&transact_weight.saturating_add(self.base_xcm_weight()))
+            // Conservative overestimate to avoid underpaying.
+            // Unused balance is refunded after the main instruction.
+            .saturating_mul(3u128)
     }
 
     #[cfg(feature = "runtime-benchmarks")]
