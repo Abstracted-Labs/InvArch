@@ -115,9 +115,7 @@ pub mod pallet {
                 ),
             };
 
-            let xcm_fee = destination
-                .xcm_fee(&weight.checked_mul(2).ok_or(Error::<T>::WeightTooHigh)?)
-                .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
+            let xcm_fee = destination.xcm_fee(&weight);
 
             let fee_multiasset = MultiAsset {
                 id: dest_asset,
@@ -204,9 +202,7 @@ pub mod pallet {
                 ),
             };
 
-            let xcm_fee = chain
-                .xcm_fee(&Weight::zero())
-                .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
+            let xcm_fee = chain.xcm_fee(&Weight::zero());
 
             let fee_multiasset = MultiAsset {
                 id: chain.get_main_asset().get_asset_id(),

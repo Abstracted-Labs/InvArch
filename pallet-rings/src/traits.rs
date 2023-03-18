@@ -13,7 +13,7 @@ pub trait ChainList: Parameter + MaxEncodedLen {
 
     fn weight_to_fee(&self, weight: &Weight) -> Self::Balance;
 
-    fn xcm_fee(&self, transact_weight: &Weight) -> Result<Self::Balance, ()>;
+    fn xcm_fee(&self, transact_weight: &Weight) -> Self::Balance;
 
     fn base_xcm_weight(&self) -> Weight;
 
