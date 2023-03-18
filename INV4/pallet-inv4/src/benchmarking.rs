@@ -176,14 +176,16 @@ benchmarks! {
         let metadata = Some(vec![u8::MAX; m as usize]);
         let minimum_support = Some(perbill_one());
         let required_approval = Some(perbill_one());
+        let frozen_tokens = Some(true);
 
-    }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), metadata.clone(), minimum_support, required_approval)
+    }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), metadata.clone(), minimum_support, required_approval, frozen_tokens)
         verify {
             assert_last_event::<T>(Event::ParametersSet {
                 core_id: 0u32.into(),
                 metadata,
                 minimum_support,
-                required_approval
+                required_approval,
+                frozen_tokens
             }.into());
         }
 

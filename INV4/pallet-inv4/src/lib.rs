@@ -125,12 +125,7 @@ pub mod pallet {
 
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::Create<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::Destroy<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::metadata::Mutate<Self::AccountId, AssetId = Self::CoreId>;
-
-        type AssetFreezer: multisig::FreezeAsset<Self::CoreId>;
+            + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
         type CreationFeeHandler: OnUnbalanced<
             <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
@@ -140,6 +135,9 @@ pub mod pallet {
             Call = <Self as Config>::RuntimeCall,
             AccountId = Self::AccountId,
         >;
+
+        #[pallet::constant]
+        type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
 
         type WeightInfo: WeightInfo;
     }
@@ -215,6 +213,7 @@ pub mod pallet {
             metadata: Option<Vec<u8>>,
             minimum_support: Option<Perbill>,
             required_approval: Option<Perbill>,
+            frozen_tokens: Option<bool>,
         },
         /// IP Tokens were minted
         Minted {
@@ -283,56 +282,28 @@ pub mod pallet {
     /// Errors for IPF pallet
     #[pallet::error]
     pub enum Error<T> {
-        /// No available IP ID
+        /// No available Core ID
         NoAvailableCoreId,
         /// Core not found
         CoreNotFound,
         /// The operator has no permission
         /// Ex: Attempting to add a file owned by another account to your IP set
         NoPermission,
-        /// The IPS is already owned
-        AlreadyOwned,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
-        /// Can not destroy Core
-        CannotDestroyCore,
-        /// Value Not Changed
-        ValueNotChanged,
-        /// Core not found
-        CoreDoesntExist,
-        NotEnoughAmount,
-        /// Max amount of multisig signers reached
-        TooManySignatories,
-        UnexistentBalance,
-        MultisigOperationUninitialized,
-        CouldntDecodeCall,
-        /// Multisig operation already exists and is available for voting
-        MultisigOperationAlreadyExists,
-        /// Cannot withdraw a vote on a multisig transaction you have not voted on
+        /// Multisig call not found.
+        MultisigCallNotFound,
+        /// Failed to decode stored multisig call.
+        FailedDecodingCall,
+        /// Multisig operation already exists and is available for voting.
+        MultisigCallAlreadyExists,
+        /// Cannot withdraw a vote on a multisig transaction you have not voted on.
         NotAVoter,
-        UnknownError,
-        /// Sub-asset not found
-        SubAssetNotFound,
-        /// Sub-asset already exists
-        SubAssetAlreadyExists,
-        /// Max amount of sub-assets reached
-        TooManySubAssets,
-        /// This sub-asset has no permission to execute this call
-        SubAssetHasNoPermission,
-        FailedDivision,
         /// Failed to extract metadata from a `Call`
         CallHasTooFewBytes,
-
-        /// Multisig is not allowed to call these extrinsics
-        CantExecuteThisCall,
-
-        /// Division by 0 happened somewhere, maybe you have IPT assets with no decimal points?
-        DivisionByZero,
-        Overflow,
-        Underflow,
-
+        /// Incomplete vote cleanup.
         IncompleteVoteCleanup,
-
+        /// Multisig fee payment failed, probably due to lack of funds to pay for fees.
         CallFeePaymentFailed,
     }
 
@@ -430,8 +401,9 @@ pub mod pallet {
             metadata: Option<Vec<u8>>,
             minimum_support: Option<Perbill>,
             required_approval: Option<Perbill>,
+            frozen_tokens: Option<bool>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_parameters(origin, metadata, minimum_support, required_approval)
+            Pallet::<T>::inner_set_parameters(origin, metadata, minimum_support, required_approval, frozen_tokens)
         }
     }
 }

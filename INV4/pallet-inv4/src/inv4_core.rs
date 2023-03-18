@@ -1,15 +1,11 @@
 use super::pallet::*;
 use crate::{
-    multisig::FreezeAsset,
     origin::{ensure_multisig, INV4Origin},
     util::derive_core_account,
 };
 use frame_support::{
     pallet_prelude::*,
-    traits::{
-        fungibles::{Create, Mutate},
-        Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons,
-    },
+    traits::{fungibles::Mutate, Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons},
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
@@ -58,17 +54,14 @@ where
 
             let seed_balance = <T as Config>::CoreSeedBalance::get();
 
-            T::AssetsProvider::create(current_id, core_account.clone(), true, One::one())?;
-
             T::AssetsProvider::mint_into(current_id, &creator, seed_balance)?;
-
-            T::AssetFreezer::freeze_asset(current_id)?;
 
             let info = CoreInfo {
                 account: core_account.clone(),
                 metadata: bounded_metadata,
                 minimum_support,
                 required_approval,
+                frozen_tokens: true,
             };
 
             T::CreationFeeHandler::on_unbalanced(<T as Config>::Currency::withdraw(
@@ -99,6 +92,7 @@ where
         metadata: Option<Vec<u8>>,
         minimum_support: Option<Perbill>,
         required_approval: Option<Perbill>,
+        frozen_tokens: Option<bool>,
     ) -> DispatchResult {
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
@@ -118,6 +112,10 @@ where
                 c.metadata = m.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
             }
 
+            if let Some(f) = frozen_tokens {
+                c.frozen_tokens = f;
+            }
+
             *core = Some(c);
 
             Self::deposit_event(Event::ParametersSet {
@@ -125,9 +123,14 @@ where
                 metadata,
                 minimum_support,
                 required_approval,
+                frozen_tokens,
             });
 
             Ok(())
         })
+    }
+
+    pub fn is_asset_frozen(core_id: T::CoreId) -> Option<bool> {
+        CoreStorage::<T>::get(core_id).map(|c| c.frozen_tokens)
     }
 }

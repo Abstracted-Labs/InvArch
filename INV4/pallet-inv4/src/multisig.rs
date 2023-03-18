@@ -10,7 +10,6 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         fungibles::{Inspect, Mutate},
-        tokens::WithdrawConsequence,
         Currency, VoteTally, WrapperKeepOpaque,
     },
 };
@@ -58,15 +57,7 @@ where
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
-        if T::AssetsProvider::can_withdraw(core_id, &target, Zero::zero())
-            == WithdrawConsequence::Frozen
-        {
-            T::AssetFreezer::thaw_asset(core_id)?;
-            T::AssetsProvider::mint_into(core_id, &target, amount)?;
-            T::AssetFreezer::freeze_asset(core_id)?;
-        } else {
-            T::AssetsProvider::mint_into(core_id, &target, amount)?;
-        }
+        T::AssetsProvider::mint_into(core_id, &target, amount)?;
 
         Self::deposit_event(Event::Minted {
             core_id,
@@ -86,15 +77,7 @@ where
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
-        if T::AssetsProvider::can_withdraw(core_id, &target, Zero::zero())
-            == WithdrawConsequence::Frozen
-        {
-            T::AssetFreezer::thaw_asset(core_id)?;
-            T::AssetsProvider::burn_from(core_id, &target, amount)?;
-            T::AssetFreezer::freeze_asset(core_id)?;
-        } else {
-            T::AssetsProvider::burn_from(core_id, &target, amount)?;
-        }
+        T::AssetsProvider::burn_from(core_id, &target, amount)?;
 
         Self::deposit_event(Event::Burned {
             core_id,
@@ -124,7 +107,7 @@ where
         };
 
         let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(core_id)
-            .ok_or(Error::<T>::CoreDoesntExist)?;
+            .ok_or(Error::<T>::CoreNotFound)?;
 
         // Get call metadata
         let call_metadata: [u8; 2] = call
@@ -145,7 +128,7 @@ where
 
         ensure!(
             Multisig::<T>::get(core_id, call_hash).is_none(),
-            Error::<T>::MultisigOperationAlreadyExists
+            Error::<T>::MultisigCallAlreadyExists
         );
 
         // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
@@ -211,9 +194,7 @@ where
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
-            let mut old_data = data
-                .take()
-                .ok_or(Error::<T>::MultisigOperationUninitialized)?;
+            let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
             VoteStorage::<T>::try_mutate((core_id, call_hash, owner.clone()), |vote_record| {
                 let old_vote_record = vote_record.take();
@@ -232,7 +213,7 @@ where
 
                 let (minimum_support, required_approval) =
                     Pallet::<T>::minimum_support_and_required_approval(core_id)
-                        .ok_or(Error::<T>::CoreDoesntExist)?;
+                        .ok_or(Error::<T>::CoreNotFound)?;
 
                 let new_vote_record = if aye {
                     old_data.tally.ayes = old_data.tally.ayes.saturating_add(voter_balance);
@@ -270,7 +251,7 @@ where
                         old_data
                             .actual_call
                             .try_decode()
-                            .ok_or(Error::<T>::CouldntDecodeCall)?,
+                            .ok_or(Error::<T>::FailedDecodingCall)?,
                     );
 
                     Self::deposit_event(Event::MultisigExecuted {
@@ -319,9 +300,7 @@ where
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
-            let mut old_data = data
-                .take()
-                .ok_or(Error::<T>::MultisigOperationUninitialized)?;
+            let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
             // Can only withdraw your vote if you have already voted on this multisig operation
             ensure!(
@@ -358,9 +337,4 @@ where
             })
         })
     }
-}
-
-pub trait FreezeAsset<AssetId> {
-    fn freeze_asset(asset_id: AssetId) -> DispatchResult;
-    fn thaw_asset(asset_id: AssetId) -> DispatchResult;
 }
