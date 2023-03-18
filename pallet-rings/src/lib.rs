@@ -3,10 +3,14 @@
 use frame_support::traits::Get;
 use sp_std::convert::TryInto;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 mod traits;
+pub mod weights;
 
 pub use pallet::*;
-pub use traits::{ParachainAssetsList, ParachainList};
+pub use traits::{ChainAssetsList, ChainList};
+pub use weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -24,10 +28,15 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_inv4::Config + pallet_xcm::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        type Parachains: ParachainList;
+        type Chains: ChainList;
 
         #[pallet::constant]
         type ParaId: Get<u32>;
+
+        #[pallet::constant]
+        type MaxWeightedLength: Get<u32>;
+
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::error]
@@ -42,13 +51,13 @@ pub mod pallet {
     pub enum Event<T: Config> {
         CallSent {
             sender: <T as pallet_inv4::Config>::CoreId,
-            destination: <T as pallet::Config>::Parachains,
+            destination: <T as pallet::Config>::Chains,
             call: Vec<u8>,
         },
 
         AssetsTransferred {
-            parachain: <<<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets as ParachainAssetsList>::Parachains,
-            asset: <<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets,
+            chain: <<<T as pallet::Config>::Chains as ChainList>::ChainAssets as ChainAssetsList>::Chains,
+            asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
             from: <T as pallet_inv4::Config>::CoreId,
             to: <T as frame_system::Config>::AccountId,
@@ -72,10 +81,15 @@ pub mod pallet {
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     {
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::send_call(
+                (call.len() as u32)
+                    .min(T::MaxWeightedLength::get())
+            )
+        )]
         pub fn send_call(
             origin: OriginFor<T>,
-            destination: <T as pallet::Config>::Parachains,
+            destination: <T as pallet::Config>::Chains,
             weight: Weight,
             call: Vec<u8>,
         ) -> DispatchResult {
@@ -102,33 +116,7 @@ pub mod pallet {
             };
 
             let xcm_fee = destination
-                .xcm_fee(&mut Xcm(vec![
-                    // Pay execution fees
-                    Instruction::WithdrawAsset(MultiAssets::new()),
-                    Instruction::BuyExecution {
-                        fees: MultiAsset {
-                            id: dest_asset.clone(),
-                            fun: Fungibility::Fungible(Default::default()),
-                        },
-                        weight_limit: WeightLimit::Unlimited,
-                    },
-                    // Actual transfer instruction
-                    Instruction::Transact {
-                        origin_type: OriginKind::Native,
-                        require_weight_at_most: weight
-                            .checked_mul(2)
-                            .ok_or(Error::<T>::WeightTooHigh)?
-                            .ref_time(),
-                        call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
-                    },
-                    // Refund unused fees
-                    Instruction::RefundSurplus,
-                    Instruction::DepositAsset {
-                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                        max_assets: 1,
-                        beneficiary: beneficiary.clone(),
-                    },
-                ]))
+                .xcm_fee(&weight.checked_mul(2).ok_or(Error::<T>::WeightTooHigh)?)
                 .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
 
             let fee_multiasset = MultiAsset {
@@ -171,10 +159,10 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(<T as Config>::WeightInfo::transfer_assets())]
         pub fn transfer_assets(
             origin: OriginFor<T>,
-            asset: <<T as pallet::Config>::Parachains as ParachainList>::ParachainAssets,
+            asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
             to: <T as frame_system::Config>::AccountId,
         ) -> DispatchResult {
@@ -186,9 +174,9 @@ pub mod pallet {
                 part: BodyPart::Voice,
             });
 
-            let parachain = asset.get_parachain();
+            let chain = asset.get_chain();
 
-            let dest = parachain.get_location();
+            let dest = chain.get_location();
 
             let asset_id = asset.get_asset_id();
 
@@ -216,34 +204,12 @@ pub mod pallet {
                 ),
             };
 
-            let xcm_fee = parachain
-                .xcm_fee(&mut Xcm(vec![
-                    // Pay execution fees
-                    Instruction::WithdrawAsset(MultiAssets::new()),
-                    Instruction::BuyExecution {
-                        fees: MultiAsset {
-                            id: asset.get_asset_id(),
-                            fun: Fungibility::Fungible(Default::default()),
-                        },
-                        weight_limit: WeightLimit::Unlimited,
-                    },
-                    // Actual transfer instruction
-                    Instruction::TransferAsset {
-                        assets: multi_asset.clone().into(),
-                        beneficiary: beneficiary.clone(),
-                    },
-                    // Refund unused fees
-                    Instruction::RefundSurplus,
-                    Instruction::DepositAsset {
-                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                        max_assets: 1,
-                        beneficiary: core_multilocation.clone(),
-                    },
-                ]))
+            let xcm_fee = chain
+                .xcm_fee(&Weight::zero())
                 .map_err(|_| Error::<T>::FailedToCalculateXcmFee)?;
 
             let fee_multiasset = MultiAsset {
-                id: parachain.get_main_asset().get_asset_id(),
+                id: chain.get_main_asset().get_asset_id(),
                 fun: Fungibility::Fungible(xcm_fee.into()),
             };
 
@@ -272,7 +238,7 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::AssetsTransferred {
-                parachain,
+                chain,
                 asset,
                 amount,
                 from: core.id,
