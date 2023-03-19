@@ -9,14 +9,10 @@ use log::{info, warn};
 
 pub mod v1 {
     use core::convert::TryInto;
-    use frame_support::BoundedVec;
+    use frame_support::{traits::fungibles::Mutate, BoundedVec};
     use primitives::{CoreInfo, OneOrPercent};
-    use rmrk_traits::{
-        collection::Collection, nft::Nft, primitives::CollectionId, ResourceInfoMin,
-    };
     use sp_core::H256;
     use sp_runtime::Perbill;
-    use sp_std::vec;
 
     use super::*;
 
@@ -80,26 +76,7 @@ pub mod v1 {
         pub data: Data,
     }
 
-    type IpfMetadataOf = BoundedVec<u8, ConstU32<10000>>;
-    type IpfInfoOf<T> = IpfInfo<
-        <T as frame_system::Config>::AccountId,
-        <T as frame_system::Config>::Hash,
-        IpfMetadataOf,
-    >;
-
-    pub fn migrate_ip_storage_to_core_storage<
-        T: Config + pallet_rmrk_core::Config + pallet_uniques::Config,
-    >()
-    where
-        u32: Into<T::CoreId>
-            + Into<CollectionId>
-            + Into<<T as pallet_uniques::Config>::CollectionId>
-            + Into<<T as pallet_uniques::Config>::ItemId>,
-
-        <T as frame_system::Config>::Hash: IsType<H256>,
-
-        [u8; 32]: Into<T::AccountId>,
-    {
+    pub fn migrate_ip_storage_to_core_storage<T: Config>() {
         let total_ips = frame_support::migration::storage_key_iter::<
             u32,
             IpInfoOf<T>,
@@ -107,18 +84,9 @@ pub mod v1 {
         >(b"INV4", b"IpStorage")
         .count();
 
-        let total_ipf = frame_support::migration::storage_key_iter::<
-            u64,
-            IpfInfoOf<T>,
-            Blake2_128Concat,
-        >(b"Ipf", b"IpfStorage")
-        .count();
-
         info!("Attempting to migrate {} IPS into Cores.", total_ips);
-        info!("Attempting to migrate {} IPF into RMRK NFTs.", total_ipf);
 
         let mut ips_migrated = 0;
-        let mut ipf_migrated = 0;
 
         frame_support::migration::storage_key_iter::<u32, IpInfoOf<T>, Blake2_128Concat>(
             b"INV4",
@@ -137,168 +105,35 @@ pub mod v1 {
                             .expect("IPS metadata should always fit in Core metadata."),
                         minimum_support: match ips.execution_threshold {
                             OneOrPercent::One => Perbill::one(),
-                            OneOrPercent::ZeroPoint(percent) => Perbill::from_percent(percent * 1)
+                            OneOrPercent::ZeroPoint(percent) => {
+                                Perbill::from_percent(percent.deconstruct() as u32)
+                            }
                         },
                         required_approval: Perbill::zero(),
-                        default_permission: ips.default_permission,
+                        frozen_tokens: true,
                     },
                 );
-
-                let symbol = {
-                    let mut c = "Core".encode();
-                    c.append(&mut ips_id.encode());
-                    c
-                };
-
-                pallet_rmrk_core::Pallet::<T>::collection_create(
-                    account.clone(),
-                    ips_id.into(),
-                    BoundedVec::default(),
-                    None,
-                    symbol
-                        .try_into()
-                        .expect("Collection symbol is always below max."),
-                )
-                .expect("Creating the collection should always succeed.");
-
-                ips.data.into_iter().enumerate().for_each(|(i, any_id)| {
-                    if let AnyId::IpfId(ipf_id) = any_id {
-                        if let Some(ipf) = frame_support::migration::take_storage_item::<
-                            u64,
-                            IpfInfoOf<T>,
-                            Blake2_128Concat,
-                        >(b"Ipf", b"IpfStorage", ipf_id)
-                        {
-                            pallet_rmrk_core::Pallet::<T>::nft_mint(
-                                account.clone(),
-                                account.clone(),
-                                (i as u32).into(),
-                                ips_id.into(),
-                                None,
-                                None,
-                                ipf.metadata.to_vec().try_into().expect("IPF metadata should always fit in RMRK NFT metadata."),
-                                true,
-                                Some(
-                                    vec![ResourceInfoMin {
-                                        id: ipf_id as u32,
-                                        resource: rmrk_traits::ResourceTypes::Basic(
-                                            rmrk_traits::BasicResource {
-                                                metadata: ipf
-                                                    .data
-                                                    .into()
-                                                    .as_bytes()
-                                                    .to_vec()
-                                                    .try_into()
-                                                    .expect("IPF data should always fit in RMRK Resource metadata."),
-                                            },
-                                        ),
-                                    }]
-                                    .try_into()
-                                    .expect("Resources vec with a single item should always fit in RMRK Core resource bounded vec."),
-                                ),
-                            )
-                            .expect("Minting the NFT should always succeed.");
-
-                            ipf_migrated += 1;
-                        }
-                    }
-                });
 
                 ips_migrated += 1;
             }
         });
 
-        let next_id =
-            frame_support::migration::get_storage_value::<u32>(b"INV4", b"NextIpId", &[]).unwrap();
-
-        pallet_rmrk_core::Pallet::<T>::collection_create(
-            [
-                2u8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                2, 2, 2, 2, 2,
-            ]
-            .into(),
-            next_id.into(),
-            BoundedVec::default(),
-            None,
-            b"MIGR"
-                .to_vec()
-                .try_into()
-                .expect("Collection symbol is always below max."),
-        )
-        .expect("Creating the collection should always succeed.");
-
-        frame_support::migration::storage_key_iter::<
-                u64,
-            IpfInfoOf<T>,
-            Blake2_128Concat,
-            >(b"Ipf", b"IpfStorage").enumerate().for_each(|(i, (ipf_id, ipf))| {
-                pallet_rmrk_core::Pallet::<T>::nft_mint(
-                    [
-                        2u8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                        2, 2, 2, 2, 2,
-                    ]
-                        .into(),
-                    [
-                        2u8, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                        2, 2, 2, 2, 2,
-                    ]
-                        .into(),
-                                (i as u32).into(),
-                                next_id.into(),
-                                None,
-                                None,
-                                ipf.metadata.to_vec().try_into().expect("IPF metadata should always fit in RMRK NFT metadata."),
-                                true,
-                                Some(
-                                    vec![ResourceInfoMin {
-                                        id: ipf_id as u32,
-                                        resource: rmrk_traits::ResourceTypes::Basic(
-                                            rmrk_traits::BasicResource {
-                                                metadata: ipf
-                                                    .data
-                                                    .into()
-                                                    .as_bytes()
-                                                    .to_vec()
-                                                    .try_into()
-                                                    .expect("IPF data should always fit in RMRK Resource metadata."),
-                                            },
-                                        ),
-                                    }]
-                                    .try_into()
-                                    .expect("Resources vec with a single item should always fit in RMRK Core resource bounded vec."),
-                                ),
-                            )
-                            .expect("Minting the NFT should always succeed.");
-
-                            ipf_migrated += 1;
-            });
-
         info!("Migrated {} IPS into Cores.", ips_migrated);
-        info!(
-            "Extra check: {} Cores, {} NFT Collections",
-            CoreStorage::<T>::iter().count(),
-            pallet_rmrk_core::Collections::<T>::iter().count()
-        );
-
-        info!("Migrated {} IPF into RMRK NFTs.", ipf_migrated);
-        info!(
-            "Extra check: {}",
-            pallet_rmrk_core::Nfts::<T>::iter().count()
-        );
+        info!("Extra check: {} Cores", CoreStorage::<T>::iter().count(),);
     }
 
-    pub fn migrate_ip_owner_to_core_account<T: Config>()
-    where
-        u32: Into<T::CoreId>,
-    {
+    pub fn migrate_ip_owner_to_core_account<T: Config>() {
         let mut ips_migrated = 0;
 
-        frame_support::migration::storage_key_iter::<(T::AccountId, u32), (), Blake2_128Concat>(
+        frame_support::migration::storage_key_iter::<(T::AccountId, T::CoreId), (), Blake2_128Concat>(
             b"INV4",
             b"IpsByOwner",
         )
         .for_each(|((account, ips_id), _)| {
-            CoreByAccount::<T>::insert(account, ips_id.into());
+            CoreByAccount::<T>::insert::<<T as frame_system::Config>::AccountId, T::CoreId>(
+                account,
+                ips_id,
+            );
 
             ips_migrated += 1;
         });
@@ -310,23 +145,17 @@ pub mod v1 {
         info!("Extra check: {}", CoreByAccount::<T>::iter().count());
     }
 
-    pub fn migrate_next_id<T: Config>()
-    where
-        u32: Into<T::CoreId>,
-    {
+    pub fn migrate_next_id<T: Config>() {
         let next_id =
             frame_support::migration::take_storage_value::<u32>(b"INV4", b"NextIpId", &[]).unwrap();
 
-        NextCoreId::<T>::put(next_id.into());
+        NextCoreId::<T>::put::<T::CoreId>(next_id.into());
 
         info!("Migrated NextIpId {} into NextCoreId.", next_id);
         info!("Extra check: {}", NextCoreId::<T>::get());
     }
 
-    pub fn migrate_balance_and_total_issuance<T: Config>()
-    where
-        u32: Into<T::CoreId>,
-    {
+    pub fn migrate_balance_and_total_issuance<T: Config>() {
         let entries = frame_support::migration::storage_key_iter::<
             (u32, Option<u32>, T::AccountId),
             BalanceOf<T>,
@@ -347,34 +176,18 @@ pub mod v1 {
             Blake2_128Concat,
         >(b"INV4", b"Balance")
         .for_each(|((ips_id, token, account), balance)| {
-            Balances::<T>::insert::<(T::CoreId, Option<T::CoreId>, T::AccountId), BalanceOf<T>>(
-                (ips_id.into(), token.map(|x| x.into()), account),
-                balance,
-            );
-            TotalIssuance::<T>::mutate(ips_id.into(), |issuance| {
-                *issuance += balance;
-            });
+            if token.is_none() {
+                T::AssetsProvider::mint_into(ips_id.into(), &account, balance).unwrap();
+            }
 
             migrated += 1;
         });
 
         info!("Migrated {} entries from Balance to Balances.", migrated);
-        info!("Extra check: {}", Balances::<T>::iter_keys().count());
     }
 
     pub struct MigrateToV1<T>(sp_std::marker::PhantomData<T>);
-    impl<T: Config + pallet_rmrk_core::Config + pallet_uniques::Config> OnRuntimeUpgrade
-        for MigrateToV1<T>
-    where
-        u32: Into<T::CoreId>
-            + Into<CollectionId>
-            + Into<<T as pallet_uniques::Config>::CollectionId>
-            + Into<<T as pallet_uniques::Config>::ItemId>,
-
-        <T as frame_system::Config>::Hash: IsType<H256>,
-
-        [u8; 32]: Into<T::AccountId>,
-    {
+    impl<T: Config> OnRuntimeUpgrade for MigrateToV1<T> {
         #[cfg(feature = "try-runtime")]
         fn pre_upgrade() -> Result<sp_std::vec::Vec<u8>, &'static str> {
             frame_support::ensure!(

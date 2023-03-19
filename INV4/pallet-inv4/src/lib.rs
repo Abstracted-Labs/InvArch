@@ -25,11 +25,11 @@ pub use pallet::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-pub mod inv4_core;
-mod lookup;
-//pub mod migrations;
 mod dispatch;
 pub mod fee_handling;
+pub mod inv4_core;
+mod lookup;
+pub mod migrations;
 pub mod multisig;
 pub mod origin;
 pub mod util;
