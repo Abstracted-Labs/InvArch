@@ -165,9 +165,9 @@ pub fn development_config() -> ChainSpec {
 pub fn solo_dev_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "UNIT".into());
+    properties.insert("tokenSymbol".into(), "TNKR".into());
     properties.insert("tokenDecimals".into(), 12u32.into());
-    properties.insert("ss58Format".into(), 42u32.into());
+    properties.insert("ss58Format".into(), 117u32.into());
 
     ChainSpec::from_genesis(
         // Name

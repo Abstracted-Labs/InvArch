@@ -100,6 +100,8 @@ use constants::currency::*;
 mod common_types;
 use common_types::*;
 mod assets;
+mod inflation;
+mod staking;
 mod inv4;
 mod nft;
 // mod rings;
@@ -162,6 +164,9 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
     (pallet_inv4::migrations::v1::MigrateToV1<Runtime>,),
 >;
+
+pub type CheckedInflationMigration =
+    pallet_checked_inflation::migrations::first_time::InitializeStorages<Runtime>;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -827,6 +832,9 @@ construct_runtime_modified!(
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
 
         // InvArch stuff
+        CheckedInflation: pallet_checked_inflation::{Pallet, Storage, Event<T>, Call} = 50,
+        OcifStaking: pallet_ocif_staking::{Pallet, Call, Storage, Event<T>} = 51,
+        
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
         CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
        // Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
