@@ -303,7 +303,7 @@ fn testnet_genesis(
             balances: endowed_accounts
                 .iter()
                 .cloned()
-                .map(|k| (k, 975000000000000000))
+                .map(|k| (k, 1 << 60))
                 .collect(),
         },
         parachain_info: ParachainInfoConfig { parachain_id: id },
