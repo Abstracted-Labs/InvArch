@@ -249,6 +249,6 @@ try-runtime = [
     "orml-unknown-tokens/try-runtime",
     "orml-asset-registry/try-runtime",
     "orml-currencies/try-runtime",
-    "orml-tokens/try-runtime"
-
+    "orml-tokens/try-runtime",
+    "orml-tokens2/try-runtime",
 ]
