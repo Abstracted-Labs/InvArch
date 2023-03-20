@@ -280,14 +280,6 @@ parameter_types! {
 pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
     fn contains(_c: &RuntimeCall) -> bool {
-        // !matches!(
-        //     c,
-        //     RuntimeCall::XTokens(_)
-        //         | RuntimeCall::PolkadotXcm(_)
-        //         | RuntimeCall::OrmlXcm(_)
-        //         | RuntimeCall::Currencies(_)
-        //         | RuntimeCall::Tokens(_)
-        // )
         true
     }
 }
@@ -295,16 +287,11 @@ impl Contains<RuntimeCall> for BaseFilter {
 pub struct MaintenanceFilter;
 impl Contains<RuntimeCall> for MaintenanceFilter {
     fn contains(c: &RuntimeCall) -> bool {
-        !matches!(
-            c,
-            RuntimeCall::Balances(_)
-                | RuntimeCall::Vesting(_)
-                | RuntimeCall::XTokens(_)
-                | RuntimeCall::PolkadotXcm(_)
-                | RuntimeCall::OrmlXcm(_)
-                | RuntimeCall::Currencies(_)
-                | RuntimeCall::Tokens(_)
-        )
+        !matches!(c, |RuntimeCall::XTokens(_)| RuntimeCall::PolkadotXcm(_)
+            | RuntimeCall::OrmlXcm(_)
+            | RuntimeCall::OcifStaking(
+                pallet_ocif_staking::Call::stake { .. }
+            ))
     }
 }
 
