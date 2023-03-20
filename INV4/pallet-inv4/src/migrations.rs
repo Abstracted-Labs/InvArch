@@ -11,7 +11,6 @@ pub mod v1 {
     use core::convert::TryInto;
     use frame_support::{traits::fungibles::Mutate, BoundedVec};
     use primitives::{CoreInfo, OneOrPercent};
-    use sp_core::H256;
     use sp_runtime::Perbill;
 
     use super::*;

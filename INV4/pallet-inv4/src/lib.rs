@@ -358,10 +358,12 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(<T as Config>::WeightInfo::operate_multisig(
-            metadata.clone().map(|m| m.len()).unwrap_or(0) as u32,
-            call.using_encoded(|c| c.len() as u32)
-        ))]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::operate_multisig(
+                metadata.clone().map(|m| m.len()).unwrap_or(0) as u32,
+                call.using_encoded(|c| c.len() as u32)
+            )
+        )]
         pub fn operate_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,

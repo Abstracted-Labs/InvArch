@@ -54,6 +54,7 @@
 
 use core::fmt::Display;
 use frame_support::{
+    dispatch::{Pays, PostDispatchInfo},
     ensure,
     pallet_prelude::*,
     traits::{
@@ -69,13 +70,22 @@ use sp_runtime::{
     traits::{AccountIdConversion, Saturating, Zero},
     Perbill,
 };
-use sp_std::convert::{From, TryInto};
+use sp_std::{
+    convert::{From, TryInto},
+    vec::Vec,
+};
 
 pub mod primitives;
+use core::ops::Div;
 use primitives::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod testing;
+pub mod weights;
+
+pub use weights::WeightInfo;
 
 const LOCK_ID: LockIdentifier = *b"ocif-stk";
 
@@ -169,6 +179,8 @@ pub mod pallet {
 
         #[pallet::constant]
         type MaxImageUrlLength: Get<u32>;
+
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::storage]
@@ -267,8 +279,8 @@ pub mod pallet {
         },
         MetadataChanged {
             core: <T as Config>::CoreId,
-            old_metadata: CoreMetadataOf<T>,
-            new_metadata: CoreMetadataOf<T>,
+            old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
+            new_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
         },
     }
 
@@ -294,6 +306,7 @@ pub mod pallet {
         NoPermission,
         MaxNameExceeded,
         MaxDescriptionExceeded,
+        MaxImageExceeded,
         NotRegistered,
         Halted,
         NoHaltChange,
@@ -342,10 +355,18 @@ pub mod pallet {
         >: From<<T as frame_system::Config>::RuntimeOrigin>,
     {
         #[pallet::call_index(0)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::register_core(
+                name.len() as u32,
+                description.len() as u32,
+                image.len() as u32
+            )
+        )]
         pub fn register_core(
             origin: OriginFor<T>,
-            metadata: CoreMetadataOf<T>,
+            name: Vec<u8>,
+            description: Vec<u8>,
+            image: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -357,6 +378,27 @@ pub mod pallet {
                 !RegisteredCore::<T>::contains_key(core_id),
                 Error::<T>::CoreAlreadyRegistered,
             );
+
+            let bounded_name: BoundedVec<u8, T::MaxNameLength> = name
+                .clone()
+                .try_into()
+                .map_err(|_| Error::<T>::MaxNameExceeded)?;
+
+            let bounded_description: BoundedVec<u8, T::MaxDescriptionLength> = description
+                .clone()
+                .try_into()
+                .map_err(|_| Error::<T>::MaxDescriptionExceeded)?;
+
+            let bounded_image: BoundedVec<u8, T::MaxImageUrlLength> = image
+                .clone()
+                .try_into()
+                .map_err(|_| Error::<T>::MaxImageExceeded)?;
+
+            let metadata: CoreMetadataOf<T> = CoreMetadata {
+                name: bounded_name,
+                description: bounded_description,
+                image: bounded_image,
+            };
 
             <T as pallet::Config>::Currency::reserve(&core_account, T::RegisterDeposit::get())?;
 
@@ -370,11 +412,17 @@ pub mod pallet {
 
             Self::deposit_event(Event::<T>::CoreRegistered { core: core_id });
 
-            Ok(().into())
+            Ok(PostDispatchInfo {
+                actual_weight: None,
+                pays_fee: Pays::No,
+            })
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::unregister_core() +
+                <T as Config>::MaxStakersPerCore::get().div(100) * <T as Config>::WeightInfo::unstake()
+        )]
         pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -390,6 +438,8 @@ pub mod pallet {
             let current_era = Self::current_era();
 
             let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(core_id);
+
+            let mut corrected_staker_length_fee = Zero::zero();
 
             for staker in staker_info_prefix {
                 let mut core_stake_info =
@@ -432,6 +482,8 @@ pub mod pallet {
                     core: core_id,
                     amount: value_to_unstake,
                 });
+
+                corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
             }
 
             RegisteredCore::<T>::remove(core_id);
@@ -440,43 +492,73 @@ pub mod pallet {
 
             Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
 
-            Ok(().into())
+            Ok(
+                Some(<T as Config>::WeightInfo::unregister_core() + corrected_staker_length_fee)
+                    .into(),
+            )
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::change_core_metadata(
+                name.len() as u32,
+                description.len() as u32,
+                image.len() as u32
+            )
+        )]
         pub fn change_core_metadata(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
-            new_metadata: CoreMetadataOf<T>,
+            name: Vec<u8>,
+            description: Vec<u8>,
+            image: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let caller = ensure_signed(origin)?;
-
-            ensure!(
-                caller
-                    == pallet_inv4::util::derive_core_account::<
-                        T,
-                        <T as pallet::Config>::CoreId,
-                        T::AccountId,
-                    >(core_id),
-                Error::<T>::NoPermission
-            );
+            let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core_id = core_origin.id.into();
 
             RegisteredCore::<T>::try_mutate(core_id, |core| {
                 let mut new_core = core.take().ok_or(Error::<T>::NotRegistered)?;
 
+                let bounded_name: BoundedVec<u8, T::MaxNameLength> = name
+                    .clone()
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxNameExceeded)?;
+
+                let bounded_description: BoundedVec<u8, T::MaxDescriptionLength> = description
+                    .clone()
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxDescriptionExceeded)?;
+
+                let bounded_image: BoundedVec<u8, T::MaxImageUrlLength> = image
+                    .clone()
+                    .try_into()
+                    .map_err(|_| Error::<T>::MaxImageExceeded)?;
+
+                let new_metadata: CoreMetadataOf<T> = CoreMetadata {
+                    name: bounded_name,
+                    description: bounded_description,
+                    image: bounded_image,
+                };
+
                 let old_metadata = new_core.metadata;
 
-                new_core.metadata = new_metadata.clone();
+                new_core.metadata = new_metadata;
 
                 *core = Some(new_core);
 
                 Self::deposit_event(Event::<T>::MetadataChanged {
                     core: core_id,
-                    old_metadata,
-                    new_metadata,
+                    old_metadata: CoreMetadata {
+                        name: old_metadata.name.into_inner(),
+                        description: old_metadata.description.into_inner(),
+                        image: old_metadata.image.into_inner(),
+                    },
+                    new_metadata: CoreMetadata {
+                        name,
+                        description,
+                        image,
+                    },
                 });
 
                 Ok(().into())
@@ -484,7 +566,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(<T as Config>::WeightInfo::stake())]
         pub fn stake(
             origin: OriginFor<T>,
             core_id: <T as pallet::Config>::CoreId,
@@ -538,7 +620,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(<T as Config>::WeightInfo::unstake())]
         pub fn unstake(
             origin: OriginFor<T>,
             core_id: <T as pallet::Config>::CoreId,
@@ -593,7 +675,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(<T as Config>::WeightInfo::withdraw_unstaked())]
         pub fn withdraw_unstaked(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -626,7 +708,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(6)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(<T as Config>::WeightInfo::staker_claim_rewards())]
         pub fn staker_claim_rewards(
             origin: OriginFor<T>,
             core_id: <T as pallet::Config>::CoreId,
@@ -671,7 +753,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(7)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight(<T as Config>::WeightInfo::core_claim_rewards())]
         pub fn core_claim_rewards(
             origin: OriginFor<T>,
             core_id: <T as pallet::Config>::CoreId,
@@ -724,7 +806,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(1000000000)]
+        #[pallet::weight((<T as Config>::WeightInfo::halt_unhalt_pallet(), Pays::No))]
         pub fn halt_unhalt_pallet(origin: OriginFor<T>, halt: bool) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
 

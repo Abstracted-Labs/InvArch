@@ -5,8 +5,6 @@ use sp_arithmetic::traits::Zero;
 use sp_std::convert::TryInto;
 
 mod inflation;
-// TODO: Refactor.
-// pub mod migrations;
 
 #[cfg(test)]
 pub(crate) mod mock;
@@ -69,10 +67,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn next_era_starting_block)]
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn current_year)]
-    pub type CurrentYear<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     /// Total token supply at the very beginning of the year before any inflation has been minted.
     #[pallet::storage]
