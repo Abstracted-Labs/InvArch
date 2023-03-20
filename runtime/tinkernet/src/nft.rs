@@ -1,5 +1,5 @@
 use crate::{
-    common_types::CommonId, constants::currency::MILLIUNIT, AccountId, Balance, Balances, Runtime,
+    common_types::CommonId, constants::currency::UNIT, AccountId, Balance, Balances, Runtime,
     RuntimeEvent,
 };
 use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
@@ -7,8 +7,8 @@ use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
 use frame_system::{EnsureRoot, EnsureSigned};
 
 parameter_types! {
-      pub const CollectionDeposit: Balance = 0; //10 * MILLIUNIT;
-      pub const ItemDeposit: Balance = 0; //UNIT;
+      pub const CollectionDeposit: Balance = UNIT;
+      pub const ItemDeposit: Balance = UNIT / 100;
       pub const KeyLimit: u32 = 32;
       pub const ValueLimit: u32 = 256;
       pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
