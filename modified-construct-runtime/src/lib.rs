@@ -17,6 +17,7 @@
 
 //! Proc macro of Support code for the runtime.
 
+#![allow(clippy::all)]
 #![recursion_limit = "512"]
 
 mod construct_runtime;

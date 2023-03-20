@@ -269,14 +269,11 @@ pub fn run() -> Result<()> {
                     }
                 }
                 #[cfg(not(feature = "runtime-benchmarks"))]
-                BenchmarkCmd::Storage(_) => {
-                    return Err(sc_cli::Error::Input(
-                        "Compile with --features=runtime-benchmarks \
+                BenchmarkCmd::Storage(_) => Err(sc_cli::Error::Input(
+                    "Compile with --features=runtime-benchmarks \
 						             to enable storage benchmarks."
-                            .into(),
-                    )
-                    .into())
-                }
+                        .into(),
+                )),
                 #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
                     let partials =
@@ -339,7 +336,7 @@ pub fn run() -> Result<()> {
             runner.run_node_until_exit(|config| async move {
                 let hwbench = if !cli.no_hardware_benchmarks {
                     config.database.path().map(|database_path| {
-                        let _ = std::fs::create_dir_all(&database_path);
+                        let _ = std::fs::create_dir_all(database_path);
                         sc_sysinfo::gather_hwbench(Some(database_path))
                     })
                 } else {
