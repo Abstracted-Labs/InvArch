@@ -3391,6 +3391,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#b9727055e0a6ef6801275889a04ac699b6d498e6"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5342,6 +5343,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-checked-inflation"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#b9727055e0a6ef6801275889a04ac699b6d498e6"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-session",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-child-bounties"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36#cb4f2491b00af7d7817f3a54209c26b20faa1f51"
@@ -5583,6 +5604,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#b9727055e0a6ef6801275889a04ac699b6d498e6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5731,6 +5753,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-ocif-staking"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#b9727055e0a6ef6801275889a04ac699b6d498e6"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-balances",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-offences"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36#cb4f2491b00af7d7817f3a54209c26b20faa1f51"
@@ -5866,30 +5912,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "pallet-rings"
-version = "0.1.0-dev"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "num-traits",
- "pallet-balances",
- "pallet-inv4",
- "pallet-session",
- "pallet-xcm",
- "parity-scale-codec",
- "scale-info",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-staking",
- "sp-std",
- "xcm",
- "xcm-executor",
 ]
 
 [[package]]
@@ -11252,14 +11274,15 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-checked-inflation",
  "pallet-collator-selection",
  "pallet-identity",
  "pallet-inv4",
  "pallet-maintenance-mode",
  "pallet-multisig",
+ "pallet-ocif-staking",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
- "pallet-rings",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",

@@ -92,12 +92,12 @@ impl
         _to: &AccountId,
         _amount: Balance,
     ) -> sp_runtime::DispatchResult {
-        if let Some(false) = crate::INV4::is_asset_frozen(currency_id) {
-            Ok(())
-        } else {
+        if let Some(true) = crate::INV4::is_asset_frozen(currency_id) {
             Err(sp_runtime::DispatchError::Token(
                 sp_runtime::TokenError::Frozen,
             ))
+        } else {
+            Ok(())
         }
     }
 }
@@ -131,5 +131,5 @@ impl orml_tokens2::Config for Runtime {
     type MaxReserves = ConstU32<0u32>;
     type DustRemovalWhitelist = CoreDustRemovalWhitelist;
     type ReserveIdentifier = [u8; 8];
-    type CurrencyHooks = ();
+    type CurrencyHooks = INV4TokenHooks;
 }

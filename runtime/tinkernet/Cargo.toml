@@ -25,16 +25,16 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-#pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
 #pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
-#pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
-#pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
 
 
-pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
-pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
-pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
-pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
+#pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
+#pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+#pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
+#pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 
@@ -200,6 +200,7 @@ std = [
     "pallet-maintenance-mode/std",
     "orml-tokens2/std",
     "pallet-ocif-staking/std",
+    "pallet-checked-inflation/std",
 ]
 
 runtime-benchmarks = [ 
@@ -216,7 +217,8 @@ runtime-benchmarks = [
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-inv4/runtime-benchmarks",
-    "pallet-rings/runtime-benchmarks",
+   # "pallet-rings/runtime-benchmarks",
+    "pallet-ocif-staking/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -258,4 +260,5 @@ try-runtime = [
     "orml-tokens/try-runtime",
     "orml-tokens2/try-runtime",
     "pallet-ocif-staking/try-runtime",
+    "pallet-checked-inflation/try-runtime",
 ]
