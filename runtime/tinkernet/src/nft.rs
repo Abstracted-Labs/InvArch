@@ -1,6 +1,7 @@
 use crate::{
-    common_types::CommonId, constants::currency::UNIT, AccountId, Balance, Balances, Runtime,
-    RuntimeEvent,
+    common_types::CommonId,
+    constants::currency::{MILLIUNIT, UNIT},
+    AccountId, Balance, Balances, Runtime, RuntimeEvent,
 };
 use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
 
