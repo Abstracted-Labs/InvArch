@@ -39,12 +39,12 @@ pub mod constants {
 
             // At least 10 µs.
             assert!(
-                w >= 10u64 * constants::WEIGHT_REF_TIME_PER_MICROS,
+                w.ref_time() >= 10u64 * constants::WEIGHT_REF_TIME_PER_MICROS,
                 "Weight should be at least 10 µs."
             );
             // At most 1 ms.
             assert!(
-                w <= constants::WEIGHT_REF_TIME_PER_MILLIS,
+                w.ref_time() <= constants::WEIGHT_REF_TIME_PER_MILLIS,
                 "Weight should be at most 1 ms."
             );
         }
