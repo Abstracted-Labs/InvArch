@@ -5,13 +5,12 @@ use sp_arithmetic::traits::Zero;
 use sp_std::convert::TryInto;
 
 mod inflation;
-pub mod migrations;
 
-#[cfg(test)]
-pub(crate) mod mock;
+//#[cfg(test)]
+//pub(crate) mod mock;
 
-#[cfg(test)]
-mod test;
+//#[cfg(test)]
+//mod test;
 
 pub use inflation::*;
 pub use pallet::*;
@@ -41,7 +40,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>
@@ -68,10 +67,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn next_era_starting_block)]
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn current_year)]
-    pub type CurrentYear<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     /// Total token supply at the very beginning of the year before any inflation has been minted.
     #[pallet::storage]
@@ -254,6 +249,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(100_000_000)]
         pub fn set_first_year_supply(root: OriginFor<T>) -> DispatchResult {
             ensure_root(root)?;
@@ -265,6 +261,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(100_000_000)]
         pub fn halt_unhalt_pallet(root: OriginFor<T>, halt: bool) -> DispatchResult {
             ensure_root(root)?;

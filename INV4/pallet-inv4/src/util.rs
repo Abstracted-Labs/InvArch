@@ -1,31 +1,20 @@
+use crate::Config;
 use codec::{Decode, Encode};
-use sp_arithmetic::traits::Zero;
+use frame_support::traits::Get;
 use sp_io::hashing::blake2_256;
 use sp_runtime::traits::TrailingZeroInput;
 
 /// Generates an `AccountId` using an `IpId` as the seed + the PalletId as salt.
-pub fn derive_ips_account<T: frame_system::Config, IpId, AccountId: Decode + Clone>(
-    ips_id: IpId,
-    original_caller: Option<&AccountId>,
-) -> AccountId
+pub fn derive_core_account<T: Config, CoreId, AccountId: Decode>(core_id: CoreId) -> AccountId
 where
-    (T::Hash, IpId): Encode,
-    (T::Hash, IpId, AccountId): Encode,
+    (T::Hash, CoreId): Encode,
 {
-    let entropy = if let Some(original_caller) = original_caller {
-        (
-            frame_system::Pallet::<T>::block_hash(T::BlockNumber::zero()),
-            ips_id,
-            original_caller.clone(),
-        )
-            .using_encoded(blake2_256)
-    } else {
-        (
-            frame_system::Pallet::<T>::block_hash(T::BlockNumber::zero()),
-            ips_id,
-        )
-            .using_encoded(blake2_256)
-    };
+    let entropy = (
+        //frame_system::Pallet::<T>::block_hash(T::BlockNumber::zero()),
+        T::GenesisHash::get(),
+        core_id,
+    )
+        .using_encoded(blake2_256);
 
     Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
         .expect("infinite length input; no invalid inputs for type; qed")

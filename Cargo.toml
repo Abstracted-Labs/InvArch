@@ -2,8 +2,7 @@
 
 members = [
     "INV4/pallet-inv4",
-    "INV4/pallet-ipf",
-
     "OCIF/staking",
-    "pallet-checked-inflation"
+    "pallet-checked-inflation",
+    "pallet-rings"
 ]
