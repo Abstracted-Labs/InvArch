@@ -52,7 +52,6 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
-        storage::Key,
         traits::{fungibles, Currency, Get, GetCallMetadata, OnUnbalanced, ReservableCurrency},
         transactional, Parameter,
     };
