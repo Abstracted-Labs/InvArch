@@ -8,17 +8,19 @@ use crate::{
     BalanceOf,
 };
 use codec::Encode;
+use core::convert::TryFrom;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::PostDispatchInfo,
     traits::{Currency, Get, WrapperKeepOpaque},
+    BoundedBTreeMap,
 };
 use frame_system::RawOrigin as SystemOrigin;
 use sp_runtime::{
     traits::{Bounded, Hash, Zero},
     DispatchError, DispatchErrorWithPostInfo, Perbill,
 };
-use sp_std::{iter::Sum, ops::Div, prelude::*, vec};
+use sp_std::{collections::btree_map::BTreeMap, iter::Sum, ops::Div, prelude::*, vec};
 
 use crate::Pallet as INV4;
 
@@ -265,10 +267,17 @@ benchmarks! {
             assert_last_event::<T>(Event::MultisigVoteAdded {
                 core_id,
                 executor_account: derive_account::<T>(core_id),
-                voter: caller,
+                voter: caller.clone(),
                 votes_added:  Vote::Aye(BalanceOf::<T>::max_value().div(4u32.into())),
                 current_votes: Tally::<T>::from_parts(
-                    (BalanceOf::<T>::max_value().div(4u32.into()) + T::CoreSeedBalance::get()).into(), Zero::zero()
+                    (BalanceOf::<T>::max_value().div(4u32.into()) + T::CoreSeedBalance::get()).into(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        whitelisted_caller(),
+                        Vote::Aye(T::CoreSeedBalance::get()),
+                    ),
+                                                              (caller, Vote::Aye(BalanceOf::<T>::max_value().div(4u32.into())))
+                    ])).unwrap()
                 ),
                 call_hash,
                 call: WrapperKeepOpaque::from_encoded(call.encode()),

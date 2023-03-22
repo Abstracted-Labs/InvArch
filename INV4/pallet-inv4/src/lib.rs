@@ -185,18 +185,6 @@ pub mod pallet {
         crate::multisig::MultisigOperationOf<T>,
     >;
 
-    #[pallet::storage]
-    #[pallet::getter(fn votes)]
-    pub type VoteStorage<T: Config> = StorageNMap<
-        _,
-        (
-            Key<Blake2_128Concat, T::CoreId>,
-            Key<Blake2_128Concat, T::Hash>,
-            Key<Blake2_128Concat, T::AccountId>,
-        ),
-        VoteRecord<T>,
-    >;
-
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -291,6 +279,8 @@ pub mod pallet {
         NoPermission,
         /// Failed because the Maximum amount of metadata was exceeded
         MaxMetadataExceeded,
+        /// Failed because the multisig call has been voted by more than the limit amount of members.
+        MaxCallersExceeded,
         /// Multisig call not found.
         MultisigCallNotFound,
         /// Failed to decode stored multisig call.

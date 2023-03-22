@@ -1,15 +1,16 @@
-use crate::{origin::INV4Origin, BalanceOf, Config, CoreStorage, Multisig, Pallet};
+use crate::{origin::INV4Origin, BalanceOf, Config, CoreStorage, Error, Multisig, Pallet};
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use core::marker::PhantomData;
 use frame_support::{
     pallet_prelude::Member,
     traits::{fungibles::Inspect, PollStatus, VoteTally},
-    CloneNoBound, EqNoBound, Parameter, PartialEqNoBound, RuntimeDebug, RuntimeDebugNoBound,
+    BoundedBTreeMap, BoundedVec, CloneNoBound, EqNoBound, Parameter, PartialEqNoBound,
+    RuntimeDebug, RuntimeDebugNoBound,
 };
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{One, Zero},
-    DispatchError, Perbill,
+    DispatchError, DispatchResult, Perbill,
 };
 use sp_std::vec::Vec;
 
@@ -32,16 +33,53 @@ pub type Core<T> = <T as Config>::CoreId;
 pub struct Tally<T: Config> {
     pub ayes: Votes<T>,
     pub nays: Votes<T>,
+    pub records: BoundedBTreeMap<T::AccountId, Vote<Votes<T>>, T::MaxCallers>,
     dummy: PhantomData<T>,
 }
 
 impl<T: Config> Tally<T> {
-    pub fn from_parts(ayes: Votes<T>, nays: Votes<T>) -> Self {
+    pub fn from_parts(
+        ayes: Votes<T>,
+        nays: Votes<T>,
+        records: BoundedBTreeMap<T::AccountId, Vote<Votes<T>>, T::MaxCallers>,
+    ) -> Self {
         Tally {
             ayes,
             nays,
+            records,
             dummy: PhantomData,
         }
+    }
+
+    pub fn process_vote(
+        &mut self,
+        account: T::AccountId,
+        maybe_vote: Option<Vote<Votes<T>>>,
+    ) -> Result<Vote<Votes<T>>, DispatchError> {
+        let votes = if let Some(vote) = maybe_vote {
+            self.records
+                .try_insert(account, vote)
+                .map_err(|_| Error::<T>::MaxCallersExceeded)?;
+            vote
+        } else {
+            self.records.remove(&account).ok_or(Error::<T>::NotAVoter)?
+        };
+
+        let (ayes, nays) = self.records.values().fold(
+            (Zero::zero(), Zero::zero()),
+            |(mut ayes, mut nays): (Votes<T>, Votes<T>), vote| {
+                match vote {
+                    Vote::Aye(v) => ayes += *v,
+                    Vote::Nay(v) => nays += *v,
+                };
+                (ayes, nays)
+            },
+        );
+
+        self.ayes = ayes;
+        self.nays = nays;
+
+        Ok(votes)
     }
 }
 
@@ -50,6 +88,7 @@ impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
         Self {
             ayes: Zero::zero(),
             nays: Zero::zero(),
+            records: BoundedBTreeMap::default(),
             dummy: PhantomData,
         }
     }

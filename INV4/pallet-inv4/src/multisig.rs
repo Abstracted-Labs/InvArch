@@ -4,7 +4,10 @@ use crate::{
     util::derive_core_account,
     voting::{Tally, Vote},
 };
-use core::{convert::TryInto, iter::Sum};
+use core::{
+    convert::{TryFrom, TryInto},
+    iter::Sum,
+};
 use frame_support::{
     dispatch::GetDispatchInfo,
     pallet_prelude::*,
@@ -12,13 +15,14 @@ use frame_support::{
         fungibles::{Inspect, Mutate},
         Currency, VoteTally, WrapperKeepOpaque,
     },
+    BoundedBTreeMap,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use sp_runtime::{
     traits::{Hash, Zero},
     Perbill, Saturating,
 };
-use sp_std::{boxed::Box, vec::Vec};
+use sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 
 pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::RuntimeCall>;
 
@@ -97,6 +101,10 @@ where
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller)?;
 
+        let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
+
+        ensure!(!owner_balance.is_zero(), Error::<T>::NoPermission);
+
         let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
             Some(
                 vec.try_into()
@@ -116,8 +124,6 @@ where
             .0
             .try_into()
             .map_err(|_| Error::<T>::CallHasTooFewBytes)?;
-
-        let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
 
         let total_issuance: BalanceOf<T> = T::AssetsProvider::total_issuance(core_id);
 
@@ -148,17 +154,20 @@ where
                 result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
-            VoteStorage::<T>::insert(
-                (core_id, call_hash, owner.clone()),
-                Vote::Aye(owner_balance),
-            );
-
             // Multisig call is now in the voting stage, so update storage.
             Multisig::<T>::insert(
                 core_id,
                 call_hash,
                 MultisigOperation {
-                    tally: Tally::from_parts(owner_balance, Zero::zero()),
+                    tally: Tally::from_parts(
+                        owner_balance,
+                        Zero::zero(),
+                        BoundedBTreeMap::try_from(BTreeMap::from([(
+                            owner.clone(),
+                            Vote::Aye(owner_balance),
+                        )]))
+                        .map_err(|_| Error::<T>::MaxCallersExceeded)?,
+                    ),
                     original_caller: owner.clone(),
                     actual_call: opaque_call.clone(),
                     call_metadata,
@@ -194,100 +203,73 @@ where
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
+            let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
+
+            ensure!(!voter_balance.is_zero(), Error::<T>::NoPermission);
+
             let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
-            VoteStorage::<T>::try_mutate((core_id, call_hash, owner.clone()), |vote_record| {
-                let old_vote_record = vote_record.take();
+            let (minimum_support, required_approval) =
+                Pallet::<T>::minimum_support_and_required_approval(core_id)
+                    .ok_or(Error::<T>::CoreNotFound)?;
 
-                match old_vote_record {
-                    Some(Vote::Aye(old_votes)) => {
-                        old_data.tally.ayes = old_data.tally.ayes.saturating_sub(old_votes)
-                    }
-                    Some(Vote::Nay(old_votes)) => {
-                        old_data.tally.nays = old_data.tally.nays.saturating_sub(old_votes)
-                    }
-                    None => (),
-                }
+            let new_vote_record = if aye {
+                Vote::Aye(voter_balance)
+            } else {
+                Vote::Nay(voter_balance)
+            };
 
-                let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
+            old_data
+                .tally
+                .process_vote(owner.clone(), Some(new_vote_record))?;
 
-                let (minimum_support, required_approval) =
-                    Pallet::<T>::minimum_support_and_required_approval(core_id)
-                        .ok_or(Error::<T>::CoreNotFound)?;
+            let support = old_data.tally.support(core_id);
+            let approval = old_data.tally.approval(core_id);
 
-                let new_vote_record = if aye {
-                    old_data.tally.ayes = old_data.tally.ayes.saturating_add(voter_balance);
+            if (support >= minimum_support) && (approval >= required_approval) {
+                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
+                *data = None;
 
-                    Vote::Aye(voter_balance)
-                } else {
-                    old_data.tally.nays = old_data.tally.nays.saturating_add(voter_balance);
+                // Actually dispatch this call and return the result of it
+                let dispatch_result = crate::dispatch::dispatch_call::<T>(
+                    core_id,
+                    old_data
+                        .actual_call
+                        .try_decode()
+                        .ok_or(Error::<T>::FailedDecodingCall)?,
+                );
 
-                    Vote::Nay(voter_balance)
-                };
+                Self::deposit_event(Event::MultisigExecuted {
+                    core_id,
+                    executor_account: derive_core_account::<
+                        T,
+                        <T as Config>::CoreId,
+                        <T as frame_system::Config>::AccountId,
+                    >(core_id),
+                    voter: owner,
+                    call_hash,
+                    call: old_data.actual_call,
+                    result: dispatch_result.map(|_| ()).map_err(|e| e.error),
+                });
+            } else {
+                *data = Some(old_data.clone());
 
-                let support = old_data.tally.support(core_id);
-                let approval = old_data.tally.approval(core_id);
+                Self::deposit_event(Event::MultisigVoteAdded {
+                    core_id,
+                    executor_account: derive_core_account::<
+                        T,
+                        <T as Config>::CoreId,
+                        <T as frame_system::Config>::AccountId,
+                    >(core_id),
+                    voter: owner,
+                    votes_added: new_vote_record,
+                    current_votes: old_data.tally,
+                    call_hash,
+                    call: old_data.actual_call,
+                });
+            }
 
-                if (support >= minimum_support) && (approval >= required_approval) {
-                    if VoteStorage::<T>::clear_prefix(
-                        (core_id, call_hash),
-                        T::MaxCallers::get(),
-                        None,
-                    )
-                    .maybe_cursor
-                    .is_some()
-                    {
-                        Err(Error::<T>::IncompleteVoteCleanup)
-                    } else {
-                        Ok(())
-                    }?;
-
-                    // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
-                    *data = None;
-
-                    // Actually dispatch this call and return the result of it
-                    let dispatch_result = crate::dispatch::dispatch_call::<T>(
-                        core_id,
-                        old_data
-                            .actual_call
-                            .try_decode()
-                            .ok_or(Error::<T>::FailedDecodingCall)?,
-                    );
-
-                    Self::deposit_event(Event::MultisigExecuted {
-                        core_id,
-                        executor_account: derive_core_account::<
-                            T,
-                            <T as Config>::CoreId,
-                            <T as frame_system::Config>::AccountId,
-                        >(core_id),
-                        voter: owner,
-                        call_hash,
-                        call: old_data.actual_call,
-                        result: dispatch_result.map(|_| ()).map_err(|e| e.error),
-                    });
-                } else {
-                    *vote_record = Some(new_vote_record);
-
-                    *data = Some(old_data.clone());
-
-                    Self::deposit_event(Event::MultisigVoteAdded {
-                        core_id,
-                        executor_account: derive_core_account::<
-                            T,
-                            <T as Config>::CoreId,
-                            <T as frame_system::Config>::AccountId,
-                        >(core_id),
-                        voter: owner,
-                        votes_added: new_vote_record,
-                        current_votes: old_data.tally,
-                        call_hash,
-                        call: old_data.actual_call,
-                    });
-                }
-
-                Ok(().into())
-            })
+            Ok(().into())
         })
     }
 
@@ -302,39 +284,24 @@ where
 
             let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
-            // Can only withdraw your vote if you have already voted on this multisig operation
-            ensure!(
-                VoteStorage::<T>::contains_key((core_id, call_hash, owner.clone())),
-                Error::<T>::NotAVoter
-            );
+            let old_vote = old_data.tally.process_vote(owner.clone(), None)?;
 
-            VoteStorage::<T>::try_mutate((core_id, call_hash, owner.clone()), |vote_record| {
-                let old_vote = vote_record.take().ok_or(Error::<T>::NotAVoter)?;
+            *data = Some(old_data.clone());
 
-                match old_vote {
-                    Vote::Aye(v) => old_data.tally.ayes = old_data.tally.ayes.saturating_sub(v),
-                    Vote::Nay(v) => old_data.tally.nays = old_data.tally.nays.saturating_sub(v),
-                };
+            Self::deposit_event(Event::MultisigVoteWithdrawn {
+                core_id,
+                executor_account: derive_core_account::<
+                    T,
+                    <T as Config>::CoreId,
+                    <T as frame_system::Config>::AccountId,
+                >(core_id),
+                voter: owner,
+                votes_removed: old_vote,
+                call_hash,
+                call: old_data.actual_call,
+            });
 
-                *vote_record = None;
-
-                *data = Some(old_data.clone());
-
-                Self::deposit_event(Event::MultisigVoteWithdrawn {
-                    core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
-                    voter: owner,
-                    votes_removed: old_vote,
-                    call_hash,
-                    call: old_data.actual_call,
-                });
-
-                Ok(().into())
-            })
+            Ok(().into())
         })
     }
 }
