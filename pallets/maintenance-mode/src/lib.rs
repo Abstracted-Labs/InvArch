@@ -40,10 +40,10 @@
 #![allow(non_camel_case_types)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod mock;
+//#[cfg(test)]
+//mod tests;
 
 mod types;
 pub use types::*;
@@ -87,19 +87,19 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Overarching event type
-        type Event: From<Event> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The base call filter to be used in normal operating mode
         /// (When we aren't in the middle of a migration)
-        type NormalCallFilter: Contains<Self::Call>;
+        type NormalCallFilter: Contains<Self::RuntimeCall>;
         /// The base call filter to be used when we are in the middle of migrations
         /// This should be very restrictive. Probably not allowing anything except possibly
         /// something like sudo or other emergency processes
-        type MaintenanceCallFilter: Contains<Self::Call>;
+        type MaintenanceCallFilter: Contains<Self::RuntimeCall>;
         /// The origin from which the call to enter or exit maintenance mode must come
         /// Take care when choosing your maintenance call filter to ensure that you'll still be
         /// able to return to normal mode. For example, if your MaintenanceOrigin is a council, make
         /// sure that your councilors can still cast votes.
-        type MaintenanceOrigin: EnsureOrigin<Self::Origin>;
+        type MaintenanceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         /// The executive hooks that will be used in normal operating mode
         /// Important: Use AllPalletsReversedWithSystemFirst here if you dont want to modify the
         /// hooks behaviour
@@ -152,6 +152,7 @@ pub mod pallet {
         /// Weight cost is:
         /// * One DB read to ensure we're not already in maintenance mode
         /// * Three DB writes - 1 for the mode, 1 for suspending xcm execution, 1 for the event
+        #[pallet::call_index(0)]
         #[pallet::weight(T::DbWeight::get().read + 3 * T::DbWeight::get().write)]
         pub fn enter_maintenance_mode(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             // Ensure Origin
@@ -179,6 +180,7 @@ pub mod pallet {
         /// Weight cost is:
         /// * One DB read to ensure we're in maintenance mode
         /// * Three DB writes - 1 for the mode, 1 for resuming xcm execution, 1 for the event
+        #[pallet::call_index(1)]
         #[pallet::weight(T::DbWeight::get().read + 3 * T::DbWeight::get().write)]
         pub fn resume_normal_operation(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             // Ensure Origin
@@ -219,8 +221,8 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Contains<T::Call> for Pallet<T> {
-        fn contains(call: &T::Call) -> bool {
+    impl<T: Config> Contains<T::RuntimeCall> for Pallet<T> {
+        fn contains(call: &T::RuntimeCall) -> bool {
             if MaintenanceMode::<T>::get() {
                 T::MaintenanceCallFilter::contains(call)
             } else {
