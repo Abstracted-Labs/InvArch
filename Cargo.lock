@@ -3391,7 +3391,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#babb5e33d6a512a139dbaf40430aa3fd8909b990"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=5fbbb94f450027249fc84bd08fcb8f4644e1a4a0#5fbbb94f450027249fc84bd08fcb8f4644e1a4a0"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5345,7 +5345,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#babb5e33d6a512a139dbaf40430aa3fd8909b990"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=5fbbb94f450027249fc84bd08fcb8f4644e1a4a0#5fbbb94f450027249fc84bd08fcb8f4644e1a4a0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5604,7 +5604,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#babb5e33d6a512a139dbaf40430aa3fd8909b990"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=5fbbb94f450027249fc84bd08fcb8f4644e1a4a0#5fbbb94f450027249fc84bd08fcb8f4644e1a4a0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5755,7 +5755,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-saturn_preparations#babb5e33d6a512a139dbaf40430aa3fd8909b990"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=5fbbb94f450027249fc84bd08fcb8f4644e1a4a0#5fbbb94f450027249fc84bd08fcb8f4644e1a4a0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
