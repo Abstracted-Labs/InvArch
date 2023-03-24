@@ -162,7 +162,6 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (pallet_inv4::migrations::v1::MigrateToV1<Runtime>,),
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -193,7 +192,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 15,
+    spec_version: 16,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
