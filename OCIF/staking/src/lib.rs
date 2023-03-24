@@ -932,6 +932,7 @@ pub mod pallet {
             );
 
             era_info.rewards = rewards;
+            era_info.active_stake = new_active_stake;
 
             GeneralEraInfo::<T>::insert(era, era_info);
         }
