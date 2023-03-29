@@ -36,6 +36,9 @@ pub mod pallet {
         #[pallet::constant]
         type MaxWeightedLength: Get<u32>;
 
+        #[pallet::constant]
+        type INV4PalletIndex: Get<u8>;
+
         type WeightInfo: WeightInfo;
     }
 
@@ -44,6 +47,9 @@ pub mod pallet {
         SendingFailed,
         WeightTooHigh,
         FailedToCalculateXcmFee,
+        FailedToReanchorAsset,
+        FailedToInvertLocation,
+        DifferentChains,
     }
 
     #[pallet::event]
@@ -58,6 +64,13 @@ pub mod pallet {
         AssetsTransferred {
             chain: <<<T as pallet::Config>::Chains as ChainList>::ChainAssets as ChainAssetsList>::Chains,
             asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
+            amount: u128,
+            from: <T as pallet_inv4::Config>::CoreId,
+            to: <T as frame_system::Config>::AccountId,
+        },
+
+        AssetsBridged {
+            origin_chain_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
             from: <T as pallet_inv4::Config>::CoreId,
             to: <T as frame_system::Config>::AccountId,
@@ -90,36 +103,34 @@ pub mod pallet {
         pub fn send_call(
             origin: OriginFor<T>,
             destination: <T as pallet::Config>::Chains,
-            weight: Weight,
+            weight: u64,
+            fee_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
+            fee: u128,
             call: Vec<u8>,
         ) -> DispatchResult {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
 
-            let interior = Junctions::X1(Junction::Plurality {
-                id: BodyId::Index(core_id),
-                part: BodyPart::Voice,
-            });
+            let interior = Junctions::X2(
+                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                Junction::GeneralIndex(core_id as u128),
+            );
 
             let dest = destination.get_location();
-            let dest_asset = destination.get_main_asset().get_asset_id();
+            let fee_asset_location = fee_asset.get_asset_location();
 
             let beneficiary: MultiLocation = MultiLocation {
                 parents: 1,
-                interior: Junctions::X2(
+                interior: Junctions::X3(
                     Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                    Junction::Plurality {
-                        id: BodyId::Index(core_id),
-                        part: BodyPart::Voice,
-                    },
+                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                    Junction::GeneralIndex(core_id as u128),
                 ),
             };
 
-            let xcm_fee = destination.xcm_fee(&weight);
-
             let fee_multiasset = MultiAsset {
-                id: dest_asset,
-                fun: Fungibility::Fungible(xcm_fee.into()),
+                id: AssetId::Concrete(fee_asset_location),
+                fun: Fungibility::Fungible(fee),
             };
 
             let message = Xcm(vec![
@@ -130,10 +141,7 @@ pub mod pallet {
                 },
                 Instruction::Transact {
                     origin_type: OriginKind::Native,
-                    require_weight_at_most: weight
-                        .checked_mul(2)
-                        .ok_or(Error::<T>::WeightTooHigh)?
-                        .ref_time(),
+                    require_weight_at_most: weight,
                     call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
                 },
                 Instruction::RefundSurplus,
@@ -163,23 +171,27 @@ pub mod pallet {
             asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
             to: <T as frame_system::Config>::AccountId,
+            fee_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
+            fee: u128,
         ) -> DispatchResult {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
 
-            let interior = Junctions::X1(Junction::Plurality {
-                id: BodyId::Index(core_id),
-                part: BodyPart::Voice,
-            });
+            let interior = Junctions::X2(
+                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                Junction::GeneralIndex(core_id as u128),
+            );
 
             let chain = asset.get_chain();
 
+            ensure!(chain == fee_asset.get_chain(), Error::<T>::DifferentChains);
+
             let dest = chain.get_location();
 
-            let asset_id = asset.get_asset_id();
+            let asset_location = asset.get_asset_location();
 
             let multi_asset = MultiAsset {
-                id: asset_id,
+                id: AssetId::Concrete(asset_location),
                 fun: Fungibility::Fungible(amount),
             };
 
@@ -193,20 +205,16 @@ pub mod pallet {
 
             let core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
-                interior: Junctions::X2(
+                interior: Junctions::X3(
                     Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                    Junction::Plurality {
-                        id: BodyId::Index(core_id),
-                        part: BodyPart::Voice,
-                    },
+                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                    Junction::GeneralIndex(core_id as u128),
                 ),
             };
 
-            let xcm_fee = chain.xcm_fee(&Weight::zero());
-
             let fee_multiasset = MultiAsset {
-                id: chain.get_main_asset().get_asset_id(),
-                fun: Fungibility::Fungible(xcm_fee.into()),
+                id: AssetId::Concrete(fee_asset.get_asset_location()),
+                fun: Fungibility::Fungible(fee),
             };
 
             let message = Xcm(vec![
@@ -239,6 +247,140 @@ pub mod pallet {
                 amount,
                 from: core.id,
                 to,
+            });
+
+            Ok(())
+        }
+
+        #[pallet::call_index(2)]
+        #[pallet::weight(<T as Config>::WeightInfo::bridge_assets())]
+        pub fn bridge_assets(
+            origin: OriginFor<T>,
+            asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
+            destination: <<<T as pallet::Config>::Chains as ChainList>::ChainAssets as ChainAssetsList>::Chains,
+            fee: u128,
+            amount: u128,
+            to: Option<<T as frame_system::Config>::AccountId>,
+        ) -> DispatchResult {
+            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core_id = core.id.into();
+            let core_account = core.to_account_id();
+
+            let interior = Junctions::X2(
+                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                Junction::GeneralIndex(core_id as u128),
+            );
+
+            let from_chain = asset.get_chain();
+            let from_chain_location = from_chain.get_location();
+
+            let dest = destination.get_location();
+
+            let asset_location = asset.get_asset_location();
+
+            let inverted_destination = dest
+                .inverted(&from_chain_location)
+                .map(|inverted| {
+                    if let (ml, Some(Junction::OnlyChild) | None) =
+                        inverted.clone().split_last_interior()
+                    {
+                        ml
+                    } else {
+                        inverted
+                    }
+                })
+                .map_err(|_| Error::<T>::FailedToInvertLocation)?;
+
+            let multiasset = MultiAsset {
+                id: AssetId::Concrete(asset_location.clone()),
+                fun: Fungibility::Fungible(amount),
+            };
+
+            let fee_multiasset = MultiAsset {
+                id: AssetId::Concrete(asset_location),
+                fun: Fungibility::Fungible(fee),
+            };
+
+            let reanchored_multiasset = multiasset
+                .clone()
+                .reanchored(&dest, &from_chain_location)
+                .map(|mut reanchored| {
+                    if let AssetId::Concrete(ref mut m) = reanchored.id {
+                        if let (ml, Some(Junction::OnlyChild) | None) =
+                            m.clone().split_last_interior()
+                        {
+                            *m = ml;
+                        }
+                    }
+                    reanchored
+                })
+                .map_err(|_| Error::<T>::FailedToReanchorAsset)?;
+
+            let beneficiary: MultiLocation = MultiLocation {
+                parents: 0,
+                interior: if let Some(to_inner) = to.clone() {
+                    Junctions::X1(Junction::AccountId32 {
+                        network: NetworkId::Any,
+                        id: to_inner.into(),
+                    })
+                } else {
+                    Junctions::X3(
+                        Junction::Parachain(<T as pallet::Config>::ParaId::get()),
+                        Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                        Junction::GeneralIndex(core_id as u128),
+                    )
+                },
+            };
+
+            let core_multilocation: MultiLocation = MultiLocation {
+                parents: 0,
+                interior: Junctions::X3(
+                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
+                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                    Junction::GeneralIndex(core_id as u128),
+                ),
+            };
+
+            let message = Xcm(vec![
+                // Pay execution fees
+                Instruction::WithdrawAsset(fee_multiasset.clone().into()),
+                Instruction::BuyExecution {
+                    fees: fee_multiasset,
+                    weight_limit: WeightLimit::Unlimited,
+                },
+                // Actual reserve transfer instruction
+                Instruction::TransferReserveAsset {
+                    assets: multiasset.into(),
+                    dest: inverted_destination,
+                    xcm: Xcm(vec![
+                        Instruction::BuyExecution {
+                            fees: reanchored_multiasset,
+                            weight_limit: WeightLimit::Unlimited,
+                        },
+                        Instruction::DepositAsset {
+                            assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                            max_assets: 1,
+                            beneficiary,
+                        },
+                    ]),
+                },
+                // Refund unused fees
+                Instruction::RefundSurplus,
+                Instruction::DepositAsset {
+                    assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                    max_assets: 1,
+                    beneficiary: core_multilocation,
+                },
+            ]);
+
+            pallet_xcm::Pallet::<T>::send_xcm(interior, from_chain_location, message)
+                .map_err(|_| Error::<T>::SendingFailed)?;
+
+            Self::deposit_event(Event::AssetsBridged {
+                origin_chain_asset: asset,
+                from: core.id,
+                amount,
+                to: to.unwrap_or(core_account),
             });
 
             Ok(())
