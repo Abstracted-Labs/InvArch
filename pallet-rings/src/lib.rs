@@ -113,7 +113,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
 
-            ChainsUnderMaintenance::<T>::insert(chain.clone().get_location(), under_maintenance);
+            ChainsUnderMaintenance::<T>::insert(chain.get_location(), under_maintenance);
 
             Self::deposit_event(Event::<T>::ChainMaintenanceStatusChanged {
                 chain,
