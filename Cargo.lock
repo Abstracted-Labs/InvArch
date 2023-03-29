@@ -3391,7 +3391,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5345,7 +5344,6 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5604,7 +5602,6 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5755,7 +5752,6 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5912,6 +5908,33 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-rings"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "num-traits",
+ "pallet-balances",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-timestamp",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -11283,6 +11306,7 @@ dependencies = [
  "pallet-ocif-staking",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
+ "pallet-rings",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",

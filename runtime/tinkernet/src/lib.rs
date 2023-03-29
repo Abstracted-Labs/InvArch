@@ -22,8 +22,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod xcm_config;
-
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
@@ -51,12 +49,18 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
+use sp_core::{
+    crypto::{ByteArray, KeyTypeId},
+    OpaqueMetadata, H160,
+};
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
@@ -68,18 +72,7 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
-
 use xcm::latest::prelude::BodyId;
-
-use pallet_inv4::{origin::INV4Origin, INV4Lookup};
-
-// Weights
-mod weights;
-
-use sp_core::crypto::ByteArray;
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -103,8 +96,10 @@ mod assets;
 mod inflation;
 mod inv4;
 mod nft;
+mod rings;
 mod staking;
-// mod rings;
+mod weights;
+pub mod xcm_config;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -820,7 +815,7 @@ construct_runtime_modified!(
 
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
         CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
-       // Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
+        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
 
@@ -849,7 +844,7 @@ mod benches {
         [cumulus_pallet_xcmp_queue, XcmpQueue]
         [pallet_inv4, INV4]
         [pallet_ocif_staking, OcifStaking]
-       // [pallet_rings, Rings]
+        [pallet_rings, Rings]
     );
 }
 
