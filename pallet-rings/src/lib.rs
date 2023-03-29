@@ -16,7 +16,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
-    use frame_system::pallet_prelude::OriginFor;
+    use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
     use xcm::{latest::prelude::*, DoubleEncoded};
@@ -42,6 +42,11 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
+    #[pallet::storage]
+    #[pallet::getter(fn is_under_maintenance)]
+    pub type ChainsUnderMaintenance<T: Config> =
+        StorageMap<_, Blake2_128Concat, MultiLocation, bool>;
+
     #[pallet::error]
     pub enum Error<T> {
         SendingFailed,
@@ -50,6 +55,7 @@ pub mod pallet {
         FailedToReanchorAsset,
         FailedToInvertLocation,
         DifferentChains,
+        ChainUnderMaintenance,
     }
 
     #[pallet::event]
@@ -75,6 +81,11 @@ pub mod pallet {
             from: <T as pallet_inv4::Config>::CoreId,
             to: <T as frame_system::Config>::AccountId,
         },
+
+        ChainMaintenanceStatusChanged {
+            chain: <T as Config>::Chains,
+            under_maintenance: bool,
+        }
     }
 
     #[pallet::call]
@@ -94,6 +105,25 @@ pub mod pallet {
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
     {
         #[pallet::call_index(0)]
+        #[pallet::weight((<T as Config>::WeightInfo::set_maintenance_status(), Pays::No))]
+        pub fn set_maintenance_status(
+            origin: OriginFor<T>,
+            chain: <T as Config>::Chains,
+            under_maintenance: bool,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            ChainsUnderMaintenance::<T>::insert(chain.clone().get_location(), under_maintenance);
+
+            Self::deposit_event(Event::<T>::ChainMaintenanceStatusChanged {
+                chain,
+                under_maintenance,
+            });
+
+            Ok(())
+        }
+
+        #[pallet::call_index(1)]
         #[pallet::weight(
             <T as Config>::WeightInfo::send_call(
                 (call.len() as u32)
@@ -111,12 +141,18 @@ pub mod pallet {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
 
+            let dest = destination.get_location();
+
+            ensure!(
+                !Self::is_under_maintenance(dest.clone()).unwrap_or(false),
+                Error::<T>::ChainUnderMaintenance
+            );
+
             let interior = Junctions::X2(
                 Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
                 Junction::GeneralIndex(core_id as u128),
             );
 
-            let dest = destination.get_location();
             let fee_asset_location = fee_asset.get_asset_location();
 
             let beneficiary: MultiLocation = MultiLocation {
@@ -164,7 +200,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::call_index(1)]
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::transfer_assets())]
         pub fn transfer_assets(
             origin: OriginFor<T>,
@@ -177,16 +213,20 @@ pub mod pallet {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
 
+            let chain = asset.get_chain();
+            let dest = chain.get_location();
+
+            ensure!(
+                !Self::is_under_maintenance(dest.clone()).unwrap_or(false),
+                Error::<T>::ChainUnderMaintenance
+            );
+
+            ensure!(chain == fee_asset.get_chain(), Error::<T>::DifferentChains);
+
             let interior = Junctions::X2(
                 Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
                 Junction::GeneralIndex(core_id as u128),
             );
-
-            let chain = asset.get_chain();
-
-            ensure!(chain == fee_asset.get_chain(), Error::<T>::DifferentChains);
-
-            let dest = chain.get_location();
 
             let asset_location = asset.get_asset_location();
 
@@ -252,7 +292,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::call_index(2)]
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::bridge_assets())]
         pub fn bridge_assets(
             origin: OriginFor<T>,
@@ -266,15 +306,21 @@ pub mod pallet {
             let core_id = core.id.into();
             let core_account = core.to_account_id();
 
-            let interior = Junctions::X2(
-                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                Junction::GeneralIndex(core_id as u128),
-            );
-
             let from_chain = asset.get_chain();
             let from_chain_location = from_chain.get_location();
 
             let dest = destination.get_location();
+
+            ensure!(
+                !(Self::is_under_maintenance(from_chain_location.clone()).unwrap_or(false)
+                    || Self::is_under_maintenance(dest.clone()).unwrap_or(false)),
+                Error::<T>::ChainUnderMaintenance
+            );
+
+            let interior = Junctions::X2(
+                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
+                Junction::GeneralIndex(core_id as u128),
+            );
 
             let asset_location = asset.get_asset_location();
 

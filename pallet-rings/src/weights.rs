@@ -31,6 +31,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_rings.
 pub trait WeightInfo {
+	  fn set_maintenance_status() -> Weight;
 	  fn send_call(c: u32, ) -> Weight;
 	  fn transfer_assets() -> Weight;
 	  fn bridge_assets() -> Weight;
@@ -39,68 +40,86 @@ pub trait WeightInfo {
   /// Weights for pallet_rings using the Substrate node and recommended hardware.
   pub struct SubstrateWeight<T>(PhantomData<T>);
           impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+	            // Storage: Rings ChainsUnderMaintenance (r:0 w:1)
+	        fn set_maintenance_status() -> Weight {
+		      // Minimum execution time: 13_000 nanoseconds.
+		      Weight::from_ref_time(13_000_000)
+			        .saturating_add(T::DbWeight::get().writes(1))
+	        }
+	            // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	            // Storage: ParachainInfo ParachainId (r:1 w:0)
 	            // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	            // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	            /// The range of component `c` is `[0, 100000]`.
 	        fn send_call(c: u32, ) -> Weight {
-		      // Minimum execution time: 20_000 nanoseconds.
-		      Weight::from_ref_time(24_021_075)
+		      // Minimum execution time: 22_000 nanoseconds.
+		      Weight::from_ref_time(25_434_022)
 			        // Standard Error: 2
-			        .saturating_add(Weight::from_ref_time(703).saturating_mul(c.into()))
-			        .saturating_add(T::DbWeight::get().reads(3))
+			        .saturating_add(Weight::from_ref_time(715).saturating_mul(c.into()))
+			        .saturating_add(T::DbWeight::get().reads(4))
 			        .saturating_add(T::DbWeight::get().writes(1))
 	        }
+	            // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	            // Storage: ParachainInfo ParachainId (r:1 w:0)
 	            // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	            // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	        fn transfer_assets() -> Weight {
-		      // Minimum execution time: 20_000 nanoseconds.
-		      Weight::from_ref_time(21_000_000)
-			        .saturating_add(T::DbWeight::get().reads(3))
+		      // Minimum execution time: 23_000 nanoseconds.
+		      Weight::from_ref_time(23_000_000)
+			        .saturating_add(T::DbWeight::get().reads(4))
 			        .saturating_add(T::DbWeight::get().writes(1))
 	        }
+	            // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	            // Storage: ParachainInfo ParachainId (r:1 w:0)
 	            // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	            // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	        fn bridge_assets() -> Weight {
-		      // Minimum execution time: 24_000 nanoseconds.
-		      Weight::from_ref_time(25_000_000)
-			        .saturating_add(T::DbWeight::get().reads(3))
+		      // Minimum execution time: 28_000 nanoseconds.
+		      Weight::from_ref_time(28_000_000)
+			        .saturating_add(T::DbWeight::get().reads(4))
 			        .saturating_add(T::DbWeight::get().writes(1))
 	        }
   }
 
   // For backwards compatibility and tests
   impl WeightInfo for () {
+	        // Storage: Rings ChainsUnderMaintenance (r:0 w:1)
+	    fn set_maintenance_status() -> Weight {
+		  // Minimum execution time: 13_000 nanoseconds.
+		  Weight::from_ref_time(13_000_000)
+			    .saturating_add(RocksDbWeight::get().writes(1))
+	    }
+	        // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	        // Storage: ParachainInfo ParachainId (r:1 w:0)
 	        // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	        // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	        /// The range of component `c` is `[0, 100000]`.
 	    fn send_call(c: u32, ) -> Weight {
-		  // Minimum execution time: 20_000 nanoseconds.
-		  Weight::from_ref_time(24_021_075)
+		  // Minimum execution time: 22_000 nanoseconds.
+		  Weight::from_ref_time(25_434_022)
 			    // Standard Error: 2
-			    .saturating_add(Weight::from_ref_time(703).saturating_mul(c.into()))
-			    .saturating_add(RocksDbWeight::get().reads(3))
+			    .saturating_add(Weight::from_ref_time(715).saturating_mul(c.into()))
+			    .saturating_add(RocksDbWeight::get().reads(4))
 			    .saturating_add(RocksDbWeight::get().writes(1))
 	    }
+	        // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	        // Storage: ParachainInfo ParachainId (r:1 w:0)
 	        // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	        // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	    fn transfer_assets() -> Weight {
-		  // Minimum execution time: 20_000 nanoseconds.
-		  Weight::from_ref_time(21_000_000)
-			    .saturating_add(RocksDbWeight::get().reads(3))
+		  // Minimum execution time: 23_000 nanoseconds.
+		  Weight::from_ref_time(23_000_000)
+			    .saturating_add(RocksDbWeight::get().reads(4))
 			    .saturating_add(RocksDbWeight::get().writes(1))
 	    }
+	        // Storage: Rings ChainsUnderMaintenance (r:1 w:0)
 	        // Storage: ParachainInfo ParachainId (r:1 w:0)
 	        // Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	        // Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	    fn bridge_assets() -> Weight {
-		  // Minimum execution time: 24_000 nanoseconds.
-		  Weight::from_ref_time(25_000_000)
-			    .saturating_add(RocksDbWeight::get().reads(3))
+		  // Minimum execution time: 28_000 nanoseconds.
+		  Weight::from_ref_time(28_000_000)
+			    .saturating_add(RocksDbWeight::get().reads(4))
 			    .saturating_add(RocksDbWeight::get().writes(1))
 	    }
   }
