@@ -1,6 +1,8 @@
 use crate::{
-    common_types::AssetId, constants::TreasuryAccount, AccountId, Balance, Balances, BlockNumber,
-    ExistentialDeposit, MaxLocks, MaxReserves, Runtime, RuntimeEvent, RuntimeOrigin, Tokens,
+    common_types::{AssetId, CommonId},
+    constants::TreasuryAccount,
+    AccountId, Balance, Balances, BlockNumber, ExistentialDeposit, MaxLocks, MaxReserves, Runtime,
+    RuntimeEvent, RuntimeOrigin, Tokens,
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -39,7 +41,7 @@ pub struct CustomAssetMetadata {
 impl orml_asset_registry::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AuthorityOrigin = AssetAuthority;
-    type AssetId = AssetId;
+    type AssetId = CommonId;
     type Balance = Balance;
     type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
     type CustomMetadata = CustomAssetMetadata;
@@ -70,7 +72,7 @@ impl orml_tokens::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = Amount;
-    type CurrencyId = AssetId;
+    type CurrencyId = CommonId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;

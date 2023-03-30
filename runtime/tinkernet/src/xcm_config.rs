@@ -3,8 +3,13 @@ use super::{
     RuntimeCall, RuntimeEvent, RuntimeOrigin, WeightToFee, XcmpQueue,
 };
 use crate::{
-    assets::CORE_ASSET_ID, common_types::AssetId, constants::TreasuryAccount, AssetRegistry,
-    Currencies, DealWithFees, UnknownTokens,
+    assets::CORE_ASSET_ID,
+    common_types::AssetId,
+    constants::TreasuryAccount,
+    inv4::{
+        CheckCoreAssets, ConvertCoreAssetBalance, CoreAssetConvert, CoreAssetId, CoreAssetsAdapter,
+    },
+    AssetRegistry, CoreAssets, Currencies, DealWithFees, UnknownTokens,
 };
 use codec::{Decode, Encode};
 use cumulus_primitives_core::ParaId;
@@ -28,10 +33,11 @@ use sp_runtime::traits::Convert;
 use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds, LocationInverter,
-    ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit, UsingComponents,
+    AllowTopLevelPaidExecutionFrom, ConvertedConcreteAssetId, EnsureXcmOrigin, FixedWeightBounds,
+    FungiblesAdapter, LocationInverter, ParentIsPreset, RelayChainAsNative,
+    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+    SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+    UsingComponents,
 };
 use xcm_executor::XcmExecutor;
 
@@ -100,6 +106,7 @@ impl Convert<AssetId, Option<MultiLocation>> for CurrencyIdConvert {
                     GeneralIndex(id.into()),
                 ),
             )),
+
             _ => AssetRegistry::multilocation(&id).unwrap_or_default(),
         }
     }
@@ -123,6 +130,7 @@ impl Convert<MultiLocation, Option<AssetId>> for CurrencyIdConvert {
                 parents: 0,
                 interior: X1(GeneralIndex(index)),
             } if (index as u32) == CORE_ASSET_ID => Some(CORE_ASSET_ID),
+
             // delegate to asset-registry
             _ => AssetRegistry::location_to_asset_id(location),
         }
@@ -300,13 +308,27 @@ pub type LocationToAccountId = (
     AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-pub type LocalAssetTransactor = MultiCurrencyAdapter<
-    Currencies,
-    UnknownTokens,
-    IsNativeConcrete<AssetId, CurrencyIdConvert>,
-    AccountId,
-    LocationToAccountId,
-    AssetId,
-    CurrencyIdConvert,
-    DepositToAlternative<TreasuryAccount, Currencies, AssetId, AccountId, Balance>,
->;
+pub type RelayOrSiblingToAccountId = (
+    // The parent (Relay-chain) origin converts to the default `AccountId`.
+    ParentIsPreset<AccountId>,
+    // Sibling parachain origins convert to AccountId via the `ParaId::into`.
+    SiblingParachainConvertsVia<Sibling, AccountId>,
+);
+
+parameter_types! {
+    pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+}
+
+pub type LocalAssetTransactor = (
+    MultiCurrencyAdapter<
+        Currencies,
+        UnknownTokens,
+        IsNativeConcrete<AssetId, CurrencyIdConvert>,
+        AccountId,
+        LocationToAccountId,
+        AssetId,
+        CurrencyIdConvert,
+        DepositToAlternative<TreasuryAccount, Currencies, AssetId, AccountId, Balance>,
+    >,
+    CoreAssetsAdapter,
+);

@@ -1,14 +1,32 @@
 use crate::{
-    common_types::CommonId, constants::currency::UNIT, AccountId, Balance, Balances, CoreAssets,
-    DealWithFees, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+    common_types::CommonId,
+    constants::currency::UNIT,
+    xcm_config::{CheckingAccount, LocationToAccountId, RelayOrSiblingToAccountId},
+    AccountId, Balance, Balances, CoreAssets, DealWithFees, Runtime, RuntimeCall, RuntimeEvent,
+    RuntimeOrigin,
 };
 use codec::{Decode, Encode};
-use frame_support::{parameter_types, traits::Contains};
+use frame_support::{
+    parameter_types,
+    traits::{
+        fungibles::{Inspect, Mutate, MutateHold, Transfer, Unbalanced},
+        Contains,
+    },
+};
 use pallet_inv4::fee_handling::MultisigFeeHandler;
 use pallet_transaction_payment::ChargeTransactionPayment;
 use scale_info::TypeInfo;
 use sp_core::{ConstU32, H256};
 use sp_runtime::traits::{One, SignedExtension, Zero};
+use xcm::latest::{
+    AssetId::Concrete, Error as XcmError, Fungibility, Junction, Junctions, MultiAsset,
+    MultiLocation, Result as XcmResult,
+};
+use xcm_builder::FungiblesMutateAdapter;
+use xcm_executor::{
+    traits::{Convert, Error as XcmExecutorError, MatchesFungibles, TransactAsset},
+    Assets,
+};
 
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
@@ -132,4 +150,227 @@ impl orml_tokens2::Config for Runtime {
     type DustRemovalWhitelist = CoreDustRemovalWhitelist;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = INV4TokenHooks;
+}
+
+pub type CoreAssetId = <Runtime as orml_tokens2::Config>::CurrencyId;
+
+pub struct CoreAssetConvert;
+
+impl Convert<CoreAssetId, MultiLocation> for CoreAssetConvert {
+    fn convert(id: CoreAssetId) -> Result<MultiLocation, CoreAssetId> {
+        Ok(MultiLocation::new(
+            1,
+            Junctions::X3(
+                Junction::Parachain(2125),
+                Junction::PalletInstance(72),
+                Junction::GeneralIndex(id.into()),
+            ),
+        ))
+    }
+}
+
+impl Convert<MultiLocation, CoreAssetId> for CoreAssetConvert {
+    fn convert(location: MultiLocation) -> Result<CoreAssetId, MultiLocation> {
+        match location {
+            MultiLocation {
+                parents: 0,
+                interior: Junctions::X2(Junction::PalletInstance(72), Junction::GeneralIndex(index)),
+            } => index.try_into().map_err(|_| location),
+
+            MultiLocation {
+                parents: 1,
+                interior:
+                    Junctions::X3(
+                        Junction::Parachain(2125),
+                        Junction::PalletInstance(72),
+                        Junction::GeneralIndex(index),
+                    ),
+            } => index.try_into().map_err(|_| location),
+
+            _ => Err(location),
+        }
+    }
+}
+
+impl Convert<MultiAsset, CoreAssetId> for CoreAssetConvert {
+    fn convert(asset: MultiAsset) -> Result<CoreAssetId, MultiAsset> {
+        if let MultiAsset {
+            id: Concrete(ref location),
+            ..
+        } = asset
+        {
+            <Self as Convert<MultiLocation, CoreAssetId>>::convert(location.clone())
+                .map_err(|_| asset)
+        } else {
+            Err(asset)
+        }
+    }
+}
+
+pub struct CheckCoreAssets;
+
+impl Contains<CoreAssetId> for CheckCoreAssets {
+    fn contains(t: &CoreAssetId) -> bool {
+        CoreAssets::asset_exists(*t)
+    }
+}
+
+pub struct ConvertCoreAssetBalance;
+
+impl Convert<u128, Balance> for ConvertCoreAssetBalance {
+    fn convert_ref(value: impl core::borrow::Borrow<u128>) -> Result<Balance, ()> {
+        Ok(*value.borrow())
+    }
+}
+
+pub struct MatchCoreAsset;
+
+impl MatchesFungibles<CoreAssetId, <Runtime as orml_tokens2::Config>::Balance> for MatchCoreAsset {
+    fn matches_fungibles(
+        a: &MultiAsset,
+    ) -> Result<(CoreAssetId, <Runtime as orml_tokens2::Config>::Balance), XcmExecutorError> {
+        let (amount, id) = match (&a.fun, &a.id) {
+            (Fungibility::Fungible(amount), Concrete(ref id)) => (amount, id),
+            _ => return Err(XcmExecutorError::AssetNotFound),
+        };
+
+        let what: CoreAssetId =
+            <CoreAssetConvert as Convert<MultiLocation, CoreAssetId>>::convert_ref(id)
+                .map_err(|_| XcmExecutorError::AssetIdConversionFailed)?;
+
+        Ok((what, *amount))
+    }
+}
+
+pub struct CoreAssetsAdapter;
+
+impl TransactAsset for CoreAssetsAdapter {
+    fn can_check_in(origin: &MultiLocation, what: &MultiAsset) -> XcmResult {
+        FungiblesMutateAdapter::<
+            CoreAssets,
+            MatchCoreAsset,
+            LocationToAccountId,
+            AccountId,
+            CheckCoreAssets,
+            CheckingAccount,
+        >::can_check_in(origin, what)
+    }
+
+    fn check_in(origin: &MultiLocation, what: &MultiAsset) {
+        FungiblesMutateAdapter::<
+            CoreAssets,
+            MatchCoreAsset,
+            LocationToAccountId,
+            AccountId,
+            CheckCoreAssets,
+            CheckingAccount,
+        >::check_in(origin, what)
+    }
+
+    fn check_out(dest: &MultiLocation, what: &MultiAsset) {
+        FungiblesMutateAdapter::<
+            CoreAssets,
+            MatchCoreAsset,
+            LocationToAccountId,
+            AccountId,
+            CheckCoreAssets,
+            CheckingAccount,
+        >::check_out(dest, what)
+    }
+
+    fn deposit_asset(what: &MultiAsset, who: &MultiLocation) -> XcmResult {
+        let (asset_id, amount) = MatchCoreAsset::matches_fungibles(what)?;
+
+        let (who, is_relay_or_sibling) = match RelayOrSiblingToAccountId::convert(who.clone()) {
+            Ok(account_id) => (account_id, true),
+            Err(multilocation) => (
+                LocationToAccountId::convert_ref(multilocation)
+                    .map_err(|()| XcmExecutorError::AccountIdConversionFailed)?,
+                false,
+            ),
+        };
+
+        CoreAssets::mint_into(asset_id, &who, amount)
+            .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+        if is_relay_or_sibling {
+            CoreAssets::hold(asset_id, &who, amount)
+                .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+            CoreAssets::set_total_issuance(asset_id, CoreAssets::total_issuance(asset_id) - amount);
+        }
+
+        Ok(())
+    }
+
+    fn withdraw_asset(what: &MultiAsset, who: &MultiLocation) -> Result<Assets, XcmError> {
+        let (asset_id, amount) = MatchCoreAsset::matches_fungibles(what)?;
+
+        let who = match RelayOrSiblingToAccountId::convert(who.clone()) {
+            Ok(account_id) => {
+                CoreAssets::release(asset_id, &account_id, amount, false)
+                    .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+                CoreAssets::set_total_issuance(
+                    asset_id,
+                    CoreAssets::total_issuance(asset_id) + amount,
+                );
+
+                account_id
+            }
+            Err(multilocation) => LocationToAccountId::convert_ref(multilocation)
+                .map_err(|()| XcmExecutorError::AccountIdConversionFailed)?,
+        };
+
+        CoreAssets::burn_from(asset_id, &who, amount)
+            .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+        Ok(what.clone().into())
+    }
+
+    fn internal_transfer_asset(
+        what: &MultiAsset,
+        from: &MultiLocation,
+        to: &MultiLocation,
+    ) -> Result<Assets, XcmError> {
+        let (asset_id, amount) = MatchCoreAsset::matches_fungibles(what)?;
+
+        let source = match RelayOrSiblingToAccountId::convert(from.clone()) {
+            Ok(account_id) => {
+                CoreAssets::release(asset_id, &account_id, amount, false)
+                    .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+                CoreAssets::set_total_issuance(
+                    asset_id,
+                    CoreAssets::total_issuance(asset_id) + amount,
+                );
+
+                account_id
+            }
+            Err(multilocation) => LocationToAccountId::convert_ref(multilocation)
+                .map_err(|()| XcmExecutorError::AccountIdConversionFailed)?,
+        };
+
+        let (dest, is_dest_relay_or_sibling) = match RelayOrSiblingToAccountId::convert(to.clone())
+        {
+            Ok(account_id) => (account_id, true),
+            Err(multilocation) => (
+                LocationToAccountId::convert_ref(multilocation)
+                    .map_err(|()| XcmExecutorError::AccountIdConversionFailed)?,
+                false,
+            ),
+        };
+
+        <CoreAssets as Transfer<AccountId>>::transfer(asset_id, &source, &dest, amount, true)
+            .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+        if is_dest_relay_or_sibling {
+            CoreAssets::hold(asset_id, &dest, amount)
+                .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+
+            CoreAssets::set_total_issuance(asset_id, CoreAssets::total_issuance(asset_id) - amount);
+        }
+
+        Ok(what.clone().into())
+    }
 }
