@@ -40,7 +40,7 @@ pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-fea
 
 modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
 
-#invarch-xcm-builder = { path = "../../../InvArch-XCM-Builder", default-features = false }
+invarch-xcm-builder = { git = "https://github.com/InvArch/InvArch-XCM-Builder", branch = "polkadot-v0.9.36", default-features = false }
 
 ## Parity's Unique
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
@@ -204,6 +204,7 @@ std = [
     "pallet-ocif-staking/std",
     "pallet-checked-inflation/std",
     "pallet-rings/std",
+    "invarch-xcm-builder/std",
 ]
 
 runtime-benchmarks = [ 

@@ -298,6 +298,7 @@ pub type LocationToAccountId = (
     SiblingParachainConvertsVia<Sibling, AccountId>,
     // Straight up local `AccountId32` origins just alias directly to `AccountId`.
     AccountId32Aliases<RelayNetwork, AccountId>,
+    invarch_xcm_builder::TinkernetMultisigAsAccountId<AccountId>,
 );
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
