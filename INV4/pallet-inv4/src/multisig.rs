@@ -304,4 +304,18 @@ where
             Ok(().into())
         })
     }
+
+    pub(crate) fn inner_cancel_multisig_proposal(
+        origin: OriginFor<T>,
+        call_hash: T::Hash,
+    ) -> DispatchResultWithPostInfo {
+        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let core_id = core_origin.id;
+
+        Multisig::<T>::remove(core_id, call_hash);
+
+        Self::deposit_event(Event::<T>::MultisigCanceled { core_id, call_hash });
+
+        Ok(().into())
+    }
 }

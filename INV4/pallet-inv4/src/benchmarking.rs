@@ -310,4 +310,24 @@ benchmarks! {
             }.into());
         }
 
+    cancel_multisig_proposal {
+        mock_core().unwrap();
+        mock_mint().unwrap();
+        mock_mint_2().unwrap();
+        mock_call().unwrap();
+
+        let caller: T::AccountId = account("target", 0, SEED);
+        let core_id: T::CoreId = 0u32.into();
+        let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
+            remark: vec![0]
+        }.into();
+        let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
+
+    }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), call_hash)
+        verify {
+            assert_last_event::<T>(Event::MultisigCanceled {
+                core_id,
+                call_hash,
+            }.into());
+        }
 }

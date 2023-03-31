@@ -256,12 +256,9 @@ pub mod pallet {
             call: crate::multisig::OpaqueCall<T>,
             result: DispatchResult,
         },
-        /// The vote on a multisig call was cancelled/withdrawn
-        ///
-        /// Params: caller derived account ID, the call hash
+        /// A multisig call was cancelled
         MultisigCanceled {
             core_id: T::CoreId,
-            executor_account: T::AccountId,
             call_hash: T::Hash,
         },
     }
@@ -381,6 +378,15 @@ pub mod pallet {
             call_hash: T::Hash,
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, call_hash)
+        }
+
+        #[pallet::call_index(6)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_multisig_proposal())]
+        pub fn cancel_multisig_proposal(
+            caller: OriginFor<T>,
+            call_hash: T::Hash,
+        ) -> DispatchResultWithPostInfo {
+            Pallet::<T>::inner_cancel_multisig_proposal(caller, call_hash)
         }
 
         #[pallet::call_index(9)]
