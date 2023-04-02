@@ -3,10 +3,9 @@
   "id": "invarch_tinker_kusama",
   "chainType": "Live",
   "bootNodes": [
-  	"/dns4/node-7035768434637967360-0.p2p.onfinality.io/tcp/20368/ws/p2p/12D3KooWHvCJfU4ECPycriYndXDiVGUbRChm7yqjYibp8naiKpuv",
-  	"/ip4/34.207.236.237/tcp/30333/ws/p2p/12D3KooWJDBpFQ4x565XCffrwqNUueWSBjfC7mCPdZxtoofZhQqg",
-  	"/ip4/34.202.164.131/tcp/30333/ws/p2p/12D3KooWKrxbPk5Mc3K6rWTfAxcfQhrcwptvqSx6UZkkhqMuqMe7",
-  	"/ip4/52.206.210.39/tcp/30333/ws/p2p/12D3KooWEhSMWi5Twk4ZqxWahDknmQz5fXvi6GEg7FXN7Co8bSRW"
+    "/dns4/node-7035768434637967360-svc/tcp/20368/ws/p2p/12D3KooWHvCJfU4ECPycriYndXDiVGUbRChm7yqjYibp8naiKpuv",
+    "/dnsaddr/tinkernet-bootnode-01.bldnodes.org/p2p/12D3KooWJNV8QmahywWtP33M3u98FtfuaKCqkTAeWpVp8MV6YyA8",
+    "/dnsaddr/tinkernet-bootnode-02.bldnodes.org/p2p/12D3KooWGtNcSLuk5cAYqACFSEd9ikA8J9ZiG1eYm1znGF51cnv8"
   ],
   "telemetryEndpoints": [
     [
