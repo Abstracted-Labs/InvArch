@@ -3,10 +3,10 @@
   "id": "invarch_tinker_kusama",
   "chainType": "Live",
   "bootNodes": [
+  	"/dns4/node-7035768434637967360-0.p2p.onfinality.io/tcp/20368/ws/p2p/12D3KooWHvCJfU4ECPycriYndXDiVGUbRChm7yqjYibp8naiKpuv",
   	"/ip4/34.207.236.237/tcp/30333/ws/p2p/12D3KooWJDBpFQ4x565XCffrwqNUueWSBjfC7mCPdZxtoofZhQqg",
   	"/ip4/34.202.164.131/tcp/30333/ws/p2p/12D3KooWKrxbPk5Mc3K6rWTfAxcfQhrcwptvqSx6UZkkhqMuqMe7",
-  	"/ip4/52.206.210.39/tcp/30333/ws/p2p/12D3KooWEhSMWi5Twk4ZqxWahDknmQz5fXvi6GEg7FXN7Co8bSRW",
-	"/dns4/node-6968552592343965696-0.p2p.onfinality.io/tcp/25446/ws/p2p/12D3KooWHoRUQsPCcZFNLMRLk5aDSDkkEBeEc3TZnQe2rBi4H2S8"
+  	"/ip4/52.206.210.39/tcp/30333/ws/p2p/12D3KooWEhSMWi5Twk4ZqxWahDknmQz5fXvi6GEg7FXN7Co8bSRW"
   ],
   "telemetryEndpoints": [
     [
