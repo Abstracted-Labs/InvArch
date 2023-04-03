@@ -4,6 +4,8 @@
   "chainType": "Live",
   "bootNodes": [
     "/dns4/node-7035768434637967360-svc/tcp/20368/ws/p2p/12D3KooWHvCJfU4ECPycriYndXDiVGUbRChm7yqjYibp8naiKpuv",
+    "/ip4/51.89.42.188/tcp/30333/ws/p2p/12D3KooWJNV8QmahywWtP33M3u98FtfuaKCqkTAeWpVp8MV6YyA8",
+    "/ip4/198.27.67.139/tcp/30333/ws/p2p/12D3KooWGtNcSLuk5cAYqACFSEd9ikA8J9ZiG1eYm1znGF51cnv8",
     "/dnsaddr/tinkernet-bootnode-01.bldnodes.org/p2p/12D3KooWJNV8QmahywWtP33M3u98FtfuaKCqkTAeWpVp8MV6YyA8",
     "/dnsaddr/tinkernet-bootnode-02.bldnodes.org/p2p/12D3KooWGtNcSLuk5cAYqACFSEd9ikA8J9ZiG1eYm1znGF51cnv8"
   ],
