@@ -318,4 +318,12 @@ where
 
         Ok(().into())
     }
+
+    pub fn add_member(core_id: &T::CoreId, member: &T::AccountId) {
+        CoreMembers::<T>::insert(core_id, member, ())
+    }
+
+    pub fn remove_member(core_id: &T::CoreId, member: &T::AccountId) {
+        CoreMembers::<T>::remove(core_id, member)
+    }
 }

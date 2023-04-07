@@ -153,26 +153,23 @@ pub mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
-    /// Next available IPS ID.
+    /// Next available Core ID.
     #[pallet::storage]
     #[pallet::getter(fn next_core_id)]
     pub type NextCoreId<T: Config> = StorageValue<_, T::CoreId, ValueQuery>;
 
-    /// Store IPS info. Core IP Set storage
-    ///
-    /// Return `None` if IPS info not set or removed
+    /// Store Core info.
     #[pallet::storage]
     #[pallet::getter(fn core_storage)]
     pub type CoreStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
-    /// IPS existence check by owner and IPS ID
     #[pallet::storage]
     #[pallet::getter(fn core_by_account)]
     pub type CoreByAccount<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::CoreId>;
 
     /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
     ///
-    /// Key: (IP Set ID, call hash)
+    /// Key: (Core ID, call hash)
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
     pub type Multisig<T: Config> = StorageDoubleMap<
@@ -183,6 +180,14 @@ pub mod pallet {
         T::Hash,
         crate::multisig::MultisigOperationOf<T>,
     >;
+
+    /// Stores a list of members for each Core.
+    /// This storage should be always handled by the runtime and mutated by CoreAssets hooks.
+    // We make this a StorageDoubleMap so we don't have to bound the list.
+    #[pallet::storage]
+    #[pallet::getter(fn core_members)]
+    pub type CoreMembers<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::CoreId, Blake2_128Concat, T::AccountId, ()>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
