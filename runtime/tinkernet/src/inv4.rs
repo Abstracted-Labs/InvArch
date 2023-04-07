@@ -102,6 +102,24 @@ impl
     }
 }
 
+pub struct HandleNewMembers;
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+    for HandleNewMembers
+{
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
+        crate::INV4::add_member(core_id, member)
+    }
+}
+
+pub struct HandleRemovedMembers;
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+    for HandleRemovedMembers
+{
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
+        crate::INV4::remove_member(core_id, member)
+    }
+}
+
 pub struct INV4TokenHooks;
 impl
     orml_traits2::currency::MutationHooks<
@@ -116,8 +134,8 @@ impl
     type PreDeposit = ();
     type PostDeposit = ();
     type PostTransfer = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = HandleNewMembers;
+    type OnKilledTokenAccount = HandleRemovedMembers;
 }
 
 impl orml_tokens2::Config for Runtime {
