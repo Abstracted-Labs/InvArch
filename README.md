@@ -4,11 +4,11 @@
 
 <div align="Center">
 <h1>InvArch FRAME Pallet Library</h1>
-<h2> A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3 </h2>
+<h2> Multichain MPC & DAO Infrastructure </h2>
 
 <br>
-Official Repository for the InvArch FRAME Pallet Library 💡
-Built on Substrate
+Official Repository for the InvArch FRAME Pallet Library
+💡Built on Substrate
 
 <br>  
 <br>
@@ -33,61 +33,34 @@ This repository should contains the Substrate FRAME Pallets used in the InvArch 
 
 ## Overview
 
-InvArch A Git Compatible IP Hosting, Management, & Cross-Chain Authentication Network for Web3
+InvArch is a blockchain network & cross-consensus operating system for DAOs. InvArch revolves around on multi-party ownership & computation with a focus on non-custodial asset management, intellectual property rights facilitation, & DAO operations.
 
-InvArch features the INV4 (Invention, Involvement, Inventory, Investment), OCIF (On-Chain Innovation Funding), & XCA (Cross-Chain Authentication) Protocols.
-
-XCM features Cross-Consensus Messaging (XCM) to index, cross-reference, & certify IP asset authenticity across Web3 using various hashing methods & rounding algorithms.
-
-<div align="center">
-<img src="https://github.com/InvArch/brand/blob/main/architecture.png">
-</div>
+Currently, InvArch features a multichain multisignature solution & DAO staking protocol.
 
 ## Features
 
-| Term                                 | Abbreviation(s)   | Description                                                                                                                            |
-| ------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Intellectual Property Set            | IP Set, IPS       | On-Chain Repositories & Folders. Consist of interchangeable IP Files & feature various IP Tokens.                                      |
-| Intellectual Property File           | IP File, IPF      | Omni-Composable & Cross-Chain Authenticated Assets. Powered With RMRK NFTs & Piracy-Proof Files.                                       |
-| Intellectual Property Tokens         | IP Tokens, IPT    | Multi-Tiered Fungible Assets Pegged To IP Sets. Realize Re-Fungible Ownership, Join Copyright, & Various Multi-Utility Purposes.       |
-| Intellectual Property Licenses       | IP Licenses, IPL  | On-Chain Copyright, Licensing, & Version Control Management. Customizable, Internationally Compliant, & Attached To Every Root IP Set. |
-|                                      |                   |                                                                                                                                        |
-| Intellectual Property Staking        | IP Staking        | On-Chain Staking For dApps, DAOs, Smart Contracts, & Other IP Set Based Assets.                                                        |
-| Intellectual Property Farming        | IP Farming        | Built-In Liquidity Tools For dApps, DAOs, & IP Tokens.                                                                                 |
-| Intellectual Property Donations      | IP Donations      | Full Or Partial Donations Of Staking Rewards For dApps, DAOs, Smart Contracts, & Other IP Set Based Assets.                            |
-|                                      |                   |                                                                                                                                        |
-| Intellectual Property Authentication | IP Authentication | Cross-Chain Indexing, Cross-Referencing, & Authenticating For INV4 Files & NFTs.                                                       |
-| Intellectual Property Disputes       | IP Disputes       | On-Chain Governance Provides A Decentralized Process For Retroactive IP Ownership Disputes.                                            |
+- `Multichain Multisig` - Please see the `Saturn SDK` below.
+- `DAO Staking` - https://www.tinker.network/staking
 
-## Components
+### Resources
 
-### INV4 Protocol & Pallets
+- `Saturn SDK` - https://github.com/InvArch/saturn-sdk
 
-- `Pallet_IPS` - [IP Sets (IPS) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ips)
-- `Pallet_IPF` - [IP Files (IPF) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipf)
-- `Pallet_IPT` - [IP Tokens (IPT) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipt)
-- `Pallet_IPL` - [IP Licenses (IPL) Pallet](https://github.com/InvArch/InvArch-Frames/tree/main/INV4/pallet-ipl)
+### Custom Protocols & Pallets
 
-### OCIF Protocol & Pallets
-
-- `Pallet_IPStaking` - IP Staking (W.I.P.)
-- `Pallet_IPFarming` - IP Farming Pallet (W.I.P.)
-- `Pallet_IPDonations` - IP Donations Pallet (W.I.P.)
-
-### XCA Protocol & Pallets
-
-- `Pallet_XCA` - Cross-chain IP Authentication Pallet (W.I.P.)
-- `Pallet_DisputeXCA` - IP Disputes Pallet (W.I.P.)
+- `INV4` - Account structure & ownership ontology protocol
+- `Rules` - layer for defining custom account permissions
+- `Rings` - XCM abstraction layer
+- `OCIF` - DAO Staking & Farming protocol
 
 ## Testing Documentation
 
 - [INV4 Testing Documentation](https://gist.github.com/arrudagates/877d6d7b56d06ea1a941b73573a28d3f)
 - [OCIF Testing Documentation](https://github.com/InvArch/InvArch-Frames)
-- [XCA Protocol Testing Documentation](https://github.com/InvArch/InvArch-Frames)
 
 ## How to contribute
 
-I'm really glad you're reading this, because we need volunteer developers to help this idea become a reality!
+We need volunteer developers to help this idea become a reality!
 
 If you haven't already, come find us on the [#InvArch Discord](https://discord.gg/invarch). We want you working on things you're excited about!
 
@@ -103,13 +76,7 @@ Always write a clear log message for your commits. One-line messages are fine fo
 
 Please make sure to update tests as appropriate.
 
-Thank you,<br>
-Dakota Barnett, Founder
 
 ### License
 
 [GPLv3.0](https://github.com/InvArch/InvArch/blob/main/LICENSE)
-
-### Substrate Node
-
-Substrate Node Template [README.md](https://github.com/substrate-developer-hub/substrate-node-template)
