@@ -19,7 +19,10 @@ pub mod pallet {
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
-    use xcm::{latest::prelude::*, DoubleEncoded};
+    use xcm::{
+        latest::{prelude::*, MultiAsset, WildMultiAsset},
+        DoubleEncoded,
+    };
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -303,6 +306,7 @@ pub mod pallet {
             to: Option<<T as frame_system::Config>::AccountId>,
         ) -> DispatchResult {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+
             let core_id = core.id.into();
             let core_account = core.to_account_id();
 
@@ -343,7 +347,7 @@ pub mod pallet {
             };
 
             let fee_multiasset = MultiAsset {
-                id: AssetId::Concrete(asset_location),
+                id: AssetId::Concrete(asset_location.clone()),
                 fun: Fungibility::Fungible(fee),
             };
 
@@ -387,37 +391,74 @@ pub mod pallet {
                 ),
             };
 
-            let message = Xcm(vec![
-                // Pay execution fees
-                Instruction::WithdrawAsset(fee_multiasset.clone().into()),
-                Instruction::BuyExecution {
-                    fees: fee_multiasset,
-                    weight_limit: WeightLimit::Unlimited,
-                },
-                // Actual reserve transfer instruction
-                Instruction::TransferReserveAsset {
-                    assets: multiasset.into(),
-                    dest: inverted_destination,
-                    xcm: Xcm(vec![
-                        Instruction::BuyExecution {
-                            fees: reanchored_multiasset,
-                            weight_limit: WeightLimit::Unlimited,
-                        },
-                        Instruction::DepositAsset {
-                            assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                            max_assets: 1,
-                            beneficiary,
-                        },
-                    ]),
-                },
-                // Refund unused fees
-                Instruction::RefundSurplus,
-                Instruction::DepositAsset {
-                    assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                    max_assets: 1,
-                    beneficiary: core_multilocation,
-                },
-            ]);
+            let message = if asset_location.starts_with(&dest) {
+                Xcm(vec![
+                    WithdrawAsset(vec![fee_multiasset.clone(), multiasset.clone()].into()),
+                    Instruction::BuyExecution {
+                        fees: fee_multiasset,
+                        weight_limit: WeightLimit::Unlimited,
+                    },
+                    InitiateReserveWithdraw {
+                        assets: multiasset.into(),
+                        reserve: inverted_destination,
+                        xcm: Xcm(vec![
+                            Instruction::BuyExecution {
+                                fees: reanchored_multiasset,
+                                weight_limit: WeightLimit::Unlimited,
+                            },
+                            Instruction::DepositAsset {
+                                assets: All.into(),
+                                max_assets: 1,
+                                beneficiary: beneficiary.clone(),
+                            },
+                            Instruction::RefundSurplus,
+                            Instruction::DepositAsset {
+                                assets: All.into(),
+                                max_assets: 1,
+                                beneficiary,
+                            },
+                        ]),
+                    },
+                    Instruction::RefundSurplus,
+                    Instruction::DepositAsset {
+                        assets: All.into(),
+                        max_assets: 1,
+                        beneficiary: core_multilocation,
+                    },
+                ])
+            } else {
+                Xcm(vec![
+                    // Pay execution fees
+                    Instruction::WithdrawAsset(fee_multiasset.clone().into()),
+                    Instruction::BuyExecution {
+                        fees: fee_multiasset,
+                        weight_limit: WeightLimit::Unlimited,
+                    },
+                    // Actual reserve transfer instruction
+                    Instruction::TransferReserveAsset {
+                        assets: multiasset.into(),
+                        dest: inverted_destination,
+                        xcm: Xcm(vec![
+                            Instruction::BuyExecution {
+                                fees: reanchored_multiasset,
+                                weight_limit: WeightLimit::Unlimited,
+                            },
+                            Instruction::DepositAsset {
+                                assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                                max_assets: 1,
+                                beneficiary,
+                            },
+                        ]),
+                    },
+                    // Refund unused fees
+                    Instruction::RefundSurplus,
+                    Instruction::DepositAsset {
+                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                        max_assets: 1,
+                        beneficiary: core_multilocation,
+                    },
+                ])
+            };
 
             pallet_xcm::Pallet::<T>::send_xcm(interior, from_chain_location, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
