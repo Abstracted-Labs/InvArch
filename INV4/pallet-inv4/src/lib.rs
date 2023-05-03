@@ -74,6 +74,8 @@ pub mod pallet {
     pub type CoreInfoOf<T> =
         CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
 
+    pub type CallOf<T> = <T as Config>::RuntimeCall;
+
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
         /// The IPS Pallet Events
@@ -149,7 +151,7 @@ pub mod pallet {
         INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
+    //#[pallet::without_storage_info]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
@@ -228,7 +230,7 @@ pub mod pallet {
             voter: T::AccountId,
             votes_added: VoteRecord<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
         ///
@@ -240,7 +242,7 @@ pub mod pallet {
             votes_added: VoteRecord<T>,
             current_votes: Tally<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         MultisigVoteWithdrawn {
             core_id: T::CoreId,
@@ -248,7 +250,7 @@ pub mod pallet {
             voter: T::AccountId,
             votes_removed: VoteRecord<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         /// Multisig call was executed.
         ///
@@ -258,7 +260,7 @@ pub mod pallet {
             executor_account: T::AccountId,
             voter: T::AccountId,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
             result: DispatchResult,
         },
         /// A multisig call was cancelled
@@ -296,6 +298,8 @@ pub mod pallet {
         IncompleteVoteCleanup,
         /// Multisig fee payment failed, probably due to lack of funds to pay for fees.
         CallFeePaymentFailed,
+
+        MaxCallLengthExceeded,
     }
 
     /// Dispatch functions

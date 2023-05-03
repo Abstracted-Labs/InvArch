@@ -2,17 +2,17 @@
 
 use super::*;
 use crate::{
+    multisig::MAX_SIZE,
     origin::{INV4Origin, MultisigInternalOrigin},
     util::derive_core_account,
     voting::{Tally, Vote},
     BalanceOf,
 };
-use codec::Encode;
 use core::convert::TryFrom;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::PostDispatchInfo,
-    traits::{Currency, Get, WrapperKeepOpaque},
+    traits::{Currency, Get},
     BoundedBTreeMap,
 };
 use frame_system::RawOrigin as SystemOrigin;
@@ -224,17 +224,18 @@ benchmarks! {
 
     operate_multisig {
         let m in 0 .. T::MaxMetadata::get();
-        let z in 0 .. 10_000;
+        let z in 0 .. (MAX_SIZE - 10);
 
         mock_core().unwrap();
         mock_mint().unwrap();
 
-        let metadata = vec![u8::MAX; m as usize];
-        let caller: T::AccountId = whitelisted_caller();
-        let core_id: T::CoreId = 0u32.into();
         let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
             remark: vec![0; z as usize]
         }.into();
+
+        let metadata = vec![u8::MAX; m as usize];
+        let caller: T::AccountId = whitelisted_caller();
+        let core_id: T::CoreId = 0u32.into();
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
 
     }: _(SystemOrigin::Signed(caller.clone()), core_id, Some(metadata), Box::new(call.clone()))
@@ -245,7 +246,7 @@ benchmarks! {
                 voter: caller,
                 votes_added: Vote::Aye(T::CoreSeedBalance::get()),
                 call_hash,
-                call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call,
             }.into());
         }
 
@@ -280,7 +281,7 @@ benchmarks! {
                     ])).unwrap()
                 ),
                 call_hash,
-                call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call,
             }.into());
         }
 
@@ -306,7 +307,7 @@ benchmarks! {
                 voter: caller,
                 votes_removed: Vote::Aye(BalanceOf::<T>::max_value().div(4u32.into())),
                 call_hash,
-                call: WrapperKeepOpaque::from_encoded(call.encode()),
+                call,
             }.into());
         }
 
