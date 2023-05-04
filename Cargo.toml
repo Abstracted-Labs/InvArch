@@ -9,11 +9,6 @@ members = [
 [profile.release]
 panic = 'unwind'
 
-#[patch.'https://github.com/paritytech/substrate']
-#frame-support = { git = "https://github.com/paritytech//substrate", branch = "polkadot-v0.9.36" }
-#sp-core = { git = "https://github.com/paritytech//substrate", branch = "polkadot-v0.9.36" }
-#sp-io = { git = "https://github.com/paritytech//substrate", branch = "polkadot-v0.9.36" }
-
 [patch.'https://github.com/paritytech/polkadot']
 xcm = { git = "https://github.com/paritytech//polkadot", branch = "release-v0.9.36" }
 xcm-executor = { git = "https://github.com/paritytech//polkadot", branch = "release-v0.9.36" }

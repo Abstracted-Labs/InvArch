@@ -11,7 +11,6 @@ pub enum BasiliskAssets {
     TNKR,
     KSM,
     USDT,
-    Custom(MultiLocation),
 }
 
 impl RingsChain for Basilisk {
@@ -40,8 +39,6 @@ impl RingsChain for Basilisk {
                 parents: 1,
                 interior: Junctions::X2(Junction::Parachain(2125), Junction::GeneralIndex(0u128)),
             },
-
-            Custom(multilocation) => multilocation.clone(),
         }
     }
 

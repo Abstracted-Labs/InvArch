@@ -26,6 +26,7 @@ use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
     pallet_prelude::EnsureOrigin,
+    traits::fungibles::HandleImbalanceDrop,
     weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 };
 pub use frame_support::{
@@ -49,6 +50,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use pallet_asset_tx_payment::OnChargeAssetTransaction;
 use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::Multiplier;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
@@ -143,7 +145,8 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    // pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -505,6 +508,148 @@ impl pallet_transaction_payment::Config for Runtime {
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
+pub struct KusamaWeightToFee;
+impl WeightToFeePolynomial for KusamaWeightToFee {
+    type Balance = Balance;
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        // in Kusama, extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+        let p = (1_000_000_000_000 / 30) / 100;
+        let q = 10 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+        smallvec![WeightToFeeCoefficient {
+            degree: 1,
+            negative: false,
+            coeff_frac: Perbill::from_rational(p % q, q),
+            coeff_integer: p / q,
+        }]
+    }
+}
+
+pub struct KSMEnabledPallets;
+impl Contains<RuntimeCall> for KSMEnabledPallets {
+    fn contains(t: &RuntimeCall) -> bool {
+        matches!(t, RuntimeCall::INV4(_) | RuntimeCall::Rings(_))
+    }
+}
+
+use frame_support::{
+    pallet_prelude::TransactionValidityError,
+    traits::{
+        fungibles::{Balanced, CreditOf, Inspect as OtherInspect},
+        tokens::WithdrawConsequence,
+    },
+    weights::WeightToFee as WeightToFeeTrait,
+};
+use sp_runtime::{
+    traits::{DispatchInfoOf, PostDispatchInfoOf},
+    transaction_validity::InvalidTransaction,
+};
+
+pub struct FilteredTransactionCharger;
+
+impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
+    type Balance = Balance;
+    type AssetId = AssetId;
+    type LiquidityInfo = CreditOf<AccountId, Tokens>;
+
+    fn withdraw_fee(
+        who: &AccountId,
+        call: &RuntimeCall,
+        dispatch_info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        asset_id: Self::AssetId,
+        fee: Self::Balance,
+        tip: Self::Balance,
+    ) -> Result<Self::LiquidityInfo, frame_support::unsigned::TransactionValidityError> {
+        log::error!(
+            "withdraw_fee: who: {:?}, call: {:?}, asset_id: {:?}",
+            who,
+            call,
+            asset_id
+        );
+
+        if KSMEnabledPallets::contains(call) && asset_id == 1 {
+            log::error!("enabled and asset 1");
+
+            let fee = KusamaWeightToFee::weight_to_fee(&dispatch_info.weight);
+
+            log::error!("fee: {:?}", fee);
+
+            let can_withdraw = Tokens::can_withdraw(asset_id, who, fee);
+
+            log::error!("can_withdraw: {:?}", can_withdraw);
+
+            if !matches!(can_withdraw, WithdrawConsequence::Success) {
+                log::error!("can't withdraw");
+                return Err(InvalidTransaction::Payment.into());
+            }
+
+            Tokens::withdraw(asset_id, who, fee)
+                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+        } else {
+            log::error!("not enabled or not asset 1");
+            Err(TransactionValidityError::from(InvalidTransaction::Payment))
+        }
+    }
+
+    fn correct_and_deposit_fee(
+        who: &AccountId,
+        dispatch_info: &DispatchInfoOf<RuntimeCall>,
+        post_info: &PostDispatchInfoOf<RuntimeCall>,
+        corrected_fee: Self::Balance,
+        _tip: Self::Balance,
+        paid: Self::LiquidityInfo,
+    ) -> Result<(), TransactionValidityError> {
+        let fee = KusamaWeightToFee::weight_to_fee(
+            &post_info.actual_weight.unwrap_or(dispatch_info.weight),
+        );
+
+        log::error!("correct_and_deposit_fee: who: {:?}, fee: {:?}", who, fee,);
+
+        let asset = paid.asset();
+
+        log::error!("asset: {:?}", asset);
+
+        let (final_fee, refund) = paid.split(fee);
+
+        log::error!(
+            "final_fee: {:?}, refund: {:?}",
+            final_fee.peek(),
+            refund.peek()
+        );
+
+        let _ = Tokens::deposit(asset, who, refund.peek());
+
+        log::error!("correct_and_deposit_fee: tokens deposited to who");
+
+        let total: u128 = 50u128.saturating_add(50u128);
+        let amount1: u128 = final_fee.peek().saturating_mul(50u128) / total;
+        let (to_collators, to_treasury) = final_fee.split(amount1);
+
+        let _ = Tokens::deposit(
+            asset,
+            &TreasuryPalletId::get().into_account_truncating(),
+            to_treasury.peek(),
+        )
+        .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?;
+
+        let _ = Tokens::deposit(
+            asset,
+            &PotId::get().into_account_truncating(),
+            to_collators.peek(),
+        )
+        .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?;
+
+        log::error!("correct_and_deposit_fee: tokens deposited to treasury");
+
+        Ok(())
+    }
+}
+
+impl pallet_asset_tx_payment::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Fungibles = Tokens;
+    type OnChargeAssetTransaction = FilteredTransactionCharger;
+}
+
 parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -789,7 +934,8 @@ construct_runtime_modified!(
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
-            Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
         Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,

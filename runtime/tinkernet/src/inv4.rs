@@ -4,7 +4,8 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use frame_support::{parameter_types, traits::Contains};
-use pallet_inv4::fee_handling::MultisigFeeHandler;
+use pallet_asset_tx_payment::{ChargeAssetTxPayment, InitialPayment};
+use pallet_inv4::fee_handling::{FeeAsset, MultisigFeeHandler};
 use pallet_transaction_payment::ChargeTransactionPayment;
 use scale_info::TypeInfo;
 use sp_core::{ConstU32, H256};
@@ -46,25 +47,56 @@ pub struct FeeCharger;
 impl MultisigFeeHandler for FeeCharger {
     type AccountId = AccountId;
     type Call = RuntimeCall;
-    type Pre = <ChargeTransactionPayment<Runtime> as SignedExtension>::Pre;
+    type Pre = (
+        u128,
+        AccountId,
+        Option<pallet_balances::NegativeImbalance<Runtime>>,
+        InitialPayment<Runtime>,
+        Option<u32>,
+    );
 
     fn pre_dispatch(
+        fee_asset: &FeeAsset,
         who: &Self::AccountId,
         call: &Self::Call,
         info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
-        ChargeTransactionPayment::<Runtime>::from(Zero::zero()).pre_dispatch(who, call, info, len)
+        match fee_asset {
+            FeeAsset::TNKR => ChargeTransactionPayment::<Runtime>::from(Zero::zero())
+                .pre_dispatch(who, call, info, len)
+                .map(|(x, y, z)| (x, y, z, InitialPayment::Nothing, None)),
+
+            FeeAsset::KSM => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), 1.into())
+                .pre_dispatch(who, call, info, len)
+                .map(|(x, y, z, a)| (x, y, None, z, a)),
+        }
     }
 
     fn post_dispatch(
+        fee_asset: &FeeAsset,
         pre: Option<Self::Pre>,
         info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
         post_info: &sp_runtime::traits::PostDispatchInfoOf<Self::Call>,
         len: usize,
         result: &sp_runtime::DispatchResult,
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
-        ChargeTransactionPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
+        match fee_asset {
+            FeeAsset::TNKR => ChargeTransactionPayment::<Runtime>::post_dispatch(
+                pre.map(|(x, y, z, _, _)| (x, y, z)),
+                info,
+                post_info,
+                len,
+                result,
+            ),
+            FeeAsset::KSM => ChargeAssetTxPayment::<Runtime>::post_dispatch(
+                pre.map(|(x, y, _, z, a)| (x, y, z, a)),
+                info,
+                post_info,
+                len,
+                result,
+            ),
+        }
     }
 }
 

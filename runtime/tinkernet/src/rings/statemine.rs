@@ -9,8 +9,6 @@ pub struct Statemine;
 pub enum StatemineAssets {
     KSM,
     BILLCOIN,
-
-    Custom(MultiLocation),
 }
 
 impl RingsChain for Statemine {
@@ -30,8 +28,6 @@ impl RingsChain for Statemine {
                     Junction::GeneralIndex(223u128),
                 ),
             },
-
-            Custom(multilocation) => multilocation.clone(),
         }
     }
 
