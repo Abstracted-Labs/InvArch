@@ -1,4 +1,4 @@
-use crate::{AccountId, TreasuryPalletId};
+use crate::{AccountId, PotId, TreasuryPalletId};
 use frame_support::parameter_types;
 use sp_runtime::traits::AccountIdConversion;
 
@@ -20,4 +20,5 @@ pub mod currency {
 
 parameter_types! {
     pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
+    pub StakingPotAccount: AccountId = PotId::get().into_account_truncating();
 }
