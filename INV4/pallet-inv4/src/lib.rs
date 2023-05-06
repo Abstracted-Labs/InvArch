@@ -36,6 +36,7 @@ pub mod util;
 pub mod voting;
 pub mod weights;
 
+use fee_handling::FeeAsset;
 pub use lookup::INV4Lookup;
 pub use weights::WeightInfo;
 
@@ -52,7 +53,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
-        traits::{fungibles, Currency, Get, GetCallMetadata, OnUnbalanced, ReservableCurrency},
+        traits::{fungibles, Currency, Get, GetCallMetadata, ReservableCurrency},
         transactional, Parameter,
     };
     use frame_system::{pallet_prelude::*, RawOrigin};
@@ -124,18 +125,18 @@ pub mod pallet {
         #[pallet::constant]
         type CoreCreationFee: Get<BalanceOf<Self>>;
 
+        #[pallet::constant]
+        type KSMCoreCreationFee: Get<
+            <<Self as Config>::Tokens as Currency<<Self as frame_system::Config>::AccountId>>::Balance,
+        >;
+
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
-        type CreationFeeHandler: OnUnbalanced<
-            <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
-        >;
+        type Tokens: Currency<Self::AccountId>;
 
-        type FeeCharger: MultisigFeeHandler<
-            Call = <Self as Config>::RuntimeCall,
-            AccountId = Self::AccountId,
-        >;
+        type FeeCharger: MultisigFeeHandler<Self>;
 
         #[pallet::constant]
         type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
@@ -321,12 +322,14 @@ pub mod pallet {
             metadata: Vec<u8>,
             minimum_support: Perbill,
             required_approval: Perbill,
+            creation_fee_asset: FeeAsset,
         ) -> DispatchResult {
             Pallet::<T>::inner_create_core(
                 owner,
                 metadata,
                 minimum_support,
                 required_approval,
+                creation_fee_asset,
             )
         }
 
@@ -363,9 +366,10 @@ pub mod pallet {
             caller: OriginFor<T>,
             core_id: T::CoreId,
             metadata: Option<Vec<u8>>,
+            fee_asset: FeeAsset,
             call: Box<<T as pallet::Config>::RuntimeCall>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, call)
+            Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, fee_asset, call)
         }
 
         #[pallet::call_index(4)]

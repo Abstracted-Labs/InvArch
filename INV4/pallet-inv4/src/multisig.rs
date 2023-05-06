@@ -1,5 +1,6 @@
 use super::pallet::{self, *};
 use crate::{
+    fee_handling::FeeAsset,
     origin::{ensure_multisig, INV4Origin},
     util::derive_core_account,
     voting::{Tally, Vote},
@@ -36,6 +37,7 @@ pub struct MultisigOperation<AccountId, TallyOf, Call, Metadata> {
     pub original_caller: AccountId,
     pub actual_call: Call,
     pub metadata: Option<Metadata>,
+    pub fee_asset: FeeAsset,
 }
 
 pub type MultisigOperationOf<T> = MultisigOperation<
@@ -98,6 +100,7 @@ where
         caller: OriginFor<T>,
         core_id: T::CoreId,
         metadata: Option<Vec<u8>>,
+        fee_asset: FeeAsset,
         call: Box<<T as Config>::RuntimeCall>,
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller)?;
@@ -132,7 +135,8 @@ where
 
         // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
         if Perbill::from_rational(owner_balance, total_issuance) >= minimum_support {
-            let dispatch_result = crate::dispatch::dispatch_call::<T>(core_id, *call.clone());
+            let dispatch_result =
+                crate::dispatch::dispatch_call::<T>(core_id, &fee_asset, *call.clone());
 
             Self::deposit_event(Event::MultisigExecuted {
                 core_id,
@@ -169,6 +173,7 @@ where
                     original_caller: owner.clone(),
                     actual_call: bounded_call,
                     metadata: bounded_metadata,
+                    fee_asset,
                 },
             );
 
@@ -230,8 +235,11 @@ where
                 *data = None;
 
                 // Actually dispatch this call and return the result of it
-                let dispatch_result =
-                    crate::dispatch::dispatch_call::<T>(core_id, decoded_call.clone());
+                let dispatch_result = crate::dispatch::dispatch_call::<T>(
+                    core_id,
+                    &old_data.fee_asset,
+                    decoded_call.clone(),
+                );
 
                 Self::deposit_event(Event::MultisigExecuted {
                     core_id,

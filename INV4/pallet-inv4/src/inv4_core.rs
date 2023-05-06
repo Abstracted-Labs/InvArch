@@ -1,11 +1,12 @@
 use super::pallet::*;
 use crate::{
+    fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
     origin::{ensure_multisig, INV4Origin},
     util::derive_core_account,
 };
 use frame_support::{
     pallet_prelude::*,
-    traits::{fungibles::Mutate, Currency, ExistenceRequirement, OnUnbalanced, WithdrawReasons},
+    traits::{fungibles::Mutate, Currency, ExistenceRequirement, WithdrawReasons},
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
@@ -30,6 +31,7 @@ where
         metadata: Vec<u8>,
         minimum_support: Perbill,
         required_approval: Perbill,
+        creation_fee_asset: FeeAsset,
     ) -> DispatchResult {
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
             let creator = ensure_signed(origin)?;
@@ -64,12 +66,43 @@ where
                 frozen_tokens: true,
             };
 
-            T::CreationFeeHandler::on_unbalanced(<T as Config>::Currency::withdraw(
-                &creator,
-                T::CoreCreationFee::get(),
-                WithdrawReasons::TRANSACTION_PAYMENT,
-                ExistenceRequirement::KeepAlive,
-            )?);
+            T::FeeCharger::handle_creation_fee(match creation_fee_asset {
+                FeeAsset::TNKR => {
+                    FeeAssetNegativeImbalance::TNKR(<T as Config>::Currency::withdraw(
+                        &creator,
+                        T::CoreCreationFee::get(),
+                        WithdrawReasons::TRANSACTION_PAYMENT,
+                        ExistenceRequirement::KeepAlive,
+                    )?)
+                }
+
+                FeeAsset::KSM => FeeAssetNegativeImbalance::KSM(<T as Config>::Tokens::withdraw(
+                    &creator,
+                    T::KSMCoreCreationFee::get(),
+                    WithdrawReasons::TRANSACTION_PAYMENT,
+                    ExistenceRequirement::KeepAlive,
+                )?),
+            });
+
+            // match creation_fee_asset {
+            //     FeeAsset::TNKR => {
+            //         T::CreationFeeHandler::on_unbalanced(<T as Config>::Currency::withdraw(
+            //             &creator,
+            //             T::CoreCreationFee::get(),
+            //             WithdrawReasons::TRANSACTION_PAYMENT,
+            //             ExistenceRequirement::KeepAlive,
+            //         )?)
+            //     }
+
+            //     FeeAsset::KSM => {
+            //         T::KSMCreationFeeHandler::on_unbalanced(<T as Config>::Tokens::withdraw(
+            //             &creator,
+            //             T::KSMCoreCreationFee::get(),
+            //             WithdrawReasons::TRANSACTION_PAYMENT,
+            //             ExistenceRequirement::KeepAlive,
+            //         )?)
+            //     }
+            // }
 
             // Update core storage
             CoreStorage::<T>::insert(current_id, info);
