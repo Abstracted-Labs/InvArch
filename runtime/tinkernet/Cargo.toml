@@ -34,6 +34,7 @@ pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-featu
 pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
 pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
 pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+# pallet-filtered-multiasset-tx-payment = { path = "../../../InvArch-Frames/filtered-multiasset-tx-payment", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
 #pallet-custom-asset-tx-payment = { path = "../../pallets/custom-asset-tx-payment", default-features = false }

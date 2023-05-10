@@ -1,20 +1,22 @@
 use crate::{
+    assets::{RelayAssetId, KSM_ASSET_ID},
     common_types::{AssetId, CommonId},
     constants::currency::UNIT,
-    fee_handling::{ChargeNativeOrRelayToken, DealWithKSMFees, InitialPayment},
+    fee_handling::DealWithKSMFees,
     AccountId, Balance, Balances, CoreAssets, DealWithFees, Runtime, RuntimeCall, RuntimeEvent,
-    RuntimeOrigin,
+    RuntimeOrigin, Tokens,
 };
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
-    traits::{Contains, Currency, OnUnbalanced},
+    traits::{fungibles::CreditOf, Contains, Currency, OnUnbalanced},
 };
-use orml_tokens::CurrencyAdapter;
+use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use scale_info::TypeInfo;
 use sp_core::{ConstU32, H256};
 use sp_runtime::traits::{One, SignedExtension, Zero};
+
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
@@ -45,7 +47,8 @@ impl pallet_inv4::Config for Runtime {
     type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 
-    type Tokens = CurrencyAdapter<Runtime, crate::fee_handling::GetKSM>;
+    type Tokens = Tokens;
+    type KSMAssetId = RelayAssetId;
     type KSMCoreCreationFee = KSMCoreCreationFee;
 }
 
@@ -59,7 +62,7 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         // who paid the fee
         AccountId,
         // imbalance resulting from withdrawing the fee
-        InitialPayment,
+        pallet_asset_tx_payment::InitialPayment<Runtime>,
         // asset_id for the transaction payment
         Option<AssetId>,
     );
@@ -72,11 +75,13 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
-            FeeAsset::TNKR => ChargeNativeOrRelayToken::from(Zero::zero(), None)
+            FeeAsset::TNKR => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), None)
                 .pre_dispatch(who, call, info, len),
 
-            FeeAsset::KSM => ChargeNativeOrRelayToken::from(Zero::zero(), Some(1))
-                .pre_dispatch(who, call, info, len),
+            FeeAsset::KSM => {
+                ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), Some(KSM_ASSET_ID))
+                    .pre_dispatch(who, call, info, len)
+            }
         }
     }
 
@@ -90,11 +95,11 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
             FeeAsset::TNKR => {
-                ChargeNativeOrRelayToken::post_dispatch(pre, info, post_info, len, result)
+                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
             }
 
             FeeAsset::KSM => {
-                ChargeNativeOrRelayToken::post_dispatch(pre, info, post_info, len, result)
+                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
             }
         }
     }
@@ -102,7 +107,7 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            <CurrencyAdapter<Runtime, crate::fee_handling::GetKSM> as Currency<AccountId>>::NegativeImbalance,
+            CreditOf<AccountId, Tokens>,
         >,
     ) {
         match imbalance {
