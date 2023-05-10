@@ -53,7 +53,11 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
         pallet_prelude::*,
-        traits::{fungibles, Currency, Get, GetCallMetadata, ReservableCurrency},
+        traits::{
+            fungibles,
+            fungibles::{Balanced, Inspect},
+            Currency, Get, GetCallMetadata, ReservableCurrency,
+        },
         transactional, Parameter,
     };
     use frame_system::{pallet_prelude::*, RawOrigin};
@@ -127,14 +131,17 @@ pub mod pallet {
 
         #[pallet::constant]
         type KSMCoreCreationFee: Get<
-            <<Self as Config>::Tokens as Currency<<Self as frame_system::Config>::AccountId>>::Balance,
+            <<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
         >;
+
+        #[pallet::constant]
+        type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
-        type Tokens: Currency<Self::AccountId>;
+        type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 
         type FeeCharger: MultisigFeeHandler<Self>;
 

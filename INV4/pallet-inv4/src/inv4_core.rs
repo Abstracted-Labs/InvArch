@@ -6,7 +6,10 @@ use crate::{
 };
 use frame_support::{
     pallet_prelude::*,
-    traits::{fungibles::Mutate, Currency, ExistenceRequirement, WithdrawReasons},
+    traits::{
+        fungibles::{Balanced, Mutate},
+        Currency, ExistenceRequirement, WithdrawReasons,
+    },
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
@@ -77,10 +80,9 @@ where
                 }
 
                 FeeAsset::KSM => FeeAssetNegativeImbalance::KSM(<T as Config>::Tokens::withdraw(
+                    T::KSMAssetId::get(),
                     &creator,
                     T::KSMCoreCreationFee::get(),
-                    WithdrawReasons::TRANSACTION_PAYMENT,
-                    ExistenceRequirement::KeepAlive,
                 )?),
             });
 
