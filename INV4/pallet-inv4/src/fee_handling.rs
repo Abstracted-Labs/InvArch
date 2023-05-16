@@ -1,26 +1,50 @@
-use frame_support::{dispatch::Dispatchable, unsigned::TransactionValidityError};
+use crate::Config;
+use codec::{Decode, Encode, MaxEncodedLen};
+use frame_support::{
+    traits::{fungibles::CreditOf, Currency},
+    unsigned::TransactionValidityError,
+};
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{DispatchInfoOf, PostDispatchInfoOf},
     DispatchResult,
 };
 
-pub trait MultisigFeeHandler {
+#[derive(Clone, TypeInfo, Encode, Decode, MaxEncodedLen, Debug, PartialEq, Eq)]
+pub enum FeeAsset {
+    TNKR,
+    KSM,
+}
+
+pub enum FeeAssetNegativeImbalance<TNKRNegativeImbalance, KSMNegativeImbalance> {
+    TNKR(TNKRNegativeImbalance),
+    KSM(KSMNegativeImbalance),
+}
+
+pub trait MultisigFeeHandler<T: Config> {
     type Pre;
-    type AccountId;
-    type Call: Dispatchable;
 
     fn pre_dispatch(
-        who: &Self::AccountId,
-        call: &Self::Call,
-        info: &DispatchInfoOf<Self::Call>,
+        asset: &FeeAsset,
+        who: &T::AccountId,
+        call: &<T as Config>::RuntimeCall,
+        info: &DispatchInfoOf<<T as Config>::RuntimeCall>,
         len: usize,
     ) -> Result<Self::Pre, TransactionValidityError>;
 
     fn post_dispatch(
+        asset: &FeeAsset,
         pre: Option<Self::Pre>,
-        info: &DispatchInfoOf<Self::Call>,
-        post_info: &PostDispatchInfoOf<Self::Call>,
+        info: &DispatchInfoOf<<T as Config>::RuntimeCall>,
+        post_info: &PostDispatchInfoOf<<T as Config>::RuntimeCall>,
         len: usize,
         result: &DispatchResult,
     ) -> Result<(), TransactionValidityError>;
+
+    fn handle_creation_fee(
+        imbalance: FeeAssetNegativeImbalance<
+            <T::Currency as Currency<T::AccountId>>::NegativeImbalance,
+            CreditOf<T::AccountId, T::Tokens>,
+        >,
+    );
 }

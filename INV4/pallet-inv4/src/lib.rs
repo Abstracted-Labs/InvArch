@@ -36,6 +36,7 @@ pub mod util;
 pub mod voting;
 pub mod weights;
 
+use fee_handling::FeeAsset;
 pub use lookup::INV4Lookup;
 pub use weights::WeightInfo;
 
@@ -50,9 +51,13 @@ pub mod pallet {
 
     use super::*;
     use frame_support::{
-        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        dispatch::{Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo},
         pallet_prelude::*,
-        traits::{fungibles, Currency, Get, GetCallMetadata, OnUnbalanced, ReservableCurrency},
+        traits::{
+            fungibles,
+            fungibles::{Balanced, Inspect},
+            Currency, Get, GetCallMetadata, ReservableCurrency,
+        },
         transactional, Parameter,
     };
     use frame_system::{pallet_prelude::*, RawOrigin};
@@ -73,6 +78,8 @@ pub mod pallet {
 
     pub type CoreInfoOf<T> =
         CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
+
+    pub type CallOf<T> = <T as Config>::RuntimeCall;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
@@ -122,18 +129,21 @@ pub mod pallet {
         #[pallet::constant]
         type CoreCreationFee: Get<BalanceOf<Self>>;
 
+        #[pallet::constant]
+        type KSMCoreCreationFee: Get<
+            <<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
+        >;
+
+        #[pallet::constant]
+        type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
+
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
             + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
-        type CreationFeeHandler: OnUnbalanced<
-            <Self::Currency as Currency<Self::AccountId>>::NegativeImbalance,
-        >;
+        type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 
-        type FeeCharger: MultisigFeeHandler<
-            Call = <Self as Config>::RuntimeCall,
-            AccountId = Self::AccountId,
-        >;
+        type FeeCharger: MultisigFeeHandler<Self>;
 
         #[pallet::constant]
         type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
@@ -142,37 +152,33 @@ pub mod pallet {
     }
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::origin]
     pub type Origin<T> =
         INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>;
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
-    /// Next available IPS ID.
+    /// Next available Core ID.
     #[pallet::storage]
     #[pallet::getter(fn next_core_id)]
     pub type NextCoreId<T: Config> = StorageValue<_, T::CoreId, ValueQuery>;
 
-    /// Store IPS info. Core IP Set storage
-    ///
-    /// Return `None` if IPS info not set or removed
+    /// Store Core info.
     #[pallet::storage]
     #[pallet::getter(fn core_storage)]
     pub type CoreStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
-    /// IPS existence check by owner and IPS ID
     #[pallet::storage]
     #[pallet::getter(fn core_by_account)]
     pub type CoreByAccount<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::CoreId>;
 
     /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
     ///
-    /// Key: (IP Set ID, call hash)
+    /// Key: (Core ID, call hash)
     #[pallet::storage]
     #[pallet::getter(fn multisig)]
     pub type Multisig<T: Config> = StorageDoubleMap<
@@ -183,6 +189,14 @@ pub mod pallet {
         T::Hash,
         crate::multisig::MultisigOperationOf<T>,
     >;
+
+    /// Stores a list of members for each Core.
+    /// This storage should be always handled by the runtime and mutated by CoreAssets hooks.
+    // We make this a StorageDoubleMap so we don't have to bound the list.
+    #[pallet::storage]
+    #[pallet::getter(fn core_members)]
+    pub type CoreMembers<T: Config> =
+        StorageDoubleMap<_, Blake2_128Concat, T::CoreId, Blake2_128Concat, T::AccountId, ()>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -223,7 +237,7 @@ pub mod pallet {
             voter: T::AccountId,
             votes_added: VoteRecord<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
         ///
@@ -235,7 +249,7 @@ pub mod pallet {
             votes_added: VoteRecord<T>,
             current_votes: Tally<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         MultisigVoteWithdrawn {
             core_id: T::CoreId,
@@ -243,7 +257,7 @@ pub mod pallet {
             voter: T::AccountId,
             votes_removed: VoteRecord<T>,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
         },
         /// Multisig call was executed.
         ///
@@ -253,15 +267,12 @@ pub mod pallet {
             executor_account: T::AccountId,
             voter: T::AccountId,
             call_hash: T::Hash,
-            call: crate::multisig::OpaqueCall<T>,
+            call: CallOf<T>,
             result: DispatchResult,
         },
-        /// The vote on a multisig call was cancelled/withdrawn
-        ///
-        /// Params: caller derived account ID, the call hash
+        /// A multisig call was cancelled
         MultisigCanceled {
             core_id: T::CoreId,
-            executor_account: T::AccountId,
             call_hash: T::Hash,
         },
     }
@@ -294,6 +305,8 @@ pub mod pallet {
         IncompleteVoteCleanup,
         /// Multisig fee payment failed, probably due to lack of funds to pay for fees.
         CallFeePaymentFailed,
+
+        MaxCallLengthExceeded,
     }
 
     /// Dispatch functions
@@ -315,13 +328,20 @@ pub mod pallet {
             metadata: Vec<u8>,
             minimum_support: Perbill,
             required_approval: Perbill,
-        ) -> DispatchResult {
+            creation_fee_asset: FeeAsset,
+        ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_create_core(
                 owner,
                 metadata,
                 minimum_support,
                 required_approval,
-            )
+                creation_fee_asset,
+            )?;
+
+            Ok(PostDispatchInfo {
+                actual_weight: None,
+                pays_fee: Pays::No,
+            })
         }
 
         /// Mint `amount` of specified token to `target` account
@@ -357,9 +377,10 @@ pub mod pallet {
             caller: OriginFor<T>,
             core_id: T::CoreId,
             metadata: Option<Vec<u8>>,
+            fee_asset: FeeAsset,
             call: Box<<T as pallet::Config>::RuntimeCall>,
         ) -> DispatchResultWithPostInfo {
-            Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, call)
+            Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, fee_asset, call)
         }
 
         #[pallet::call_index(4)]
@@ -381,6 +402,15 @@ pub mod pallet {
             call_hash: T::Hash,
         ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, call_hash)
+        }
+
+        #[pallet::call_index(6)]
+        #[pallet::weight(<T as Config>::WeightInfo::cancel_multisig_proposal())]
+        pub fn cancel_multisig_proposal(
+            caller: OriginFor<T>,
+            call_hash: T::Hash,
+        ) -> DispatchResultWithPostInfo {
+            Pallet::<T>::inner_cancel_multisig_proposal(caller, call_hash)
         }
 
         #[pallet::call_index(9)]

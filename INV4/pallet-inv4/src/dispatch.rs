@@ -1,5 +1,5 @@
 use crate::{
-    fee_handling::MultisigFeeHandler,
+    fee_handling::{FeeAsset, MultisigFeeHandler},
     origin::{INV4Origin, MultisigInternalOrigin},
     Config, Error,
 };
@@ -10,6 +10,7 @@ use frame_support::{
 
 pub fn dispatch_call<T: Config>(
     core_id: <T as Config>::CoreId,
+    fee_asset: &FeeAsset,
     call: <T as Config>::RuntimeCall,
 ) -> DispatchResultWithPostInfo {
     let internal_origin = MultisigInternalOrigin::new(core_id);
@@ -19,9 +20,14 @@ pub fn dispatch_call<T: Config>(
     let info = call.get_dispatch_info();
     let len = call.encode().len();
 
-    let pre =
-        <T::FeeCharger as MultisigFeeHandler>::pre_dispatch(&multisig_account, &call, &info, len)
-            .map_err(|_| Error::<T>::CallFeePaymentFailed)?;
+    let pre = <T::FeeCharger as MultisigFeeHandler<T>>::pre_dispatch(
+        fee_asset,
+        &multisig_account,
+        &call,
+        &info,
+        len,
+    )
+    .map_err(|_| Error::<T>::CallFeePaymentFailed)?;
 
     let dispatch_result = call.dispatch(origin);
 
@@ -30,7 +36,8 @@ pub fn dispatch_call<T: Config>(
         Err(e) => e.post_info,
     };
 
-    <T::FeeCharger as MultisigFeeHandler>::post_dispatch(
+    <T::FeeCharger as MultisigFeeHandler<T>>::post_dispatch(
+        fee_asset,
         Some(pre),
         &info,
         &post,
