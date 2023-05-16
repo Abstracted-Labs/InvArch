@@ -1,11 +1,18 @@
 use crate::{
-    common_types::CommonId, constants::currency::UNIT, AccountId, Balance, Balances, CoreAssets,
-    DealWithFees, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
+    assets::{RelayAssetId, KSM_ASSET_ID},
+    common_types::{AssetId, CommonId},
+    constants::currency::UNIT,
+    fee_handling::DealWithKSMFees,
+    AccountId, Balance, Balances, CoreAssets, DealWithFees, Runtime, RuntimeCall, RuntimeEvent,
+    RuntimeOrigin, Tokens,
 };
 use codec::{Decode, Encode};
-use frame_support::{parameter_types, traits::Contains};
-use pallet_inv4::fee_handling::MultisigFeeHandler;
-use pallet_transaction_payment::ChargeTransactionPayment;
+use frame_support::{
+    parameter_types,
+    traits::{fungibles::CreditOf, Contains, Currency, OnUnbalanced},
+};
+use pallet_asset_tx_payment::ChargeAssetTxPayment;
+use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use scale_info::TypeInfo;
 use sp_core::{ConstU32, H256};
 use sp_runtime::traits::{One, SignedExtension, Zero};
@@ -19,6 +26,8 @@ parameter_types! {
         212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
+
+    pub const KSMCoreCreationFee: Balance = UNIT;
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -34,37 +43,78 @@ impl pallet_inv4::Config for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     // type AssetFreezer = AssetFreezer;
     type CoreCreationFee = CoreCreationFee;
-    type CreationFeeHandler = DealWithFees;
     type FeeCharger = FeeCharger;
     type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
+
+    type Tokens = Tokens;
+    type KSMAssetId = RelayAssetId;
+    type KSMCoreCreationFee = KSMCoreCreationFee;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
 pub struct FeeCharger;
 
-impl MultisigFeeHandler for FeeCharger {
-    type AccountId = AccountId;
-    type Call = RuntimeCall;
-    type Pre = <ChargeTransactionPayment<Runtime> as SignedExtension>::Pre;
+impl MultisigFeeHandler<Runtime> for FeeCharger {
+    type Pre = (
+        // tip
+        Balance,
+        // who paid the fee
+        AccountId,
+        // imbalance resulting from withdrawing the fee
+        pallet_asset_tx_payment::InitialPayment<Runtime>,
+        // asset_id for the transaction payment
+        Option<AssetId>,
+    );
 
     fn pre_dispatch(
-        who: &Self::AccountId,
-        call: &Self::Call,
-        info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
+        fee_asset: &FeeAsset,
+        who: &AccountId,
+        call: &RuntimeCall,
+        info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
         len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
-        ChargeTransactionPayment::<Runtime>::from(Zero::zero()).pre_dispatch(who, call, info, len)
+        match fee_asset {
+            FeeAsset::TNKR => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), None)
+                .pre_dispatch(who, call, info, len),
+
+            FeeAsset::KSM => {
+                ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), Some(KSM_ASSET_ID))
+                    .pre_dispatch(who, call, info, len)
+            }
+        }
     }
 
     fn post_dispatch(
+        fee_asset: &FeeAsset,
         pre: Option<Self::Pre>,
-        info: &sp_runtime::traits::DispatchInfoOf<Self::Call>,
-        post_info: &sp_runtime::traits::PostDispatchInfoOf<Self::Call>,
+        info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        post_info: &sp_runtime::traits::PostDispatchInfoOf<RuntimeCall>,
         len: usize,
         result: &sp_runtime::DispatchResult,
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
-        ChargeTransactionPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
+        match fee_asset {
+            FeeAsset::TNKR => {
+                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
+            }
+
+            FeeAsset::KSM => {
+                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
+            }
+        }
+    }
+
+    fn handle_creation_fee(
+        imbalance: FeeAssetNegativeImbalance<
+            <Balances as Currency<AccountId>>::NegativeImbalance,
+            CreditOf<AccountId, Tokens>,
+        >,
+    ) {
+        match imbalance {
+            FeeAssetNegativeImbalance::TNKR(imb) => DealWithFees::on_unbalanced(imb),
+
+            FeeAssetNegativeImbalance::KSM(imb) => DealWithKSMFees::on_unbalanced(imb),
+        }
     }
 }
 
@@ -102,6 +152,24 @@ impl
     }
 }
 
+pub struct HandleNewMembers;
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+    for HandleNewMembers
+{
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
+        crate::INV4::add_member(core_id, member)
+    }
+}
+
+pub struct HandleRemovedMembers;
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+    for HandleRemovedMembers
+{
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
+        crate::INV4::remove_member(core_id, member)
+    }
+}
+
 pub struct INV4TokenHooks;
 impl
     orml_traits2::currency::MutationHooks<
@@ -116,8 +184,8 @@ impl
     type PreDeposit = ();
     type PostDeposit = ();
     type PostTransfer = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = HandleNewMembers;
+    type OnKilledTokenAccount = HandleRemovedMembers;
 }
 
 impl orml_tokens2::Config for Runtime {

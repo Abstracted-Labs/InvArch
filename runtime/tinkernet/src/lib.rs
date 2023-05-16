@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with InvArch.  If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(clippy::upper_case_acronyms)]
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
@@ -22,8 +23,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod xcm_config;
-
+use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
@@ -35,8 +35,9 @@ pub use frame_support::{
     match_types,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Get,
-        Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
+        tokens::BalanceConversion, AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly,
+        Everything, FindAuthor, Get, Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced,
+        Randomness, StorageInfo,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
@@ -51,12 +52,18 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
-use pallet_transaction_payment::Multiplier;
+use pallet_inv4::{origin::INV4Origin, INV4Lookup};
+use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
+use sp_core::{
+    crypto::{ByteArray, KeyTypeId},
+    OpaqueMetadata, H160,
+};
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
@@ -68,18 +75,7 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
-
 use xcm::latest::prelude::BodyId;
-
-use pallet_inv4::{origin::INV4Origin, INV4Lookup};
-
-// Weights
-mod weights;
-
-use sp_core::crypto::ByteArray;
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
@@ -100,11 +96,15 @@ use constants::currency::*;
 mod common_types;
 use common_types::*;
 mod assets;
+mod fee_handling;
+use fee_handling::TnkrToKsm;
 mod inflation;
 mod inv4;
 mod nft;
+mod rings;
 mod staking;
-// mod rings;
+mod weights;
+pub mod xcm_config;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -148,7 +148,7 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -162,6 +162,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    pallet_inv4::migrations::v2::MigrateToV2<Runtime>,
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -192,7 +193,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 16,
+    spec_version: 17,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -489,7 +490,7 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
     type Balance = Balance;
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-        let p = UNIT / 500;
+        let p = UNIT / 10;
         let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec![WeightToFeeCoefficient {
             degree: 1,
@@ -793,7 +794,8 @@ construct_runtime_modified!(
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
-            Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
         Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,
@@ -820,7 +822,7 @@ construct_runtime_modified!(
 
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
         CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
-       // Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
+        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
 
@@ -849,7 +851,7 @@ mod benches {
         [cumulus_pallet_xcmp_queue, XcmpQueue]
         [pallet_inv4, INV4]
         [pallet_ocif_staking, OcifStaking]
-       // [pallet_rings, Rings]
+        [pallet_rings, Rings]
     );
 }
 
@@ -944,13 +946,54 @@ impl_runtime_apis! {
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
-            TransactionPayment::query_info(uxt, len)
+            log::error!("uxt: {:?}", crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id);
+
+            match crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id {
+                Some(1u32) => {
+                    let mut tp = TransactionPayment::query_info(uxt, len);
+                    if let Ok(fee) = TnkrToKsm::to_asset_balance(tp.partial_fee, 1u32) {
+                        tp.partial_fee = fee
+                    }
+                    tp
+                }
+                None | Some(_) => TransactionPayment::query_info(uxt, len),
+            }
         }
         fn query_fee_details(
             uxt: <Block as BlockT>::Extrinsic,
             len: u32,
         ) -> pallet_transaction_payment::FeeDetails<Balance> {
-            TransactionPayment::query_fee_details(uxt, len)
+            log::error!("uxt: {:?}", crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id);
+
+                match crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id {
+                    Some(1u32) => {
+                        let tp = TransactionPayment::query_fee_details(uxt, len);
+                        if let Some(ref inclusion) = tp.inclusion_fee {
+                            if let (
+                                Ok(base_fee),
+                                Ok(len_fee),
+                                Ok(adjusted_weight_fee)
+                            ) = (
+                                TnkrToKsm::to_asset_balance(inclusion.base_fee, 1u32),
+                                TnkrToKsm::to_asset_balance(inclusion.len_fee, 1u32),
+                                TnkrToKsm::to_asset_balance(inclusion.adjusted_weight_fee, 1u32)
+                            ) {
+
+                               return FeeDetails {
+                                    inclusion_fee: Some(InclusionFee {
+                                        base_fee,
+                                        len_fee,
+                                        adjusted_weight_fee,
+                                    }),
+                                    tip: tp.tip,
+                                };
+
+                            }
+                        }
+                        tp
+                    }
+                    None | Some(_) => TransactionPayment::query_fee_details(uxt, len),
+                }
         }
     }
 

@@ -1,22 +1,22 @@
 use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use xcm::latest::{Junctions, MultiLocation};
+use xcm::latest::{Junction, Junctions, MultiLocation};
 
-pub struct Kusama;
+pub struct Khala;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub enum KusamaAssets {
-    KSM,
+pub enum KhalaAssets {
+    PHA,
 }
 
-impl RingsChain for Kusama {
-    type Assets = KusamaAssets;
+impl RingsChain for Khala {
+    type Assets = KhalaAssets;
 
     fn get_asset_location(asset: &Self::Assets) -> MultiLocation {
-        use KusamaAssets::*;
+        use KhalaAssets::*;
         match asset {
-            KSM => MultiLocation {
+            PHA => MultiLocation {
                 parents: 0,
                 interior: Junctions::Here,
             },
@@ -26,11 +26,11 @@ impl RingsChain for Kusama {
     fn get_location() -> MultiLocation {
         MultiLocation {
             parents: 1,
-            interior: Junctions::Here,
+            interior: Junctions::X1(Junction::Parachain(2004)),
         }
     }
 
     fn get_main_asset() -> Self::Assets {
-        KusamaAssets::KSM
+        KhalaAssets::PHA
     }
 }

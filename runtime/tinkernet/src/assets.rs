@@ -14,9 +14,11 @@ use orml_traits::parameter_type_with_key;
 use scale_info::TypeInfo;
 
 pub const CORE_ASSET_ID: AssetId = 0;
+pub const KSM_ASSET_ID: AssetId = 1;
 
 parameter_types! {
     pub const NativeAssetId: AssetId = CORE_ASSET_ID;
+    pub const RelayAssetId: AssetId = KSM_ASSET_ID;
 }
 
 pub struct AssetAuthority;

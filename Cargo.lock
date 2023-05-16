@@ -3391,7 +3391,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5165,6 +5165,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-tx-payment"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36#cb4f2491b00af7d7817f3a54209c26b20faa1f51"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36#cb4f2491b00af7d7817f3a54209c26b20faa1f51"
@@ -5345,7 +5363,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5604,13 +5622,14 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "invarch-primitives",
  "log",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=4f5a3f34d8cbd98b7bc2e295219a3e7b99b9ecaf)",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -5755,7 +5774,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=a0a5ec784ff356744e6f718f34bc4463b4b8dccf#a0a5ec784ff356744e6f718f34bc4463b4b8dccf"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5912,6 +5931,34 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-rings"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "num-traits",
+ "pallet-balances",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-timestamp",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -6657,6 +6704,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-runtime",
  "polkadot-runtime-common",
+ "rococo-runtime",
  "sc-client-api",
  "sc-consensus",
  "sc-executor",
@@ -7591,6 +7639,7 @@ dependencies = [
  "polkadot-runtime-parachains",
  "polkadot-statement-distribution",
  "rococo-runtime",
+ "rococo-runtime-constants",
  "sc-authority-discovery",
  "sc-basic-authorship",
  "sc-block-builder",
@@ -11270,6 +11319,7 @@ dependencies = [
  "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
+ "pallet-asset-tx-payment",
  "pallet-assets",
  "pallet-aura",
  "pallet-authorship",
@@ -11283,6 +11333,7 @@ dependencies = [
  "pallet-ocif-staking",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
+ "pallet-rings",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -12644,7 +12695,7 @@ dependencies = [
 [[package]]
 name = "xcm"
 version = "0.9.36"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
+source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
 dependencies = [
  "derivative",
  "impl-trait-for-tuples",
@@ -12678,7 +12729,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.9.36"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
+source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12696,7 +12747,7 @@ dependencies = [
 [[package]]
 name = "xcm-procedural"
 version = "0.9.36"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
+source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.36#dc25abc712e42b9b51d87ad1168e453a42b5f0bc"
 dependencies = [
  "Inflector",
  "proc-macro2",

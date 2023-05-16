@@ -5,11 +5,15 @@ provider = "native"
 [relaychain]
 default_command = "./zombienet/binaries/polkadot"
 chain = "rococo-local"
+default_args = ["-lxcm::barriers=trace"]
 
   [[relaychain.nodes]]
   name = "alice"
   validator = true
   ws_port = 9955
+  [[env]]
+    name = "RUST_LOG"
+    value = "trace"
 
   [[relaychain.nodes]]
   name = "bob"

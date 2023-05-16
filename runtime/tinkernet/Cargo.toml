@@ -25,11 +25,10 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "a0a5ec784ff356744e6f718f34bc4463b4b8dccf",  default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "a0a5ec784ff356744e6f718f34bc4463b4b8dccf",  default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "a0a5ec784ff356744e6f718f34bc4463b4b8dccf",  default-features = false }
-
-#pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-saturn_preparations",  default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
 
 #pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
 #pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
@@ -69,6 +68,7 @@ frame-try-runtime = { git = "https://github.com/paritytech/substrate", default-f
 
 # Substrate Pallet Dependencies
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
+pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
@@ -201,6 +201,8 @@ std = [
     "orml-tokens2/std",
     "pallet-ocif-staking/std",
     "pallet-checked-inflation/std",
+    "pallet-rings/std",
+    "pallet-asset-tx-payment/std",
 ]
 
 runtime-benchmarks = [ 
@@ -217,7 +219,7 @@ runtime-benchmarks = [
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "pallet-inv4/runtime-benchmarks",
-   # "pallet-rings/runtime-benchmarks",
+    "pallet-rings/runtime-benchmarks",
     "pallet-ocif-staking/runtime-benchmarks",
 ]
 
@@ -261,4 +263,6 @@ try-runtime = [
     "orml-tokens2/try-runtime",
     "pallet-ocif-staking/try-runtime",
     "pallet-checked-inflation/try-runtime",
+    "pallet-rings/try-runtime",
+    "pallet-asset-tx-payment/try-runtime",
 ]
