@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::{
+    fee_handling::FeeAsset,
     multisig::MAX_SIZE,
     origin::{INV4Origin, MultisigInternalOrigin},
     util::derive_core_account,
@@ -57,6 +58,7 @@ where
         vec![],
         perbill_one(),
         perbill_one(),
+        FeeAsset::TNKR,
     )
 }
 
@@ -111,6 +113,7 @@ where
         SystemOrigin::Signed(whitelisted_caller()).into(),
         0u32.into(),
         None,
+        FeeAsset::TNKR,
         Box::new(frame_system::Call::<T>::remark { remark: vec![0] }.into()),
     )
 }
@@ -157,9 +160,10 @@ benchmarks! {
         let caller = whitelisted_caller();
         let minimum_support = perbill_one();
         let required_approval = perbill_one();
+        let creation_fee_asset = FeeAsset::TNKR;
 
         T::Currency::make_free_balance_be(&caller, T::CoreCreationFee::get() + T::CoreCreationFee::get());
-    }: _(SystemOrigin::Signed(caller.clone()), metadata.clone(), minimum_support, required_approval)
+    }: _(SystemOrigin::Signed(caller.clone()), metadata.clone(), minimum_support, required_approval, creation_fee_asset)
         verify {
             assert_last_event::<T>(Event::CoreCreated {
                 core_account: derive_account::<T>(0u32.into()),
@@ -237,8 +241,9 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let core_id: T::CoreId = 0u32.into();
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
+        let fee_asset = FeeAsset::TNKR;
 
-    }: _(SystemOrigin::Signed(caller.clone()), core_id, Some(metadata), Box::new(call.clone()))
+    }: _(SystemOrigin::Signed(caller.clone()), core_id, Some(metadata), fee_asset, Box::new(call.clone()))
         verify {
             assert_last_event::<T>(Event::MultisigVoteStarted {
                 core_id,
