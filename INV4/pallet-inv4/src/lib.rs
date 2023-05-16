@@ -51,7 +51,7 @@ pub mod pallet {
 
     use super::*;
     use frame_support::{
-        dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+        dispatch::{Dispatchable, GetDispatchInfo, Pays, PostDispatchInfo},
         pallet_prelude::*,
         traits::{
             fungibles,
@@ -329,14 +329,19 @@ pub mod pallet {
             minimum_support: Perbill,
             required_approval: Perbill,
             creation_fee_asset: FeeAsset,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             Pallet::<T>::inner_create_core(
                 owner,
                 metadata,
                 minimum_support,
                 required_approval,
                 creation_fee_asset,
-            )
+            )?;
+
+            Ok(PostDispatchInfo {
+                actual_weight: None,
+                pays_fee: Pays::No,
+            })
         }
 
         /// Mint `amount` of specified token to `target` account
