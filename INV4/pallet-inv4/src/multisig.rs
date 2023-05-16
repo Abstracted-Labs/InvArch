@@ -13,7 +13,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         fungibles::{Inspect, Mutate},
-        Currency, VoteTally, WrapperKeepOpaque,
+        Currency, VoteTally,
     },
     BoundedBTreeMap,
 };
@@ -27,7 +27,6 @@ use sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 /// Maximum size of call we store is 4mb.
 pub const MAX_SIZE: u32 = 4 * 1024 * 1024;
 
-pub type OpaqueCall<T> = WrapperKeepOpaque<<T as Config>::RuntimeCall>;
 pub type BoundedCallBytes = BoundedVec<u8, ConstU32<MAX_SIZE>>;
 
 /// Details of a multisig operation

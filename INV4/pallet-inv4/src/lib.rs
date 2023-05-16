@@ -159,7 +159,6 @@ pub mod pallet {
         INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>;
 
     #[pallet::pallet]
-    //#[pallet::without_storage_info]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
