@@ -3391,6 +3391,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -5362,6 +5363,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5620,6 +5622,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5771,6 +5774,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5932,6 +5936,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=fda529b247b61243d7a0bf8ffa4a5aa90ba283d4#fda529b247b61243d7a0bf8ffa4a5aa90ba283d4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

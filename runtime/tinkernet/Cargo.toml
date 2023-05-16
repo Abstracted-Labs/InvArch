@@ -25,18 +25,17 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-#pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-rings",  default-features = false }
-#pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-rings",  default-features = false }
-#pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rbranch = "gabriel-rings",  default-features = false }
-#pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-rings",  default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
 
-pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
-pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
-pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
-pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+#pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
+#pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
+#pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
+#pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
-pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 
 modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
 
@@ -69,6 +68,7 @@ frame-try-runtime = { git = "https://github.com/paritytech/substrate", default-f
 
 # Substrate Pallet Dependencies
 pallet-assets = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
+pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
