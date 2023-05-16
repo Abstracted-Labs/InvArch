@@ -47,11 +47,29 @@ jobs:
     name: Build and publish ${{ github.event.inputs.chain }}
     runs-on: ubuntu-latest
     steps:
+    
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+        
       # Checkout the codebase
       - name: Checkout Codebase
         uses: actions/checkout@v3
         with:
           submodules: true
+          
+      - name: Install deps
+        run: sudo apt -y install protobuf-compiler
+      
+      - name: Install & display rust toolchain
+        run: rustup show
+
+      - name: Check targets are installed correctly
+        run: rustup target list --installed
 
       # Build WASM with Substrate Runtime Tool
       - name: Srtool build
