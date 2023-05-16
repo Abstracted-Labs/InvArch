@@ -3402,20 +3402,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "invarch-xcm-builder"
-version = "0.1.0"
-source = "git+https://github.com/InvArch/InvArch-XCM-Builder?branch=polkadot-v0.9.36#4a49981047abe8351c98c644b37a967164a59254"
-dependencies = [
- "frame-support",
- "log",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "xcm",
- "xcm-executor",
-]
-
-[[package]]
 name = "io-lifetimes"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5182,11 +5168,13 @@ name = "pallet-asset-tx-payment"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.36#cb4f2491b00af7d7817f3a54209c26b20faa1f51"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -11313,7 +11301,6 @@ dependencies = [
  "frame-try-runtime",
  "getrandom 0.2.8",
  "hex-literal",
- "invarch-xcm-builder",
  "log",
  "modified-construct-runtime",
  "orml-asset-registry",

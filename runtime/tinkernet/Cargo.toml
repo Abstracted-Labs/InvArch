@@ -34,15 +34,11 @@ pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-featu
 pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
 pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
 pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
-# pallet-filtered-multiasset-tx-payment = { path = "../../../InvArch-Frames/filtered-multiasset-tx-payment", default-features = false }
 
 pallet-maintenance-mode = { path = "../../pallets/maintenance-mode", default-features = false }
-#pallet-custom-asset-tx-payment = { path = "../../pallets/custom-asset-tx-payment", default-features = false }
 pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 
 modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
-
-invarch-xcm-builder = { git = "https://github.com/InvArch/InvArch-XCM-Builder", branch = "polkadot-v0.9.36", default-features = false }
 
 ## Parity's Unique
 pallet-uniques = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
@@ -206,7 +202,7 @@ std = [
     "pallet-ocif-staking/std",
     "pallet-checked-inflation/std",
     "pallet-rings/std",
-    "invarch-xcm-builder/std",
+    "pallet-asset-tx-payment/std",
 ]
 
 runtime-benchmarks = [ 
@@ -268,4 +264,5 @@ try-runtime = [
     "pallet-ocif-staking/try-runtime",
     "pallet-checked-inflation/try-runtime",
     "pallet-rings/try-runtime",
+    "pallet-asset-tx-payment/try-runtime",
 ]

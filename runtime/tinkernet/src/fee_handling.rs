@@ -24,10 +24,14 @@ impl Contains<RuntimeCall> for KSMEnabledPallets {
     fn contains(t: &RuntimeCall) -> bool {
         matches!(
             t,
+            // We want users and Cores to be able to operate multisigs using KSM.
             RuntimeCall::INV4(_)
+                // We want Cores to be able to operate XCMultisigs using KSM.
                 | RuntimeCall::Rings(_)
+                // These next 3 are needed to manage the KSM itself using KSM as the fee token.
                 | RuntimeCall::Tokens(_)
                 | RuntimeCall::XTokens(_)
+                | RuntimeCall::Currencies(_)
         )
     }
 }
@@ -46,7 +50,7 @@ impl BalanceConversion<Balance, AssetId, Balance> for TnkrToKsm {
         if asset_id == 1u32 {
             Ok(balance.saturating_div(20u128))
         } else {
-            return Err(());
+            Err(())
         }
     }
 }
@@ -132,8 +136,6 @@ impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithKSMFees {
     }
 
     fn on_unbalanced(amount: CreditOf<AccountId, Tokens>) {
-        //let (to_collators, to_treasury) = amount.ration(50, 50);
-
         let total: u128 = 100u128;
         let amount1 = amount.peek().saturating_mul(50u128) / total;
         let (to_collators, to_treasury) = amount.split(amount1);
