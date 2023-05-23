@@ -7,6 +7,8 @@ use xcm::prelude::*;
 
 mod basilisk;
 use basilisk::Basilisk;
+mod picasso;
+use picasso::Picasso;
 
 parameter_types! {
     pub ParaId: u32 = ParachainInfo::get().into();
@@ -34,11 +36,13 @@ pub trait RingsChain {
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Chains {
     Basilisk,
+    Picasso,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum ChainAssets {
     Basilisk(<Basilisk as RingsChain>::Assets),
+    Picasso(<Picasso as RingsChain>::Assets),
 }
 
 impl ChainAssetsList for ChainAssets {
@@ -47,12 +51,14 @@ impl ChainAssetsList for ChainAssets {
     fn get_chain(&self) -> Self::Chains {
         match self {
             Self::Basilisk(_) => Chains::Basilisk,
+            Self::Picasso(_) => Chains::Picasso,
         }
     }
 
     fn get_asset_location(&self) -> MultiLocation {
         match self {
             Self::Basilisk(asset) => Basilisk::get_asset_location(asset),
+            Self::Picasso(asset) => Picasso::get_asset_location(asset),
         }
     }
 }
@@ -64,12 +70,14 @@ impl ChainList for Chains {
     fn get_location(&self) -> MultiLocation {
         match self {
             Self::Basilisk => Basilisk::get_location(),
+            Self::Picasso => Picasso::get_location(),
         }
     }
 
     fn get_main_asset(&self) -> Self::ChainAssets {
         match self {
             Self::Basilisk => ChainAssets::Basilisk(Basilisk::get_main_asset()),
+            Self::Picasso => ChainAssets::Picasso(Picasso::get_main_asset()),
         }
     }
 
