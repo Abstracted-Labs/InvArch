@@ -25,6 +25,10 @@ pub use pallet::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+#[cfg(test)]
+mod tests;
+
 mod dispatch;
 pub mod fee_handling;
 pub mod inv4_core;
