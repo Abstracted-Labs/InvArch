@@ -28,6 +28,7 @@ pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
 pub const CHARLIE: AccountId = 2;
+pub const DAVE: AccountId = 3;
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -345,6 +346,7 @@ impl ExtBuilder {
             balances: vec![
                 (ALICE, INITIAL_BALANCE),
                 (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
                 (
                     util::derive_core_account::<Test, u32, u32>(0u32),
                     INITIAL_BALANCE,
@@ -390,6 +392,7 @@ impl ExtBuilder {
             balances: vec![
                 (ALICE, KSM_ASSET_ID, INITIAL_BALANCE),
                 (BOB, KSM_ASSET_ID, INITIAL_BALANCE),
+                (CHARLIE, KSM_ASSET_ID, INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)
