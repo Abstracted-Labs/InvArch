@@ -622,3 +622,157 @@ fn operate_multisig_fails() {
         );
     });
 }
+
+#[test]
+fn cancel_multisig_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        // Test with single voter.
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+
+        System::set_block_number(2);
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: Some(vec![1, 2, 3].try_into().unwrap()),
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        ALICE,
+                        Vote::Aye(CoreSeedBalance::get())
+                    )]))
+                    .unwrap()
+                ),
+            })
+        );
+
+        assert_ok!(INV4::cancel_multisig_proposal(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+        ));
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            None
+        );
+    });
+}
+
+#[test]
+fn cancel_multisig_fails() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        // Test with single voter.
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+
+        System::set_block_number(2);
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+
+        // Wrong origin.
+        assert_err!(
+            INV4::cancel_multisig_proposal(
+                RawOrigin::Signed(ALICE).into(),
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            BadOrigin
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: Some(vec![1, 2, 3].try_into().unwrap()),
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        ALICE,
+                        Vote::Aye(CoreSeedBalance::get())
+                    )]))
+                    .unwrap()
+                ),
+            })
+        );
+    });
+}
