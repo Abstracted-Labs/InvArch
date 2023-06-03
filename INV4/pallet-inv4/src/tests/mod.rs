@@ -5,7 +5,7 @@ use frame_support::{assert_err, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use mock::*;
 use primitives::CoreInfo;
-use sp_runtime::{Perbill, TokenError};
+use sp_runtime::{ArithmeticError, Perbill, TokenError};
 use sp_std::{convert::TryInto, vec};
 
 #[test]
@@ -220,6 +220,183 @@ fn set_parameters_fails() {
                 None
             ),
             Error::<Test>::MaxMetadataExceeded
+        );
+    });
+}
+
+#[test]
+fn token_mint_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(1),
+            Perbill::from_percent(1),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        assert_eq!(
+            CoreAssets::accounts(ALICE, 0u32).free,
+            CoreSeedBalance::get()
+        );
+        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+
+        assert_eq!(CoreAssets::accounts(BOB, 0u32).free, 0u128);
+        assert_eq!(INV4::core_members(0u32, BOB), None);
+
+        assert_ok!(INV4::token_mint(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            CoreSeedBalance::get(),
+            BOB
+        ));
+
+        assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
+        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+    });
+}
+
+#[test]
+fn token_mint_fails() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(1),
+            Perbill::from_percent(1),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        // Wrong origin.
+        assert_err!(
+            INV4::token_mint(RawOrigin::Signed(ALICE).into(), CoreSeedBalance::get(), BOB),
+            BadOrigin
+        );
+
+        // Overflow
+        assert_err!(
+            INV4::token_mint(
+                Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+                u128::MAX,
+                ALICE
+            ),
+            ArithmeticError::Overflow
+        );
+    });
+}
+
+#[test]
+fn token_burn_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(1),
+            Perbill::from_percent(1),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        assert_eq!(
+            CoreAssets::accounts(ALICE, 0u32).free,
+            CoreSeedBalance::get()
+        );
+        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+
+        INV4::token_mint(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            CoreSeedBalance::get(),
+            BOB,
+        )
+        .unwrap();
+
+        assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
+        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+
+        // Actual burn test
+
+        assert_ok!(INV4::token_burn(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            CoreSeedBalance::get() / 2,
+            ALICE
+        ));
+
+        assert_eq!(
+            CoreAssets::accounts(ALICE, 0u32).free,
+            CoreSeedBalance::get() / 2
+        );
+        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+
+        assert_ok!(INV4::token_burn(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            CoreSeedBalance::get(),
+            BOB
+        ));
+
+        assert_eq!(CoreAssets::accounts(BOB, 0u32).free, 0u128);
+        assert_eq!(INV4::core_members(0u32, BOB), None);
+    });
+}
+
+#[test]
+fn token_burn_fails() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(1),
+            Perbill::from_percent(1),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        assert_eq!(
+            CoreAssets::accounts(ALICE, 0u32).free,
+            CoreSeedBalance::get()
+        );
+        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+
+        INV4::token_mint(
+            Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+            CoreSeedBalance::get(),
+            BOB,
+        )
+        .unwrap();
+
+        assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
+        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+
+        // Actual burn test
+
+        // Wrong origin.
+        assert_err!(
+            INV4::token_burn(
+                RawOrigin::Signed(ALICE).into(),
+                CoreSeedBalance::get(),
+                ALICE
+            ),
+            BadOrigin
+        );
+
+        // Underflow
+        assert_err!(
+            INV4::token_burn(
+                Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+                CoreSeedBalance::get() * 3,
+                ALICE
+            ),
+            ArithmeticError::Underflow
+        );
+
+        // Not enough to burn
+        assert_err!(
+            INV4::token_burn(
+                Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
+                CoreSeedBalance::get() + 1,
+                ALICE
+            ),
+            TokenError::NoFunds
         );
     });
 }
