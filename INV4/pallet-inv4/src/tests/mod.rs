@@ -1023,3 +1023,286 @@ fn vote_multisig_fails() {
         );
     });
 }
+
+#[test]
+fn withdraw_vote_multisig_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call1: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        let call2: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: CHARLIE,
+        }
+        .into();
+
+        // Adding BOB.
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call1.clone()),
+        )
+        .unwrap();
+
+        System::set_block_number(2);
+
+        // Adding CHARLIE
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call2.clone()),
+        )
+        .unwrap();
+
+        // BOB votes nay.
+
+        assert_ok!(INV4::vote_multisig(
+            RawOrigin::Signed(BOB).into(),
+            0u32,
+            <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            false
+        ));
+
+        System::assert_has_event(
+            Event::MultisigVoteAdded {
+                core_id: 0u32,
+                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                voter: BOB,
+                votes_added: Vote::Nay(CoreSeedBalance::get()),
+                current_votes: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    CoreSeedBalance::get(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([
+                        (ALICE, Vote::Aye(CoreSeedBalance::get())),
+                        (BOB, Vote::Nay(CoreSeedBalance::get())),
+                    ]))
+                    .unwrap(),
+                ),
+                call: call2.clone(),
+                call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            }
+            .into(),
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: None,
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    CoreSeedBalance::get(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([
+                        (ALICE, Vote::Aye(CoreSeedBalance::get())),
+                        (BOB, Vote::Nay(CoreSeedBalance::get()))
+                    ]))
+                    .unwrap()
+                ),
+            })
+        );
+
+        // BOB withdraws his vote.
+
+        assert_ok!(INV4::withdraw_vote_multisig(
+            RawOrigin::Signed(BOB).into(),
+            0u32,
+            <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+        ));
+
+        System::assert_has_event(
+            Event::MultisigVoteWithdrawn {
+                core_id: 0u32,
+                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                voter: BOB,
+                votes_removed: Vote::Nay(CoreSeedBalance::get()),
+                call: call2.clone(),
+                call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            }
+            .into(),
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: None,
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        ALICE,
+                        Vote::Aye(CoreSeedBalance::get())
+                    )]))
+                    .unwrap()
+                ),
+            })
+        );
+
+        // ALICE also withdraws her vote.
+
+        assert_ok!(INV4::withdraw_vote_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+        ));
+
+        System::assert_has_event(
+            Event::MultisigVoteWithdrawn {
+                core_id: 0u32,
+                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                voter: ALICE,
+                votes_removed: Vote::Aye(CoreSeedBalance::get()),
+                call: call2.clone(),
+                call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            }
+            .into(),
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: None,
+                tally: Tally::from_parts(Zero::zero(), Zero::zero(), BoundedBTreeMap::new()),
+            })
+        );
+    });
+}
+
+#[test]
+fn withdraw_vote_multisig_fails() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call1: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        let call2: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: CHARLIE,
+        }
+        .into();
+
+        // Adding BOB.
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call1.clone()),
+        )
+        .unwrap();
+
+        System::set_block_number(2);
+
+        // Adding CHARLIE
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call2.clone()),
+        )
+        .unwrap();
+
+        // BOB votes nay.
+
+        assert_ok!(INV4::vote_multisig(
+            RawOrigin::Signed(BOB).into(),
+            0u32,
+            <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            false
+        ));
+
+        // Multisig call not found.
+        assert_err!(
+            INV4::withdraw_vote_multisig(
+                RawOrigin::Signed(BOB).into(),
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call1),
+            ),
+            Error::<Test>::MultisigCallNotFound
+        );
+
+        // Not a voter in this proposal.
+        assert_err!(
+            INV4::withdraw_vote_multisig(
+                RawOrigin::Signed(CHARLIE).into(),
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
+            ),
+            Error::<Test>::NotAVoter
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: None,
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    CoreSeedBalance::get(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([
+                        (ALICE, Vote::Aye(CoreSeedBalance::get())),
+                        (BOB, Vote::Nay(CoreSeedBalance::get()))
+                    ]))
+                    .unwrap()
+                ),
+            })
+        );
+    });
+}
