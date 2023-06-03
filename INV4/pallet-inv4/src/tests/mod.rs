@@ -1,12 +1,27 @@
 mod mock;
 
-use crate::{origin::MultisigInternalOrigin, *};
-use frame_support::{assert_err, assert_ok, error::BadOrigin};
+extern crate alloc;
+
+use crate::{
+    multisig::{BoundedCallBytes, MultisigOperation, MAX_SIZE},
+    origin::MultisigInternalOrigin,
+    voting::{Tally, Vote},
+    *,
+};
+use alloc::collections::BTreeMap;
+use codec::Encode;
+use frame_support::{assert_err, assert_ok, error::BadOrigin, BoundedBTreeMap};
 use frame_system::RawOrigin;
 use mock::*;
 use primitives::CoreInfo;
-use sp_runtime::{ArithmeticError, Perbill, TokenError};
-use sp_std::{convert::TryInto, vec};
+use sp_runtime::{
+    traits::{Hash, Zero},
+    ArithmeticError, Perbill, TokenError,
+};
+use sp_std::{
+    convert::{TryFrom, TryInto},
+    vec,
+};
 
 #[test]
 fn create_core_works() {
@@ -397,6 +412,213 @@ fn token_burn_fails() {
                 ALICE
             ),
             TokenError::NoFunds
+        );
+    });
+}
+
+#[test]
+fn operate_multisig_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        // Test with single voter.
+
+        assert_ok!(INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone())
+        ));
+
+        System::assert_has_event(
+            orml_tokens2::Event::Deposited {
+                currency_id: 0u32,
+                who: BOB,
+                amount: CoreSeedBalance::get(),
+            }
+            .into(),
+        );
+
+        System::assert_has_event(
+            Event::Minted {
+                core_id: 0u32,
+                target: BOB,
+                amount: CoreSeedBalance::get(),
+            }
+            .into(),
+        );
+
+        System::assert_has_event(
+            Event::MultisigExecuted {
+                core_id: 0u32,
+                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                voter: ALICE,
+                call: call.clone(),
+                call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
+                result: Ok(()),
+            }
+            .into(),
+        );
+
+        // Test with 2 voters, call should be stored for voting.
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            None,
+        );
+
+        assert_ok!(INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            Some(vec![1, 2, 3]),
+            FeeAsset::TNKR,
+            Box::new(call.clone())
+        ));
+
+        System::assert_has_event(
+            Event::MultisigVoteStarted {
+                core_id: 0u32,
+                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                voter: ALICE,
+                votes_added: Vote::Aye(CoreSeedBalance::get()),
+                call: call.clone(),
+                call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
+            }
+            .into(),
+        );
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                fee_asset: FeeAsset::TNKR,
+                original_caller: ALICE,
+                metadata: Some(vec![1, 2, 3].try_into().unwrap()),
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        ALICE,
+                        Vote::Aye(CoreSeedBalance::get())
+                    )]))
+                    .unwrap()
+                ),
+            })
+        );
+    });
+}
+
+#[test]
+fn operate_multisig_fails() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![],
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::TNKR,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        // Using this call now to add a second member to the multisig.
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+
+        // Not a member of the multisig
+        assert_err!(
+            INV4::operate_multisig(
+                RawOrigin::Signed(CHARLIE).into(),
+                0u32,
+                Some(vec![1, 2, 3]),
+                FeeAsset::TNKR,
+                Box::new(call.clone())
+            ),
+            Error::<Test>::NoPermission
+        );
+
+        // MaxMetadataExceeded
+        assert_err!(
+            INV4::operate_multisig(
+                RawOrigin::Signed(ALICE).into(),
+                0u32,
+                Some(vec![0u8; (MaxMetadata::get() + 1) as usize]),
+                FeeAsset::TNKR,
+                Box::new(call.clone())
+            ),
+            Error::<Test>::MaxMetadataExceeded
+        );
+
+        // Max call length exceeded.
+        assert_err!(
+            INV4::operate_multisig(
+                RawOrigin::Signed(ALICE).into(),
+                0u32,
+                None,
+                FeeAsset::TNKR,
+                Box::new(
+                    frame_system::pallet::Call::<Test>::remark {
+                        remark: vec![0u8; MAX_SIZE as usize]
+                    }
+                    .into()
+                )
+            ),
+            Error::<Test>::MaxCallLengthExceeded
+        );
+
+        // Multisig call already exists in storage.
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::TNKR,
+            Box::new(call.clone()),
+        )
+        .unwrap();
+        assert_err!(
+            INV4::operate_multisig(
+                RawOrigin::Signed(ALICE).into(),
+                0u32,
+                None,
+                FeeAsset::TNKR,
+                Box::new(call.clone())
+            ),
+            Error::<Test>::MultisigCallAlreadyExists
         );
     });
 }

@@ -44,6 +44,13 @@ frame_support::construct_runtime!(
     }
 );
 
+pub struct TestBaseCallFilter;
+impl Contains<RuntimeCall> for TestBaseCallFilter {
+    fn contains(_c: &RuntimeCall) -> bool {
+        true
+    }
+}
+
 impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
@@ -64,7 +71,7 @@ impl frame_system::Config for Test {
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type DbWeight = ();
-    type BaseCallFilter = ();
+    type BaseCallFilter = TestBaseCallFilter;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -335,7 +342,14 @@ impl ExtBuilder {
             .unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
-            balances: vec![(ALICE, INITIAL_BALANCE), (BOB, INITIAL_BALANCE)],
+            balances: vec![
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (
+                    util::derive_core_account::<Test, u32, u32>(0u32),
+                    INITIAL_BALANCE,
+                ),
+            ],
         }
         .assimilate_storage(&mut t)
         .unwrap();
