@@ -1,6 +1,5 @@
 use crate::{testing::mock::*, Config, Event, *};
 use frame_support::assert_ok;
-use pallet_inv4::util::derive_ips_account;
 
 pub mod mock;
 pub mod test;
@@ -26,20 +25,18 @@ impl MemorySnapshot {
 }
 
 pub(crate) fn assert_register(core: mock::CoreId) {
-    let account = derive_ips_account::<Test, CoreId, AccountId>(core, None);
+    let account = pallet_inv4::util::derive_core_account::<Test, CoreId, AccountId>(core);
 
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account);
 
     assert!(!RegisteredCore::<Test>::contains_key(core));
 
     assert_ok!(OcifStaking::register_core(
-        Origin::signed(account),
-        core,
-        CoreMetadata {
-            name: BoundedVec::default(),
-            description: BoundedVec::default(),
-            image: BoundedVec::default()
-        }
+        pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(core))
+            .into(),
+        vec![],
+        vec![],
+        vec![]
     ));
 
     let core_info = RegisteredCore::<Test>::get(core).unwrap();
@@ -62,11 +59,11 @@ pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
     let staking_value = available_for_staking.min(value);
 
     assert_ok!(OcifStaking::stake(
-        Origin::signed(staker),
+        RuntimeOrigin::signed(staker),
         core.clone(),
         value
     ));
-    System::assert_last_event(mock::Event::OcifStaking(Event::Staked {
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Staked {
         staker,
         core: core.clone(),
         amount: staking_value,
@@ -120,11 +117,11 @@ pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
     let remaining_staked = init_state.staker_info.latest_staked_value() - expected_unbond_amount;
 
     assert_ok!(OcifStaking::unstake(
-        Origin::signed(staker),
+        RuntimeOrigin::signed(staker),
         core.clone(),
         value
     ));
-    System::assert_last_event(mock::Event::OcifStaking(Event::Unstaked {
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Unstaked {
         staker,
         core: core.clone(),
         amount: expected_unbond_amount,
@@ -195,8 +192,10 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
     let (valid_info, remaining_info) = init_ledger.unbonding_info.partition(current_era);
     let expected_unbond_amount = valid_info.sum();
 
-    assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker),));
-    System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
+    assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+        staker
+    ),));
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
         staker,
         amount: expected_unbond_amount,
     }));
@@ -223,10 +222,12 @@ pub(crate) fn assert_unregister(core: CoreId) {
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
 
     assert_ok!(OcifStaking::unregister_core(
-        Origin::signed(account(core)),
-        core.clone()
+        pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(core))
+            .into()
     ));
-    System::assert_last_event(mock::Event::OcifStaking(Event::CoreUnregistered { core }));
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreUnregistered {
+        core,
+    }));
 
     let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
     assert_eq!(
@@ -257,7 +258,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
     let issuance_before_claim = <Test as Config>::Currency::total_issuance();
 
     assert_ok!(OcifStaking::staker_claim_rewards(
-        Origin::signed(claimer),
+        RuntimeOrigin::signed(claimer),
         core
     ));
 
@@ -269,7 +270,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
         calculated_reward,
     );
 
-    System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
         staker: claimer,
         core,
         era: claim_era,
@@ -303,11 +304,11 @@ pub(crate) fn assert_claim_core(core: CoreId, claim_era: EraIndex) {
         OcifStaking::core_stakers_split(&init_state.core_stake_info, &init_state.era_info);
 
     assert_ok!(OcifStaking::core_claim_rewards(
-        Origin::signed(account(core)),
+        RuntimeOrigin::signed(account(core)),
         core,
         claim_era,
     ));
-    System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
         core,
         destination_account: account(core),
         era: claim_era,

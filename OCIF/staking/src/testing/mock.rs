@@ -1,12 +1,15 @@
 use crate as pallet_ocif_staking;
+use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
 use frame_support::{
     construct_runtime, parameter_types,
-    traits::{ConstU128, ConstU32, Currency, OnFinalize, OnInitialize},
+    traits::{
+        fungibles::CreditOf, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
+    },
     weights::Weight,
     PalletId,
 };
-use pallet_inv4::util::derive_ips_account;
+use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
@@ -43,6 +46,8 @@ construct_runtime!(
         Balances: pallet_balances,
         Timestamp: pallet_timestamp,
         OcifStaking: pallet_ocif_staking,
+        INV4: pallet_inv4,
+        CoreAssets: orml_tokens,
     }
 );
 
@@ -123,6 +128,121 @@ pub type CoreId = u32;
 
 pub const THRESHOLD: u128 = 50;
 
+parameter_types! {
+    pub const MaxMetadata: u32 = 100;
+    pub const MaxCallers: u32 = 100;
+    pub const CoreSeedBalance: u32 = 1000000;
+    pub const CoreCreationFee: u128 = 1000000000000;
+    pub const GenesisHash: <Test as frame_system::Config>::Hash = H256([
+        212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
+        243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
+    ]);
+    pub const KSMAssetId: u32 = 9999;
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
+pub struct FeeCharger;
+
+impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
+    type Pre = (
+        // tip
+        Balance,
+        // who paid the fee
+        AccountId,
+        // imbalance resulting from withdrawing the fee
+        (),
+        // asset_id for the transaction payment
+        Option<u32>,
+    );
+
+    fn pre_dispatch(
+        fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        who: &AccountId,
+        _call: &RuntimeCall,
+        _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        _len: usize,
+    ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
+        Ok((
+            0u128,
+            *who,
+            (),
+            match fee_asset {
+                pallet_inv4::fee_handling::FeeAsset::TNKR => None,
+                pallet_inv4::fee_handling::FeeAsset::KSM => Some(1u32),
+            },
+        ))
+    }
+
+    fn post_dispatch(
+        _fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        _pre: Option<Self::Pre>,
+        _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        _post_info: &sp_runtime::traits::PostDispatchInfoOf<RuntimeCall>,
+        _len: usize,
+        _result: &sp_runtime::DispatchResult,
+    ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
+        Ok(())
+    }
+
+    fn handle_creation_fee(
+        _imbalance: pallet_inv4::fee_handling::FeeAssetNegativeImbalance<
+            <Balances as Currency<AccountId>>::NegativeImbalance,
+            CreditOf<AccountId, CoreAssets>,
+        >,
+    ) {
+    }
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+    fn contains(_: &AccountId) -> bool {
+        true
+    }
+}
+
+pub type Amount = i128;
+
+orml_traits::parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: u32| -> Balance {
+        ExistentialDeposit::get()
+    };
+}
+
+impl orml_tokens::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = u32;
+    type WeightInfo = ();
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = MaxLocks;
+    type DustRemovalWhitelist = DustRemovalWhitelist;
+    type MaxReserves = MaxCallers;
+    type ReserveIdentifier = [u8; 8];
+    type CurrencyHooks = ();
+}
+
+impl pallet_inv4::Config for Test {
+    type MaxMetadata = MaxMetadata;
+    type CoreId = u32;
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type RuntimeCall = RuntimeCall;
+    type MaxCallers = MaxCallers;
+    type MaxSubAssets = MaxCallers;
+    type CoreSeedBalance = CoreSeedBalance;
+    type AssetsProvider = CoreAssets;
+    type RuntimeOrigin = RuntimeOrigin;
+    type CoreCreationFee = CoreCreationFee;
+    type FeeCharger = FeeCharger;
+    type GenesisHash = GenesisHash;
+    type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
+
+    type Tokens = CoreAssets;
+    type KSMAssetId = KSMAssetId;
+    type KSMCoreCreationFee = CoreCreationFee;
+}
+
 impl pallet_ocif_staking::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
@@ -141,12 +261,13 @@ impl pallet_ocif_staking::Config for Test {
     type MaxImageUrlLength = ConstU32<60>;
     type RewardRatio = RewardRatio;
     type StakeThresholdForActiveCore = ConstU128<THRESHOLD>;
+    type WeightInfo = crate::weights::SubstrateWeight<Test>;
 }
 
 pub struct ExternalityBuilder;
 
 pub fn account(core: CoreId) -> AccountId {
-    derive_ips_account::<Test, CoreId, AccountId>(core, None)
+    pallet_inv4::util::derive_core_account::<Test, CoreId, AccountId>(core)
 }
 
 pub const A: CoreId = 0;

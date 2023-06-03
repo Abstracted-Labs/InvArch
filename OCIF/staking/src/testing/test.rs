@@ -114,7 +114,7 @@ fn new_era_is_ok() {
 
         let current_era = OcifStaking::current_era();
         assert_eq!(starting_era + 1, current_era);
-        System::assert_last_event(mock::Event::OcifStaking(Event::NewEra {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::NewEra {
             era: starting_era + 1,
         }));
 
@@ -203,7 +203,9 @@ fn register_is_ok() {
 
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
         assert_register(A);
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered { core: A }));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
+            core: A,
+        }));
 
         assert_eq!(
             RegisterDeposit::get(),
@@ -219,17 +221,17 @@ fn register_twice_with_same_account_fails() {
 
         assert_register(A);
 
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered { core: A }));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
+            core: A,
+        }));
 
         assert_noop!(
             OcifStaking::register_core(
-                Origin::signed(account(A)),
-                A,
-                CoreMetadata {
-                    name: BoundedVec::default(),
-                    description: BoundedVec::default(),
-                    image: BoundedVec::default()
-                }
+                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(A))
+                    .into(),
+                Vec::default(),
+                Vec::default(),
+                Vec::default()
             ),
             Error::<Test>::CoreAlreadyRegistered
         );
@@ -245,7 +247,7 @@ fn change_metadata() {
 
         assert_register(core_id);
 
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreRegistered {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
             core: core_id,
         }));
 
@@ -268,9 +270,13 @@ fn change_metadata() {
         };
 
         assert_ok!(OcifStaking::change_core_metadata(
-            Origin::signed(account(core_id)),
-            core_id,
-            new_metadata.clone()
+            pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
+                core_id
+            ))
+            .into(),
+            b"Test CORE".to_vec().try_into().unwrap(),
+            b"Description of the test CORE".to_vec().try_into().unwrap(),
+            b"https://test.core".to_vec().try_into().unwrap(),
         ));
 
         assert_eq!(
@@ -294,7 +300,10 @@ fn unregister_after_register_is_ok() {
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
 
         assert_noop!(
-            OcifStaking::unregister_core(Origin::signed(account(A)), A),
+            OcifStaking::unregister_core(
+                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(A))
+                    .into()
+            ),
             Error::<Test>::NotRegistered
         );
     })
@@ -314,11 +323,11 @@ fn unregister_stake_and_unstake_is_not_ok() {
         assert_unregister(A);
 
         assert_noop!(
-            OcifStaking::stake(Origin::signed(staker), A, 100),
+            OcifStaking::stake(RuntimeOrigin::signed(staker), A, 100),
             Error::<Test>::NotRegistered
         );
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(staker), A, 100),
+            OcifStaking::unstake(RuntimeOrigin::signed(staker), A, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -355,16 +364,16 @@ fn withdraw_from_unregistered_is_ok() {
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker_1), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_1), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker_2), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_2), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
             OcifStaking::core_claim_rewards(
-                Origin::signed(account(core_id)),
+                RuntimeOrigin::signed(account(core_id)),
                 core_id,
                 OcifStaking::current_era()
             ),
@@ -476,7 +485,7 @@ fn bond_and_stake_on_unregistered_core_fails() {
 
         let core_id = A;
         assert_noop!(
-            OcifStaking::stake(Origin::signed(staker_id), core_id, stake_value),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_id), core_id, stake_value),
             Error::<Test>::NotRegistered
         );
     })
@@ -493,7 +502,7 @@ fn bond_and_stake_insufficient_value() {
 
         assert_noop!(
             OcifStaking::stake(
-                Origin::signed(staker_id),
+                RuntimeOrigin::signed(staker_id),
                 core_id,
                 MINIMUM_STAKING_AMOUNT - 1
             ),
@@ -504,7 +513,7 @@ fn bond_and_stake_insufficient_value() {
         assert_stake(staker_id, &core_id, staker_free_balance);
 
         assert_noop!(
-            OcifStaking::stake(Origin::signed(staker_id), core_id, 1),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_id), core_id, 1),
             Error::<Test>::StakingNothing
         );
     })
@@ -524,7 +533,7 @@ fn bond_and_stake_too_many_stakers_per_core() {
 
         assert_noop!(
             OcifStaking::stake(
-                Origin::signed(account((1 + MAX_NUMBER_OF_STAKERS).into())),
+                RuntimeOrigin::signed(account((1 + MAX_NUMBER_OF_STAKERS).into())),
                 core_id,
                 100
             ),
@@ -549,7 +558,7 @@ fn bond_and_stake_too_many_era_stakes() {
         }
 
         assert_noop!(
-            OcifStaking::stake(Origin::signed(staker_id.into()), core_id, 100),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_id.into()), core_id, 100),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -645,7 +654,7 @@ fn unbond_and_unstake_with_zero_value_is_not_ok() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(account(B)), core_id, 0),
+            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 0),
             Error::<Test>::UnstakingNothing
         );
     })
@@ -658,7 +667,7 @@ fn unbond_and_unstake_on_not_registered_core_is_not_ok() {
 
         let core_id = A;
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(account(B)), core_id, 100),
+            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -691,7 +700,11 @@ fn unbond_and_unstake_too_many_unlocking_chunks_is_not_ok() {
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(staker), core_id.clone(), unstake_amount),
+            OcifStaking::unstake(
+                RuntimeOrigin::signed(staker),
+                core_id.clone(),
+                unstake_amount
+            ),
             Error::<Test>::TooManyUnlockingChunks,
         );
     })
@@ -706,7 +719,7 @@ fn unbond_and_unstake_on_not_staked_core_is_not_ok() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(account(B)), core_id, 10),
+            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 10),
             Error::<Test>::NoStakeAvailable,
         );
     })
@@ -728,7 +741,7 @@ fn unbond_and_unstake_too_many_era_stakes() {
         }
 
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(staker_id), core_id, 10),
+            OcifStaking::unstake(RuntimeOrigin::signed(staker_id), core_id, 10),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -756,27 +769,31 @@ fn withdraw_unbonded_is_ok() {
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(Origin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id)),
             Error::<Test>::NothingToWithdraw
         );
 
         advance_to_era(OcifStaking::current_era() + 1);
-        assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker_id),));
-        System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
+        assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+            staker_id
+        ),));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
             staker: staker_id,
             amount: first_unbond_value,
         }));
 
         advance_to_era(OcifStaking::current_era() + 1);
-        assert_ok!(OcifStaking::withdraw_unstaked(Origin::signed(staker_id),));
-        System::assert_last_event(mock::Event::OcifStaking(Event::Withdrawn {
+        assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+            staker_id
+        ),));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
             staker: staker_id,
             amount: second_unbond_value,
         }));
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(Origin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id)),
             Error::<Test>::NothingToWithdraw
         );
     })
@@ -816,7 +833,7 @@ fn withdraw_unbonded_no_value_is_not_ok() {
         initialize_first_block();
 
         assert_noop!(
-            OcifStaking::withdraw_unstaked(Origin::signed(account(B))),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(account(B))),
             Error::<Test>::NothingToWithdraw,
         );
     })
@@ -833,13 +850,13 @@ fn claim_not_staked_core() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_noop!(
-            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 1),
+            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 1),
             Error::<Test>::NoStakeAvailable
         );
     })
@@ -861,13 +878,13 @@ fn claim_not_registered_core() {
 
         assert_claim_staker(staker, core_id);
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
         assert_claim_core(core_id, 1);
         assert_noop!(
-            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 2),
+            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 2),
             Error::<Test>::IncorrectEra
         );
     })
@@ -892,12 +909,12 @@ fn claim_invalid_era() {
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
             OcifStaking::core_claim_rewards(
-                Origin::signed(account(core_id)),
+                RuntimeOrigin::signed(account(core_id)),
                 core_id,
                 OcifStaking::current_era()
             ),
@@ -921,7 +938,11 @@ fn claim_core_same_era_twice() {
 
         assert_claim_core(core_id, start_era);
         assert_noop!(
-            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, start_era),
+            OcifStaking::core_claim_rewards(
+                RuntimeOrigin::signed(account(core_id)),
+                core_id,
+                start_era
+            ),
             Error::<Test>::RewardAlreadyClaimed
         );
     })
@@ -964,12 +985,15 @@ fn claim_is_ok() {
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(first_staker), first_core_id.clone()),
+            OcifStaking::staker_claim_rewards(
+                RuntimeOrigin::signed(first_staker),
+                first_core_id.clone()
+            ),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
             OcifStaking::core_claim_rewards(
-                Origin::signed(account(first_core_id)),
+                RuntimeOrigin::signed(account(first_core_id)),
                 first_core_id,
                 current_era
             ),
@@ -1049,7 +1073,7 @@ fn claim_check_amount() {
                     core: 130
                 },
                 staked: 130,
-                active_stake: 0,
+                active_stake: 100,
                 locked: 130
             })
         );
@@ -1089,13 +1113,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for era 1 for the first core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(first_core_id)),
+            RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 1,
@@ -1104,13 +1128,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for era 1 for the second core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(second_core_id)),
+            RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 1,
@@ -1119,13 +1143,13 @@ fn claim_check_amount() {
 
         // Now let's try claiming rewards for era 2 for the first core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(first_core_id)),
+            RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             2
         ));
 
         // ...there should be 130 since it's 50% of the issue 260 and the second core shouldn't be active yet.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 2,
@@ -1134,13 +1158,13 @@ fn claim_check_amount() {
 
         // Now let's try claiming rewards for era 2 for the second core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(second_core_id)),
+            RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             2
         ));
 
         // ...there should be 0 since the current stake is 30, which is below the active threshold.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 2,
@@ -1196,13 +1220,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for era 4 for the first core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(first_core_id)),
+            RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             4
         ));
 
         // ...there should be 100 out of the 150, because the second core should be active now.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 4,
@@ -1211,13 +1235,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for era 4 for the second core...
         assert_ok!(OcifStaking::core_claim_rewards(
-            Origin::signed(account(second_core_id)),
+            RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             4
         ));
 
         // ...there should be 50 out of the 150, because the second core should be active now.
-        System::assert_last_event(mock::Event::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 4,
@@ -1259,12 +1283,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 1.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: first_core_id,
             era: 1,
@@ -1273,12 +1297,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 1.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
             core: second_core_id,
             era: 1,
@@ -1289,12 +1313,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 2.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: first_core_id,
             era: 2,
@@ -1303,12 +1327,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 2.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
             core: second_core_id,
             era: 2,
@@ -1319,12 +1343,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             first_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: first_core_id,
             era: 3,
@@ -1333,12 +1357,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: second_core_id,
             era: 3,
@@ -1347,12 +1371,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
             core: second_core_id,
             era: 3,
@@ -1363,12 +1387,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 150, because the second staker had 30 staked in era 4 and first staker had 20 in the second core.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: first_core_id,
             era: 4,
@@ -1377,12 +1401,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker),
             second_core_id,
         ));
 
         // ...there should be 20 out of the 150, because the second staker had 30 staked in era 4 and first staker had 100 in the first core.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: first_staker,
             core: second_core_id,
             era: 4,
@@ -1391,12 +1415,12 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            Origin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 150, because the first staker had 120 staked in era 4.
-        System::assert_last_event(mock::Event::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
             staker: second_staker,
             core: second_core_id,
             era: 4,
@@ -1438,7 +1462,7 @@ fn claim_after_unregister_is_ok() {
             assert_claim_staker(staker, core_id);
         }
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker), core_id.clone()),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id.clone()),
             Error::<Test>::NoStakeAvailable
         );
 
@@ -1446,7 +1470,7 @@ fn claim_after_unregister_is_ok() {
             if era >= full_unstake_era && era < restake_era {
                 assert_noop!(
                     OcifStaking::core_claim_rewards(
-                        Origin::signed(account(A)),
+                        RuntimeOrigin::signed(account(A)),
                         core_id.clone(),
                         era
                     ),
@@ -1531,7 +1555,7 @@ fn claim_core_with_zero_stake_periods_is_ok() {
         for era in first_full_unstake_era..restake_era {
             assert_noop!(
                 OcifStaking::core_claim_rewards(
-                    Origin::signed(account(core_id)),
+                    RuntimeOrigin::signed(account(core_id)),
                     core_id.clone(),
                     era
                 ),
@@ -1545,7 +1569,7 @@ fn claim_core_with_zero_stake_periods_is_ok() {
 
         assert_noop!(
             OcifStaking::core_claim_rewards(
-                Origin::signed(account(core_id)),
+                RuntimeOrigin::signed(account(core_id)),
                 core_id.clone(),
                 second_full_unstake_era
             ),
@@ -1899,9 +1923,9 @@ fn new_era_is_handled_with_halt_enabled() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
@@ -1910,8 +1934,11 @@ fn new_era_is_handled_with_halt_enabled() {
         assert!(System::block_number() > OcifStaking::next_era_starting_block());
         assert_eq!(OcifStaking::current_era(), 1);
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
+        assert_ok!(OcifStaking::halt_unhalt_pallet(
+            RuntimeOrigin::root(),
+            false
+        ));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -1932,9 +1959,9 @@ fn pallet_halt_is_ok() {
         assert_ok!(OcifStaking::ensure_not_halted());
         assert!(!Halted::<Test>::exists());
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
@@ -1943,64 +1970,72 @@ fn pallet_halt_is_ok() {
 
         assert_noop!(
             OcifStaking::register_core(
-                Origin::signed(account(core_id)),
-                core_id,
-                CoreMetadata {
-                    name: BoundedVec::default(),
-                    description: BoundedVec::default(),
-                    image: BoundedVec::default()
-                }
+                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
+                    core_id
+                ))
+                .into(),
+                Vec::default(),
+                Vec::default(),
+                Vec::default()
             ),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::unregister_core(Origin::signed(account(core_id)), core_id),
+            OcifStaking::unregister_core(
+                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
+                    core_id
+                ))
+                .into()
+            ),
             Error::<Test>::Halted
         );
 
         assert_noop!(
             OcifStaking::change_core_metadata(
-                Origin::signed(account(core_id)),
-                core_id,
-                CoreMetadata {
-                    name: BoundedVec::default(),
-                    description: BoundedVec::default(),
-                    image: BoundedVec::default()
-                }
+                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
+                    core_id
+                ))
+                .into(),
+                Vec::default(),
+                Vec::default(),
+                Vec::default()
             ),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::withdraw_unstaked(Origin::signed(staker_account)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_account)),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::stake(Origin::signed(staker_account), core_id, 100),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_account), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::unstake(Origin::signed(staker_account), core_id, 100),
+            OcifStaking::unstake(RuntimeOrigin::signed(staker_account), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::core_claim_rewards(Origin::signed(account(core_id)), core_id, 5),
+            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 5),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(Origin::signed(staker_account), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_account), core_id),
             Error::<Test>::Halted
         );
 
         assert_eq!(OcifStaking::on_initialize(3), Weight::zero());
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), false));
-        System::assert_last_event(mock::Event::OcifStaking(Event::HaltChanged {
+        assert_ok!(OcifStaking::halt_unhalt_pallet(
+            RuntimeOrigin::root(),
+            false
+        ));
+        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -2015,13 +2050,13 @@ fn halted_no_change() {
 
         assert_ok!(OcifStaking::ensure_not_halted());
         assert_noop!(
-            OcifStaking::halt_unhalt_pallet(Origin::root(), false),
+            OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), false),
             Error::<Test>::NoHaltChange
         );
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert_noop!(
-            OcifStaking::halt_unhalt_pallet(Origin::root(), true),
+            OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true),
             Error::<Test>::NoHaltChange
         );
     })
