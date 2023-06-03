@@ -86,26 +86,6 @@ where
                 )?),
             });
 
-            // match creation_fee_asset {
-            //     FeeAsset::TNKR => {
-            //         T::CreationFeeHandler::on_unbalanced(<T as Config>::Currency::withdraw(
-            //             &creator,
-            //             T::CoreCreationFee::get(),
-            //             WithdrawReasons::TRANSACTION_PAYMENT,
-            //             ExistenceRequirement::KeepAlive,
-            //         )?)
-            //     }
-
-            //     FeeAsset::KSM => {
-            //         T::KSMCreationFeeHandler::on_unbalanced(<T as Config>::Tokens::withdraw(
-            //             &creator,
-            //             T::KSMCoreCreationFee::get(),
-            //             WithdrawReasons::TRANSACTION_PAYMENT,
-            //             ExistenceRequirement::KeepAlive,
-            //         )?)
-            //     }
-            // }
-
             // Update core storage
             CoreStorage::<T>::insert(current_id, info);
             CoreByAccount::<T>::insert(core_account.clone(), current_id);

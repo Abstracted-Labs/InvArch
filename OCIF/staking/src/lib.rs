@@ -81,8 +81,8 @@ use primitives::*;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-//#[cfg(test)]
-//mod testing;
+#[cfg(test)]
+mod testing;
 pub mod weights;
 
 pub use weights::WeightInfo;

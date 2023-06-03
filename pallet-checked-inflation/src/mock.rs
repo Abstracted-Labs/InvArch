@@ -1,10 +1,13 @@
 use super::*;
 use crate::inflation::InflationMethod;
 use core::convert::TryFrom;
-use frame_support::traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced};
+use frame_support::{
+    parameter_types,
+    traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced},
+};
 use pallet_balances::AccountData;
 use sp_core::H256;
-use sp_runtime::{parameter_types, testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -32,16 +35,16 @@ frame_support::construct_runtime!(
 );
 
 impl frame_system::Config for Test {
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
     type BlockNumber = BlockNumber;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
     type BlockWeights = ();
     type BlockLength = ();
@@ -62,7 +65,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = ConstU32<50>;
     /// The type for recording an account's balance.
     type Balance = Balance;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
     type AccountStore = System;
@@ -88,7 +91,7 @@ pub const ERAS_PER_YEAR: u32 = 365;
 impl pallet::Config for Test {
     type BlocksPerEra = ConstU64<BLOCKS_PER_ERA>;
     type Currency = Balances;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ErasPerYear = ConstU32<ERAS_PER_YEAR>;
     type Inflation = Inflation;
     type DealWithInflation = DealWithInflation;

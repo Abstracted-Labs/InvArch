@@ -30,7 +30,7 @@ pub const MAX_SIZE: u32 = 4 * 1024 * 1024;
 pub type BoundedCallBytes = BoundedVec<u8, ConstU32<MAX_SIZE>>;
 
 /// Details of a multisig operation
-#[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+#[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo, PartialEq, Eq)]
 pub struct MultisigOperation<AccountId, TallyOf, Call, Metadata> {
     pub tally: TallyOf,
     pub original_caller: AccountId,
@@ -121,8 +121,6 @@ where
             .ok_or(Error::<T>::CoreNotFound)?;
 
         let total_issuance: BalanceOf<T> = T::AssetsProvider::total_issuance(core_id);
-
-        //let opaque_call: OpaqueCall<T> = WrapperKeepOpaque::from_encoded(call.encode());
 
         // Compute the `call` hash
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call);

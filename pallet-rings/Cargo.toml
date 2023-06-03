@@ -38,6 +38,14 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.36", default-features = false, optional = true }
 
+[dev-dependencies]
+orml-traits2 = { package = "orml-traits", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "4f5a3f34d8cbd98b7bc2e295219a3e7b99b9ecaf" }
+orml-traits = { package = "orml-traits", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
+orml-tokens2 = { package = "orml-tokens", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "4f5a3f34d8cbd98b7bc2e295219a3e7b99b9ecaf" }
+orml-tokens = { package = "orml-tokens", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
+orml-asset-registry = { package = "orml-asset-registry", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.36" }
+
 [features]
 default = ["std"]
 std = [
@@ -58,7 +66,13 @@ std = [
 	"sp-staking/std",
   "pallet-inv4/std",
   "pallet-xcm/std",
-  "xcm/std"
+  "xcm/std",
+  "orml-traits2/std",
+  "orml-traits/std",
+  "orml-tokens/std",
+  "orml-tokens2/std",
+  "orml-asset-registry/std",
+  "xcm-builder/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

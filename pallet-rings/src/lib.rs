@@ -5,6 +5,10 @@ use sp_std::convert::TryInto;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+
+#[cfg(test)]
+mod tests;
+
 mod traits;
 pub mod weights;
 

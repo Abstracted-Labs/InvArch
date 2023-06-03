@@ -33,6 +33,10 @@ pallet-inv4 = { path = "../../INV4/pallet-inv4", default-features = false }
 
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', branch = "polkadot-v0.9.36", default-features = false, optional = true }
 
+[dev-dependencies]
+orml-traits = { package = "orml-traits", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
+orml-tokens = { package = "orml-tokens", git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.36" }
+
 [features]
 default = ["std"]
 std = [
@@ -51,6 +55,8 @@ std = [
 	"pallet-session/std",
 	"pallet-timestamp/std",
 	"sp-staking/std",
+  "orml-traits/std",
+  "orml-tokens/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
