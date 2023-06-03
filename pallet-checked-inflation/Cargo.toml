@@ -27,6 +27,8 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-staking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
+[dev-dependencies]
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
 [features]
 default = ["std"]
@@ -44,5 +46,6 @@ std = [
 	"frame-system/std",
 	"pallet-session/std",
 	"sp-staking/std",
+  "pallet-balances/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

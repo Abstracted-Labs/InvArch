@@ -138,7 +138,10 @@ fn halt() {
 
         assert_eq!(Balances::total_issuance(), GENESIS_ISSUANCE + (per_era * 2));
 
-        assert_ok!(CheckedInflation::halt_unhalt_pallet(Origin::root(), true));
+        assert_ok!(CheckedInflation::halt_unhalt_pallet(
+            RuntimeOrigin::root(),
+            true
+        ));
 
         run_to_next_era();
 
@@ -164,7 +167,10 @@ fn halt() {
 
         assert_eq!(Balances::total_issuance(), GENESIS_ISSUANCE + (per_era * 2));
 
-        assert_ok!(CheckedInflation::halt_unhalt_pallet(Origin::root(), false));
+        assert_ok!(CheckedInflation::halt_unhalt_pallet(
+            RuntimeOrigin::root(),
+            false
+        ));
 
         run_to_next_era();
 
