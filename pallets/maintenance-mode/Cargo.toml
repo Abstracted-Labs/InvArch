@@ -1,5 +1,9 @@
 [package]
 name = "pallet-maintenance-mode"
+# SBP-M3 review: while it is not your pallet
+# You should fetch it from original repository.
+# In case you have modified it,
+# Some actions may need to be taken based on original pallet's License.
 authors = [ "PureStake" ]
 description = "Puts a FRAME-based runtime into maintenance mode where restricted interactions are allowed."
 edition = "2021"
@@ -9,6 +13,7 @@ version = "0.1.0"
 log = "0.4"
 
 # Substrate
+# SBP-M3 review: bump Substrate/Cumulus/Polkadot version
 frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 parity-scale-codec = { version = "3.0.0", default-features = false }
