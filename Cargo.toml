@@ -9,6 +9,17 @@ members = [
 [profile.release]
 panic = 'unwind'
 
-[patch.'https://github.com/paritytech/polkadot']
-xcm = { git = "https://github.com/paritytech//polkadot", branch = "release-v0.9.36" }
-xcm-executor = { git = "https://github.com/paritytech//polkadot", branch = "release-v0.9.36" }
+[patch.'https://github.com/arrudagates/open-runtime-module-library']
+orml-traits2 = { package = "orml-traits", git = "https://github.com/arrudagates//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+
+[patch.'https://github.com/open-web3-stack/open-runtime-module-library']
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-xcm = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-vesting = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-asset-registry = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-xtokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }

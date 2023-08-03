@@ -334,24 +334,12 @@ pub fn run() -> Result<()> {
             let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
-                let hwbench = if !cli.no_hardware_benchmarks {
-                    config.database.path().map(|database_path| {
-                        let _ = std::fs::create_dir_all(database_path);
-                        sc_sysinfo::gather_hwbench(Some(database_path))
-                    })
-                } else {
-                    None
-                };
-
                 let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
                     .map(|e| e.para_id)
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
                 if is_solo_dev {
-                    return crate::service::start_solo_dev(
-                        config,
-                    )
-                    .map_err(Into::into);
+                    return crate::service::start_solo_dev(config).map_err(Into::into);
                 }
 
                 let polkadot_cli = RelayChainCli::new(
@@ -364,7 +352,9 @@ pub fn run() -> Result<()> {
                 let id = ParaId::from(para_id);
 
                 let parachain_account =
-                    AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+                    AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
+                        &id,
+                    );
 
                 let state_version =
                     RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
@@ -389,16 +379,10 @@ pub fn run() -> Result<()> {
                     }
                 );
 
-                crate::service::start_parachain_node(
-                    config,
-                    polkadot_config,
-                    collator_options,
-                    id,
-                    hwbench,
-                ) // TODO
-                .await
-                .map(|r| r.0)
-                .map_err(Into::into)
+                crate::service::start_parachain_node(config, polkadot_config, collator_options, id)
+                    .await
+                    .map(|r| r.0)
+                    .map_err(Into::into)
             })
         }
     }
@@ -409,12 +393,8 @@ impl DefaultConfigurationValues for RelayChainCli {
         30334
     }
 
-    fn rpc_ws_listen_port() -> u16 {
+    fn rpc_listen_port() -> u16 {
         9945
-    }
-
-    fn rpc_http_listen_port() -> u16 {
-        9934
     }
 
     fn prometheus_listen_port() -> u16 {
@@ -446,16 +426,8 @@ impl CliConfiguration<Self> for RelayChainCli {
             .or_else(|| self.base_path.clone().map(Into::into)))
     }
 
-    fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-        self.base.base.rpc_http(default_listen_port)
-    }
-
-    fn rpc_ipc(&self) -> Result<Option<String>> {
-        self.base.base.rpc_ipc()
-    }
-
-    fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-        self.base.base.rpc_ws(default_listen_port)
+    fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
+        self.base.base.rpc_addr(default_listen_port)
     }
 
     fn prometheus_config(
@@ -503,8 +475,8 @@ impl CliConfiguration<Self> for RelayChainCli {
         self.base.base.rpc_methods()
     }
 
-    fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-        self.base.base.rpc_ws_max_connections()
+    fn rpc_max_connections(&self) -> Result<u32> {
+        self.base.base.rpc_max_connections()
     }
 
     fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {

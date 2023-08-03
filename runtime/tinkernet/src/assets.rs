@@ -31,6 +31,11 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
     ) -> Result<Self::Success, RuntimeOrigin> {
         EnsureRoot::try_origin(origin)
     }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin(_asset_id: &Option<u32>) -> Result<RuntimeOrigin, ()> {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, TypeInfo, Encode, Decode, PartialEq, Eq, Clone)]

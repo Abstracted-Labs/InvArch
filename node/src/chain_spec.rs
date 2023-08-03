@@ -278,7 +278,7 @@ pub fn local_testnet_config() -> ChainSpec {
         None,
         // Extensions
         Extensions {
-            relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+            relay_chain: "kusama-local".into(), // You MUST set this to the correct network!
             para_id: 1000,
         },
     )

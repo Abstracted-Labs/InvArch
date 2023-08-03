@@ -7,8 +7,8 @@ use crate::{
 use codec::{Decode, Encode};
 use frame_support::traits::{
     fungible::Inspect as FungibleInspect,
-    fungibles::{Balanced, CreditOf},
-    tokens::{BalanceConversion, WithdrawConsequence},
+    fungibles::{Balanced, Credit},
+    tokens::{Fortitude, Precision, Preservation, WithdrawConsequence},
     Contains, OnUnbalanced,
 };
 use orml_tokens::CurrencyAdapter;
@@ -43,15 +43,9 @@ impl pallet_asset_tx_payment::Config for Runtime {
 }
 
 pub struct TnkrToKsm;
-impl BalanceConversion<Balance, AssetId, Balance> for TnkrToKsm {
-    type Error = ();
-
-    fn to_asset_balance(balance: Balance, asset_id: AssetId) -> Result<Balance, Self::Error> {
-        if asset_id == 1u32 {
-            Ok(balance.saturating_div(20u128))
-        } else {
-            Err(())
-        }
+impl TnkrToKsm {
+    pub fn to_asset_balance(balance: Balance) -> Balance {
+        balance.saturating_div(20u128)
     }
 }
 
@@ -59,7 +53,7 @@ pub struct FilteredTransactionCharger;
 impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
     type AssetId = AssetId;
     type Balance = Balance;
-    type LiquidityInfo = CreditOf<AccountId, Tokens>;
+    type LiquidityInfo = Credit<AccountId, Tokens>;
 
     fn withdraw_fee(
         who: &AccountId,
@@ -68,8 +62,7 @@ impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
         asset_id: AssetId,
         fee: Balance,
         _tip: Balance,
-    ) -> Result<CreditOf<AccountId, Tokens>, frame_support::unsigned::TransactionValidityError>
-    {
+    ) -> Result<Credit<AccountId, Tokens>, frame_support::unsigned::TransactionValidityError> {
         if KSMEnabledPallets::contains(call) && asset_id == 1u32 {
             let min_converted_fee = if fee.is_zero() {
                 Zero::zero()
@@ -77,9 +70,7 @@ impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
                 One::one()
             };
 
-            let fee = TnkrToKsm::to_asset_balance(fee, asset_id)
-                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?
-                .max(min_converted_fee);
+            let fee = TnkrToKsm::to_asset_balance(fee).max(min_converted_fee);
 
             let can_withdraw = CurrencyAdapter::<Runtime, RelayAssetId>::can_withdraw(who, fee);
 
@@ -87,8 +78,15 @@ impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
                 return Err(InvalidTransaction::Payment.into());
             }
 
-            <Tokens as Balanced<AccountId>>::withdraw(asset_id, who, fee)
-                .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
+            <Tokens as Balanced<AccountId>>::withdraw(
+                asset_id,
+                who,
+                fee,
+                Precision::Exact,
+                Preservation::Expendable,
+                Fortitude::Force,
+            )
+            .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))
         } else {
             Err(TransactionValidityError::from(InvalidTransaction::Payment))
         }
@@ -100,17 +98,15 @@ impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
         _post_info: &PostDispatchInfoOf<RuntimeCall>,
         corrected_fee: Balance,
         _tip: Balance,
-        paid: CreditOf<AccountId, Tokens>,
-    ) -> Result<(), TransactionValidityError> {
+        paid: Credit<AccountId, Tokens>,
+    ) -> Result<(u128, u128), TransactionValidityError> {
         let min_converted_fee = if corrected_fee.is_zero() {
             Zero::zero()
         } else {
             One::one()
         };
 
-        let corrected_fee = TnkrToKsm::to_asset_balance(corrected_fee, paid.asset())
-            .map_err(|_| TransactionValidityError::from(InvalidTransaction::Payment))?
-            .max(min_converted_fee);
+        let corrected_fee = TnkrToKsm::to_asset_balance(corrected_fee).max(min_converted_fee);
 
         let (final_fee, refund) = paid.split(corrected_fee);
 
@@ -118,13 +114,13 @@ impl OnChargeAssetTransaction<Runtime> for FilteredTransactionCharger {
 
         DealWithKSMFees::on_unbalanced(final_fee);
 
-        Ok(())
+        Ok((Zero::zero(), Zero::zero()))
     }
 }
 
 pub struct DealWithKSMFees;
-impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithKSMFees {
-    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = CreditOf<AccountId, Tokens>>) {
+impl OnUnbalanced<Credit<AccountId, Tokens>> for DealWithKSMFees {
+    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = Credit<AccountId, Tokens>>) {
         if let Some(mut fees) = fees_then_tips.next() {
             if let Some(tips) = fees_then_tips.next() {
                 // Merge with fee, for now we send everything to the treasury
@@ -135,7 +131,7 @@ impl OnUnbalanced<CreditOf<AccountId, Tokens>> for DealWithKSMFees {
         }
     }
 
-    fn on_unbalanced(amount: CreditOf<AccountId, Tokens>) {
+    fn on_unbalanced(amount: Credit<AccountId, Tokens>) {
         let total: u128 = 100u128;
         let amount1 = amount.peek().saturating_mul(50u128) / total;
         let (to_collators, to_treasury) = amount.split(amount1);

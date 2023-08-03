@@ -27,7 +27,7 @@ use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
-    pallet_prelude::EnsureOrigin,
+    pallet_prelude::{ConstU32, EnsureOrigin},
     weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 };
 pub use frame_support::{
@@ -35,9 +35,8 @@ pub use frame_support::{
     match_types,
     parameter_types,
     traits::{
-        tokens::BalanceConversion, AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly,
-        Everything, FindAuthor, Get, Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced,
-        Randomness, StorageInfo,
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Get,
+        Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
@@ -231,7 +230,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
+    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
 
 /// The version information used to identify this runtime when compiled natively.
@@ -420,8 +419,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = (CollatorSelection,);
 }
 
@@ -442,6 +439,11 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -588,9 +590,9 @@ impl pallet_collator_selection::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
-}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
 
 impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -661,13 +663,11 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureInvarchAccount {
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn successful_origin() -> RuntimeOrigin {
-        use codec::Decode;
-
+    fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
         let zero_account_id =
             AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
                 .expect("infinite length input; no invalid inputs for type; qed");
-        RuntimeOrigin::from(RawOrigin::Signed(zero_account_id))
+        Ok(RuntimeOrigin::from(RawOrigin::Signed(zero_account_id)))
     }
 }
 
@@ -798,7 +798,7 @@ construct_runtime_modified!(
         AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
-        Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,
+        Authorship: pallet_authorship::{Pallet, Storage } = 20,
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
         Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
@@ -811,7 +811,6 @@ construct_runtime_modified!(
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
         // FRAME
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 40,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
@@ -884,6 +883,14 @@ impl_runtime_apis! {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
         }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+                  Runtime::metadata_at_version(version)
+            }
+
+            fn metadata_versions() -> sp_std::vec::Vec<u32> {
+                  Runtime::metadata_versions()
+            }
     }
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -951,9 +958,7 @@ impl_runtime_apis! {
             match crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id {
                 Some(1u32) => {
                     let mut tp = TransactionPayment::query_info(uxt, len);
-                    if let Ok(fee) = TnkrToKsm::to_asset_balance(tp.partial_fee, 1u32) {
-                        tp.partial_fee = fee
-                    }
+                    tp.partial_fee = TnkrToKsm::to_asset_balance(tp.partial_fee);
                     tp
                 }
                 None | Some(_) => TransactionPayment::query_info(uxt, len),
@@ -969,32 +974,27 @@ impl_runtime_apis! {
                     Some(1u32) => {
                         let tp = TransactionPayment::query_fee_details(uxt, len);
                         if let Some(ref inclusion) = tp.inclusion_fee {
-                            if let (
-                                Ok(base_fee),
-                                Ok(len_fee),
-                                Ok(adjusted_weight_fee)
-                            ) = (
-                                TnkrToKsm::to_asset_balance(inclusion.base_fee, 1u32),
-                                TnkrToKsm::to_asset_balance(inclusion.len_fee, 1u32),
-                                TnkrToKsm::to_asset_balance(inclusion.adjusted_weight_fee, 1u32)
-                            ) {
-
                                return FeeDetails {
                                     inclusion_fee: Some(InclusionFee {
-                                        base_fee,
-                                        len_fee,
-                                        adjusted_weight_fee,
+                                        base_fee: TnkrToKsm::to_asset_balance(inclusion.base_fee),
+                                        len_fee: TnkrToKsm::to_asset_balance(inclusion.len_fee),
+                                        adjusted_weight_fee: TnkrToKsm::to_asset_balance(inclusion.adjusted_weight_fee),
                                     }),
                                     tip: tp.tip,
                                 };
-
-                            }
                         }
                         tp
                     }
                     None | Some(_) => TransactionPayment::query_fee_details(uxt, len),
                 }
         }
+
+        fn query_weight_to_fee(weight: Weight) -> Balance {
+                  TransactionPayment::weight_to_fee(weight)
+            }
+            fn query_length_to_fee(length: u32) -> Balance {
+                  TransactionPayment::length_to_fee(length)
+            }
     }
 
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {

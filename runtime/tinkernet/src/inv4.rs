@@ -9,7 +9,7 @@ use crate::{
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
-    traits::{fungibles::CreditOf, Contains, Currency, OnUnbalanced},
+    traits::{fungibles::Credit, Contains, Currency, OnUnbalanced},
 };
 use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
@@ -107,7 +107,7 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            CreditOf<AccountId, Tokens>,
+            Credit<AccountId, Tokens>,
         >,
     ) {
         match imbalance {

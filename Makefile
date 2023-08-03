@@ -107,6 +107,9 @@ zombienet-run-tinkernet+basilisk: | $(polkadot_target) $(basilisk_target)
 zombienet-run-tinkernet+tinkernet: | $(polkadot_target)
 	zombienet spawn zombienet/rococo-and-tinkernet+tinkernet.toml
 
+zombienet-run-kusama+tinkernet:
+	zombienet spawn zombienet/kusama-and-tinkernet.toml
+
 .PHONY: setup-testing purge-testing download-relay generate-relay-raw-chainspec build generate-both copy-collator-to-testing
 
 generate-genesis-wasm:
@@ -164,9 +167,9 @@ setup-testing: | purge-testing download-relay generate-relay-raw-chainspec build
 	$(info Terminal 3: make run-parachain-collator)
 
 run-solo-alice:
-	./target/release/invarch-collator --chain solo-dev --alice --tmp --rpc-cors=all
+	./target/release/invarch-collator --chain solo-dev --alice --tmp --listen-addr /ip4/0.0.0.0/tcp/53102/ws --rpc-cors=all --discover-local --collator --node-key c12b6d18942f5ee8528c8e2baf4e147b5c5c18710926ea492d09cbd9f6c9f82a
 
 run-solo-bob:
-	./target/release/invarch-collator --chain solo-dev --bob --tmp --port 30334 --rpc-cors=all
+	./target/release/invarch-collator --chain solo-dev --bob --tmp --listen-addr /ip4/0.0.0.0/tcp/54102/ws --rpc-cors=all --discover-local --collator --bootnodes /ip4/127.0.0.1/tcp/53102/ws/p2p/12D3KooWBmAwcd4PJNJvfV89HwE48nwkRmAgo8Vy3uQEyNNHBox2
 
 run-solo: ; printf "run-solo-alice\nrun-solo-bob" | parallel -u make
