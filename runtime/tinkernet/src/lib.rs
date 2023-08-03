@@ -25,6 +25,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_primitives_core::DmpMessageHandler;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
     pallet_prelude::{ConstU32, EnsureOrigin},
@@ -336,6 +337,16 @@ impl frame_support::traits::OffchainWorker<BlockNumber> for MaintenanceHooks {
     }
 }
 
+pub struct NoHandler;
+impl DmpMessageHandler for NoHandler {
+    fn handle_dmp_messages(
+        _iter: impl Iterator<Item = (cumulus_primitives_core::relay_chain::BlockNumber, Vec<u8>)>,
+        _max_weight: Weight,
+    ) -> Weight {
+        Weight::zero()
+    }
+}
+
 impl pallet_maintenance_mode::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type NormalCallFilter = BaseFilter;
@@ -345,6 +356,10 @@ impl pallet_maintenance_mode::Config for Runtime {
     // operation
     type NormalExecutiveHooks = AllPalletsWithSystem;
     type MaintenanceExecutiveHooks = MaintenanceHooks;
+
+    type XcmExecutionManager = ();
+    type NormalDmpHandler = NoHandler;
+    type MaintenanceDmpHandler = NoHandler;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -847,6 +862,7 @@ mod benches {
         [pallet_inv4, INV4]
         [pallet_ocif_staking, OcifStaking]
         [pallet_rings, Rings]
+        [pallet_checked_inflation, CheckedInflation]
     );
 }
 

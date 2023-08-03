@@ -57,7 +57,7 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const RelayNetwork: NetworkId = NetworkId::Rococo;
+    pub const RelayNetwork: NetworkId = NetworkId::Kusama;
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
