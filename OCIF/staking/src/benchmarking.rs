@@ -118,7 +118,7 @@ benchmarks! {
         let description = vec![u8::MAX; d as usize];
         let image = vec![u8::MAX; i as usize];
 
-        <T as Config>::Currency::make_free_balance_be(&derive_account::<T>(0u32.into()), T::RegisterDeposit::get());
+        <T as Config>::Currency::make_free_balance_be(&derive_account::<T>(0u32.into()), T::RegisterDeposit::get() + T::RegisterDeposit::get());
     }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), name, description, image)
     verify {
         assert_last_event::<T>(Event::<T>::CoreRegistered {

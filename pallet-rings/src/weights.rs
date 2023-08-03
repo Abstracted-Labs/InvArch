@@ -71,10 +71,10 @@ pub trait WeightInfo {
 		      // Proof Size summary in bytes:
 		      //  Measured:  `253`
 		      //  Estimated: `4084`
-		      // Minimum execution time: 34_000_000 picoseconds.
-		      Weight::from_parts(36_736_979, 4084)
+		      // Minimum execution time: 35_000_000 picoseconds.
+		      Weight::from_parts(36_761_484, 4084)
 			        // Standard Error: 1
-			        .saturating_add(Weight::from_parts(1_874, 0).saturating_mul(c.into()))
+			        .saturating_add(Weight::from_parts(1_939, 0).saturating_mul(c.into()))
 			        .saturating_add(T::DbWeight::get().reads(7_u64))
 			        .saturating_add(T::DbWeight::get().writes(2_u64))
 	        }
@@ -96,8 +96,8 @@ pub trait WeightInfo {
 		      // Proof Size summary in bytes:
 		      //  Measured:  `253`
 		      //  Estimated: `4084`
-		      // Minimum execution time: 35_000_000 picoseconds.
-		      Weight::from_parts(36_000_000, 4084)
+		      // Minimum execution time: 36_000_000 picoseconds.
+		      Weight::from_parts(37_000_000, 4084)
 			        .saturating_add(T::DbWeight::get().reads(7_u64))
 			        .saturating_add(T::DbWeight::get().writes(2_u64))
 	        }
@@ -119,8 +119,8 @@ pub trait WeightInfo {
 		      // Proof Size summary in bytes:
 		      //  Measured:  `253`
 		      //  Estimated: `4084`
-		      // Minimum execution time: 42_000_000 picoseconds.
-		      Weight::from_parts(43_000_000, 4084)
+		      // Minimum execution time: 43_000_000 picoseconds.
+		      Weight::from_parts(44_000_000, 4084)
 			        .saturating_add(T::DbWeight::get().reads(7_u64))
 			        .saturating_add(T::DbWeight::get().writes(2_u64))
 	        }
@@ -157,10 +157,10 @@ pub trait WeightInfo {
 		  // Proof Size summary in bytes:
 		  //  Measured:  `253`
 		  //  Estimated: `4084`
-		  // Minimum execution time: 34_000_000 picoseconds.
-		  Weight::from_parts(36_736_979, 4084)
+		  // Minimum execution time: 35_000_000 picoseconds.
+		  Weight::from_parts(36_761_484, 4084)
 			    // Standard Error: 1
-			    .saturating_add(Weight::from_parts(1_874, 0).saturating_mul(c.into()))
+			    .saturating_add(Weight::from_parts(1_939, 0).saturating_mul(c.into()))
 			    .saturating_add(RocksDbWeight::get().reads(7_u64))
 			    .saturating_add(RocksDbWeight::get().writes(2_u64))
 	    }
@@ -182,8 +182,8 @@ pub trait WeightInfo {
 		  // Proof Size summary in bytes:
 		  //  Measured:  `253`
 		  //  Estimated: `4084`
-		  // Minimum execution time: 35_000_000 picoseconds.
-		  Weight::from_parts(36_000_000, 4084)
+		  // Minimum execution time: 36_000_000 picoseconds.
+		  Weight::from_parts(37_000_000, 4084)
 			    .saturating_add(RocksDbWeight::get().reads(7_u64))
 			    .saturating_add(RocksDbWeight::get().writes(2_u64))
 	    }
@@ -205,8 +205,8 @@ pub trait WeightInfo {
 		  // Proof Size summary in bytes:
 		  //  Measured:  `253`
 		  //  Estimated: `4084`
-		  // Minimum execution time: 42_000_000 picoseconds.
-		  Weight::from_parts(43_000_000, 4084)
+		  // Minimum execution time: 43_000_000 picoseconds.
+		  Weight::from_parts(44_000_000, 4084)
 			    .saturating_add(RocksDbWeight::get().reads(7_u64))
 			    .saturating_add(RocksDbWeight::get().writes(2_u64))
 	    }
