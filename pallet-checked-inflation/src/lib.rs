@@ -6,6 +6,8 @@ use sp_std::convert::TryInto;
 
 mod inflation;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 pub(crate) mod mock;
 
@@ -14,6 +16,10 @@ mod test;
 
 pub use inflation::*;
 pub use pallet::*;
+
+pub mod weights;
+
+pub use weights::WeightInfo;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -56,6 +62,8 @@ pub mod pallet {
         type Inflation: Get<InflationMethod<BalanceOf<Self>>>;
 
         type DealWithInflation: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+        type WeightInfo: WeightInfo;
     }
 
     /// The current era. Starts from 1 and is reset every year.
@@ -250,7 +258,9 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::set_first_year_supply()
+        )]
         pub fn set_first_year_supply(root: OriginFor<T>) -> DispatchResult {
             ensure_root(root)?;
 
@@ -262,7 +272,9 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(100_000_000)]
+        #[pallet::weight(
+            <T as Config>::WeightInfo::halt_unhalt_pallet()
+        )]
         pub fn halt_unhalt_pallet(root: OriginFor<T>, halt: bool) -> DispatchResult {
             ensure_root(root)?;
 
