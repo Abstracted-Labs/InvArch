@@ -24,7 +24,7 @@ pub mod pallet {
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
     use xcm::{
-        latest::{prelude::*, MultiAsset, WildMultiAsset},
+        latest::{prelude::*, MultiAsset, Weight, WildMultiAsset},
         DoubleEncoded,
     };
 
@@ -140,7 +140,7 @@ pub mod pallet {
         pub fn send_call(
             origin: OriginFor<T>,
             destination: <T as pallet::Config>::Chains,
-            weight: u64,
+            weight: Weight,
             fee_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             fee: u128,
             call: Vec<u8>,
@@ -183,14 +183,13 @@ pub mod pallet {
                     weight_limit: WeightLimit::Unlimited,
                 },
                 Instruction::Transact {
-                    origin_type: OriginKind::Native,
+                    origin_kind: OriginKind::Native,
                     require_weight_at_most: weight,
                     call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
                 },
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
                     assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                    max_assets: 1,
                     beneficiary,
                 },
             ]);
@@ -245,7 +244,7 @@ pub mod pallet {
             let beneficiary: MultiLocation = MultiLocation {
                 parents: 0,
                 interior: Junctions::X1(Junction::AccountId32 {
-                    network: NetworkId::Any,
+                    network: None,
                     id: to.clone().into(),
                 }),
             };
@@ -280,7 +279,6 @@ pub mod pallet {
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
                     assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                    max_assets: 1,
                     beneficiary: core_multilocation,
                 },
             ]);
@@ -333,7 +331,7 @@ pub mod pallet {
             let asset_location = asset.get_asset_location();
 
             let inverted_destination = dest
-                .inverted(&from_chain_location)
+                .reanchored(&from_chain_location, *from_chain_location.interior())
                 .map(|inverted| {
                     if let (ml, Some(Junction::OnlyChild) | None) =
                         inverted.clone().split_last_interior()
@@ -357,7 +355,7 @@ pub mod pallet {
 
             let reanchored_multiasset = multiasset
                 .clone()
-                .reanchored(&dest, &from_chain_location)
+                .reanchored(&dest, *from_chain_location.interior())
                 .map(|mut reanchored| {
                     if let AssetId::Concrete(ref mut m) = reanchored.id {
                         if let (ml, Some(Junction::OnlyChild) | None) =
@@ -374,7 +372,7 @@ pub mod pallet {
                 parents: 0,
                 interior: if let Some(to_inner) = to.clone() {
                     Junctions::X1(Junction::AccountId32 {
-                        network: NetworkId::Any,
+                        network: None,
                         id: to_inner.into(),
                     })
                 } else {
@@ -412,13 +410,11 @@ pub mod pallet {
                             },
                             Instruction::DepositAsset {
                                 assets: All.into(),
-                                max_assets: 1,
                                 beneficiary: beneficiary.clone(),
                             },
                             Instruction::RefundSurplus,
                             Instruction::DepositAsset {
                                 assets: All.into(),
-                                max_assets: 1,
                                 beneficiary,
                             },
                         ]),
@@ -426,7 +422,6 @@ pub mod pallet {
                     Instruction::RefundSurplus,
                     Instruction::DepositAsset {
                         assets: All.into(),
-                        max_assets: 1,
                         beneficiary: core_multilocation,
                     },
                 ])
@@ -449,7 +444,6 @@ pub mod pallet {
                             },
                             Instruction::DepositAsset {
                                 assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                                max_assets: 1,
                                 beneficiary,
                             },
                         ]),
@@ -458,7 +452,6 @@ pub mod pallet {
                     Instruction::RefundSurplus,
                     Instruction::DepositAsset {
                         assets: MultiAssetFilter::Wild(WildMultiAsset::All),
-                        max_assets: 1,
                         beneficiary: core_multilocation,
                     },
                 ])

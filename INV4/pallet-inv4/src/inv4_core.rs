@@ -8,6 +8,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         fungibles::{Balanced, Mutate},
+        tokens::{Fortitude, Precision, Preservation},
         Currency, ExistenceRequirement, WithdrawReasons,
     },
 };
@@ -83,6 +84,9 @@ where
                     T::KSMAssetId::get(),
                     &creator,
                     T::KSMCoreCreationFee::get(),
+                    Precision::Exact,
+                    Preservation::Protect,
+                    Fortitude::Force,
                 )?),
             });
 

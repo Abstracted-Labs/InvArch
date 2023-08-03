@@ -142,8 +142,7 @@ pub mod pallet {
         type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
-            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
+            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>; // + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
         type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 

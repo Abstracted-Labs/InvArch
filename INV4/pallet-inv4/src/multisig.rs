@@ -13,6 +13,7 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         fungibles::{Inspect, Mutate},
+        tokens::{Fortitude, Precision},
         Currency, VoteTally,
     },
     BoundedBTreeMap,
@@ -24,8 +25,8 @@ use sp_runtime::{
 };
 use sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 
-/// Maximum size of call we store is 4mb.
-pub const MAX_SIZE: u32 = 4 * 1024 * 1024;
+/// Maximum size of call we store is 50kb.
+pub const MAX_SIZE: u32 = 50 * 1024;
 
 pub type BoundedCallBytes = BoundedVec<u8, ConstU32<MAX_SIZE>>;
 
@@ -83,7 +84,13 @@ where
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
-        T::AssetsProvider::burn_from(core_id, &target, amount)?;
+        T::AssetsProvider::burn_from(
+            core_id,
+            &target,
+            amount,
+            Precision::Exact,
+            Fortitude::Polite,
+        )?;
 
         Self::deposit_event(Event::Burned {
             core_id,

@@ -13,6 +13,7 @@ use core::convert::TryFrom;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::PostDispatchInfo,
+    pallet_prelude::DispatchResultWithPostInfo,
     traits::{Currency, Get},
     BoundedBTreeMap,
 };
@@ -39,7 +40,7 @@ fn derive_account<T: Config>(core_id: T::CoreId) -> T::AccountId {
     derive_core_account::<T, T::CoreId, T::AccountId>(core_id)
 }
 
-fn mock_core<T: Config>() -> Result<(), DispatchError>
+fn mock_core<T: Config>() -> DispatchResultWithPostInfo
 where
     Result<
         INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,

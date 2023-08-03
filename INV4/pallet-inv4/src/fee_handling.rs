@@ -1,7 +1,7 @@
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
-    traits::{fungibles::CreditOf, Currency},
+    traits::{fungibles::Credit, Currency},
     unsigned::TransactionValidityError,
 };
 use scale_info::TypeInfo;
@@ -44,7 +44,7 @@ pub trait MultisigFeeHandler<T: Config> {
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <T::Currency as Currency<T::AccountId>>::NegativeImbalance,
-            CreditOf<T::AccountId, T::Tokens>,
+            Credit<T::AccountId, T::Tokens>,
         >,
     );
 }
