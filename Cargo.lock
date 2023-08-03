@@ -6094,6 +6094,7 @@ dependencies = [
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "num-traits",
@@ -6372,6 +6373,7 @@ dependencies = [
 [[package]]
 name = "pallet-maintenance-mode"
 version = "0.1.0"
+source = "git+https://github.com/Moonsong-Labs/moonkit?rev=51e3068808fb58f30ffb16bfdaa81d0890f98fd8#51e3068808fb58f30ffb16bfdaa81d0890f98fd8"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -6379,10 +6381,9 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm-primitives",
 ]
 
 [[package]]
@@ -14255,6 +14256,14 @@ dependencies = [
  "sp-std",
  "sp-weights",
  "xcm",
+]
+
+[[package]]
+name = "xcm-primitives"
+version = "0.1.0"
+source = "git+https://github.com/Moonsong-Labs/moonkit?rev=51e3068808fb58f30ffb16bfdaa81d0890f98fd8#51e3068808fb58f30ffb16bfdaa81d0890f98fd8"
+dependencies = [
+ "sp-runtime",
 ]
 
 [[package]]
