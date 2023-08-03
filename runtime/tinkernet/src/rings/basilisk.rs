@@ -2,7 +2,6 @@ use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::BoundedSlice;
 use scale_info::TypeInfo;
-use sp_std::vec;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
 pub struct Basilisk;
