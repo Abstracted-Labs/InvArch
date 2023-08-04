@@ -4,7 +4,10 @@ use super::*;
 use crate::Pallet as OcifStaking;
 use core::ops::Add;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::{Get, OnFinalize, OnInitialize};
+use frame_support::{
+    traits::{Get, OnFinalize, OnInitialize},
+    BoundedVec,
+};
 use frame_system::{Pallet as System, RawOrigin};
 use pallet_inv4::{
     origin::{INV4Origin, MultisigInternalOrigin},
@@ -51,9 +54,9 @@ where
 
     OcifStaking::<T>::register_core(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
-        vec![],
-        vec![],
-        vec![],
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap(),
     )
 }
 
@@ -114,9 +117,9 @@ benchmarks! {
         let d in 0 .. T::MaxDescriptionLength::get();
         let i in 0 .. T::MaxImageUrlLength::get();
 
-        let name = vec![u8::MAX; n as usize];
-        let description = vec![u8::MAX; d as usize];
-        let image = vec![u8::MAX; i as usize];
+        let name: BoundedVec<u8, T::MaxNameLength> = vec![u8::MAX; n as usize].try_into().unwrap();
+        let description: BoundedVec<u8, T::MaxDescriptionLength> = vec![u8::MAX; d as usize].try_into().unwrap();
+        let image: BoundedVec<u8, T::MaxImageUrlLength> = vec![u8::MAX; i as usize].try_into().unwrap();
 
         <T as Config>::Currency::make_free_balance_be(&derive_account::<T>(0u32.into()), T::RegisterDeposit::get() + T::RegisterDeposit::get());
     }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), name, description, image)
@@ -131,9 +134,9 @@ benchmarks! {
         let d in 0 .. T::MaxDescriptionLength::get();
         let i in 0 .. T::MaxImageUrlLength::get();
 
-        let name = vec![u8::MAX; n as usize];
-        let description = vec![u8::MAX; d as usize];
-        let image = vec![u8::MAX; i as usize];
+        let name: BoundedVec<u8, T::MaxNameLength> = vec![u8::MAX; n as usize].try_into().unwrap();
+        let description: BoundedVec<u8, T::MaxDescriptionLength> = vec![u8::MAX; d as usize].try_into().unwrap();
+        let image: BoundedVec<u8, T::MaxImageUrlLength> = vec![u8::MAX; i as usize].try_into().unwrap();
 
         mock_register().unwrap();
 
@@ -147,9 +150,9 @@ benchmarks! {
                     image: vec![]
                 },
                 new_metadata: CoreMetadata {
-                    name,
-                    description,
-                    image
+                    name: name.to_vec(),
+                    description: description.to_vec(),
+                    image: image.to_vec()
                 }
             }.into());
         }

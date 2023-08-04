@@ -23,12 +23,12 @@ use sp_runtime::{
     traits::{Hash, Zero},
     Perbill,
 };
-use sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use sp_std::{boxed::Box, collections::btree_map::BTreeMap};
 
 /// Maximum size of call we store is 50kb.
 pub const MAX_SIZE: u32 = 50 * 1024;
 
-pub type BoundedCallBytes = BoundedVec<u8, ConstU32<MAX_SIZE>>;
+pub type BoundedCallBytes<T> = BoundedVec<u8, <T as Config>::MaxCallSize>;
 
 /// Details of a multisig operation
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo, PartialEq, Eq)]
@@ -43,7 +43,7 @@ pub struct MultisigOperation<AccountId, TallyOf, Call, Metadata> {
 pub type MultisigOperationOf<T> = MultisigOperation<
     <T as frame_system::Config>::AccountId,
     Tally<T>,
-    BoundedCallBytes,
+    BoundedCallBytes<T>,
     BoundedVec<u8, <T as pallet::Config>::MaxMetadata>,
 >;
 
@@ -105,7 +105,7 @@ where
     pub(crate) fn inner_operate_multisig(
         caller: OriginFor<T>,
         core_id: T::CoreId,
-        metadata: Option<Vec<u8>>,
+        metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
         fee_asset: FeeAsset,
         call: Box<<T as Config>::RuntimeCall>,
     ) -> DispatchResultWithPostInfo {
@@ -114,15 +114,6 @@ where
         let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
 
         ensure!(!owner_balance.is_zero(), Error::<T>::NoPermission);
-
-        let bounded_metadata: Option<BoundedVec<u8, T::MaxMetadata>> = if let Some(vec) = metadata {
-            Some(
-                vec.try_into()
-                    .map_err(|_| Error::<T>::MaxMetadataExceeded)?,
-            )
-        } else {
-            None
-        };
 
         let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(core_id)
             .ok_or(Error::<T>::CoreNotFound)?;
@@ -155,7 +146,7 @@ where
                 result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
-            let bounded_call: BoundedCallBytes = (*call)
+            let bounded_call: BoundedCallBytes<T> = (*call)
                 .encode()
                 .try_into()
                 .map_err(|_| Error::<T>::MaxCallLengthExceeded)?;
@@ -176,7 +167,7 @@ where
                     ),
                     original_caller: owner.clone(),
                     actual_call: bounded_call,
-                    metadata: bounded_metadata,
+                    metadata,
                     fee_asset,
                 },
             );
@@ -191,7 +182,6 @@ where
                 voter: owner,
                 votes_added: Vote::Aye(owner_balance),
                 call_hash,
-                call: *call,
             });
         }
 
@@ -271,7 +261,6 @@ where
                     votes_added: new_vote_record,
                     current_votes: old_data.tally,
                     call_hash,
-                    call: decoded_call,
                 });
             }
 
@@ -292,9 +281,6 @@ where
 
             let old_vote = old_data.tally.process_vote(owner.clone(), None)?;
 
-            let decoded_call = <T as Config>::RuntimeCall::decode(&mut &old_data.actual_call[..])
-                .map_err(|_| Error::<T>::FailedDecodingCall)?;
-
             *data = Some(old_data.clone());
 
             Self::deposit_event(Event::MultisigVoteWithdrawn {
@@ -307,7 +293,6 @@ where
                 voter: owner,
                 votes_removed: old_vote,
                 call_hash,
-                call: decoded_call,
             });
 
             Ok(().into())

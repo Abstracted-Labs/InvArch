@@ -28,10 +28,9 @@ impl<T: Config> StaticLookup for INV4Lookup<T> {
     }
 
     fn unlookup(a: Self::Target) -> Self::Source {
-        if let Some(core_id) = CoreByAccount::<T>::get(&a) {
-            MultiAddress::Index(core_id)
-        } else {
-            MultiAddress::Id(a)
+        match CoreByAccount::<T>::get(&a) {
+            Some(core_id) => MultiAddress::Index(core_id),
+            None => MultiAddress::Id(a),
         }
     }
 }

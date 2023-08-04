@@ -15,14 +15,16 @@ use frame_support::{
     dispatch::PostDispatchInfo,
     pallet_prelude::DispatchResultWithPostInfo,
     traits::{Currency, Get},
-    BoundedBTreeMap,
+    BoundedBTreeMap, BoundedVec,
 };
 use frame_system::RawOrigin as SystemOrigin;
 use sp_runtime::{
     traits::{Bounded, Hash, Zero},
     DispatchError, DispatchErrorWithPostInfo, Perbill,
 };
-use sp_std::{collections::btree_map::BTreeMap, iter::Sum, ops::Div, prelude::*, vec};
+use sp_std::{
+    collections::btree_map::BTreeMap, convert::TryInto, iter::Sum, ops::Div, prelude::*, vec,
+};
 
 use crate::Pallet as INV4;
 
@@ -56,7 +58,7 @@ where
 
     INV4::<T>::create_core(
         SystemOrigin::Signed(whitelisted_caller()).into(),
-        vec![],
+        vec![].try_into().unwrap(),
         perbill_one(),
         perbill_one(),
         FeeAsset::TNKR,
@@ -157,7 +159,7 @@ benchmarks! {
     create_core {
         let m in 0 .. T::MaxMetadata::get();
 
-        let metadata = vec![u8::MAX; m as usize];
+        let metadata: BoundedVec<u8, T::MaxMetadata> = vec![u8::MAX; m as usize].try_into().unwrap();
         let caller = whitelisted_caller();
         let minimum_support = perbill_one();
         let required_approval = perbill_one();
@@ -169,7 +171,7 @@ benchmarks! {
             assert_last_event::<T>(Event::CoreCreated {
                 core_account: derive_account::<T>(0u32.into()),
                 core_id: 0u32.into(),
-                metadata,
+                metadata: metadata.to_vec(),
                 minimum_support,
                 required_approval
             }.into());
@@ -180,7 +182,7 @@ benchmarks! {
 
         mock_core().unwrap();
 
-        let metadata = Some(vec![u8::MAX; m as usize]);
+        let metadata: Option<BoundedVec<u8, T::MaxMetadata>> = Some(vec![u8::MAX; m as usize].try_into().unwrap());
         let minimum_support = Some(perbill_one());
         let required_approval = Some(perbill_one());
         let frozen_tokens = Some(true);
@@ -189,7 +191,7 @@ benchmarks! {
         verify {
             assert_last_event::<T>(Event::ParametersSet {
                 core_id: 0u32.into(),
-                metadata,
+                metadata: metadata.map(|m| m.to_vec()),
                 minimum_support,
                 required_approval,
                 frozen_tokens
@@ -238,7 +240,7 @@ benchmarks! {
             remark: vec![0; z as usize]
         }.into();
 
-        let metadata = vec![u8::MAX; m as usize];
+        let metadata: BoundedVec<u8, T::MaxMetadata> = vec![u8::MAX; m as usize].try_into().unwrap();
         let caller: T::AccountId = whitelisted_caller();
         let core_id: T::CoreId = 0u32.into();
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
@@ -252,7 +254,6 @@ benchmarks! {
                 voter: caller,
                 votes_added: Vote::Aye(T::CoreSeedBalance::get()),
                 call_hash,
-                call,
             }.into());
         }
 
@@ -287,7 +288,6 @@ benchmarks! {
                     ])).unwrap()
                 ),
                 call_hash,
-                call,
             }.into());
         }
 
@@ -313,7 +313,6 @@ benchmarks! {
                 voter: caller,
                 votes_removed: Vote::Aye(BalanceOf::<T>::max_value().div(4u32.into())),
                 call_hash,
-                call,
             }.into());
         }
 

@@ -16,7 +16,6 @@ use frame_system::{ensure_signed, pallet_prelude::*};
 use primitives::CoreInfo;
 use sp_arithmetic::traits::{CheckedAdd, One};
 use sp_runtime::Perbill;
-use sp_std::{convert::TryInto, vec::Vec};
 
 pub type CoreIndexOf<T> = <T as Config>::CoreId;
 
@@ -32,18 +31,13 @@ where
     /// Create IP Set
     pub(crate) fn inner_create_core(
         origin: OriginFor<T>,
-        metadata: Vec<u8>,
+        metadata: BoundedVec<u8, T::MaxMetadata>,
         minimum_support: Perbill,
         required_approval: Perbill,
         creation_fee_asset: FeeAsset,
     ) -> DispatchResult {
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
             let creator = ensure_signed(origin)?;
-
-            let bounded_metadata: BoundedVec<u8, T::MaxMetadata> = metadata
-                .clone()
-                .try_into()
-                .map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 
             // Increment counter
             let current_id = *next_id;
@@ -64,7 +58,7 @@ where
 
             let info = CoreInfo {
                 account: core_account.clone(),
-                metadata: bounded_metadata,
+                metadata: metadata.clone(),
                 minimum_support,
                 required_approval,
                 frozen_tokens: true,
@@ -96,7 +90,7 @@ where
 
             Self::deposit_event(Event::CoreCreated {
                 core_account,
-                metadata,
+                metadata: metadata.to_vec(),
                 core_id: current_id,
                 minimum_support,
                 required_approval,
@@ -108,7 +102,7 @@ where
 
     pub(crate) fn inner_set_parameters(
         origin: OriginFor<T>,
-        metadata: Option<Vec<u8>>,
+        metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
         minimum_support: Option<Perbill>,
         required_approval: Option<Perbill>,
         frozen_tokens: Option<bool>,
@@ -128,7 +122,7 @@ where
             }
 
             if let Some(m) = metadata.clone() {
-                c.metadata = m.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+                c.metadata = m;
             }
 
             if let Some(f) = frozen_tokens {
@@ -139,7 +133,7 @@ where
 
             Self::deposit_event(Event::ParametersSet {
                 core_id,
-                metadata,
+                metadata: metadata.map(|m| m.to_vec()),
                 minimum_support,
                 required_approval,
                 frozen_tokens,

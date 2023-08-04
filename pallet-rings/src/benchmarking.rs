@@ -2,7 +2,7 @@
 
 use super::*;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::{pallet_prelude::Weight, traits::Get};
+use frame_support::{pallet_prelude::Weight, traits::Get, BoundedVec};
 use frame_system::RawOrigin as SystemOrigin;
 use pallet_inv4::origin::{INV4Origin, MultisigInternalOrigin};
 use sp_std::{ops::Div, prelude::*, vec};
@@ -43,9 +43,9 @@ benchmarks! {
         }
 
     send_call {
-        let c in 0 .. T::MaxWeightedLength::get();
+        let c in 0 .. T::MaxXCMCallLength::get();
 
-        let call = vec![u8::MAX; c as usize];
+        let call: BoundedVec<u8, T::MaxXCMCallLength> = vec![u8::MAX; c as usize].try_into().unwrap();
         let destination = T::Chains::benchmark_mock();
         let weight = Weight::from_parts(100_000_000u64, 10_000u64);
         let fee_asset: <<T as Config>::Chains as ChainList>::ChainAssets = T::Chains::benchmark_mock().get_main_asset();
@@ -56,7 +56,7 @@ benchmarks! {
             assert_last_event::<T>(Event::CallSent {
                 sender: 0u32.into(),
                 destination,
-                call,
+                call: call.to_vec(),
             }.into());
         }
 

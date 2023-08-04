@@ -20,7 +20,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
-    use frame_system::{ensure_root, pallet_prelude::OriginFor};
+    use frame_system::pallet_prelude::OriginFor;
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
     use xcm::{
@@ -41,10 +41,12 @@ pub mod pallet {
         type ParaId: Get<u32>;
 
         #[pallet::constant]
-        type MaxWeightedLength: Get<u32>;
+        type INV4PalletIndex: Get<u8>;
 
         #[pallet::constant]
-        type INV4PalletIndex: Get<u8>;
+        type MaxXCMCallLength: Get<u32>;
+
+        type MaintenanceOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
         type WeightInfo: WeightInfo;
     }
@@ -118,7 +120,7 @@ pub mod pallet {
             chain: <T as Config>::Chains,
             under_maintenance: bool,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            T::MaintenanceOrigin::ensure_origin(origin)?;
 
             ChainsUnderMaintenance::<T>::insert(chain.get_location(), under_maintenance);
 
@@ -132,10 +134,7 @@ pub mod pallet {
 
         #[pallet::call_index(1)]
         #[pallet::weight(
-            <T as Config>::WeightInfo::send_call(
-                (call.len() as u32)
-                    .min(T::MaxWeightedLength::get())
-            )
+            <T as Config>::WeightInfo::send_call(call.len() as u32)
         )]
         pub fn send_call(
             origin: OriginFor<T>,
@@ -143,7 +142,7 @@ pub mod pallet {
             weight: Weight,
             fee_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             fee: u128,
-            call: Vec<u8>,
+            call: BoundedVec<u8, T::MaxXCMCallLength>,
         ) -> DispatchResult {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_id = core.id.into();
@@ -185,7 +184,7 @@ pub mod pallet {
                 Instruction::Transact {
                     origin_kind: OriginKind::Native,
                     require_weight_at_most: weight,
-                    call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone()),
+                    call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone().to_vec()),
                 },
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
@@ -200,7 +199,7 @@ pub mod pallet {
             Self::deposit_event(Event::CallSent {
                 sender: core.id,
                 destination,
-                call,
+                call: call.to_vec(),
             });
 
             Ok(())
