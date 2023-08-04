@@ -1,13 +1,12 @@
 [package]
 name = "tinkernet-runtime"
-version = "0.1.0"
-authors = ["InvArchitect <https://github.com/InvArch>"]
-description = "A Substrate-based InvArch Runtime."
-license = "GPL-3.0"
-homepage = "https://invarch.network"
-repository = "https://github.com/InvArch/InvArch-Node/"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 publish = false
-edition = "2021"
+edition.workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

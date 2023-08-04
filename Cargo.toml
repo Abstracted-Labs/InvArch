@@ -6,6 +6,16 @@ members = [
 
    'modified-construct-runtime',
 ]
+
+[workspace.package]
+version = "1.5.0"
+edition = "2021"
+
+license = "GPL-3.0"
+authors = ["InvArch Association <https://github.com/InvArch>"]
+repository = "https://github.com/InvArch/InvArch-Node/"
+homepage = "https://invarch.network"
+
 [profile.release]
 panic = 'unwind'
 

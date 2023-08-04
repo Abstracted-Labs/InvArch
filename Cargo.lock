@@ -3844,7 +3844,7 @@ dependencies = [
 
 [[package]]
 name = "invarch-node"
-version = "0.1.0"
+version = "1.5.0"
 dependencies = [
  "async-trait",
  "clap",
@@ -12402,7 +12402,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-runtime"
-version = "0.1.0"
+version = "1.5.0"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
