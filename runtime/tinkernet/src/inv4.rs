@@ -28,6 +28,7 @@ parameter_types! {
     ]);
 
     pub const KSMCoreCreationFee: Balance = UNIT;
+    pub const MaxCallSize: u32 = 50 * 1024;
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -50,6 +51,8 @@ impl pallet_inv4::Config for Runtime {
     type Tokens = Tokens;
     type KSMAssetId = RelayAssetId;
     type KSMCoreCreationFee = KSMCoreCreationFee;
+
+    type MaxCallSize = MaxCallSize;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
