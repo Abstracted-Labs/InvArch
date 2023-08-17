@@ -7,8 +7,8 @@ use core::convert::TryFrom;
 use frame_support::{
     parameter_types,
     traits::{
-        fungibles::CreditOf, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
-        EnsureOriginWithArg, Everything, GenesisBuild,
+        fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
+        EnsureOriginWithArg, Everything, GenesisBuild, Nothing,
     },
 };
 use frame_system::EnsureRoot;
@@ -24,8 +24,8 @@ use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
     AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfFungible,
-    FixedWeightBounds, IsConcrete, LocationInverter, SignedAccountId32AsNative,
-    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
+    FixedWeightBounds, IsConcrete, SignedAccountId32AsNative, SignedToAccountId32,
+    SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
@@ -110,6 +110,10 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 thread_local! {
@@ -119,15 +123,24 @@ thread_local! {
 /// Sender that never returns error, always sends
 pub struct TestSendXcm;
 impl SendXcm for TestSendXcm {
-    fn send_xcm(dest: impl Into<MultiLocation>, msg: Xcm<()>) -> SendResult {
-        SENT_XCM.with(|q| q.borrow_mut().push((dest.into(), msg)));
-        Ok(())
+    type Ticket = (MultiLocation, Xcm<()>);
+    fn validate(
+        dest: &mut Option<MultiLocation>,
+        msg: &mut Option<Xcm<()>>,
+    ) -> SendResult<(MultiLocation, Xcm<()>)> {
+        let pair = (dest.take().unwrap(), msg.take().unwrap());
+        Ok((pair, MultiAssets::new()))
+    }
+    fn deliver(pair: (MultiLocation, Xcm<()>)) -> Result<XcmHash, SendError> {
+        let hash = pair.1.using_encoded(sp_io::hashing::blake2_256);
+        SENT_XCM.with(|q| q.borrow_mut().push(pair));
+        Ok(hash)
     }
 }
 
 parameter_types! {
-    pub const RelayLocation: MultiLocation = Here.into();
-    pub const AnyNetwork: NetworkId = NetworkId::Any;
+    pub const RelayLocation: MultiLocation = MultiLocation::parent();
+    pub const AnyNetwork: Option<NetworkId> = None;
     pub Ancestry: MultiLocation = Here.into();
     pub UnitWeightCost: u64 = 1_000;
 }
@@ -144,9 +157,11 @@ type LocalOriginConverter = (
 
 parameter_types! {
     pub const BaseXcmWeight: u64 = 1_000;
-    pub CurrencyPerSecond: (xcm::latest::AssetId, u128) = (Concrete(RelayLocation::get()), 1);
+    pub CurrencyPerSecond: (xcm::latest::AssetId, u128, u128) = (Concrete(RelayLocation::get()), 1, 1);
     pub TrustedAssets: (MultiAssetFilter, MultiLocation) = (All.into(), Here.into());
     pub const MaxInstructions: u32 = 100;
+    pub UniversalLocation: InteriorMultiLocation = Here;
+    pub const MaxAssetsIntoHolding: u32 = 64;
 }
 
 pub type Barrier = (
@@ -164,7 +179,6 @@ impl xcm_executor::Config for XcmConfig {
     type OriginConverter = LocalOriginConverter;
     type IsReserve = ();
     type IsTeleporter = ();
-    type LocationInverter = LocationInverter<Ancestry>;
     type Barrier = Barrier;
     type Weigher = FixedWeightBounds<BaseXcmWeight, RuntimeCall, MaxInstructions>;
     type Trader = FixedRateOfFungible<CurrencyPerSecond, ()>;
@@ -172,6 +186,16 @@ impl xcm_executor::Config for XcmConfig {
     type AssetTrap = XcmPallet;
     type AssetClaims = XcmPallet;
     type SubscriptionService = XcmPallet;
+    type AssetLocker = ();
+    type AssetExchanger = ();
+    type FeeManager = ();
+    type MessageExporter = ();
+    type UniversalAliases = Nothing;
+    type UniversalLocation = UniversalLocation;
+    type CallDispatcher = RuntimeCall;
+    type SafeCallFilter = Everything;
+    type PalletInstancesInfo = AllPalletsWithSystem;
+    type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, AnyNetwork>;
@@ -186,11 +210,20 @@ impl pallet_xcm::Config for Test {
     type XcmTeleportFilter = Everything;
     type XcmReserveTransferFilter = Everything;
     type Weigher = FixedWeightBounds<BaseXcmWeight, RuntimeCall, MaxInstructions>;
-    type LocationInverter = LocationInverter<Ancestry>;
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
     const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
     type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type UniversalLocation = UniversalLocation;
+    type MaxLockers = frame_support::traits::ConstU32<8>;
+    type MaxRemoteLockConsumers = frame_support::traits::ConstU32<0>;
+    type Currency = Balances;
+    type CurrencyMatcher = IsConcrete<RelayLocation>;
+    type AdminOrigin = EnsureRoot<AccountId>;
+    type TrustedLockers = ();
+    type SovereignAccountOf = AccountId32Aliases<(), AccountId32>;
+    type RemoteLockConsumerIdentifier = ();
+    type WeightInfo = pallet_xcm::TestWeightInfo;
 }
 
 const UNIT: u128 = 1000000000000;
@@ -403,7 +436,7 @@ impl MultisigFeeHandler<Test> for FeeCharger {
     fn handle_creation_fee(
         _imbalance: FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            CreditOf<AccountId, Tokens>,
+            Credit<AccountId, Tokens>,
         >,
     ) {
     }
@@ -428,6 +461,7 @@ impl pallet_inv4::Config for Test {
     type Tokens = Tokens;
     type KSMAssetId = RelayAssetId;
     type KSMCoreCreationFee = KSMCoreCreationFee;
+    type MaxCallSize = ConstU32<51200>;
 }
 
 parameter_types! {
@@ -440,9 +474,10 @@ impl pallet::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type ParaId = ParaId;
     type Chains = Chains;
-    type MaxWeightedLength = MaxWeightedLength;
     type INV4PalletIndex = INV4PalletIndex;
     type WeightInfo = weights::SubstrateWeight<Test>;
+    type MaxXCMCallLength = ConstU32<100_000>;
+    type MaintenanceOrigin = EnsureRoot<AccountId>;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]

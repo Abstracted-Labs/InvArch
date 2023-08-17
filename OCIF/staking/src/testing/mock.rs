@@ -4,7 +4,7 @@ use core::convert::{TryFrom, TryInto};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        fungibles::CreditOf, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
+        fungibles::Credit, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
     },
     weights::Weight,
     PalletId,
@@ -54,7 +54,7 @@ construct_runtime!(
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(Weight::from_ref_time(1024));
+        frame_system::limits::BlockWeights::simple_max(Weight::from_parts(1024, 0));
 }
 
 impl frame_system::Config for Test {
@@ -99,6 +99,10 @@ impl pallet_balances::Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -187,7 +191,7 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
     fn handle_creation_fee(
         _imbalance: pallet_inv4::fee_handling::FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            CreditOf<AccountId, CoreAssets>,
+            Credit<AccountId, CoreAssets>,
         >,
     ) {
     }
@@ -241,6 +245,7 @@ impl pallet_inv4::Config for Test {
     type Tokens = CoreAssets;
     type KSMAssetId = KSMAssetId;
     type KSMCoreCreationFee = CoreCreationFee;
+    type MaxCallSize = ConstU32<51200>;
 }
 
 impl pallet_ocif_staking::Config for Test {

@@ -34,9 +34,9 @@ pub(crate) fn assert_register(core: mock::CoreId) {
     assert_ok!(OcifStaking::register_core(
         pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(core))
             .into(),
-        vec![],
-        vec![],
-        vec![]
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap()
     ));
 
     let core_info = RegisteredCore::<Test>::get(core).unwrap();

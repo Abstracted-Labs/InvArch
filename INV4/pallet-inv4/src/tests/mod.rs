@@ -34,7 +34,7 @@ fn create_core_works() {
 
         assert_ok!(INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR
@@ -66,7 +66,7 @@ fn create_core_works() {
 
         assert_ok!(INV4::create_core(
             RawOrigin::Signed(BOB).into(),
-            vec![1, 2, 3],
+            vec![1, 2, 3].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::KSM
@@ -106,7 +106,7 @@ fn create_core_fails() {
         assert_err!(
             INV4::create_core(
                 RawOrigin::Signed(DAVE).into(),
-                vec![],
+                vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
                 Perbill::from_percent(1),
                 FeeAsset::TNKR
@@ -124,28 +124,12 @@ fn create_core_fails() {
         assert_err!(
             INV4::create_core(
                 RawOrigin::Signed(DAVE).into(),
-                vec![],
+                vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
                 Perbill::from_percent(1),
                 FeeAsset::KSM
             ),
-            TokenError::NoFunds
-        );
-
-        assert_eq!(INV4::next_core_id(), 0u32);
-        assert_eq!(INV4::core_storage(0u32), None);
-
-        // Max metadata exceeded
-
-        assert_err!(
-            INV4::create_core(
-                RawOrigin::Signed(ALICE).into(),
-                vec![0u8; (MaxMetadata::get() + 1) as usize],
-                Perbill::from_percent(1),
-                Perbill::from_percent(1),
-                FeeAsset::TNKR
-            ),
-            Error::<Test>::MaxMetadataExceeded
+            TokenError::FundsUnavailable
         );
 
         assert_eq!(INV4::next_core_id(), 0u32);
@@ -158,7 +142,7 @@ fn set_parameters_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -167,7 +151,7 @@ fn set_parameters_works() {
 
         assert_ok!(INV4::set_parameters(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             Some(Perbill::from_percent(100)),
             Some(Perbill::from_percent(100)),
             Some(false)
@@ -191,7 +175,7 @@ fn set_parameters_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -203,7 +187,7 @@ fn set_parameters_fails() {
         assert_err!(
             INV4::set_parameters(
                 RawOrigin::Signed(ALICE).into(),
-                Some(vec![1, 2, 3]),
+                Some(vec![1, 2, 3].try_into().unwrap()),
                 Some(Perbill::from_percent(100)),
                 Some(Perbill::from_percent(100)),
                 Some(false)
@@ -216,25 +200,12 @@ fn set_parameters_fails() {
         assert_err!(
             INV4::set_parameters(
                 Origin::Multisig(MultisigInternalOrigin::new(1u32)).into(),
-                Some(vec![1, 2, 3]),
+                Some(vec![1, 2, 3].try_into().unwrap()),
                 Some(Perbill::from_percent(100)),
                 Some(Perbill::from_percent(100)),
                 Some(false)
             ),
             Error::<Test>::CoreNotFound
-        );
-
-        // Max metadata exceeded.
-
-        assert_err!(
-            INV4::set_parameters(
-                Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
-                Some(vec![0u8; (MaxMetadata::get() + 1) as usize],),
-                None,
-                None,
-                None
-            ),
-            Error::<Test>::MaxMetadataExceeded
         );
     });
 }
@@ -244,7 +215,7 @@ fn token_mint_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -276,7 +247,7 @@ fn token_mint_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -306,7 +277,7 @@ fn token_burn_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -359,7 +330,7 @@ fn token_burn_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
             FeeAsset::TNKR,
@@ -411,7 +382,7 @@ fn token_burn_fails() {
                 CoreSeedBalance::get() + 1,
                 ALICE
             ),
-            TokenError::NoFunds
+            TokenError::FundsUnavailable
         );
     });
 }
@@ -421,7 +392,7 @@ fn operate_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -441,7 +412,7 @@ fn operate_multisig_works() {
         assert_ok!(INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone())
         ));
@@ -489,7 +460,7 @@ fn operate_multisig_works() {
         assert_ok!(INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone())
         ));
@@ -500,7 +471,6 @@ fn operate_multisig_works() {
                 executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
                 voter: ALICE,
                 votes_added: Vote::Aye(CoreSeedBalance::get()),
-                call: call.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
             }
             .into(),
@@ -512,7 +482,7 @@ fn operate_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
@@ -535,7 +505,7 @@ fn operate_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -565,23 +535,11 @@ fn operate_multisig_fails() {
             INV4::operate_multisig(
                 RawOrigin::Signed(CHARLIE).into(),
                 0u32,
-                Some(vec![1, 2, 3]),
+                Some(vec![1, 2, 3].try_into().unwrap()),
                 FeeAsset::TNKR,
                 Box::new(call.clone())
             ),
             Error::<Test>::NoPermission
-        );
-
-        // MaxMetadataExceeded
-        assert_err!(
-            INV4::operate_multisig(
-                RawOrigin::Signed(ALICE).into(),
-                0u32,
-                Some(vec![0u8; (MaxMetadata::get() + 1) as usize]),
-                FeeAsset::TNKR,
-                Box::new(call.clone())
-            ),
-            Error::<Test>::MaxMetadataExceeded
         );
 
         // Max call length exceeded.
@@ -628,7 +586,7 @@ fn cancel_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -646,7 +604,7 @@ fn cancel_multisig_works() {
         INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone()),
         )
@@ -657,7 +615,7 @@ fn cancel_multisig_works() {
         INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone()),
         )
@@ -669,7 +627,7 @@ fn cancel_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
@@ -705,7 +663,7 @@ fn cancel_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -723,7 +681,7 @@ fn cancel_multisig_fails() {
         INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone()),
         )
@@ -734,7 +692,7 @@ fn cancel_multisig_fails() {
         INV4::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
-            Some(vec![1, 2, 3]),
+            Some(vec![1, 2, 3].try_into().unwrap()),
             FeeAsset::TNKR,
             Box::new(call.clone()),
         )
@@ -755,7 +713,7 @@ fn cancel_multisig_fails() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
@@ -778,7 +736,7 @@ fn vote_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -829,7 +787,7 @@ fn vote_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -869,7 +827,6 @@ fn vote_multisig_works() {
                     ]))
                     .unwrap(),
                 ),
-                call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
             }
             .into(),
@@ -881,7 +838,7 @@ fn vote_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -933,7 +890,7 @@ fn vote_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -984,7 +941,7 @@ fn vote_multisig_fails() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -1029,7 +986,7 @@ fn withdraw_vote_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -1098,7 +1055,6 @@ fn withdraw_vote_multisig_works() {
                     ]))
                     .unwrap(),
                 ),
-                call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
             }
             .into(),
@@ -1110,7 +1066,7 @@ fn withdraw_vote_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -1140,7 +1096,6 @@ fn withdraw_vote_multisig_works() {
                 executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
                 voter: BOB,
                 votes_removed: Vote::Nay(CoreSeedBalance::get()),
-                call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
             }
             .into(),
@@ -1152,7 +1107,7 @@ fn withdraw_vote_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -1182,7 +1137,6 @@ fn withdraw_vote_multisig_works() {
                 executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
                 voter: ALICE,
                 votes_removed: Vote::Aye(CoreSeedBalance::get()),
-                call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
             }
             .into(),
@@ -1194,7 +1148,7 @@ fn withdraw_vote_multisig_works() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
@@ -1209,7 +1163,7 @@ fn withdraw_vote_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
         INV4::create_core(
             RawOrigin::Signed(ALICE).into(),
-            vec![],
+            vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
             FeeAsset::TNKR,
@@ -1289,7 +1243,7 @@ fn withdraw_vote_multisig_fails() {
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
             Some(MultisigOperation {
-                actual_call: BoundedCallBytes::try_from(call2.clone().encode()).unwrap(),
+                actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
                 fee_asset: FeeAsset::TNKR,
                 original_caller: ALICE,
                 metadata: None,
