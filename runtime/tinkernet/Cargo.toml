@@ -24,15 +24,15 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-#pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
-#pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
-#pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
-#pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "fda529b247b61243d7a0bf8ffa4a5aa90ba283d4",  default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
 
-pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
-pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
-pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
-pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+#pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
+#pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
+#pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
+#pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
 
 pallet-maintenance-mode = { git = "https://github.com/Moonsong-Labs/moonkit", default-features = false, features = ["xcm-support"], rev = "51e3068808fb58f30ffb16bfdaa81d0890f98fd8" }
 
