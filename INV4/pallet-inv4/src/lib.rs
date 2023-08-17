@@ -29,11 +29,12 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
+//pub mod migrations;
+
 mod dispatch;
 pub mod fee_handling;
 pub mod inv4_core;
 mod lookup;
-pub mod migrations;
 pub mod multisig;
 pub mod origin;
 pub mod util;
