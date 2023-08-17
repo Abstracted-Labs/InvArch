@@ -72,6 +72,11 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
+
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -95,6 +100,7 @@ impl pallet::Config for Test {
     type ErasPerYear = ConstU32<ERAS_PER_YEAR>;
     type Inflation = Inflation;
     type DealWithInflation = DealWithInflation;
+    type WeightInfo = weights::SubstrateWeight<Test>;
 }
 
 pub struct ExtBuilder;

@@ -104,7 +104,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(crate) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
@@ -364,9 +363,9 @@ pub mod pallet {
         )]
         pub fn register_core(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            description: Vec<u8>,
-            image: Vec<u8>,
+            name: BoundedVec<u8, T::MaxNameLength>,
+            description: BoundedVec<u8, T::MaxDescriptionLength>,
+            image: BoundedVec<u8, T::MaxImageUrlLength>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -379,25 +378,10 @@ pub mod pallet {
                 Error::<T>::CoreAlreadyRegistered,
             );
 
-            let bounded_name: BoundedVec<u8, T::MaxNameLength> = name
-                .clone()
-                .try_into()
-                .map_err(|_| Error::<T>::MaxNameExceeded)?;
-
-            let bounded_description: BoundedVec<u8, T::MaxDescriptionLength> = description
-                .clone()
-                .try_into()
-                .map_err(|_| Error::<T>::MaxDescriptionExceeded)?;
-
-            let bounded_image: BoundedVec<u8, T::MaxImageUrlLength> = image
-                .clone()
-                .try_into()
-                .map_err(|_| Error::<T>::MaxImageExceeded)?;
-
             let metadata: CoreMetadataOf<T> = CoreMetadata {
-                name: bounded_name,
-                description: bounded_description,
-                image: bounded_image,
+                name,
+                description,
+                image,
             };
 
             <T as pallet::Config>::Currency::reserve(&core_account, T::RegisterDeposit::get())?;
@@ -508,9 +492,9 @@ pub mod pallet {
         )]
         pub fn change_core_metadata(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            description: Vec<u8>,
-            image: Vec<u8>,
+            name: BoundedVec<u8, T::MaxNameLength>,
+            description: BoundedVec<u8, T::MaxDescriptionLength>,
+            image: BoundedVec<u8, T::MaxImageUrlLength>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -520,25 +504,10 @@ pub mod pallet {
             RegisteredCore::<T>::try_mutate(core_id, |core| {
                 let mut new_core = core.take().ok_or(Error::<T>::NotRegistered)?;
 
-                let bounded_name: BoundedVec<u8, T::MaxNameLength> = name
-                    .clone()
-                    .try_into()
-                    .map_err(|_| Error::<T>::MaxNameExceeded)?;
-
-                let bounded_description: BoundedVec<u8, T::MaxDescriptionLength> = description
-                    .clone()
-                    .try_into()
-                    .map_err(|_| Error::<T>::MaxDescriptionExceeded)?;
-
-                let bounded_image: BoundedVec<u8, T::MaxImageUrlLength> = image
-                    .clone()
-                    .try_into()
-                    .map_err(|_| Error::<T>::MaxImageExceeded)?;
-
                 let new_metadata: CoreMetadataOf<T> = CoreMetadata {
-                    name: bounded_name,
-                    description: bounded_description,
-                    image: bounded_image,
+                    name: name.clone(),
+                    description: description.clone(),
+                    image: image.clone(),
                 };
 
                 let old_metadata = new_core.metadata;
@@ -555,9 +524,9 @@ pub mod pallet {
                         image: old_metadata.image.into_inner(),
                     },
                     new_metadata: CoreMetadata {
-                        name,
-                        description,
-                        image,
+                        name: name.to_vec(),
+                        description: description.to_vec(),
+                        image: image.to_vec(),
                     },
                 });
 

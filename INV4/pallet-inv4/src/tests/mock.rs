@@ -4,7 +4,7 @@ use core::convert::TryFrom;
 use frame_support::{
     parameter_types,
     traits::{
-        fungibles::CreditOf, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
+        fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
         EnsureOriginWithArg, GenesisBuild,
     },
 };
@@ -90,6 +90,10 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 const UNIT: u128 = 1000000000000;
@@ -195,6 +199,7 @@ parameter_types! {
     pub const ExistentialDeposit: u128 = 100000000000;
     pub const MaxLocks: u32 = 1;
     pub const MaxReserves: u32 = 1;
+    pub const MaxCallSize: u32 = 50 * 1024;
 }
 
 pub struct AssetAuthority;
@@ -299,7 +304,7 @@ impl MultisigFeeHandler<Test> for FeeCharger {
     fn handle_creation_fee(
         _imbalance: FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            CreditOf<AccountId, Tokens>,
+            Credit<AccountId, Tokens>,
         >,
     ) {
     }
@@ -324,6 +329,8 @@ impl pallet::Config for Test {
     type Tokens = Tokens;
     type KSMAssetId = RelayAssetId;
     type KSMCoreCreationFee = KSMCoreCreationFee;
+
+    type MaxCallSize = MaxCallSize;
 }
 
 pub struct ExtBuilder;

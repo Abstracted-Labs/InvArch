@@ -29,11 +29,12 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
+//pub mod migrations;
+
 mod dispatch;
 pub mod fee_handling;
 pub mod inv4_core;
 mod lookup;
-pub mod migrations;
 pub mod multisig;
 pub mod origin;
 pub mod util;
@@ -142,8 +143,7 @@ pub mod pallet {
         type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
-            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>
-            + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
+            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>; // + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
 
         type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 
@@ -151,6 +151,9 @@ pub mod pallet {
 
         #[pallet::constant]
         type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
+
+        #[pallet::constant]
+        type MaxCallSize: Get<u32>;
 
         type WeightInfo: WeightInfo;
     }
@@ -241,7 +244,6 @@ pub mod pallet {
             voter: T::AccountId,
             votes_added: VoteRecord<T>,
             call_hash: T::Hash,
-            call: CallOf<T>,
         },
         /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
         ///
@@ -253,7 +255,6 @@ pub mod pallet {
             votes_added: VoteRecord<T>,
             current_votes: Tally<T>,
             call_hash: T::Hash,
-            call: CallOf<T>,
         },
         MultisigVoteWithdrawn {
             core_id: T::CoreId,
@@ -261,7 +262,6 @@ pub mod pallet {
             voter: T::AccountId,
             votes_removed: VoteRecord<T>,
             call_hash: T::Hash,
-            call: CallOf<T>,
         },
         /// Multisig call was executed.
         ///
@@ -329,7 +329,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::create_core(metadata.len() as u32))]
         pub fn create_core(
             owner: OriginFor<T>,
-            metadata: Vec<u8>,
+            metadata: BoundedVec<u8, T::MaxMetadata>,
             minimum_support: Perbill,
             required_approval: Perbill,
             creation_fee_asset: FeeAsset,
@@ -380,7 +380,7 @@ pub mod pallet {
         pub fn operate_multisig(
             caller: OriginFor<T>,
             core_id: T::CoreId,
-            metadata: Option<Vec<u8>>,
+            metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
             fee_asset: FeeAsset,
             call: Box<<T as pallet::Config>::RuntimeCall>,
         ) -> DispatchResultWithPostInfo {
@@ -423,7 +423,7 @@ pub mod pallet {
         ))]
         pub fn set_parameters(
             origin: OriginFor<T>,
-            metadata: Option<Vec<u8>>,
+            metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
             minimum_support: Option<Perbill>,
             required_approval: Option<Perbill>,
             frozen_tokens: Option<bool>,

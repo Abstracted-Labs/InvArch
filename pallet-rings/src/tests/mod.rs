@@ -6,6 +6,7 @@ use frame_system::RawOrigin;
 use mock::*;
 use pallet_inv4::{origin::MultisigInternalOrigin, Origin};
 use sp_std::vec;
+use xcm::latest::Weight;
 
 #[test]
 fn set_maintenance_status() {
@@ -55,10 +56,10 @@ fn send_call_works() {
         assert_ok!(Rings::send_call(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             chain_a.clone(),
-            5000000000,
+            Weight::from_parts(5000000000, 0),
             fee_asset,
             10000000000000u128,
-            vec![1, 2, 3]
+            vec![1, 2, 3].try_into().unwrap()
         ));
     })
 }
@@ -74,10 +75,10 @@ fn send_call_fails() {
             Rings::send_call(
                 RawOrigin::Signed(ALICE).into(),
                 chain_a.clone(),
-                5000000000,
+                Weight::from_parts(5000000000, 0),
                 fee_asset.clone(),
                 10000000000000u128,
-                vec![1, 2, 3]
+                vec![1, 2, 3].try_into().unwrap()
             ),
             BadOrigin
         );
@@ -88,10 +89,10 @@ fn send_call_fails() {
             Rings::send_call(
                 Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
                 chain_a,
-                5000000000,
+                Weight::from_parts(5000000000, 0),
                 fee_asset,
                 10000000000000u128,
-                vec![1, 2, 3]
+                vec![1, 2, 3].try_into().unwrap()
             ),
             Error::<Test>::ChainUnderMaintenance
         );

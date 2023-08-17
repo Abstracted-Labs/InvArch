@@ -229,9 +229,9 @@ fn register_twice_with_same_account_fails() {
             OcifStaking::register_core(
                 pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(A))
                     .into(),
-                Vec::default(),
-                Vec::default(),
-                Vec::default()
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap()
             ),
             Error::<Test>::CoreAlreadyRegistered
         );
@@ -1974,9 +1974,9 @@ fn pallet_halt_is_ok() {
                     core_id
                 ))
                 .into(),
-                Vec::default(),
-                Vec::default(),
-                Vec::default()
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap()
             ),
             Error::<Test>::Halted
         );
@@ -1997,9 +1997,9 @@ fn pallet_halt_is_ok() {
                     core_id
                 ))
                 .into(),
-                Vec::default(),
-                Vec::default(),
-                Vec::default()
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap(),
+                Vec::default().try_into().unwrap()
             ),
             Error::<Test>::Halted
         );
