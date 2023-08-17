@@ -162,7 +162,6 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    pallet_inv4::migrations::v2::MigrateToV2<Runtime>,
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -193,7 +192,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 18,
+    spec_version: 19,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -309,12 +308,12 @@ impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
         AllPalletsWithSystem::on_runtime_upgrade()
     }
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
         AllPalletsWithSystem::pre_upgrade()
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
         AllPalletsWithSystem::post_upgrade(state)
     }
 }
@@ -1017,7 +1016,7 @@ impl_runtime_apis! {
 
       #[cfg(feature = "try-runtime")]
       impl frame_try_runtime::TryRuntime<Block> for Runtime {
-            fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
+            fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
                   let weight = Executive::try_runtime_upgrade(checks).unwrap();
                   (weight, RuntimeBlockWeights::get().max_block)
             }

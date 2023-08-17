@@ -293,6 +293,10 @@ pub fn run() -> Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            #[cfg(feature = "tinkernet")]
+            use tinkernet_runtime::MILLISECS_PER_BLOCK;
+            use try_runtime_cli::block_building_info::timestamp_with_aura_info;
+
             let runner = cli.create_runner(cmd)?;
 
             use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
@@ -311,9 +315,13 @@ pub fn run() -> Result<()> {
                 sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
                     .map_err(|e| format!("Error: {:?}", e))?;
 
+            let info_provider = timestamp_with_aura_info(MILLISECS_PER_BLOCK);
+
             runner.async_run(|_| {
                 Ok((
-                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>>(),
+                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>, _>(Some(
+                        info_provider,
+                    )),
                     task_manager,
                 ))
             })
