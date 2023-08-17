@@ -150,7 +150,7 @@ pub mod pallet {
             let dest = destination.get_location();
 
             ensure!(
-                !Self::is_under_maintenance(dest.clone()).unwrap_or(false),
+                !Self::is_under_maintenance(dest).unwrap_or(false),
                 Error::<T>::ChainUnderMaintenance
             );
 
@@ -222,7 +222,7 @@ pub mod pallet {
             let dest = chain.get_location();
 
             ensure!(
-                !Self::is_under_maintenance(dest.clone()).unwrap_or(false),
+                !Self::is_under_maintenance(dest).unwrap_or(false),
                 Error::<T>::ChainUnderMaintenance
             );
 
@@ -317,8 +317,8 @@ pub mod pallet {
             let dest = destination.get_location();
 
             ensure!(
-                !(Self::is_under_maintenance(from_chain_location.clone()).unwrap_or(false)
-                    || Self::is_under_maintenance(dest.clone()).unwrap_or(false)),
+                !(Self::is_under_maintenance(from_chain_location).unwrap_or(false)
+                    || Self::is_under_maintenance(dest).unwrap_or(false)),
                 Error::<T>::ChainUnderMaintenance
             );
 
@@ -332,9 +332,7 @@ pub mod pallet {
             let inverted_destination = dest
                 .reanchored(&from_chain_location, *from_chain_location.interior())
                 .map(|inverted| {
-                    if let (ml, Some(Junction::OnlyChild) | None) =
-                        inverted.clone().split_last_interior()
-                    {
+                    if let (ml, Some(Junction::OnlyChild) | None) = inverted.split_last_interior() {
                         ml
                     } else {
                         inverted
@@ -343,12 +341,12 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::FailedToInvertLocation)?;
 
             let multiasset = MultiAsset {
-                id: AssetId::Concrete(asset_location.clone()),
+                id: AssetId::Concrete(asset_location),
                 fun: Fungibility::Fungible(amount),
             };
 
             let fee_multiasset = MultiAsset {
-                id: AssetId::Concrete(asset_location.clone()),
+                id: AssetId::Concrete(asset_location),
                 fun: Fungibility::Fungible(fee),
             };
 
@@ -357,9 +355,7 @@ pub mod pallet {
                 .reanchored(&dest, *from_chain_location.interior())
                 .map(|mut reanchored| {
                     if let AssetId::Concrete(ref mut m) = reanchored.id {
-                        if let (ml, Some(Junction::OnlyChild) | None) =
-                            m.clone().split_last_interior()
-                        {
+                        if let (ml, Some(Junction::OnlyChild) | None) = (*m).split_last_interior() {
                             *m = ml;
                         }
                     }
@@ -409,7 +405,7 @@ pub mod pallet {
                             },
                             Instruction::DepositAsset {
                                 assets: All.into(),
-                                beneficiary: beneficiary.clone(),
+                                beneficiary,
                             },
                             Instruction::RefundSurplus,
                             Instruction::DepositAsset {
