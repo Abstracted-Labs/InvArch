@@ -20,49 +20,49 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 pub fn expand_outer_slash_reason(pallet_decls: &[Pallet], scrate: &TokenStream) -> TokenStream {
-	let mut conversion_fns = Vec::new();
-	let mut slash_reason_variants = Vec::new();
-	for decl in pallet_decls {
-		if let Some(_) = decl.find_part("SlashReason") {
-			let variant_name = &decl.name;
-			let path = &decl.path;
-			let index = decl.index;
+    let mut conversion_fns = Vec::new();
+    let mut slash_reason_variants = Vec::new();
+    for decl in pallet_decls {
+        if let Some(_) = decl.find_part("SlashReason") {
+            let variant_name = &decl.name;
+            let path = &decl.path;
+            let index = decl.index;
 
-			conversion_fns.push(expand_conversion_fn(path, variant_name));
+            conversion_fns.push(expand_conversion_fn(path, variant_name));
 
-			slash_reason_variants.push(expand_variant(index, path, variant_name));
-		}
-	}
+            slash_reason_variants.push(expand_variant(index, path, variant_name));
+        }
+    }
 
-	quote! {
-		/// A reason for slashing funds.
-		#[derive(
-			Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
-			#scrate::codec::Encode, #scrate::codec::Decode, #scrate::codec::MaxEncodedLen,
-			#scrate::scale_info::TypeInfo,
-			#scrate::RuntimeDebug,
-		)]
-		pub enum RuntimeSlashReason {
-			#( #slash_reason_variants )*
-		}
+    quote! {
+        /// A reason for slashing funds.
+        #[derive(
+            Copy, Clone, Eq, PartialEq, Ord, PartialOrd,
+            #scrate::codec::Encode, #scrate::codec::Decode, #scrate::codec::MaxEncodedLen,
+            #scrate::scale_info::TypeInfo,
+            #scrate::RuntimeDebug,
+        )]
+        pub enum RuntimeSlashReason {
+            #( #slash_reason_variants )*
+        }
 
-		#( #conversion_fns )*
-	}
+        #( #conversion_fns )*
+    }
 }
 
 fn expand_conversion_fn(path: &PalletPath, variant_name: &Ident) -> TokenStream {
-	quote! {
-		impl From<#path::SlashReason> for RuntimeSlashReason {
-			fn from(hr: #path::SlashReason) -> Self {
-				RuntimeSlashReason::#variant_name(hr)
-			}
-		}
-	}
+    quote! {
+        impl From<#path::SlashReason> for RuntimeSlashReason {
+            fn from(hr: #path::SlashReason) -> Self {
+                RuntimeSlashReason::#variant_name(hr)
+            }
+        }
+    }
 }
 
 fn expand_variant(index: u8, path: &PalletPath, variant_name: &Ident) -> TokenStream {
-	quote! {
-		#[codec(index = #index)]
-		#variant_name(#path::SlashReason),
-	}
+    quote! {
+        #[codec(index = #index)]
+        #variant_name(#path::SlashReason),
+    }
 }
