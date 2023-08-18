@@ -1,8 +1,7 @@
 use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::WeakBoundedVec;
+use frame_support::BoundedSlice;
 use scale_info::TypeInfo;
-use sp_std::vec;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
 pub struct Picasso;
@@ -40,13 +39,10 @@ impl RingsChain for Picasso {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            0, 0, 0, 0, 0, 0, 0, 129,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 129,
+                    ])),
                 ),
             },
 

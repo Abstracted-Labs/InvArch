@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,6 @@
 // tag::description[]
 //! Proc macro helpers for procedural macros
 // end::description[]
-
-#![allow(clippy::all)]
 
 // reexport proc macros
 pub use frame_support_procedural_tools_derive::*;
@@ -57,7 +55,7 @@ pub fn generate_crate_access(unique_id: &str, def_crate: &str) -> TokenStream {
 pub fn generate_crate_access_2018(def_crate: &str) -> Result<syn::Ident, Error> {
     match crate_name(def_crate) {
         Ok(FoundCrate::Itself) => {
-            let name = def_crate.to_string().replace("-", "_");
+            let name = def_crate.to_string().replace('-', "_");
             Ok(syn::Ident::new(&name, Span::call_site()))
         }
         Ok(FoundCrate::Name(name)) => Ok(Ident::new(&name, Span::call_site())),
@@ -107,16 +105,15 @@ pub fn clean_type_string(input: &str) -> String {
 }
 
 /// Return all doc attributes literals found.
-pub fn get_doc_literals(attrs: &[syn::Attribute]) -> Vec<syn::Lit> {
+pub fn get_doc_literals(attrs: &[syn::Attribute]) -> Vec<syn::Expr> {
     attrs
         .iter()
         .filter_map(|attr| {
-            if let Ok(syn::Meta::NameValue(meta)) = attr.parse_meta() {
-                if meta.path.get_ident().map_or(false, |ident| ident == "doc") {
-                    Some(meta.lit)
-                } else {
-                    None
-                }
+            if let syn::Meta::NameValue(meta) = &attr.meta {
+                meta.path
+                    .get_ident()
+                    .filter(|ident| *ident == "doc")
+                    .map(|_| meta.value.clone())
             } else {
                 None
             }

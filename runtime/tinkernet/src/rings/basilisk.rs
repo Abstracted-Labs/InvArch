@@ -1,8 +1,7 @@
 use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::WeakBoundedVec;
+use frame_support::BoundedSlice;
 use scale_info::TypeInfo;
-use sp_std::vec;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
 pub struct Basilisk;
@@ -53,26 +52,20 @@ impl RingsChain for Basilisk {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            2, 75, 182, 175, 181, 250, 43, 7, 165, 209, 196, 153, 225, 195, 221,
-                            181, 161, 94, 112, 154, 113,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        2, 75, 182, 175, 181, 250, 43, 7, 165, 209, 196, 153, 225, 195, 221, 181,
+                        161, 94, 112, 154, 113,
+                    ])),
                 ),
             },
             USDCet => MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            2, 31, 58, 16, 88, 122, 32, 17, 78, 162, 91, 161, 179, 136, 238, 45,
-                            212, 163, 55, 206, 39,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        2, 31, 58, 16, 88, 122, 32, 17, 78, 162, 91, 161, 179, 136, 238, 45, 212,
+                        163, 55, 206, 39,
+                    ])),
                 ),
             },
             XRT => MultiLocation {
@@ -83,46 +76,37 @@ impl RingsChain for Basilisk {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(vec![0, 129], None)),
+                    Junction::from(BoundedSlice::truncate_from(&[0, 129])),
                 ),
             },
             wETH => MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            2, 236, 224, 204, 56, 2, 30, 115, 75, 239, 29, 93, 160, 113, 176, 39,
-                            172, 47, 113, 24, 31,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        2, 236, 224, 204, 56, 2, 30, 115, 75, 239, 29, 93, 160, 113, 176, 39, 172,
+                        47, 113, 24, 31,
+                    ])),
                 ),
             },
             wBTC => MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            2, 102, 41, 28, 125, 136, 210, 237, 154, 112, 129, 71, 186, 228, 224,
-                            129, 74, 118, 112, 94, 47,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        2, 102, 41, 28, 125, 136, 210, 237, 154, 112, 129, 71, 186, 228, 224, 129,
+                        74, 118, 112, 94, 47,
+                    ])),
                 ),
             },
             wUSDT => MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(2000),
-                    Junction::GeneralKey(WeakBoundedVec::force_from(
-                        vec![
-                            2, 84, 225, 131, 229, 51, 253, 60, 110, 114, 222, 187, 45, 28, 171, 69,
-                            29, 1, 127, 175, 114,
-                        ],
-                        None,
-                    )),
+                    Junction::from(BoundedSlice::truncate_from(&[
+                        2, 84, 225, 131, 229, 51, 253, 60, 110, 114, 222, 187, 45, 28, 171, 69, 29,
+                        1, 127, 175, 114,
+                    ])),
                 ),
             },
         }

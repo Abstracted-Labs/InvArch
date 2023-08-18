@@ -1,6 +1,7 @@
-use crate::{Balance, ParachainInfo, Runtime, RuntimeEvent};
+use crate::{AccountId, Balance, ParachainInfo, Runtime, RuntimeEvent};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{parameter_types, traits::Get};
+use frame_system::EnsureRoot;
 use pallet_rings::{ChainAssetsList, ChainList};
 use scale_info::TypeInfo;
 use xcm::prelude::*;
@@ -12,16 +13,17 @@ use picasso::Picasso;
 
 parameter_types! {
     pub ParaId: u32 = ParachainInfo::get().into();
-    pub MaxWeightedLength: u32 = 100_000;
     pub INV4PalletIndex: u8 = 71u8;
+    pub MaxXCMCallLength: u32 = 100_000;
 }
 
 impl pallet_rings::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type ParaId = ParaId;
     type Chains = Chains;
-    type MaxWeightedLength = MaxWeightedLength;
     type INV4PalletIndex = INV4PalletIndex;
+    type MaxXCMCallLength = MaxXCMCallLength;
+    type MaintenanceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = pallet_rings::weights::SubstrateWeight<Runtime>;
 }
 

@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@
 //! Use to derive parsing for parsing struct.
 // end::description[]
 
-#![allow(clippy::all)]
 #![recursion_limit = "128"]
 
 use proc_macro::TokenStream;

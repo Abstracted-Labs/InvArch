@@ -25,9 +25,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_primitives_core::DmpMessageHandler;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
-    pallet_prelude::EnsureOrigin,
+    pallet_prelude::{ConstU32, EnsureOrigin},
     weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 };
 pub use frame_support::{
@@ -35,9 +36,8 @@ pub use frame_support::{
     match_types,
     parameter_types,
     traits::{
-        tokens::BalanceConversion, AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly,
-        Everything, FindAuthor, Get, Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced,
-        Randomness, StorageInfo,
+        AsEnsureOriginWithArg, Contains, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Get,
+        Imbalance, KeyOwnerProofSystem, Nothing, OnUnbalanced, Randomness, StorageInfo,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight},
@@ -162,7 +162,6 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    pallet_inv4::migrations::v2::MigrateToV2<Runtime>,
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -193,7 +192,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 18,
+    spec_version: 19,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -231,7 +230,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
     WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
-    cumulus_primitives_core::relay_chain::v2::MAX_POV_SIZE as u64,
+    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
 );
 
 /// The version information used to identify this runtime when compiled natively.
@@ -309,12 +308,12 @@ impl frame_support::traits::OnRuntimeUpgrade for MaintenanceHooks {
         AllPalletsWithSystem::on_runtime_upgrade()
     }
     #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<Vec<u8>, &'static str> {
+    fn pre_upgrade() -> Result<Vec<u8>, sp_runtime::DispatchError> {
         AllPalletsWithSystem::pre_upgrade()
     }
 
     #[cfg(feature = "try-runtime")]
-    fn post_upgrade(state: Vec<u8>) -> Result<(), &'static str> {
+    fn post_upgrade(state: Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
         AllPalletsWithSystem::post_upgrade(state)
     }
 }
@@ -337,6 +336,16 @@ impl frame_support::traits::OffchainWorker<BlockNumber> for MaintenanceHooks {
     }
 }
 
+pub struct NoHandler;
+impl DmpMessageHandler for NoHandler {
+    fn handle_dmp_messages(
+        _iter: impl Iterator<Item = (cumulus_primitives_core::relay_chain::BlockNumber, Vec<u8>)>,
+        _max_weight: Weight,
+    ) -> Weight {
+        Weight::zero()
+    }
+}
+
 impl pallet_maintenance_mode::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type NormalCallFilter = BaseFilter;
@@ -346,6 +355,10 @@ impl pallet_maintenance_mode::Config for Runtime {
     // operation
     type NormalExecutiveHooks = AllPalletsWithSystem;
     type MaintenanceExecutiveHooks = MaintenanceHooks;
+
+    type XcmExecutionManager = ();
+    type NormalDmpHandler = NoHandler;
+    type MaintenanceDmpHandler = NoHandler;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -420,8 +433,6 @@ parameter_types! {
 
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = (CollatorSelection,);
 }
 
@@ -442,6 +453,11 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+
+    type MaxHolds = ConstU32<1>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -588,9 +604,9 @@ impl pallet_collator_selection::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type RuntimeCall = RuntimeCall;
-}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+    type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
 
 impl pallet_utility::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -661,13 +677,11 @@ impl EnsureOrigin<RuntimeOrigin> for EnsureInvarchAccount {
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn successful_origin() -> RuntimeOrigin {
-        use codec::Decode;
-
+    fn try_successful_origin() -> Result<RuntimeOrigin, ()> {
         let zero_account_id =
             AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
                 .expect("infinite length input; no invalid inputs for type; qed");
-        RuntimeOrigin::from(RawOrigin::Signed(zero_account_id))
+        Ok(RuntimeOrigin::from(RawOrigin::Signed(zero_account_id)))
     }
 }
 
@@ -798,7 +812,7 @@ construct_runtime_modified!(
         AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
-        Authorship: pallet_authorship::{Pallet, Call, Storage } = 20,
+        Authorship: pallet_authorship::{Pallet, Storage } = 20,
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
         Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
@@ -811,7 +825,6 @@ construct_runtime_modified!(
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
         // FRAME
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 40,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
@@ -837,12 +850,8 @@ construct_runtime_modified!(
 );
 
 #[cfg(feature = "runtime-benchmarks")]
-#[macro_use]
-extern crate frame_benchmarking;
-
-#[cfg(feature = "runtime-benchmarks")]
 mod benches {
-    define_benchmarks!(
+    frame_benchmarking::define_benchmarks!(
         [frame_system, SystemBench::<Runtime>]
         [pallet_balances, Balances]
         [pallet_session, SessionBench::<Runtime>]
@@ -852,6 +861,7 @@ mod benches {
         [pallet_inv4, INV4]
         [pallet_ocif_staking, OcifStaking]
         [pallet_rings, Rings]
+        [pallet_checked_inflation, CheckedInflation]
     );
 }
 
@@ -884,6 +894,14 @@ impl_runtime_apis! {
         fn metadata() -> OpaqueMetadata {
             OpaqueMetadata::new(Runtime::metadata().into())
         }
+
+        fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+                  Runtime::metadata_at_version(version)
+            }
+
+            fn metadata_versions() -> sp_std::vec::Vec<u32> {
+                  Runtime::metadata_versions()
+            }
     }
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -951,9 +969,7 @@ impl_runtime_apis! {
             match crate::fee_handling::ChargerExtra::decode(&mut uxt.signature.as_ref().unwrap().2.7.encode().as_slice()).unwrap().asset_id {
                 Some(1u32) => {
                     let mut tp = TransactionPayment::query_info(uxt, len);
-                    if let Ok(fee) = TnkrToKsm::to_asset_balance(tp.partial_fee, 1u32) {
-                        tp.partial_fee = fee
-                    }
+                    tp.partial_fee = TnkrToKsm::to_asset_balance(tp.partial_fee);
                     tp
                 }
                 None | Some(_) => TransactionPayment::query_info(uxt, len),
@@ -969,32 +985,27 @@ impl_runtime_apis! {
                     Some(1u32) => {
                         let tp = TransactionPayment::query_fee_details(uxt, len);
                         if let Some(ref inclusion) = tp.inclusion_fee {
-                            if let (
-                                Ok(base_fee),
-                                Ok(len_fee),
-                                Ok(adjusted_weight_fee)
-                            ) = (
-                                TnkrToKsm::to_asset_balance(inclusion.base_fee, 1u32),
-                                TnkrToKsm::to_asset_balance(inclusion.len_fee, 1u32),
-                                TnkrToKsm::to_asset_balance(inclusion.adjusted_weight_fee, 1u32)
-                            ) {
-
                                return FeeDetails {
                                     inclusion_fee: Some(InclusionFee {
-                                        base_fee,
-                                        len_fee,
-                                        adjusted_weight_fee,
+                                        base_fee: TnkrToKsm::to_asset_balance(inclusion.base_fee),
+                                        len_fee: TnkrToKsm::to_asset_balance(inclusion.len_fee),
+                                        adjusted_weight_fee: TnkrToKsm::to_asset_balance(inclusion.adjusted_weight_fee),
                                     }),
                                     tip: tp.tip,
                                 };
-
-                            }
                         }
                         tp
                     }
                     None | Some(_) => TransactionPayment::query_fee_details(uxt, len),
                 }
         }
+
+        fn query_weight_to_fee(weight: Weight) -> Balance {
+                  TransactionPayment::weight_to_fee(weight)
+            }
+            fn query_length_to_fee(length: u32) -> Balance {
+                  TransactionPayment::length_to_fee(length)
+            }
     }
 
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -1005,7 +1016,7 @@ impl_runtime_apis! {
 
       #[cfg(feature = "try-runtime")]
       impl frame_try_runtime::TryRuntime<Block> for Runtime {
-            fn on_runtime_upgrade(checks: bool) -> (Weight, Weight) {
+            fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
                   let weight = Executive::try_runtime_upgrade(checks).unwrap();
                   (weight, RuntimeBlockWeights::get().max_block)
             }
@@ -1045,34 +1056,28 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+                  use frame_system_benchmarking::Pallet as SystemBench;
 
-            use frame_system_benchmarking::Pallet as SystemBench;
-            impl frame_system_benchmarking::Config for Runtime {}
+                  impl frame_system_benchmarking::Config for Runtime {}
 
-            use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
-            impl cumulus_pallet_session_benchmarking::Config for Runtime {}
+                  use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
-            let whitelist: Vec<TrackedStorageKey> = vec![
-                // Block Number
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
-                // Total Issuance
-                hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
-                // Execution Phase
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
-                // Event Count
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
-                // System Events
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
-            ];
+                  impl cumulus_pallet_session_benchmarking::Config for Runtime {}
 
-            let mut batches = Vec::<BenchmarkBatch>::new();
-            let params = (&config, &whitelist);
+                  use frame_support::traits::WhitelistedStorageKeys;
 
-            add_benchmarks!(params, batches);
+                  let whitelist = AllPalletsWithSystem::whitelisted_storage_keys();
 
-            if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
-            Ok(batches)
+                  let mut batches = Vec::<BenchmarkBatch>::new();
+
+                  let params = (&config, &whitelist);
+
+                  add_benchmarks!(params, batches);
+
+                  if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+
+                  Ok(batches)
         }
     }
 }

@@ -29,4 +29,5 @@ impl pallet_checked_inflation::Config for Runtime {
     type ErasPerYear = ErasPerYear;
     type Inflation = Inflation;
     type DealWithInflation = DealWithInflation;
+    type WeightInfo = pallet_checked_inflation::weights::SubstrateWeight<Runtime>;
 }
