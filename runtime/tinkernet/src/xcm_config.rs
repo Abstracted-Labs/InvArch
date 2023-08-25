@@ -42,6 +42,9 @@ pub struct AssetLocation(pub MultiLocation);
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 pub type Barrier = (
+    // \/ FOR TESTING ONLY \/
+    // xcm_builder::AllowUnpaidExecutionFrom<Everything>,
+    // /\ FOR TESTING ONLY /\
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<Everything>,
     // Parent and its plurality get free execution
@@ -88,6 +91,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
+    // If XCM origin is an NFT from a registered chain we give it NftOrigin.
+    pallet_nft_origins::NftMultiLocationAsOrigin<RuntimeOrigin, Runtime>,
     // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
     XcmPassthrough<RuntimeOrigin>,
 );
@@ -226,7 +231,7 @@ impl xcm_executor::Config for XcmConfig {
     type MaxAssetsIntoHolding = ConstU32<8>;
     type UniversalAliases = Nothing;
     type CallDispatcher = RuntimeCall;
-    type SafeCallFilter = ();
+    type SafeCallFilter = Everything;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {

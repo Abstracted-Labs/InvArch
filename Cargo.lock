@@ -3919,7 +3919,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=82061c35b7b73d77b3a073789ef03fd56771e9fb#82061c35b7b73d77b3a073789ef03fd56771e9fb"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6094,7 +6093,6 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=82061c35b7b73d77b3a073789ef03fd56771e9fb#82061c35b7b73d77b3a073789ef03fd56771e9fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6353,7 +6351,6 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=82061c35b7b73d77b3a073789ef03fd56771e9fb#82061c35b7b73d77b3a073789ef03fd56771e9fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6459,6 +6456,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-nft-origins"
+version = "0.1.0-dev"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "pallet-nis"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -6525,7 +6542,6 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=82061c35b7b73d77b3a073789ef03fd56771e9fb#82061c35b7b73d77b3a073789ef03fd56771e9fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6674,7 +6690,6 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=82061c35b7b73d77b3a073789ef03fd56771e9fb#82061c35b7b73d77b3a073789ef03fd56771e9fb"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12451,6 +12466,7 @@ dependencies = [
  "pallet-inv4",
  "pallet-maintenance-mode",
  "pallet-multisig",
+ "pallet-nft-origins",
  "pallet-ocif-staking",
  "pallet-preimage",
  "pallet-rings",
