@@ -43,7 +43,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 
 pub type Barrier = (
     // \/ FOR TESTING ONLY \/
-    // xcm_builder::AllowUnpaidExecutionFrom<Everything>,
+    xcm_builder::AllowUnpaidExecutionFrom<Everything>,
     // /\ FOR TESTING ONLY /\
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<Everything>,
@@ -91,8 +91,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
-    // If XCM origin is an NFT from a registered chain we give it NftOrigin.
-    pallet_nft_origins::NftMultiLocationAsOrigin<RuntimeOrigin, Runtime>,
+    // If XCM origin is an NFT from a registered chain we give it NftOrigin::Nft.
+    pallet_nft_origins::NftMultilocationAsOrigin<RuntimeOrigin, Runtime>,
+    // If XCM origin is an NFT Origin verifier from a registered chain we give it NftOrigin::Verifier.
+    pallet_nft_origins::VerifierMultilocationAsOrigin<RuntimeOrigin, Runtime>,
     // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
     XcmPassthrough<RuntimeOrigin>,
 );
