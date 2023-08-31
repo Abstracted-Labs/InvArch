@@ -837,7 +837,7 @@ construct_runtime_modified!(
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
         CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
         Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
-        NftOrigins: pallet_nft_origins::{Pallet, Origin, Event<T>, Call} = 74,
+        NftOrigins: pallet_nft_origins::{Pallet, Origin, Event<T>, Call, Storage} = 74,
 
         Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
 

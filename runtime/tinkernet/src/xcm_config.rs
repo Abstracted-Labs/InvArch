@@ -32,7 +32,7 @@ use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
     ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-    TakeWeightCredit, UsingComponents,
+    TakeWeightCredit, UsingComponents, WithComputedOrigin,
 };
 use xcm_executor::XcmExecutor;
 
@@ -43,10 +43,11 @@ pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, R
 
 pub type Barrier = (
     // \/ FOR TESTING ONLY \/
-    xcm_builder::AllowUnpaidExecutionFrom<Everything>,
+    //xcm_builder::AllowUnpaidExecutionFrom<Everything>,
     // /\ FOR TESTING ONLY /\
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<Everything>,
+    WithComputedOrigin<AllowTopLevelPaidExecutionFrom<Everything>, UniversalLocation, ConstU32<8>>,
     // Parent and its plurality get free execution
     AllowUnpaidExecutionFrom<ParentOrParentsPlurality>,
     // Expected responses are OK.
@@ -78,6 +79,10 @@ match_types! {
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
 /// biases the kind of local `Origin` it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
+    // If XCM origin is an NFT from a registered chain we give it NftOrigin::Nft.
+    pallet_nft_origins::NftMultilocationAsOrigin<RuntimeOrigin, Runtime>,
+    // If XCM origin is an NFT Origin verifier from a registered chain we give it NftOrigin::Verifier.
+    pallet_nft_origins::VerifierMultilocationAsOrigin<RuntimeOrigin, Runtime>,
     // Sovereign account converter; this attempts to derive an `AccountId` from the origin location
     // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
     // foreign chains who want to have a local sovereign account on this chain which they control.
@@ -91,10 +96,6 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
-    // If XCM origin is an NFT from a registered chain we give it NftOrigin::Nft.
-    pallet_nft_origins::NftMultilocationAsOrigin<RuntimeOrigin, Runtime>,
-    // If XCM origin is an NFT Origin verifier from a registered chain we give it NftOrigin::Verifier.
-    pallet_nft_origins::VerifierMultilocationAsOrigin<RuntimeOrigin, Runtime>,
     // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
     XcmPassthrough<RuntimeOrigin>,
 );
@@ -341,6 +342,7 @@ pub type XcmRouter = (
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
+    HashedDescription<AccountId, DescribeFamily<DescribeAllTerminal>>,
     // The parent (Relay-chain) origin converts to the default `AccountId`.
     ParentIsPreset<AccountId>,
     // Sibling parachain origins convert to AccountId via the `ParaId::into`.
@@ -359,3 +361,130 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
     CurrencyIdConvert,
     DepositToAlternative<TreasuryAccount, Currencies, AssetId, AccountId, Balance>,
 >;
+
+// Temporary \/
+
+use codec::Compact;
+use core::marker::PhantomData;
+use sp_io::hashing::blake2_256;
+use sp_std::prelude::*;
+use xcm_executor::traits::Convert as XcmConvert;
+
+/// Means of converting a location into a stable and unique descriptive identifier.
+pub trait DescribeLocation {
+    /// Create a description of the given `location` if possible. No two locations should have the
+    /// same descriptor.
+    fn describe_location(location: &MultiLocation) -> Option<Vec<u8>>;
+}
+
+impl<A: DescribeLocation, B: DescribeLocation, C: DescribeLocation, D: DescribeLocation>
+    DescribeLocation for (A, B, C, D)
+{
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match A::describe_location(l) {
+            Some(result) => Some(result),
+            None => match B::describe_location(l) {
+                Some(result) => Some(result),
+                None => match C::describe_location(l) {
+                    Some(result) => Some(result),
+                    None => match D::describe_location(l) {
+                        Some(result) => Some(result),
+                        None => None,
+                    },
+                },
+            },
+        }
+    }
+}
+
+pub struct DescribeTerminus;
+impl DescribeLocation for DescribeTerminus {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, &l.interior) {
+            (0, Here) => Some(Vec::new()),
+            _ => return None,
+        }
+    }
+}
+
+pub struct DescribePalletTerminal;
+impl DescribeLocation for DescribePalletTerminal {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, &l.interior) {
+            (0, X1(PalletInstance(i))) => {
+                Some((b"Pallet", Compact::<u32>::from(*i as u32)).encode())
+            }
+            _ => return None,
+        }
+    }
+}
+
+pub struct DescribeAccountId32Terminal;
+impl DescribeLocation for DescribeAccountId32Terminal {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, &l.interior) {
+            (0, X1(AccountId32 { id, .. })) => Some((b"AccountId32", id).encode()),
+            _ => return None,
+        }
+    }
+}
+
+pub struct DescribeAccountKey20Terminal;
+impl DescribeLocation for DescribeAccountKey20Terminal {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, &l.interior) {
+            (0, X1(AccountKey20 { key, .. })) => Some((b"AccountKey20", key).encode()),
+            _ => return None,
+        }
+    }
+}
+
+pub type DescribeAllTerminal = (
+    DescribeTerminus,
+    DescribePalletTerminal,
+    DescribeAccountId32Terminal,
+    DescribeAccountKey20Terminal,
+);
+
+pub struct DescribeFamily<DescribeInterior>(PhantomData<DescribeInterior>);
+impl<Suffix: DescribeLocation> DescribeLocation for DescribeFamily<Suffix> {
+    fn describe_location(l: &MultiLocation) -> Option<Vec<u8>> {
+        match (l.parents, l.interior.first()) {
+            (0, Some(Parachain(index))) => {
+                let tail = l.interior.split_first().0;
+                let interior = Suffix::describe_location(&tail.into())?;
+                Some((b"ChildChain", Compact::<u32>::from(*index), interior).encode())
+            }
+            (1, Some(Parachain(index))) => {
+                let tail = l.interior.split_first().0;
+                let interior = Suffix::describe_location(&tail.into())?;
+                Some((b"SiblingChain", Compact::<u32>::from(*index), interior).encode())
+            }
+            (1, _) => {
+                let tail = l.interior.into();
+                let interior = Suffix::describe_location(&tail)?;
+                Some((b"ParentChain", interior).encode())
+            }
+            _ => return None,
+        }
+    }
+}
+
+pub struct HashedDescription<AccountId, Describe>(PhantomData<(AccountId, Describe)>);
+impl<AccountId: From<[u8; 32]> + Clone + core::fmt::Debug, Describe: DescribeLocation>
+    XcmConvert<MultiLocation, AccountId> for HashedDescription<AccountId, Describe>
+{
+    fn convert(value: MultiLocation) -> Result<AccountId, MultiLocation> {
+        if let Some(description) = Describe::describe_location(&value) {
+            log::trace!(
+                  target: "xcm::LocationToAccountId",
+                  "HashedDescription location: {:?}, account_id: {:?}",
+                  value, AccountId::from(blake2_256(&description))
+            );
+
+            Ok(blake2_256(&description).into())
+        } else {
+            Err(value)
+        }
+    }
+}

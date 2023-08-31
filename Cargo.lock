@@ -6464,6 +6464,7 @@ dependencies = [
  "log",
  "pallet-xcm",
  "parity-scale-codec",
+ "primitive-types",
  "scale-info",
  "serde",
  "sp-arithmetic",
