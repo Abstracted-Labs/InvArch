@@ -57,8 +57,8 @@ impl ChainVerifier for RegisteredChains {
 pub enum RegisteredCalls {
     VoteInCore {
         core_id: <Runtime as pallet_inv4::Config>::CoreId,
-        proposal: <Runtime as frame_system::Config>::Hash,
-        vote: bool,
+        call_hash: <Runtime as frame_system::Config>::Hash,
+        aye: bool,
     },
     TestNftCall,
 }
@@ -74,7 +74,18 @@ impl Dispatchable for RegisteredCalls {
         origin: Self::RuntimeOrigin,
     ) -> sp_runtime::DispatchResultWithInfo<Self::PostInfo> {
         match self {
-            Self::VoteInCore { .. } => todo!(),
+            Self::VoteInCore {
+                core_id,
+                call_hash,
+                aye,
+            } => Ok(pallet_inv4::Pallet::<Runtime>::nft_vote_multisig(
+                origin.into(),
+                core_id,
+                call_hash,
+                aye,
+            )?
+            .into()),
+
             Self::TestNftCall => {
                 Ok(pallet_nft_origins::Pallet::<Runtime>::test_nft_location(origin.into())?.into())
             }
@@ -84,8 +95,18 @@ impl Dispatchable for RegisteredCalls {
 
 impl GetDispatchInfo for RegisteredCalls {
     fn get_dispatch_info(&self) -> frame_support::dispatch::DispatchInfo {
-        match self {
-            Self::VoteInCore { .. } => todo!(),
+        match *self {
+            Self::VoteInCore {
+                core_id,
+                call_hash,
+                aye,
+            } => pallet_inv4::pallet::Call::<Runtime>::nft_vote_multisig {
+                core_id,
+                call_hash,
+                aye,
+            }
+            .get_dispatch_info(),
+
             Self::TestNftCall => pallet_nft_origins::pallet::Call::<Runtime>::test_nft_location {}
                 .get_dispatch_info(),
         }

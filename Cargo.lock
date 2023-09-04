@@ -6359,6 +6359,7 @@ dependencies = [
  "log",
  "orml-tokens 0.4.1-dev (git+https://github.com/arrudagates//open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae)",
  "pallet-balances",
+ "pallet-nft-origins",
  "parity-scale-codec",
  "scale-info",
  "serde",
