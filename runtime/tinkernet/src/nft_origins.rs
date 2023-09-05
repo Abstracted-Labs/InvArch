@@ -1,9 +1,10 @@
 use crate::{Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin};
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use frame_support::dispatch::GetDispatchInfo;
 use pallet_nft_origins::{ChainVerifier, Parachain};
 use scale_info::TypeInfo;
-use sp_runtime::traits::Dispatchable;
+use sp_runtime::{traits::Dispatchable, BoundedVec};
+use sp_std::boxed::Box;
 use xcm::latest::Junction;
 
 impl pallet_nft_origins::Config for Runtime {
@@ -53,14 +54,28 @@ impl ChainVerifier for RegisteredChains {
     }
 }
 
-#[derive(Encode, Decode, MaxEncodedLen, Clone, PartialEq, Eq, Debug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, TypeInfo)]
+#[repr(u8)]
 pub enum RegisteredCalls {
-    VoteInCore {
+    VoteInMultisig {
         core_id: <Runtime as pallet_inv4::Config>::CoreId,
         call_hash: <Runtime as frame_system::Config>::Hash,
         aye: bool,
-    },
-    TestNftCall,
+    } = 0,
+
+    WithdrawVoteInMultisig {
+        core_id: <Runtime as pallet_inv4::Config>::CoreId,
+        call_hash: <Runtime as frame_system::Config>::Hash,
+    } = 1,
+
+    OperateMultisig {
+        core_id: <Runtime as pallet_inv4::Config>::CoreId,
+        metadata: Option<BoundedVec<u8, <Runtime as pallet_inv4::Config>::MaxMetadata>>,
+        fee_asset: pallet_inv4::fee_handling::FeeAsset,
+        call: Box<<Runtime as pallet_inv4::Config>::RuntimeCall>,
+    } = 2,
+
+    TestNftCall = 3,
 }
 
 impl Dispatchable for RegisteredCalls {
@@ -74,7 +89,7 @@ impl Dispatchable for RegisteredCalls {
         origin: Self::RuntimeOrigin,
     ) -> sp_runtime::DispatchResultWithInfo<Self::PostInfo> {
         match self {
-            Self::VoteInCore {
+            Self::VoteInMultisig {
                 core_id,
                 call_hash,
                 aye,
@@ -83,6 +98,29 @@ impl Dispatchable for RegisteredCalls {
                 core_id,
                 call_hash,
                 aye,
+            )?
+            .into()),
+
+            Self::WithdrawVoteInMultisig { core_id, call_hash } => {
+                Ok(pallet_inv4::Pallet::<Runtime>::nft_withdraw_vote_multisig(
+                    origin.into(),
+                    core_id,
+                    call_hash,
+                )?
+                .into())
+            }
+
+            Self::OperateMultisig {
+                core_id,
+                metadata,
+                fee_asset,
+                call,
+            } => Ok(pallet_inv4::Pallet::<Runtime>::nft_operate_multisig(
+                origin.into(),
+                core_id,
+                metadata,
+                fee_asset,
+                call,
             )?
             .into()),
 
@@ -95,8 +133,8 @@ impl Dispatchable for RegisteredCalls {
 
 impl GetDispatchInfo for RegisteredCalls {
     fn get_dispatch_info(&self) -> frame_support::dispatch::DispatchInfo {
-        match *self {
-            Self::VoteInCore {
+        match self.clone() {
+            Self::VoteInMultisig {
                 core_id,
                 call_hash,
                 aye,
@@ -104,6 +142,27 @@ impl GetDispatchInfo for RegisteredCalls {
                 core_id,
                 call_hash,
                 aye,
+            }
+            .get_dispatch_info(),
+
+            Self::WithdrawVoteInMultisig { core_id, call_hash } => {
+                pallet_inv4::pallet::Call::<Runtime>::nft_withdraw_vote_multisig {
+                    core_id,
+                    call_hash,
+                }
+                .get_dispatch_info()
+            }
+
+            Self::OperateMultisig {
+                core_id,
+                metadata,
+                fee_asset,
+                call,
+            } => pallet_inv4::pallet::Call::<Runtime>::nft_operate_multisig {
+                core_id,
+                metadata,
+                fee_asset,
+                call,
             }
             .get_dispatch_info(),
 
