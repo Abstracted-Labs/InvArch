@@ -835,7 +835,7 @@ construct_runtime_modified!(
         OcifStaking: pallet_ocif_staking::{Pallet, Call, Storage, Event<T>} = 51,
 
         INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
-        CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+        CoreAssets: pallet_core_assets::{Pallet, Storage, Call, Event<T>} = 72,
         Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
         NftOrigins: pallet_nft_origins::{Pallet, Origin, Event<T>, Call, Storage} = 74,
 

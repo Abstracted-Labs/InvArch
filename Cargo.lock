@@ -6183,6 +6183,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-core-assets"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -12464,6 +12478,7 @@ dependencies = [
  "pallet-balances",
  "pallet-checked-inflation",
  "pallet-collator-selection",
+ "pallet-core-assets",
  "pallet-identity",
  "pallet-inv4",
  "pallet-maintenance-mode",

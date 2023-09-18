@@ -9,13 +9,13 @@ use crate::{
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
-    traits::{fungibles::Credit, Contains, Currency, OnUnbalanced},
+    traits::{fungibles::Credit, Currency, OnUnbalanced},
 };
 use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use scale_info::TypeInfo;
-use sp_core::{ConstU32, H256};
-use sp_runtime::traits::{One, SignedExtension, Zero};
+use sp_core::H256;
+use sp_runtime::traits::{SignedExtension, Zero};
 
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
@@ -42,7 +42,6 @@ impl pallet_inv4::Config for Runtime {
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    // type AssetFreezer = AssetFreezer;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
     type GenesisHash = GenesisHash;
@@ -121,86 +120,89 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
     }
 }
 
-orml_traits2::parameter_type_with_key! {
-    pub CoreExistentialDeposits: |_currency_id: <Runtime as pallet_inv4::Config>::CoreId| -> Balance {
-        Balance::one()
-    };
-}
+// pub struct DisallowIfFrozen;
+// impl
+//     orml_tokens_fork::OnTransfer<
+//         pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         <Runtime as pallet_inv4::Config>::CoreId,
+//         Balance,
+//     > for DisallowIfFrozen
+// {
+//     fn on_transfer(
+//         currency_id: <Runtime as pallet_inv4::Config>::CoreId,
+//         _from: &pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         _to: &pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         _amount: Balance,
+//     ) -> sp_runtime::DispatchResult {
+//         if let Some(true) = crate::INV4::is_asset_frozen(currency_id) {
+//             Err(sp_runtime::DispatchError::Token(
+//                 sp_runtime::TokenError::Frozen,
+//             ))
+//         } else {
+//             Ok(())
+//         }
+//     }
+// }
 
-pub struct CoreDustRemovalWhitelist;
-impl Contains<AccountId> for CoreDustRemovalWhitelist {
-    fn contains(_: &AccountId) -> bool {
-        true
-    }
-}
+// pub struct HandleNewMembers;
+// impl
+//     orml_tokens_fork::Happened<(
+//         pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         <Runtime as pallet_inv4::Config>::CoreId,
+//     )> for HandleNewMembers
+// {
+//     fn happened(
+//         (member, core_id): &(
+//             pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//             <Runtime as pallet_inv4::Config>::CoreId,
+//         ),
+//     ) {
+//         crate::INV4::add_member(core_id, member)
+//     }
+// }
 
-pub struct DisallowIfFrozen;
-impl
-    orml_traits2::currency::OnTransfer<AccountId, <Runtime as pallet_inv4::Config>::CoreId, Balance>
-    for DisallowIfFrozen
-{
-    fn on_transfer(
-        currency_id: <Runtime as pallet_inv4::Config>::CoreId,
-        _from: &AccountId,
-        _to: &AccountId,
-        _amount: Balance,
-    ) -> sp_runtime::DispatchResult {
-        if let Some(true) = crate::INV4::is_asset_frozen(currency_id) {
-            Err(sp_runtime::DispatchError::Token(
-                sp_runtime::TokenError::Frozen,
-            ))
-        } else {
-            Ok(())
-        }
-    }
-}
+// pub struct HandleRemovedMembers;
+// impl
+//     orml_tokens_fork::Happened<(
+//         pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         <Runtime as pallet_inv4::Config>::CoreId,
+//     )> for HandleRemovedMembers
+// {
+//     fn happened(
+//         (member, core_id): &(
+//             pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//             <Runtime as pallet_inv4::Config>::CoreId,
+//         ),
+//     ) {
+//         crate::INV4::remove_member(core_id, member)
+//     }
+// }
 
-pub struct HandleNewMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
-    for HandleNewMembers
-{
-    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
-        crate::INV4::add_member(core_id, member)
-    }
-}
+// pub struct INV4TokenHooks;
+// impl
+//     orml_tokens_fork::MutationHooks<
+//         pallet_inv4::multisig::MultisigMemberOf<Runtime>,
+//         <Runtime as pallet_inv4::Config>::CoreId,
+//         Balance,
+//     > for INV4TokenHooks
+// {
+//     type PreTransfer = DisallowIfFrozen;
+//     type OnDust = ();
+//     type OnSlash = ();
+//     type PreDeposit = ();
+//     type PostDeposit = ();
+//     type PostTransfer = ();
+//     type OnNewTokenAccount = HandleNewMembers;
+//     type OnKilledTokenAccount = HandleRemovedMembers;
+// }
 
-pub struct HandleRemovedMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
-    for HandleRemovedMembers
-{
-    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
-        crate::INV4::remove_member(core_id, member)
-    }
-}
-
-pub struct INV4TokenHooks;
-impl
-    orml_traits2::currency::MutationHooks<
-        AccountId,
-        <Runtime as pallet_inv4::Config>::CoreId,
-        Balance,
-    > for INV4TokenHooks
-{
-    type PreTransfer = DisallowIfFrozen;
-    type OnDust = ();
-    type OnSlash = ();
-    type PreDeposit = ();
-    type PostDeposit = ();
-    type PostTransfer = ();
-    type OnNewTokenAccount = HandleNewMembers;
-    type OnKilledTokenAccount = HandleRemovedMembers;
-}
-
-impl orml_tokens2::Config for Runtime {
+impl pallet_core_assets::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
-    type Amount = i128;
     type CurrencyId = <Runtime as pallet_inv4::Config>::CoreId;
     type WeightInfo = ();
-    type ExistentialDeposits = CoreExistentialDeposits;
-    type MaxLocks = ConstU32<0u32>;
-    type MaxReserves = ConstU32<0u32>;
-    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
-    type ReserveIdentifier = [u8; 8];
-    type CurrencyHooks = INV4TokenHooks;
+
+    type AccountId = pallet_inv4::multisig::MultisigMemberOf<Runtime>;
+    type Lookup =
+        sp_runtime::traits::IdentityLookup<pallet_inv4::multisig::MultisigMemberOf<Runtime>>;
 }
