@@ -4,13 +4,17 @@
 #[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{api, native_version as _native_version, opaque::Block, Hash};
 
-use cumulus_client_cli::CollatorOptions;
-use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
+use cumulus_client_cli::{CollatorOptions, RelayChainMode};
+use cumulus_client_consensus_aura::{
+    collators::lookahead::Params as AuraLookaheadParams, AuraConsensus, BuildAuraConsensusParams,
+    SlotProportion,
+};
 use cumulus_client_consensus_common::{
     ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
 };
 use cumulus_client_service::{
-    prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
+    prepare_node_config, start_collator, start_full_node, CollatorSybilResistance,
+    StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
 use cumulus_primitives_parachain_inherent::{
@@ -83,7 +87,7 @@ pub fn new_partial<BIQ>(
         ParachainClient,
         ParachainBackend,
         (),
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
+        sc_consensus::DefaultImportQueue<Block>,
         sc_transaction_pool::FullPool<Block, ParachainClient>,
         (
             ParachainBlockImport,
@@ -101,10 +105,7 @@ where
         &Configuration,
         Option<TelemetryHandle>,
         &TaskManager,
-    ) -> Result<
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
-        sc_service::Error,
-    >,
+    ) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -178,21 +179,26 @@ async fn build_relay_chain_interface(
     Arc<(dyn RelayChainInterface + 'static)>,
     Option<CollatorPair>,
 )> {
-    if !collator_options.relay_chain_rpc_urls.is_empty() {
-        cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node(
-            polkadot_config,
-            task_manager,
-            collator_options.relay_chain_rpc_urls,
-        )
-        .await
-    } else {
-        cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain(
-            polkadot_config,
-            parachain_config,
-            telemetry_worker_handle,
-            task_manager,
-            None,
-        )
+    match collator_options.relay_chain_mode {
+        RelayChainMode::ExternalRpc(rpc_urls) => {
+            cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node_with_rpc(
+                polkadot_config,
+                task_manager,
+                rpc_urls,
+            )
+            .await
+        }
+
+        // TODO: Add support for relay chain with light client.
+        RelayChainMode::Embedded | RelayChainMode::LightClient => {
+            cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain(
+                polkadot_config,
+                parachain_config,
+                telemetry_worker_handle,
+                task_manager,
+                None,
+            )
+        }
     }
 }
 
@@ -219,10 +225,8 @@ where
             &Configuration,
             Option<TelemetryHandle>,
             &TaskManager,
-        ) -> Result<
-            sc_consensus::DefaultImportQueue<Block, ParachainClient>,
-            sc_service::Error,
-        > + 'static,
+        ) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>
+        + 'static,
     BIC: FnOnce(
         Arc<ParachainClient>,
         ParachainBlockImport,
@@ -276,6 +280,7 @@ where
             relay_chain_interface: relay_chain_interface.clone(),
             para_id: id,
             net_config,
+            sybil_resistance_level: CollatorSybilResistance::Unresistant,
         })
         .await?;
 
@@ -385,7 +390,7 @@ pub fn parachain_build_import_queue(
     config: &Configuration,
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
-) -> Result<sc_consensus::DefaultImportQueue<Block, ParachainClient>, sc_service::Error> {
+) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error> {
     let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
     cumulus_client_consensus_aura::import_queue::<
@@ -458,7 +463,8 @@ pub async fn start_parachain_node(
                 _,
                 _,
                 _,
-            >(BuildAuraConsensusParams {
+            >(
+                BuildAuraConsensusParams {
                 proposer_factory,
                 create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
                     let relay_chain_interface = relay_chain_interface.clone();
@@ -672,7 +678,7 @@ pub fn new_solo_partial(
         ParachainClient,
         ParachainBackend,
         sc_consensus::LongestChain<ParachainBackend, Block>,
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
+        sc_consensus::DefaultImportQueue<Block>,
         sc_transaction_pool::FullPool<Block, ParachainClient>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
@@ -806,7 +812,7 @@ mod instant_finalize {
         I: BlockImport<Block> + Send,
     {
         type Error = I::Error;
-        type Transaction = I::Transaction;
+        //type Transaction = I::Transaction;
 
         async fn check_block(
             &mut self,
@@ -817,7 +823,7 @@ mod instant_finalize {
 
         async fn import_block(
             &mut self,
-            mut block_import_params: sc_consensus::BlockImportParams<Block, Self::Transaction>,
+            mut block_import_params: sc_consensus::BlockImportParams<Block>,
         ) -> Result<sc_consensus::ImportResult, Self::Error> {
             block_import_params.finalized = true;
             self.0.import_block(block_import_params).await

@@ -20,16 +20,19 @@ homepage = "https://invarch.network"
 panic = 'unwind'
 
 [patch.'https://github.com/arrudagates/open-runtime-module-library']
-orml-traits2 = { package = "orml-traits", git = "https://github.com/arrudagates//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-tokens2 = { package = "orml-tokens", git = "https://github.com/moonbeam-foundation//open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-traits2 = { package = "orml-traits", git = "https://github.com/moonbeam-foundation//open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
 
 [patch.'https://github.com/open-web3-stack/open-runtime-module-library']
-orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-xcm = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-vesting = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-asset-registry = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-xtokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-unknown-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-xcm = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-vesting = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-xtokens = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-xcm-support = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-unknown-tokens = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-currencies = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-traits = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-tokens = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+orml-asset-registry = { git = "https://github.com/moonbeam-foundation/open-runtime-module-library", branch = "upgrade-to-polkadot-v1.1.0" }
+
+[patch."https://github.com/Moonsong-Labs/moonkit"]
+pallet-maintenance-mode = { git = "https://github.com/Moonsong-Labs//moonkit", branch = "moonbeam-polkadot-v1.1.0" }

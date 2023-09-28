@@ -85,9 +85,9 @@ impl SubstrateCli for Cli {
         load_spec(id)
     }
 
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &VERSION
-    }
+    //fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+    //    &VERSION
+    //}
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -123,9 +123,9 @@ impl SubstrateCli for RelayChainCli {
         polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
     }
 
-    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        polkadot_cli::Cli::native_runtime_version(chain_spec)
-    }
+    //fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+    //    polkadot_cli::Cli::native_runtime_version(chain_spec)
+    //}
 }
 
 #[allow(clippy::borrowed_box)]
@@ -216,7 +216,7 @@ pub fn run() -> Result<()> {
             let _ = builder.init();
 
             let spec = load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
-            let state_version = Cli::native_runtime_version(&spec).state_version();
+            let state_version = VERSION.state_version();
             let block: Block = generate_genesis_block(&*spec, state_version)?;
             let raw_header = block.header().encode();
             let output_buf = if params.raw {
@@ -261,7 +261,7 @@ pub fn run() -> Result<()> {
             match cmd {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
-                        runner.sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
+                        runner.sync_run(|config| cmd.run::<Block, ()>(config))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
@@ -364,11 +364,11 @@ pub fn run() -> Result<()> {
                         &id,
                     );
 
-                let state_version =
-                    RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
-                let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-                    .map_err(|e| format!("{:?}", e))?;
-                let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+                //let state_version =
+                //    RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
+                //let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
+                //    .map_err(|e| format!("{:?}", e))?;
+                //let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
@@ -377,7 +377,7 @@ pub fn run() -> Result<()> {
 
                 info!("Parachain id: {:?}", id);
                 info!("Parachain Account: {}", parachain_account);
-                info!("Parachain genesis state: {}", genesis_state);
+                //info!("Parachain genesis state: {}", genesis_state);
                 info!(
                     "Is collating: {}",
                     if config.role.is_authority() {

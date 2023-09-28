@@ -297,6 +297,7 @@ fn testnet_genesis(
             code: WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
+            ..Default::default()
         },
         balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
@@ -306,7 +307,10 @@ fn testnet_genesis(
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        parachain_info: ParachainInfoConfig { parachain_id: id },
+        parachain_info: ParachainInfoConfig {
+            parachain_id: id,
+            ..Default::default()
+        },
         collator_selection: CollatorSelectionConfig {
             invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
             candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
@@ -331,6 +335,7 @@ fn testnet_genesis(
         parachain_system: Default::default(),
         polkadot_xcm: PolkadotXcmConfig {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
+            ..Default::default()
         },
         sudo: SudoConfig {
             // Assign network admin rights.

@@ -119,6 +119,8 @@ pub type Balance = u128;
 /// Index of a transaction in the chain.
 pub type Index = u32;
 
+pub type Nonce = u32;
+
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
 
@@ -371,15 +373,15 @@ impl frame_system::Config for Runtime {
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = INV4Lookup<Runtime>;
     /// The index type for storing how many extrinsics an account has signed.
-    type Index = Index;
+    // type Index = Index;
     /// The index type for blocks.
-    type BlockNumber = BlockNumber;
+    // type BlockNumber = BlockNumber;
     /// The type for hashing blocks and tries.
     type Hash = Hash;
     /// The hashing algorithm used.
     type Hashing = BlakeTwo256;
     /// The header type.
-    type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    // type Header = generic::Header<BlockNumber, BlakeTwo256>;
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
@@ -413,6 +415,9 @@ impl frame_system::Config for Runtime {
     /// The set code logic, just the default since we're not a parachain.
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
     type MaxConsumers = frame_support::traits::ConstU32<16>;
+
+    type Nonce = Nonce;
+    type Block = Block;
 }
 
 parameter_types! {
@@ -457,7 +462,7 @@ impl pallet_balances::Config for Runtime {
     type MaxHolds = ConstU32<1>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
+    type RuntimeHoldReason = [u8; 8];
 }
 
 parameter_types! {
@@ -551,6 +556,7 @@ parameter_types! {
     pub const Period: u32 = 6 * HOURS;
     pub const Offset: u32 = 0;
     pub const MaxAuthorities: u32 = 100_000;
+    pub const AllowMultipleBlocksPerSlot: bool = true;
 }
 
 impl pallet_session::Config for Runtime {
@@ -571,6 +577,8 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
+
+    type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
 }
 
 parameter_types! {
@@ -591,7 +599,7 @@ impl pallet_collator_selection::Config for Runtime {
     type UpdateOrigin = CollatorSelectionUpdateOrigin;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
-    type MinCandidates = MinCandidates;
+    type MinEligibleCollators = MinCandidates;
     type MaxInvulnerables = MaxInvulnerables;
     // should be a multiple of session or things will get inconsistent
     type KickThreshold = Period;
@@ -788,27 +796,28 @@ impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeO
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime_modified!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic
+    pub enum Runtime
+    //where
+    //    Block = Block,
+    //    NodeBlock = opaque::Block,
+    //    UncheckedExtrinsic = UncheckedExtrinsic
     {
         // System support stuff
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>} = 0,
         Utility: pallet_utility::{Pallet, Call, Event} = 1,
         ParachainSystem: cumulus_pallet_parachain_system::{
-            Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
+            Pallet, Call, Config<T>, Storage, Inherent, Event<T>, ValidateUnsigned,
         } = 2,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-        ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+        ParachainInfo: parachain_info::{Pallet, Storage, Config<T>} = 4,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
         Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 6,
-        MaintenanceMode: pallet_maintenance_mode::{Pallet, Call, Config, Storage, Event} = 7,
+        MaintenanceMode: pallet_maintenance_mode::{Pallet, Call, Config<T>, Storage, Event} = 7,
 
         // Monetary stuff
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
         AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
@@ -816,11 +825,11 @@ construct_runtime_modified!(
         CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
         Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-        AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+        AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config<T>} = 24,
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config, Call} = 31,
+        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config<T>, Call} = 31,
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
