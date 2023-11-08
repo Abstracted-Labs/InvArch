@@ -28,7 +28,7 @@ jobs:
           dir_names: true
           dir_names_max_depth: 1
 
-  build [tinkernet]:
+  build_tinkernet:
     runs-on: ubuntu-latest
     if:
       contains(jobs.changed_files.outputs.modified_files, 'tinkernet')
@@ -54,7 +54,7 @@ jobs:
       working-directory: ./tinkernet
       run: cargo +stable fmt --all -- --check
 
-  build [invarch]:
+  build_invarch:
     runs-on: ubuntu-latest
     if:
       contains(jobs.changed_files.outputs.modified_files, 'invarch')
