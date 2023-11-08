@@ -27,12 +27,12 @@ chain = "local"
 
   [[parachains.collators]]
   name = "tinkernet-collator-0"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
   ws_port = 9944
 
   [[parachains.collators]]
   name = "tinkernet-collator-1"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
 
 [[parachains]]
 id = 2090

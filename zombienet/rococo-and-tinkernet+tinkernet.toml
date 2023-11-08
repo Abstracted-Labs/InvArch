@@ -23,12 +23,12 @@ chain = "local"
 
   [[parachains.collators]]
   name = "tinkernet-collator-0"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
   ws_port = 2125
 
   [[parachains.collators]]
   name = "tinkernet-collator-1"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
 
 [[parachains]]
 id = 2126
@@ -38,12 +38,12 @@ chain = "local"
 
   [[parachains.collators]]
   name = "tinkernet-2-collator-0"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
   ws_port = 2126
 
   [[parachains.collators]]
   name = "tinkernet-2-collator-1"
-  command = "./target/release/invarch-collator"
+  command = "./tinkernet/target/release/tinkernet-collator"
 
 [[hrmp_channels]]
 sender = 2125
