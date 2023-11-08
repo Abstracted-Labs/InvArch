@@ -14,9 +14,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  changed_files:
+  build:
     runs-on: ubuntu-latest
-    name: Test changed-files
+    name: Build
     steps:
       - uses: actions/checkout@v4
 
@@ -28,54 +28,55 @@ jobs:
           dir_names: true
           dir_names_max_depth: 1
 
-  build_tinkernet:
-    runs-on: ubuntu-latest
-    if:
-      contains(jobs.changed_files.outputs.modified_files, 'tinkernet')
-    steps:
-    - uses: actions/checkout@v2
+      - name: Setup for checks
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'tinkernet') || contains(steps.changed-files.outputs.modified_files, 'invarch')
+        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
-    - name: Setup for checks
-      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+      - name: Build [tinkernet]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'tinkernet')
+        working-directory: ./tinkernet
+        run: cargo build --verbose
 
-    - name: Build
-      working-directory: ./tinkernet
-      run: cargo build --verbose
+      - name: Run tests [tinkernet]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'tinkernet')
+        working-directory: ./tinkernet
+        run: cargo test --verbose
 
-    - name: Run tests
-      working-directory: ./tinkernet
-      run: cargo test --verbose
+      - name: Run clippy [tinkernet]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'tinkernet')
+        working-directory: ./tinkernet
+        run: cargo clippy -- -D warnings
 
-    - name: Run clippy
-      working-directory: ./tinkernet
-      run: cargo clippy -- -D warnings
+      - name: Run cargofmt [tinkernet]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'tinkernet')
+        working-directory: ./tinkernet
+        run: cargo +stable fmt --all -- --check
 
-    - name: Run cargofmt
-      working-directory: ./tinkernet
-      run: cargo +stable fmt --all -- --check
+      - name: Build [invarch]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'invarch')
+        working-directory: ./invarch
+        run: cargo build --verbose
 
-  build_invarch:
-    runs-on: ubuntu-latest
-    if:
-      contains(jobs.changed_files.outputs.modified_files, 'invarch')
-    steps:
-    - uses: actions/checkout@v2
+      - name: Run tests [invarch]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'invarch')
+        working-directory: ./invarch
+        run: cargo test --verbose
 
-    - name: Setup for checks
-      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+      - name: Run clippy [invarch]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'invarch')
+        working-directory: ./invarch
+        run: cargo clippy -- -D warnings
 
-    - name: Build
-      working-directory: ./invarch
-      run: cargo build --verbose
-
-    - name: Run tests
-      working-directory: ./invarch
-      run: cargo test --verbose
-
-    - name: Run clippy
-      working-directory: ./invarch
-      run: cargo clippy -- -D warnings
-
-    - name: Run cargofmt
-      working-directory: ./invarch
-      run: cargo +stable fmt --all -- --check
+      - name: Run cargofmt [invarch]
+        if:
+          contains(steps.changed-files.outputs.modified_files, 'invarch')
+        working-directory: ./invarch
+        run: cargo +stable fmt --all -- --check
