@@ -14,44 +14,68 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  detect-directory-changes:
-    name: "Detect Directory Changes"
+  changed_files:
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.detect.outputs.changed }}
+    name: Test changed-files
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Detect Directory Changes
-        id: detect
-        uses: tchupp/actions-detect-directory-changes@v1
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
         with:
-          included-paths: "tinkernet,invarch"
+          fetch-depth: 0
+          dir_names: true
+          dir_names_max_depth: 1
 
-  build:
+  build [tinkernet]:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        project: ${{ fromJSON(needs.detect-directory-changes.outputs.changed) }}
+    if:
+      contains(jobs.changed_files.outputs.modified_files, 'tinkernet')
     steps:
     - uses: actions/checkout@v2
 
     - name: Setup for checks
       run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
-    - name: Build [${{ matrix.project }}]
-      working-directory: ./${{ matrix.project }}
+    - name: Build
+      working-directory: ./tinkernet
       run: cargo build --verbose
 
-    - name: Run tests [${{ matrix.project }}]
-      working-directory: ./${{ matrix.project }}
+    - name: Run tests
+      working-directory: ./tinkernet
       run: cargo test --verbose
 
-    - name: Run clippy [${{ matrix.project }}]
-      working-directory: ./${{ matrix.project }}
+    - name: Run clippy
+      working-directory: ./tinkernet
       run: cargo clippy -- -D warnings
 
-    - name: Run cargofmt [${{ matrix.project }}]
-      working-directory: ./${{ matrix.project }}
+    - name: Run cargofmt
+      working-directory: ./tinkernet
+      run: cargo +stable fmt --all -- --check
+
+  build [invarch]:
+    runs-on: ubuntu-latest
+    if:
+      contains(jobs.changed_files.outputs.modified_files, 'invarch')
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup for checks
+      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+    - name: Build
+      working-directory: ./invarch
+      run: cargo build --verbose
+
+    - name: Run tests
+      working-directory: ./invarch
+      run: cargo test --verbose
+
+    - name: Run clippy
+      working-directory: ./invarch
+      run: cargo clippy -- -D warnings
+
+    - name: Run cargofmt
+      working-directory: ./invarch
       run: cargo +stable fmt --all -- --check
