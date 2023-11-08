@@ -2,45 +2,56 @@ name: Checks
 
 on:
   push:
-    branches: [ main, development ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, development ]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build.yml'
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  detect-directory-changes:
+    name: "Detect Directory Changes"
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.detect.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Detect Directory Changes
+        id: detect
+        uses: tchupp/actions-detect-directory-changes@v1
+        with:
+          included-paths: "tinkernet,invarch"
+
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJSON(needs.detect-directory-changes.outputs.changed) }}
     steps:
-    
-    - name: Free disk space
-      run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        df -h
-        
     - uses: actions/checkout@v2
 
     - name: Setup for checks
       run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
-    - name: Install & display rust toolchain
-      run: rustup show
-
-    - name: Check targets are installed correctly
-      run: rustup target list --installed
-
-    - name: Build
+    - name: Build [${{ matrix.project }}]
+      working-directory: ./${{ matrix.project }}
       run: cargo build --verbose
 
-    - name: Run tests
+    - name: Run tests [${{ matrix.project }}]
+      working-directory: ./${{ matrix.project }}
       run: cargo test --verbose
 
-    - name: Run clippy
+    - name: Run clippy [${{ matrix.project }}]
+      working-directory: ./${{ matrix.project }}
       run: cargo clippy -- -D warnings
 
-    - name: Run cargofmt
+    - name: Run cargofmt [${{ matrix.project }}]
+      working-directory: ./${{ matrix.project }}
       run: cargo +stable fmt --all -- --check
