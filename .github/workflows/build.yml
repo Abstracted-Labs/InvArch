@@ -28,6 +28,14 @@ jobs:
           dir_names: true
           dir_names_max_depth: 1
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
       - name: Setup for checks
         if:
           contains(steps.changed-files.outputs.all_modified_files, 'tinkernet') || contains(steps.changed-files.outputs.all_modified_files, 'invarch')
@@ -57,6 +65,12 @@ jobs:
         working-directory: ./tinkernet
         run: cargo +stable fmt --all -- --check
 
+      - name: Cleanup [tinkernet]
+        if:
+          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
+        working-directory: ./tinkernet
+        run: cargo clean
+
       - name: Build [invarch]
         if:
           contains(steps.changed-files.outputs.all_modified_files, 'invarch')
@@ -80,3 +94,9 @@ jobs:
           contains(steps.changed-files.outputs.all_modified_files, 'invarch')
         working-directory: ./invarch
         run: cargo +stable fmt --all -- --check
+
+      - name: Cleanup [invarch]
+        if:
+          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
+        working-directory: ./invarch
+        run: cargo clean

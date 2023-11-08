@@ -22,6 +22,14 @@ jobs:
       with:
         submodules: true
 
+    - name: Free disk space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
+
     - name: Setup for checks
       run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
