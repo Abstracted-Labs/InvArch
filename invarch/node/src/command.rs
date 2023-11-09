@@ -1,20 +1,3 @@
-// This file is part of Substrate.
-
-// Copyright (C) 2017-2021 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: Apache-2.0
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// 	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 use invarch_runtime::{Block, VERSION};
 
 use crate::{
@@ -88,7 +71,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
     fn impl_name() -> String {
-        "InvArch Collator".into()
+        "InvArch Node".into()
     }
 
     fn impl_version() -> String {
@@ -96,7 +79,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn description() -> String {
-        "InvArch Collator\n\nThe command-line arguments provided first will be \
+        "InvArch Node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
 		parachain-collator <parachain-args> -- <relay-chain-args>"
@@ -196,7 +179,7 @@ pub fn run() -> Result<()> {
                     &polkadot_cli,
                     config.tokio_handle.clone(),
                 )
-                .map_err(|err| format!("Relay chain argument error: {err}"))?;
+                .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
                 cmd.run(config, polkadot_config)
             })
@@ -289,6 +272,9 @@ pub fn run() -> Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            use invarch_runtime::MILLISECS_PER_BLOCK;
+            use try_runtime_cli::block_building_info::timestamp_with_aura_info;
+
             let runner = cli.create_runner(cmd)?;
 
             use sc_executor::{sp_wasm_interface::ExtendedHostFunctions, NativeExecutionDispatch};
@@ -307,9 +293,13 @@ pub fn run() -> Result<()> {
                 sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
                     .map_err(|e| format!("Error: {:?}", e))?;
 
+            let info_provider = timestamp_with_aura_info(MILLISECS_PER_BLOCK);
+
             runner.async_run(|_| {
                 Ok((
-                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>>(),
+                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>, _>(Some(
+                        info_provider,
+                    )),
                     task_manager,
                 ))
             })
@@ -319,35 +309,19 @@ pub fn run() -> Result<()> {
 			                                       You can enable it with `--features try-runtime`."
             .into()),
         None => {
-            let mut runner = cli.create_runner(&cli.run.normalize())?;
-
-            if runner.config().chain_spec.name() == "InvArch Brainstorm Testnet" {
-                runner.config_mut().impl_name = String::from("InvArch Brainstorm Node");
-            }
+            let runner = cli.create_runner(&cli.run.normalize())?;
 
             let chain_spec = &runner.config().chain_spec;
             let is_solo_dev = chain_spec.is_solo_dev();
             let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
-                let hwbench = if !cli.no_hardware_benchmarks {
-                    config.database.path().map(|database_path| {
-                        let _ = std::fs::create_dir_all(database_path);
-                        sc_sysinfo::gather_hwbench(Some(database_path))
-                    })
-                } else {
-                    None
-                };
-
                 let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
                     .map(|e| e.para_id)
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
                 if is_solo_dev {
-                    return crate::service::start_solo_dev(
-                        config,
-                    )
-                    .map_err(Into::into);
+                    return crate::service::start_solo_dev(config).map_err(Into::into);
                 }
 
                 let polkadot_cli = RelayChainCli::new(
@@ -360,18 +334,20 @@ pub fn run() -> Result<()> {
                 let id = ParaId::from(para_id);
 
                 let parachain_account =
-                    AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(&id);
+                    AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
+                        &id,
+                    );
 
                 let state_version =
                     RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
                 let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-                    .map_err(|e| format!("{e:?}"))?;
+                    .map_err(|e| format!("{:?}", e))?;
                 let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
                     SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-                        .map_err(|err| format!("Relay chain argument error: {err}"))?;
+                        .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
                 info!("Parachain id: {:?}", id);
                 info!("Parachain Account: {}", parachain_account);
@@ -385,16 +361,10 @@ pub fn run() -> Result<()> {
                     }
                 );
 
-                crate::service::start_parachain_node(
-                    config,
-                    polkadot_config,
-                    collator_options,
-                    id,
-                    hwbench,
-                ) // TODO
-                .await
-                .map(|r| r.0)
-                .map_err(Into::into)
+                crate::service::start_parachain_node(config, polkadot_config, collator_options, id)
+                    .await
+                    .map(|r| r.0)
+                    .map_err(Into::into)
             })
         }
     }
@@ -405,12 +375,8 @@ impl DefaultConfigurationValues for RelayChainCli {
         30334
     }
 
-    fn rpc_ws_listen_port() -> u16 {
+    fn rpc_listen_port() -> u16 {
         9945
-    }
-
-    fn rpc_http_listen_port() -> u16 {
-        9934
     }
 
     fn prometheus_listen_port() -> u16 {
@@ -442,16 +408,8 @@ impl CliConfiguration<Self> for RelayChainCli {
             .or_else(|| self.base_path.clone().map(Into::into)))
     }
 
-    fn rpc_http(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-        self.base.base.rpc_http(default_listen_port)
-    }
-
-    fn rpc_ipc(&self) -> Result<Option<String>> {
-        self.base.base.rpc_ipc()
-    }
-
-    fn rpc_ws(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
-        self.base.base.rpc_ws(default_listen_port)
+    fn rpc_addr(&self, default_listen_port: u16) -> Result<Option<SocketAddr>> {
+        self.base.base.rpc_addr(default_listen_port)
     }
 
     fn prometheus_config(
@@ -499,8 +457,8 @@ impl CliConfiguration<Self> for RelayChainCli {
         self.base.base.rpc_methods()
     }
 
-    fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
-        self.base.base.rpc_ws_max_connections()
+    fn rpc_max_connections(&self) -> Result<u32> {
+        self.base.base.rpc_max_connections()
     }
 
     fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {
