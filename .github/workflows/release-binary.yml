@@ -16,6 +16,11 @@ on:
 jobs:
   build_binary:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./${{ github.event.inputs.chain }}
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -34,10 +39,10 @@ jobs:
       run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
     - name: Install & display rust toolchain
-      run: cd ${{ github.event.inputs.chain }} && rustup show
+      run: rustup show
 
     - name: Build binary
-      run: cd ${{ github.event.inputs.chain }} && cargo build --release
+      run: cargo build --release
 
     - name: Add binary to release
       uses: djnicholson/release-action@v2.11
@@ -45,4 +50,4 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag-name: ${{ github.ref_name }}
         asset-name: '${{ github.event.inputs.chain }}-collator'
-        file: '${{ github.event.inputs.chain }}/target/release/${{ github.event.inputs.chain }}-collator'
+        file: 'target/release/${{ github.event.inputs.chain }}-collator'

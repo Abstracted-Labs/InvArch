@@ -45,7 +45,17 @@ jobs:
   release:
     name: Build and publish ${{ github.event.inputs.chain }}
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./${{ github.event.inputs.chain }}
+
     steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -54,17 +64,11 @@ jobs:
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           df -h
 
-      # Checkout the codebase
-      - name: Checkout Codebase
-        uses: actions/checkout@v3
-        with:
-          submodules: true
-
       - name: Install deps
         run: sudo apt -y install protobuf-compiler
 
       - name: Install & display rust toolchain
-        run: cd ${{ github.event.inputs.chain }} && rustup show
+        run: rustup show
 
       # Build WASM with Substrate Runtime Tool
       - name: Srtool build
@@ -74,7 +78,7 @@ jobs:
           BUILD_OPTS: ""
         with:
           chain: ${{ github.event.inputs.chain }}
-          runtime_dir: ${{ matrix.chain }}/runtime
+          runtime_dir: ./${{ github.event.inputs.chain }}/runtime
           tag: ${{ github.event.inputs.srtool_image }}
 
       # Output the build summary
