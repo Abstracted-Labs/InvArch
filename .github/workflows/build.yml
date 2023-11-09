@@ -16,11 +16,13 @@ env:
 jobs:
   get_changed_files:
     runs-on: ubuntu-latest
-    name: Build
+    name: Get Changed Files
+    outputs:
+      all_modified_files: ${{ steps.changed-files.outputs.all_modified_files }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get changed files
+      - name: Changed Files
         id: changed-files
         uses: tj-actions/changed-files@v40
         with:
