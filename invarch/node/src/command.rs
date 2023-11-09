@@ -196,7 +196,7 @@ pub fn run() -> Result<()> {
                     &polkadot_cli,
                     config.tokio_handle.clone(),
                 )
-                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+                .map_err(|err| format!("Relay chain argument error: {err}"))?;
 
                 cmd.run(config, polkadot_config)
             })
@@ -265,14 +265,11 @@ pub fn run() -> Result<()> {
                     }
                 }
                 #[cfg(not(feature = "runtime-benchmarks"))]
-                BenchmarkCmd::Storage(_) => {
-                    return Err(sc_cli::Error::Input(
-                        "Compile with --features=runtime-benchmarks \
+                BenchmarkCmd::Storage(_) => Err(sc_cli::Error::Input(
+                    "Compile with --features=runtime-benchmarks \
 						             to enable storage benchmarks."
-                            .into(),
-                    )
-                    .into())
-                }
+                        .into(),
+                )),
                 #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
                     let partials =
@@ -335,7 +332,7 @@ pub fn run() -> Result<()> {
             runner.run_node_until_exit(|config| async move {
                 let hwbench = if !cli.no_hardware_benchmarks {
                     config.database.path().map(|database_path| {
-                        let _ = std::fs::create_dir_all(&database_path);
+                        let _ = std::fs::create_dir_all(database_path);
                         sc_sysinfo::gather_hwbench(Some(database_path))
                     })
                 } else {
@@ -368,13 +365,13 @@ pub fn run() -> Result<()> {
                 let state_version =
                     RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
                 let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-                    .map_err(|e| format!("{:?}", e))?;
+                    .map_err(|e| format!("{e:?}"))?;
                 let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
                     SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-                        .map_err(|err| format!("Relay chain argument error: {}", err))?;
+                        .map_err(|err| format!("Relay chain argument error: {err}"))?;
 
                 info!("Parachain id: {:?}", id);
                 info!("Parachain Account: {}", parachain_account);

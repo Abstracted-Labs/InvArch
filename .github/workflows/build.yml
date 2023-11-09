@@ -14,7 +14,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  get_changed_files:
     runs-on: ubuntu-latest
     name: Build
     steps:
@@ -28,6 +28,19 @@ jobs:
           dir_names: true
           dir_names_max_depth: 1
 
+  build_tinkernet:
+    runs-on: ubuntu-latest
+    name: Build Tinkernet
+
+    needs: get_changed_files
+    if:
+      contains(needs.get_changed_files.outputs.all_modified_files, 'tinkernet')
+
+    defaults:
+      run:
+        working-directory: ./tinkernet
+
+    steps:
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -37,66 +50,62 @@ jobs:
           df -h
 
       - name: Setup for checks
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet') || contains(steps.changed-files.outputs.all_modified_files, 'invarch')
         run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
 
-      - name: Build [tinkernet]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
-        working-directory: ./tinkernet
+      - name: Install & display rust toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
         run: cargo build --verbose
 
-      - name: Run tests [tinkernet]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
-        working-directory: ./tinkernet
+      - name: Run tests
         run: cargo test --verbose
 
-      - name: Run clippy [tinkernet]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
-        working-directory: ./tinkernet
+      - name: Run clippy
         run: cargo clippy -- -D warnings
 
-      - name: Run cargofmt [tinkernet]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
-        working-directory: ./tinkernet
-        run: cargo +stable fmt --all -- --check
+      - name: Run cargofmt
+        run: cargo fmt --all -- --check
 
-      - name: Cleanup [tinkernet]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'tinkernet')
-        working-directory: ./tinkernet
-        run: cargo clean
+  build_invarch:
+    runs-on: ubuntu-latest
+    name: Build InvArch
 
-      - name: Build [invarch]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
+    needs: get_changed_files
+    if:
+      contains(needs.get_changed_files.outputs.all_modified_files, 'invarch')
+
+    defaults:
+      run:
         working-directory: ./invarch
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      - name: Setup for checks
+        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+      - name: Install & display rust toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
         run: cargo build --verbose
 
-      - name: Run tests [invarch]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
-        working-directory: ./invarch
+      - name: Run tests
         run: cargo test --verbose
 
-      - name: Run clippy [invarch]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
-        working-directory: ./invarch
+      - name: Run clippy
         run: cargo clippy -- -D warnings
 
-      - name: Run cargofmt [invarch]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
-        working-directory: ./invarch
-        run: cargo +stable fmt --all -- --check
-
-      - name: Cleanup [invarch]
-        if:
-          contains(steps.changed-files.outputs.all_modified_files, 'invarch')
-        working-directory: ./invarch
-        run: cargo clean
+      - name: Run cargofmt
+        run: cargo fmt --all -- --check
