@@ -1,5 +1,5 @@
 [package]
-name = "invarch-node"
+name = "tinkernet-node"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ edition.workspace = true
 build = "build.rs"
 
 [[bin]]
-name = "invarch-collator"
+name = "tinkernet-collator"
 path = "src/main.rs"
 
 [dependencies]
@@ -29,7 +29,7 @@ jsonrpsee = { version = "0.16.2", features = ["server"] }
 futures = "0.3.25"
 
 ## Local Dependencies
-tinkernet-runtime = { path = "../runtime/tinkernet", optional = true }
+tinkernet-runtime = { path = "../runtime", optional = true }
 
 ## Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

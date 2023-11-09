@@ -1,12 +1,27 @@
 name: Release binary to existing tag
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      # Get name of the chain
+      chain:
+        description: Chain (default = tinkernet)
+        required: true
+        default: tinkernet
+        type: choice
+        options:
+          - tinkernet
+          - invarch
 
 jobs:
   build_binary:
     runs-on: ubuntu-latest
     steps:
-    
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
     - name: Free disk space
       run: |
         sudo rm -rf /usr/share/dotnet
@@ -14,36 +29,20 @@ jobs:
         sudo rm -rf "/usr/local/share/boost"
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
         df -h
-        
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        submodules: true
 
     - name: Setup for checks
       run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
-      
-    - name: Install & display rust toolchain
-      run: rustup show
 
-    - name: Check targets are installed correctly
-      run: rustup target list --installed
-      
+    - name: Install & display rust toolchain
+      run: cd ${{ github.event.inputs.chain }} && rustup show
+
     - name: Build binary
-      run: cargo build --release
-      
+      run: cd ${{ github.event.inputs.chain }} && cargo build --release
+
     - name: Add binary to release
       uses: djnicholson/release-action@v2.11
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag-name: ${{ github.ref_name }}
-        asset-name: 'invarch-collator'
-        file: 'target/release/invarch-collator'
-        
-    - name: Add spec file to release
-      uses: djnicholson/release-action@v2.11
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag-name: ${{ github.ref_name }}
-        asset-name: 'tinker-raw.json'
-        file: 'res/tinker/tinker-raw.json'
+        asset-name: '${{ github.event.inputs.chain }}-collator'
+        file: '${{ github.event.inputs.chain }}/target/release/${{ github.event.inputs.chain }}-collator'

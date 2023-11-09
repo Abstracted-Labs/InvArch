@@ -2,45 +2,120 @@ name: Checks
 
 on:
   push:
-    branches: [ main, development ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, development ]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build.yml'
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  get_changed_files:
     runs-on: ubuntu-latest
+    name: Get Changed Files
+    outputs:
+      all_modified_files: ${{ steps.changed-files.outputs.all_modified_files }}
     steps:
-    
-    - name: Free disk space
-      run: |
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        df -h
-        
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-    - name: Setup for checks
-      run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+      - name: Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          fetch_depth: 0
+          dir_names: true
+          dir_names_max_depth: 1
 
-    - name: Install & display rust toolchain
-      run: rustup show
+  build_tinkernet:
+    runs-on: ubuntu-latest
+    name: Build Tinkernet
 
-    - name: Check targets are installed correctly
-      run: rustup target list --installed
+    needs: get_changed_files
+    if:
+      contains(needs.get_changed_files.outputs.all_modified_files, 'tinkernet')
 
-    - name: Build
-      run: cargo build --verbose
+    defaults:
+      run:
+        working-directory: ./tinkernet
 
-    - name: Run tests
-      run: cargo test --verbose
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Run clippy
-      run: cargo clippy -- -D warnings
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
 
-    - name: Run cargofmt
-      run: cargo +stable fmt --all -- --check
+      - name: Setup for checks
+        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+      - name: Install & display rust toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "tinkernet"
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargofmt
+        run: cargo fmt --all -- --check
+
+  build_invarch:
+    runs-on: ubuntu-latest
+    name: Build InvArch
+
+    needs: get_changed_files
+    if:
+      contains(needs.get_changed_files.outputs.all_modified_files, 'invarch')
+
+    defaults:
+      run:
+        working-directory: ./invarch
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      - name: Setup for checks
+        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev protobuf-compiler
+
+      - name: Install & display rust toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "invarch"
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargofmt
+        run: cargo fmt --all -- --check

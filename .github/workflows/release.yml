@@ -16,12 +16,11 @@ on:
     inputs:
       # Get name of the chain
       chain:
-        description: Chain Runtime (default = tinkernet)    
+        description: Chain Runtime (default = tinkernet)
         required: true
         default: tinkernet
         type: choice
         options:
-          - brainstorm
           - tinkernet
           - invarch
       # Get the scope of release note
@@ -47,7 +46,6 @@ jobs:
     name: Build and publish ${{ github.event.inputs.chain }}
     runs-on: ubuntu-latest
     steps:
-    
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -55,21 +53,18 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           df -h
-        
+
       # Checkout the codebase
       - name: Checkout Codebase
         uses: actions/checkout@v3
         with:
           submodules: true
-          
+
       - name: Install deps
         run: sudo apt -y install protobuf-compiler
-      
-      - name: Install & display rust toolchain
-        run: rustup show
 
-      - name: Check targets are installed correctly
-        run: rustup target list --installed
+      - name: Install & display rust toolchain
+        run: cd ${{ github.event.inputs.chain }} && rustup show
 
       # Build WASM with Substrate Runtime Tool
       - name: Srtool build
@@ -79,6 +74,7 @@ jobs:
           BUILD_OPTS: ""
         with:
           chain: ${{ github.event.inputs.chain }}
+          runtime_dir: ${{ matrix.chain }}/runtime
           tag: ${{ github.event.inputs.srtool_image }}
 
       # Output the build summary
@@ -102,7 +98,7 @@ jobs:
           subwasm  --json info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ github.event.inputs.chain }}-subwam-info.json
           subwasm info ${{ steps.srtool_build.outputs.wasm_compressed }} > ${{ github.event.inputs.chain }}-subwam-info.txt
           cat ${{ github.event.inputs.chain }}-subwam-info.txt
-          
+
       - name: Archive Artifacts for ${{ github.event.inputs.chain }}
         uses: actions/upload-artifact@v2
         with:
