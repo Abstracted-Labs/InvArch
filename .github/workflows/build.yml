@@ -60,6 +60,8 @@ jobs:
         run: rustup show
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "tinkernet"
 
       - name: Build
         run: cargo build --verbose
@@ -103,6 +105,8 @@ jobs:
         run: rustup show
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "invarch"
 
       - name: Build
         run: cargo build --verbose
