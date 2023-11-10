@@ -1,8 +1,19 @@
 use crate::{
-    AccountId, Balance, Balances, Runtime, RuntimeEvent, System, EXISTENTIAL_DEPOSIT, UNIT,
+    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent, System,
+    Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, UNIT,
 };
-use frame_support::{pallet_prelude::ConstU32, parameter_types, traits::SortedMembers};
-use frame_system::EnsureSignedBy;
+use frame_support::{
+    pallet_prelude::ConstU32,
+    parameter_types,
+    traits::{Currency, Imbalance, OnUnbalanced, SortedMembers},
+    weights::{
+        ConstantMultiplier, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+    },
+    PalletId,
+};
+use frame_system::{EnsureRoot, EnsureSignedBy};
+use polkadot_runtime_common::SlowAdjustingFeeUpdate;
+use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
 use sp_std::vec::Vec;
 
 parameter_types! {
@@ -26,6 +37,63 @@ impl pallet_balances::Config for Runtime {
     type FreezeIdentifier = ();
     type MaxFreezes = ();
     type HoldIdentifier = [u8; 8];
+}
+
+parameter_types! {
+    // Relay Chain `TransactionByteFee` / 10
+    pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+    pub const OperationalFeeMultiplier: u8 = 5;
+}
+
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+    type Balance = Balance;
+    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+        let p = MILLIUNIT;
+        let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+        smallvec::smallvec![WeightToFeeCoefficient {
+            degree: 1,
+            negative: false,
+            coeff_frac: Perbill::from_rational(p % q, q),
+            coeff_integer: p / q,
+        }]
+    }
+}
+
+type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+pub struct ToCollatorPot;
+impl OnUnbalanced<NegativeImbalance> for ToCollatorPot {
+    fn on_nonzero_unbalanced(amount: NegativeImbalance) {
+        let collator_pot =
+            <Runtime as pallet_collator_selection::Config>::PotId::get().into_account_truncating();
+        Balances::resolve_creating(&collator_pot, amount);
+    }
+}
+
+pub struct DealWithFees;
+impl OnUnbalanced<NegativeImbalance> for DealWithFees {
+    fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+        if let Some(mut fees) = fees_then_tips.next() {
+            if let Some(tips) = fees_then_tips.next() {
+                tips.merge_into(&mut fees);
+            }
+
+            let (to_treasury, to_collators) = fees.ration(50, 50);
+
+            ToCollatorPot::on_unbalanced(to_collators);
+            Treasury::on_unbalanced(to_treasury)
+        }
+    }
+}
+
+impl pallet_transaction_payment::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+    type WeightToFee = WeightToFee;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
 parameter_types! {
@@ -59,4 +127,32 @@ impl orml_vesting::Config for Runtime {
     type MaxVestingSchedules = MaxVestingSchedules;
     // Relay chain block number provider (6 seconds)
     type BlockNumberProvider = cumulus_pallet_parachain_system::RelaychainDataProvider<Runtime>;
+}
+
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(1);
+    pub const ProposalBondMinimum: Balance = 100 * UNIT;
+    pub const SpendPeriod: BlockNumber = 30 * DAYS;
+    pub const Burn: Permill = Permill::from_percent(1);
+    pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
+    pub const MaxApprovals: u32 = 100;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type PalletId = TreasuryPalletId;
+    type Currency = Balances;
+    type ApproveOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = EnsureRoot<AccountId>;
+    type RuntimeEvent = RuntimeEvent;
+    type OnSlash = ();
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type SpendPeriod = SpendPeriod;
+    type Burn = ();
+    type BurnDestination = ();
+    type SpendFunds = ();
+    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type MaxApprovals = MaxApprovals;
+    type ProposalBondMaximum = ();
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
 }
