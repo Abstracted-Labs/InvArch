@@ -50,4 +50,4 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag-name: ${{ github.ref_name }}
         asset-name: '${{ github.event.inputs.chain }}-collator'
-        file: 'target/release/${{ github.event.inputs.chain }}-collator'
+        file: './${{ github.event.inputs.chain }}/target/release/${{ github.event.inputs.chain }}-collator'
