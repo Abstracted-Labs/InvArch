@@ -46,10 +46,6 @@ jobs:
     name: Build and publish ${{ github.event.inputs.chain }}
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./${{ github.event.inputs.chain }}
-
     steps:
       - name: Checkout Codebase
         uses: actions/checkout@v3
@@ -68,10 +64,12 @@ jobs:
         run: sudo apt -y install protobuf-compiler
 
       - name: Install & display rust toolchain
+        working-directory: ./${{ github.event.inputs.chain }}
         run: rustup show
 
       # Build WASM with Substrate Runtime Tool
       - name: Srtool build
+        working-directory: ./${{ github.event.inputs.chain }}
         id: srtool_build
         uses: chevdor/srtool-actions@v0.7.0
         env:
