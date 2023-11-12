@@ -398,10 +398,10 @@ impl pallet_identity::Config for Runtime {
 pub struct TxPauseWhitelistedCalls;
 impl Contains<pallet_tx_pause::RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
     fn contains(full_name: &pallet_tx_pause::RuntimeCallNameOf<Runtime>) -> bool {
-        match (full_name.0.as_slice(), full_name.1.as_slice()) {
-            (b"Sudo", _) => true,
-            _ => false,
-        }
+        matches!(
+            (full_name.0.as_slice(), full_name.1.as_slice()),
+            (b"Sudo", _)
+        )
     }
 }
 

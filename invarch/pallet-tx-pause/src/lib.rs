@@ -128,8 +128,8 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             for call in &self.paused {
-                Pallet::<T>::ensure_can_pause(&call).expect("Genesis data is known good; qed");
-                PausedCalls::<T>::insert(&call, ());
+                Pallet::<T>::ensure_can_pause(call).expect("Genesis data is known good; qed");
+                PausedCalls::<T>::insert(call, ());
             }
         }
     }
@@ -206,10 +206,10 @@ impl<T: Config> Pallet<T> {
             return Err(Error::<T>::Unpausable);
         }
 
-        if T::WhitelistedCalls::contains(&full_name) {
+        if T::WhitelistedCalls::contains(full_name) {
             return Err(Error::<T>::Unpausable);
         }
-        if Self::is_paused(&full_name) {
+        if Self::is_paused(full_name) {
             return Err(Error::<T>::IsPaused);
         }
         Ok(())
@@ -217,7 +217,7 @@ impl<T: Config> Pallet<T> {
 
     /// Ensure that this call can be un-paused.
     pub fn ensure_can_unpause(full_name: &RuntimeCallNameOf<T>) -> Result<(), Error<T>> {
-        if Self::is_paused(&full_name) {
+        if Self::is_paused(full_name) {
             // SAFETY: Everything that is paused, can be un-paused.
             Ok(())
         } else {
