@@ -54,3 +54,11 @@ run-tinkernet-solo-bob:
 	cd tinkernet && ./target/release/tinkernet-collator --chain solo-dev --bob --tmp --listen-addr /ip4/0.0.0.0/tcp/54102/ws --rpc-cors=all --discover-local --collator --bootnodes /ip4/127.0.0.1/tcp/53102/ws/p2p/12D3KooWBmAwcd4PJNJvfV89HwE48nwkRmAgo8Vy3uQEyNNHBox2
 
 run-tinkernet-solo: ; printf "run-tinkernet-solo-alice\nrun-tinkernet-solo-bob" | parallel -u make
+
+run-invarch-solo-alice:
+	cd invarch && ./target/release/invarch-collator --chain solo-dev --alice --tmp --listen-addr /ip4/0.0.0.0/tcp/53102/ws --rpc-cors=all --discover-local --collator --node-key c12b6d18942f5ee8528c8e2baf4e147b5c5c18710926ea492d09cbd9f6c9f82a
+
+run-invarch-solo-bob:
+	cd invarch && ./target/release/invarch-collator --chain solo-dev --bob --tmp --listen-addr /ip4/0.0.0.0/tcp/54102/ws --rpc-cors=all --discover-local --collator --bootnodes /ip4/127.0.0.1/tcp/53102/ws/p2p/12D3KooWBmAwcd4PJNJvfV89HwE48nwkRmAgo8Vy3uQEyNNHBox2
+
+run-invarch-solo: ; printf "run-invarch-solo-alice\nrun-invarch-solo-bob" | parallel -u make

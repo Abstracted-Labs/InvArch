@@ -6,12 +6,22 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-mod weights;
-pub mod xcm_config;
-
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-use smallvec::smallvec;
+use frame_support::{
+    construct_runtime,
+    dispatch::DispatchClass,
+    parameter_types,
+    traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
+    weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
+    PalletId,
+};
+use frame_system::{
+    limits::{BlockLength, BlockWeights},
+    EnsureRoot,
+};
+use polkadot_runtime_common::BlockHashCount;
 use sp_api::impl_runtime_apis;
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
@@ -19,36 +29,20 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
-
+pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_support::{
-    construct_runtime,
-    dispatch::DispatchClass,
-    parameter_types,
-    traits::{ConstU32, ConstU64, ConstU8, Everything},
-    weights::{
-        constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
-        WeightToFeeCoefficients, WeightToFeePolynomial,
-    },
-    PalletId,
-};
-use frame_system::{
-    limits::{BlockLength, BlockWeights},
-    EnsureRoot,
-};
-pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-pub use sp_runtime::{MultiAddress, Perbill, Permill};
-
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-// Polkadot imports
-use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
+pub mod balances;
+mod weights;
+pub mod xcm_config;
 
+use balances::*;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
@@ -113,33 +107,6 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
 >;
 
-/// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
-/// node's balance type.
-///
-/// This should typically create a mapping between the following ranges:
-///   - `[0, MAXIMUM_BLOCK_WEIGHT]`
-///   - `[Balance::min, Balance::max]`
-///
-/// Yet, it can be used for any other sort of change to weight-fee. Some examples being:
-///   - Setting it to `0` will essentially disable the weight fee.
-///   - Setting it to `1` will cause the literal `#[weight = x]` values to be charged.
-pub struct WeightToFee;
-impl WeightToFeePolynomial for WeightToFee {
-    type Balance = Balance;
-    fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-        // in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
-        // in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
-        let p = MILLIUNIT / 10;
-        let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
-        smallvec![WeightToFeeCoefficient {
-            degree: 1,
-            negative: false,
-            coeff_frac: Perbill::from_rational(p % q, q),
-            coeff_integer: p / q,
-        }]
-    }
-}
-
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -168,7 +135,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("invarch"),
     impl_name: create_runtime_str!("invarch"),
     authoring_version: 1,
-    spec_version: 2,
+    spec_version: 3,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -291,7 +258,7 @@ impl frame_system::Config for Runtime {
     /// The weight of database operations that the runtime can invoke.
     type DbWeight = RocksDbWeight;
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = InsideBoth<Everything, TxPause>;
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = ();
     /// Block & extrinsics weights: base values and limits.
@@ -316,43 +283,6 @@ impl pallet_timestamp::Config for Runtime {
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
     type EventHandler = (CollatorSelection,);
-}
-
-parameter_types! {
-    pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
-}
-
-impl pallet_balances::Config for Runtime {
-    type MaxLocks = ConstU32<50>;
-    /// The type for recording an account's balance.
-    type Balance = Balance;
-    /// The ubiquitous event type.
-    type RuntimeEvent = RuntimeEvent;
-    type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = System;
-    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-    type MaxReserves = ConstU32<50>;
-    type ReserveIdentifier = [u8; 8];
-
-    type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
-}
-
-parameter_types! {
-    /// Relay Chain `TransactionByteFee` / 10
-    pub const TransactionByteFee: Balance = 10 * MICROUNIT;
-}
-
-impl pallet_transaction_payment::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-    type WeightToFee = WeightToFee;
-    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
-    type OperationalFeeMultiplier = ConstU8<5>;
 }
 
 parameter_types! {
@@ -434,6 +364,57 @@ impl pallet_sudo::Config for Runtime {
     type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_utility::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type PalletsOrigin = OriginCaller;
+    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+    pub BasicDeposit: Balance = 5 * UNIT;
+    pub FieldDeposit: Balance = 2 * UNIT;
+    pub const MaxAdditionalFields: u32 = 5;
+    pub const MaxRegistrars: u32 = 10;
+    pub const MaxSubAccounts: u32 = 10;
+    pub SubAccountDeposit: Balance = 5 * UNIT;
+}
+
+impl pallet_identity::Config for Runtime {
+    type BasicDeposit = BasicDeposit;
+    type Currency = Balances;
+    type RuntimeEvent = RuntimeEvent;
+    type FieldDeposit = FieldDeposit;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxRegistrars = MaxRegistrars;
+    type MaxSubAccounts = MaxSubAccounts;
+    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type Slashed = Treasury;
+    type SubAccountDeposit = SubAccountDeposit;
+    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+pub struct TxPauseWhitelistedCalls;
+impl Contains<pallet_tx_pause::RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
+    fn contains(full_name: &pallet_tx_pause::RuntimeCallNameOf<Runtime>) -> bool {
+        matches!(
+            (full_name.0.as_slice(), full_name.1.as_slice()),
+            (b"Sudo", _)
+        )
+    }
+}
+
+impl pallet_tx_pause::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxNameLen = ConstU32<50>;
+    type PauseOrigin = EnsureRoot<AccountId>;
+    type UnpauseOrigin = EnsureRoot<AccountId>;
+    type RuntimeCall = RuntimeCall;
+    type WeightInfo = pallet_tx_pause::weights::SubstrateWeight<Runtime>;
+    type WhitelistedCalls = TxPauseWhitelistedCalls;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -449,10 +430,14 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+        Utility: pallet_utility::{Pallet, Call, Event} = 5,
+        TxPause: pallet_tx_pause::{Pallet, Call, Storage, Event<T>} = 6,
 
         // Monetary stuff.
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Event<T>} = 12,
+        Vesting: orml_vesting::{Pallet, Call, Storage, Event<T>} = 13,
 
         // Collator support. The order of these 4 are important and shall not change.
         Authorship: pallet_authorship::{Pallet, Storage} = 20,
@@ -467,6 +452,9 @@ construct_runtime!(
         CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
         OrmlXcm: orml_xcm = 34,
+
+        // Extra
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 40,
 
     }
 );
