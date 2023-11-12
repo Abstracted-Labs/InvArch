@@ -6,32 +6,12 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod balances;
-mod weights;
-pub mod xcm_config;
-
-pub use balances::*;
-
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::{
-    create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
-    transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
-};
-
-use sp_std::prelude::*;
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
-use sp_version::RuntimeVersion;
-
 use frame_support::{
     construct_runtime,
     dispatch::DispatchClass,
     parameter_types,
-    traits::{ConstU32, ConstU64, Everything},
+    traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
     weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
     PalletId,
 };
@@ -39,15 +19,30 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use polkadot_runtime_common::BlockHashCount;
+use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_runtime::{
+    create_runtime_str, generic, impl_opaque_keys,
+    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+    transaction_validity::{TransactionSource, TransactionValidity},
+    ApplyExtrinsicResult, MultiSignature,
+};
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
+use sp_std::prelude::*;
+#[cfg(feature = "std")]
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-// Polkadot imports
-use polkadot_runtime_common::BlockHashCount;
+pub mod balances;
+mod weights;
+pub mod xcm_config;
 
+use balances::*;
 use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
@@ -263,7 +258,7 @@ impl frame_system::Config for Runtime {
     /// The weight of database operations that the runtime can invoke.
     type DbWeight = RocksDbWeight;
     /// The basic call filter to use in dispatchable.
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = InsideBoth<Everything, TxPause>;
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = ();
     /// Block & extrinsics weights: base values and limits.
@@ -400,6 +395,26 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
+pub struct TxPauseWhitelistedCalls;
+impl Contains<pallet_tx_pause::RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
+    fn contains(full_name: &pallet_tx_pause::RuntimeCallNameOf<Runtime>) -> bool {
+        match (full_name.0.as_slice(), full_name.1.as_slice()) {
+            (b"Sudo", _) => true,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_tx_pause::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxNameLen = ConstU32<50>;
+    type PauseOrigin = EnsureRoot<AccountId>;
+    type UnpauseOrigin = EnsureRoot<AccountId>;
+    type RuntimeCall = RuntimeCall;
+    type WeightInfo = pallet_tx_pause::weights::SubstrateWeight<Runtime>;
+    type WhitelistedCalls = TxPauseWhitelistedCalls;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -416,6 +431,7 @@ construct_runtime!(
         ParachainInfo: parachain_info::{Pallet, Storage, Config} = 3,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
         Utility: pallet_utility::{Pallet, Call, Event} = 5,
+        TxPause: pallet_tx_pause::{Pallet, Call, Storage, Event<T>} = 6,
 
         // Monetary stuff.
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
