@@ -24,10 +24,10 @@ smallvec = "1.6.1"
 getrandom = { version = "0.2.4", default-features = false, features = ["js"] }
 
 # InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "82061c35b7b73d77b3a073789ef03fd56771e9fb",  default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "2830b0abc6e29e1b3412480f2e95265fafd73cb5",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "2830b0abc6e29e1b3412480f2e95265fafd73cb5",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "2830b0abc6e29e1b3412480f2e95265fafd73cb5",  default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "2830b0abc6e29e1b3412480f2e95265fafd73cb5",  default-features = false }
 
 #pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
 #pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
