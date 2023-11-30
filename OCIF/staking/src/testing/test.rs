@@ -2061,3 +2061,244 @@ fn halted_no_change() {
         );
     })
 }
+
+#[test]
+fn move_stake_is_ok() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+        let stake_value = 100;
+        assert_stake(staker, &core_id_a, stake_value);
+
+        assert_move_stake(staker, &core_id_a, &core_id_b, stake_value / 2);
+        assert!(!GeneralStakerInfo::<Test>::get(&core_id_a, &staker)
+            .latest_staked_value()
+            .is_zero());
+
+        assert_move_stake(staker, &core_id_a, &core_id_b, stake_value / 2);
+        assert!(GeneralStakerInfo::<Test>::get(&core_id_a, &staker)
+            .latest_staked_value()
+            .is_zero());
+    })
+}
+
+#[test]
+fn move_stake_to_same_contract_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+
+        assert_register(core_id_a);
+        let stake_value = 100;
+        assert_stake(staker, &core_id_a, stake_value);
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_a,
+                stake_value,
+                core_id_a,
+            ),
+            Error::<Test>::MoveStakeToSameCore
+        );
+    })
+}
+
+#[test]
+fn move_stake_to_unregistered_core_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+        let core_id_c = D;
+
+        assert_register(core_id_a);
+        let stake_value = 100;
+        assert_stake(staker, &core_id_a, stake_value);
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_b,
+                stake_value,
+                core_id_c,
+            ),
+            Error::<Test>::NotRegistered
+        );
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_a,
+                stake_value,
+                core_id_b,
+            ),
+            Error::<Test>::NotRegistered
+        );
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_b,
+                stake_value,
+                core_id_a,
+            ),
+            Error::<Test>::NoStakeAvailable
+        );
+    })
+}
+
+#[test]
+fn move_stake_not_staking_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+        let stake_value = 100;
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_a,
+                stake_value,
+                core_id_b
+            ),
+            Error::<Test>::NoStakeAvailable
+        );
+    })
+}
+
+#[test]
+fn move_stake_with_no_amount_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+        let stake_value = 100;
+        assert_stake(staker, &core_id_a, stake_value);
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_a,
+                Zero::zero(),
+                core_id_b
+            ),
+            Error::<Test>::UnstakingNothing
+        );
+    })
+}
+
+#[test]
+fn move_stake_with_insufficient_amount_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+        let stake_value = 100;
+        assert_stake(staker, &core_id_a, stake_value);
+
+        assert_noop!(
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker),
+                core_id_a,
+                MINIMUM_STAKING_AMOUNT - 1,
+                core_id_b
+            ),
+            Error::<Test>::InsufficientBalance
+        );
+    })
+}
+
+#[test]
+fn move_stake_core_has_too_many_era_stake_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker = account(B);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+
+        for _ in 1..MAX_ERA_STAKE_VALUES {
+            assert_stake(staker, &core_id_a, MINIMUM_STAKING_AMOUNT);
+            advance_to_era(OcifStaking::current_era() + 1);
+        }
+        assert_noop!(
+            OcifStaking::stake(RuntimeOrigin::signed(staker), core_id_a, 15),
+            Error::<Test>::TooManyEraStakeValues
+        );
+
+        assert_noop!(
+            OcifStaking::move_stake(RuntimeOrigin::signed(staker), core_id_a, 15, core_id_b),
+            Error::<Test>::TooManyEraStakeValues
+        );
+
+        assert_stake(staker, &core_id_b, 15);
+        assert_noop!(
+            OcifStaking::move_stake(RuntimeOrigin::signed(staker), core_id_b, 15, core_id_a),
+            Error::<Test>::TooManyEraStakeValues
+        );
+    })
+}
+
+#[test]
+fn move_stake_max_number_of_stakers_exceeded_err() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let staker_a = account(B);
+        let staker_b = account(D);
+        let core_id_a = A;
+        let core_id_b = C;
+
+        assert_register(core_id_a);
+        assert_register(core_id_b);
+
+        assert_stake(staker_a, &core_id_a, 23);
+        assert_stake(staker_b, &core_id_b, 37);
+        assert_stake(staker_b, &core_id_b, 41);
+
+        for temp_staker in (staker_b + 1)..(MAX_NUMBER_OF_STAKERS as u64 + staker_b) {
+            Balances::resolve_creating(&temp_staker, Balances::issue(100));
+            assert_stake(temp_staker, &core_id_b, 13);
+        }
+
+        assert_noop!(
+            OcifStaking::stake(RuntimeOrigin::signed(staker_a), core_id_b, 19),
+            Error::<Test>::MaxStakersReached
+        );
+
+        assert_noop!(
+            OcifStaking::move_stake(RuntimeOrigin::signed(staker_a), core_id_a, 19, core_id_b,),
+            Error::<Test>::MaxStakersReached
+        );
+    })
+}

@@ -60,6 +60,28 @@ where
     )
 }
 
+fn mock_register_2<T: Config>() -> DispatchResultWithPostInfo
+where
+    Result<
+        INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+        <T as frame_system::Config>::RuntimeOrigin,
+    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::RuntimeOrigin:
+        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+{
+    <T as Config>::Currency::make_free_balance_be(
+        &derive_account::<T>(1u32.into()),
+        T::RegisterDeposit::get() + T::RegisterDeposit::get(),
+    );
+
+    OcifStaking::<T>::register_core(
+        INV4Origin::Multisig(MultisigInternalOrigin::new(1u32.into())).into(),
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap(),
+        vec![].try_into().unwrap(),
+    )
+}
+
 fn mock_stake<T: Config>() -> DispatchResultWithPostInfo
 where
     Result<
@@ -266,6 +288,24 @@ benchmarks! {
         verify {
             assert_last_event::<T>(Event::<T>::HaltChanged {
                 is_halted: true
+            }.into());
+        }
+
+    move_stake {
+        mock_register().unwrap();
+        mock_register_2().unwrap();
+
+        mock_stake().unwrap();
+
+        let staker: T::AccountId = whitelisted_caller();
+        let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
+    }: _(RawOrigin::Signed(staker.clone()), 0u32.into(), amount, 1u32.into())
+        verify {
+            assert_last_event::<T>(Event::<T>::StakeMoved {
+                staker,
+                from_core: 0u32.into(),
+                amount,
+                to_core: 1u32.into()
             }.into());
         }
 }
