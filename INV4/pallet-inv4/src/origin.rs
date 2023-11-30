@@ -36,10 +36,7 @@ impl<
     > MultisigInternalOrigin<T, CoreId, AccountId>
 {
     pub fn new(id: CoreId) -> Self {
-        Self {
-            id,
-            t: PhantomData::default(),
-        }
+        Self { id, t: PhantomData }
     }
 
     pub fn to_account_id(&self) -> AccountId {
