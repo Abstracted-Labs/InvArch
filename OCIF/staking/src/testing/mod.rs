@@ -349,3 +349,77 @@ fn assert_reward(
         final_state_current_era.core_stake_info
     );
 }
+
+pub(crate) fn assert_move_stake(
+    staker: AccountId,
+    from_core: &CoreId,
+    to_core: &CoreId,
+    amount: Balance,
+) {
+    let current_era = OcifStaking::current_era();
+    let from_init_state = MemorySnapshot::all(current_era, &from_core, staker);
+    let to_init_state = MemorySnapshot::all(current_era, &to_core, staker);
+
+    let init_staked_value = from_init_state.staker_info.latest_staked_value();
+    let expected_transfer_amount = if init_staked_value - amount >= MINIMUM_STAKING_AMOUNT {
+        amount
+    } else {
+        init_staked_value
+    };
+
+    assert_ok!(OcifStaking::move_stake(
+        RuntimeOrigin::signed(staker),
+        from_core.clone(),
+        amount,
+        to_core.clone()
+    ));
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakeMoved {
+        staker,
+        from_core: from_core.clone(),
+        amount: expected_transfer_amount,
+        to_core: to_core.clone(),
+    }));
+
+    let from_final_state = MemorySnapshot::all(current_era, &from_core, staker);
+    let to_final_state = MemorySnapshot::all(current_era, &to_core, staker);
+
+    assert_eq!(
+        from_final_state.staker_info.latest_staked_value(),
+        init_staked_value - expected_transfer_amount
+    );
+    assert_eq!(
+        to_final_state.staker_info.latest_staked_value(),
+        to_init_state.staker_info.latest_staked_value() + expected_transfer_amount
+    );
+
+    assert_eq!(
+        from_final_state.core_stake_info.total,
+        from_init_state.core_stake_info.total - expected_transfer_amount
+    );
+    assert_eq!(
+        to_final_state.core_stake_info.total,
+        to_init_state.core_stake_info.total + expected_transfer_amount
+    );
+
+    let from_core_fully_unstaked = init_staked_value == expected_transfer_amount;
+    if from_core_fully_unstaked {
+        assert_eq!(
+            from_final_state.core_stake_info.number_of_stakers + 1,
+            from_init_state.core_stake_info.number_of_stakers
+        );
+    }
+
+    let no_init_stake_on_to_core = to_init_state.staker_info.latest_staked_value().is_zero();
+    if no_init_stake_on_to_core {
+        assert_eq!(
+            to_final_state.core_stake_info.number_of_stakers,
+            to_init_state.core_stake_info.number_of_stakers + 1
+        );
+    }
+
+    let fully_unstaked_and_nothing_to_claim =
+        from_core_fully_unstaked && to_final_state.staker_info.clone().claim() == (0, 0);
+    if fully_unstaked_and_nothing_to_claim {
+        assert!(!GeneralStakerInfo::<Test>::contains_key(&to_core, &staker));
+    }
+}

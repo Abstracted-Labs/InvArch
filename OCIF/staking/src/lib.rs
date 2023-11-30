@@ -281,6 +281,12 @@ pub mod pallet {
             old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
             new_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
         },
+        StakeMoved {
+            staker: T::AccountId,
+            from_core: <T as Config>::CoreId,
+            to_core: <T as Config>::CoreId,
+            amount: BalanceOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -309,6 +315,7 @@ pub mod pallet {
         NotRegistered,
         Halted,
         NoHaltChange,
+        MoveStakeToSameCore,
     }
 
     #[pallet::hooks]
@@ -786,6 +793,62 @@ pub mod pallet {
             Self::internal_halt_unhalt(halt);
 
             Self::deposit_event(Event::<T>::HaltChanged { is_halted: halt });
+
+            Ok(().into())
+        }
+
+        #[pallet::call_index(9)]
+        #[pallet::weight(<T as Config>::WeightInfo::move_stake())]
+        pub fn move_stake(
+            origin: OriginFor<T>,
+            from_core: <T as pallet::Config>::CoreId,
+            #[pallet::compact] amount: BalanceOf<T>,
+            to_core: <T as pallet::Config>::CoreId,
+        ) -> DispatchResultWithPostInfo {
+            Self::ensure_not_halted()?;
+
+            let staker = ensure_signed(origin)?;
+
+            ensure!(from_core != to_core, Error::<T>::MoveStakeToSameCore);
+            ensure!(
+                Self::core_info(to_core).is_some(),
+                Error::<T>::NotRegistered
+            );
+
+            let current_era = Self::current_era();
+            let mut from_staker_info = Self::staker_info(from_core, &staker);
+            let mut from_core_info =
+                Self::core_stake_info(from_core, current_era).unwrap_or_default();
+
+            let unstaked_amount = Self::internal_unstake(
+                &mut from_staker_info,
+                &mut from_core_info,
+                amount,
+                current_era,
+            )?;
+
+            let mut to_staker_info = Self::staker_info(to_core, &staker);
+            let mut to_core_info = Self::core_stake_info(to_core, current_era).unwrap_or_default();
+
+            Self::internal_stake(
+                &mut to_staker_info,
+                &mut to_core_info,
+                unstaked_amount,
+                current_era,
+            )?;
+
+            CoreEraStake::<T>::insert(from_core, current_era, from_core_info);
+            Self::update_staker_info(&staker, from_core, from_staker_info);
+
+            CoreEraStake::<T>::insert(to_core, current_era, to_core_info);
+            Self::update_staker_info(&staker, to_core, to_staker_info);
+
+            Self::deposit_event(Event::<T>::StakeMoved {
+                staker,
+                from_core,
+                to_core,
+                amount: unstaked_amount,
+            });
 
             Ok(().into())
         }
