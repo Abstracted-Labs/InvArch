@@ -12333,7 +12333,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-node"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "async-trait",
  "clap",
@@ -12407,7 +12407,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-runtime"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
