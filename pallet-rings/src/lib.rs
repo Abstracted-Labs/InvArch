@@ -100,18 +100,13 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
-        Result<
-            INV4Origin<
-                T,
-                <T as pallet_inv4::Config>::CoreId,
-                <T as frame_system::Config>::AccountId,
-            >,
-            <T as frame_system::Config>::RuntimeOrigin,
-        >: From<<T as frame_system::Config>::RuntimeOrigin>,
+        Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+            From<<T as frame_system::Config>::RuntimeOrigin>,
 
         <T as pallet_inv4::Config>::CoreId: Into<u32>,
 
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
+        T::AccountId: From<[u8; 32]>,
     {
         #[pallet::call_index(0)]
         #[pallet::weight((<T as Config>::WeightInfo::set_maintenance_status(), Pays::No))]

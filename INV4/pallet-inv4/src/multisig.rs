@@ -2,7 +2,7 @@ use super::pallet::{self, *};
 use crate::{
     fee_handling::FeeAsset,
     origin::{ensure_multisig, INV4Origin},
-    util::derive_core_account,
+    util::CoreAccountConversion,
     voting::{Tally, Vote},
 };
 use core::{
@@ -49,11 +49,10 @@ pub type MultisigOperationOf<T> = MultisigOperation<
 
 impl<T: Config> Pallet<T>
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+    <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
     /// Mint `amount` of specified token to `target` account
     pub(crate) fn inner_token_mint(
@@ -135,11 +134,7 @@ where
 
             Self::deposit_event(Event::MultisigExecuted {
                 core_id,
-                executor_account: derive_core_account::<
-                    T,
-                    <T as Config>::CoreId,
-                    <T as frame_system::Config>::AccountId,
-                >(core_id),
+                executor_account: Self::derive_core_account(core_id),
                 voter: owner,
                 call_hash,
                 call: *call,
@@ -174,11 +169,7 @@ where
 
             Self::deposit_event(Event::MultisigVoteStarted {
                 core_id,
-                executor_account: derive_core_account::<
-                    T,
-                    <T as Config>::CoreId,
-                    <T as frame_system::Config>::AccountId,
-                >(core_id),
+                executor_account: Self::derive_core_account(core_id),
                 voter: owner,
                 votes_added: Vote::Aye(owner_balance),
                 call_hash,
@@ -237,11 +228,7 @@ where
 
                 Self::deposit_event(Event::MultisigExecuted {
                     core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
+                    executor_account: Self::derive_core_account(core_id),
                     voter: owner,
                     call_hash,
                     call: decoded_call,
@@ -252,11 +239,7 @@ where
 
                 Self::deposit_event(Event::MultisigVoteAdded {
                     core_id,
-                    executor_account: derive_core_account::<
-                        T,
-                        <T as Config>::CoreId,
-                        <T as frame_system::Config>::AccountId,
-                    >(core_id),
+                    executor_account: Self::derive_core_account(core_id),
                     voter: owner,
                     votes_added: new_vote_record,
                     current_votes: old_data.tally,
@@ -285,11 +268,7 @@ where
 
             Self::deposit_event(Event::MultisigVoteWithdrawn {
                 core_id,
-                executor_account: derive_core_account::<
-                    T,
-                    <T as Config>::CoreId,
-                    <T as frame_system::Config>::AccountId,
-                >(core_id),
+                executor_account: Self::derive_core_account(core_id),
                 voter: owner,
                 votes_removed: old_vote,
                 call_hash,

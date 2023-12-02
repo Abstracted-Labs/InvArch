@@ -2,7 +2,7 @@ use super::pallet::*;
 use crate::{
     fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
     origin::{ensure_multisig, INV4Origin},
-    util::derive_core_account,
+    util::CoreAccountConversion,
 };
 use frame_support::{
     pallet_prelude::*,
@@ -23,10 +23,9 @@ pub type CoreMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 
 impl<T: Config> Pallet<T>
 where
-    Result<
-        INV4Origin<T, <T as crate::pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
     /// Create IP Set
     pub(crate) fn inner_create_core(
@@ -46,11 +45,7 @@ where
                 .ok_or(Error::<T>::NoAvailableCoreId)?;
 
             // Generate new `AccountId` to represent new IP Set being created
-            let core_account = derive_core_account::<
-                T,
-                <T as Config>::CoreId,
-                <T as frame_system::Config>::AccountId,
-            >(current_id);
+            let core_account = Self::derive_core_account(current_id);
 
             let seed_balance = <T as Config>::CoreSeedBalance::get();
 

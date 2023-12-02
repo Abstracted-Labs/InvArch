@@ -12,7 +12,10 @@ pub fn dispatch_call<T: Config>(
     core_id: <T as Config>::CoreId,
     fee_asset: &FeeAsset,
     call: <T as Config>::RuntimeCall,
-) -> DispatchResultWithPostInfo {
+) -> DispatchResultWithPostInfo
+where
+    T::AccountId: From<[u8; 32]>,
+{
     let internal_origin = MultisigInternalOrigin::new(core_id);
     let multisig_account = internal_origin.to_account_id();
     let origin = INV4Origin::Multisig(internal_origin).into();

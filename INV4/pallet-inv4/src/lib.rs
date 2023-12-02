@@ -43,6 +43,7 @@ pub mod weights;
 
 use fee_handling::FeeAsset;
 pub use lookup::INV4Lookup;
+pub use util::CoreAccountConversion;
 pub use weights::WeightInfo;
 
 #[frame_support::pallet]
@@ -73,6 +74,7 @@ pub mod pallet {
         Perbill,
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
+    use xcm::latest::NetworkId;
 
     pub use super::{inv4_core, multisig};
 
@@ -98,7 +100,8 @@ pub mod pallet {
             + Copy
             + Display
             + MaxEncodedLen
-            + Clone;
+            + Clone
+            + Into<u32>;
 
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
@@ -143,7 +146,7 @@ pub mod pallet {
         type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
-            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>; // + fungibles::Transfer<Self::AccountId, AssetId = Self::CoreId>;
+            + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>;
 
         type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 
@@ -151,6 +154,12 @@ pub mod pallet {
 
         #[pallet::constant]
         type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
+
+        #[pallet::constant]
+        type GlobalNetworkId: Get<NetworkId>;
+
+        #[pallet::constant]
+        type ParaId: Get<u32>;
 
         #[pallet::constant]
         type MaxCallSize: Get<u32>;
@@ -162,8 +171,7 @@ pub mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::origin]
-    pub type Origin<T> =
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>;
+    pub type Origin<T> = INV4Origin<T>;
 
     #[pallet::pallet]
     #[pallet::storage_version(STORAGE_VERSION)]
@@ -318,10 +326,11 @@ pub mod pallet {
     impl<T: Config> Pallet<T>
     where
         Result<
-            INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+            INV4Origin<T>,
             <T as frame_system::Config>::RuntimeOrigin,
         >: From<<T as frame_system::Config>::RuntimeOrigin>,
         <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+    <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
         /// Create IP (Intellectual Property) Set (IPS)
         #[pallet::call_index(0)]
