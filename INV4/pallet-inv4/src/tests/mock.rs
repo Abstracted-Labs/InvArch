@@ -355,7 +355,7 @@ impl ExtBuilder {
                 (BOB, INITIAL_BALANCE),
                 (CHARLIE, INITIAL_BALANCE),
                 (
-                    util::derive_core_account::<Test, u32, u32>(0u32),
+                    account_derivation::derive_core_account::<Test, u32, u32>(0u32),
                     INITIAL_BALANCE,
                 ),
             ],

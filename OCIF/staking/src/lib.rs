@@ -93,7 +93,7 @@ pub use pallet::*;
 pub mod pallet {
     use pallet_inv4::{
         origin::{ensure_multisig, INV4Origin},
-        CoreAccountConversion,
+        CoreAccountDerivation,
     };
 
     use super::*;
@@ -758,7 +758,7 @@ pub mod pallet {
             )?;
 
             let core_account =
-                <pallet_inv4::Pallet<T> as CoreAccountConversion<T>>::derive_core_account(core_id);
+                <pallet_inv4::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(core_id);
 
             <T as pallet::Config>::Currency::resolve_creating(&core_account, reward_imbalance);
             Self::deposit_event(Event::<T>::CoreClaimed {

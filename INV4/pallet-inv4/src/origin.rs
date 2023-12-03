@@ -1,6 +1,6 @@
 use crate::{
+    account_derivation::CoreAccountDerivation,
     pallet::{self, Origin, Pallet},
-    util::CoreAccountConversion,
     Config,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -26,7 +26,7 @@ where
     }
 
     pub fn to_account_id(&self) -> T::AccountId {
-        Pallet::<T>::derive_core_account(self.id.clone())
+        Pallet::<T>::derive_core_account(self.id)
     }
 }
 

@@ -31,19 +31,19 @@ mod tests;
 
 //pub mod migrations;
 
+pub mod account_derivation;
 mod dispatch;
 pub mod fee_handling;
 pub mod inv4_core;
 mod lookup;
 pub mod multisig;
 pub mod origin;
-pub mod util;
 pub mod voting;
 pub mod weights;
 
+pub use account_derivation::CoreAccountDerivation;
 use fee_handling::FeeAsset;
 pub use lookup::INV4Lookup;
-pub use util::CoreAccountConversion;
 pub use weights::WeightInfo;
 
 #[frame_support::pallet]
@@ -152,14 +152,9 @@ pub mod pallet {
 
         type FeeCharger: MultisigFeeHandler<Self>;
 
-        #[pallet::constant]
-        type GenesisHash: Get<<Self as frame_system::Config>::Hash>;
+        const GLOBAL_NETWORK_ID: NetworkId;
 
-        #[pallet::constant]
-        type GlobalNetworkId: Get<NetworkId>;
-
-        #[pallet::constant]
-        type ParaId: Get<u32>;
+        const PARA_ID: u32;
 
         #[pallet::constant]
         type MaxCallSize: Get<u32>;

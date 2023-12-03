@@ -38,12 +38,6 @@ pub mod pallet {
         type Chains: ChainList;
 
         #[pallet::constant]
-        type ParaId: Get<u32>;
-
-        #[pallet::constant]
-        type INV4PalletIndex: Get<u8>;
-
-        #[pallet::constant]
         type MaxXCMCallLength: Get<u32>;
 
         type MaintenanceOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
@@ -149,19 +143,19 @@ pub mod pallet {
                 Error::<T>::ChainUnderMaintenance
             );
 
-            let interior = Junctions::X2(
-                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                Junction::GeneralIndex(core_id as u128),
-            );
+            let descend_interior = Junction::Plurality {
+                id: BodyId::Index(core_id),
+                part: BodyPart::Voice,
+            };
 
             let fee_asset_location = fee_asset.get_asset_location();
 
             let beneficiary: MultiLocation = MultiLocation {
-                parents: 1,
+                parents: 0,
                 interior: Junctions::X3(
-                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                    Junction::GeneralIndex(core_id as u128),
+                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
+                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                    descend_interior,
                 ),
             };
 
@@ -171,6 +165,10 @@ pub mod pallet {
             };
 
             let message = Xcm(vec![
+                Instruction::UniversalOrigin(Junction::GlobalConsensus(
+                    <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
+                )),
+                Instruction::DescendOrigin(descend_interior.into()),
                 Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                 Instruction::BuyExecution {
                     fees: fee_multiasset,
@@ -188,7 +186,7 @@ pub mod pallet {
                 },
             ]);
 
-            pallet_xcm::Pallet::<T>::send_xcm(interior, dest, message)
+            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, dest, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::CallSent {
@@ -223,10 +221,10 @@ pub mod pallet {
 
             ensure!(chain == fee_asset.get_chain(), Error::<T>::DifferentChains);
 
-            let interior = Junctions::X2(
-                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                Junction::GeneralIndex(core_id as u128),
-            );
+            let descend_interior = Junction::Plurality {
+                id: BodyId::Index(core_id),
+                part: BodyPart::Voice,
+            };
 
             let asset_location = asset.get_asset_location();
 
@@ -244,11 +242,11 @@ pub mod pallet {
             };
 
             let core_multilocation: MultiLocation = MultiLocation {
-                parents: 1,
+                parents: 0,
                 interior: Junctions::X3(
-                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                    Junction::GeneralIndex(core_id as u128),
+                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
+                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                    descend_interior,
                 ),
             };
 
@@ -258,6 +256,10 @@ pub mod pallet {
             };
 
             let message = Xcm(vec![
+                Instruction::UniversalOrigin(Junction::GlobalConsensus(
+                    <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
+                )),
+                Instruction::DescendOrigin(descend_interior.into()),
                 // Pay execution fees
                 Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                 Instruction::BuyExecution {
@@ -277,7 +279,7 @@ pub mod pallet {
                 },
             ]);
 
-            pallet_xcm::Pallet::<T>::send_xcm(interior, dest, message)
+            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, dest, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::AssetsTransferred {
@@ -317,10 +319,10 @@ pub mod pallet {
                 Error::<T>::ChainUnderMaintenance
             );
 
-            let interior = Junctions::X2(
-                Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                Junction::GeneralIndex(core_id as u128),
-            );
+            let descend_interior = Junction::Plurality {
+                id: BodyId::Index(core_id),
+                part: BodyPart::Voice,
+            };
 
             let asset_location = asset.get_asset_location();
 
@@ -358,33 +360,32 @@ pub mod pallet {
                 })
                 .map_err(|_| Error::<T>::FailedToReanchorAsset)?;
 
-            let beneficiary: MultiLocation = MultiLocation {
-                parents: 0,
-                interior: if let Some(to_inner) = to.clone() {
-                    Junctions::X1(Junction::AccountId32 {
-                        network: None,
-                        id: to_inner.into(),
-                    })
-                } else {
-                    Junctions::X3(
-                        Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                        Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                        Junction::GeneralIndex(core_id as u128),
-                    )
-                },
-            };
-
             let core_multilocation: MultiLocation = MultiLocation {
                 parents: 0,
                 interior: Junctions::X3(
-                    Junction::Parachain(<T as pallet::Config>::ParaId::get()),
-                    Junction::PalletInstance(<T as pallet::Config>::INV4PalletIndex::get()),
-                    Junction::GeneralIndex(core_id as u128),
+                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
+                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                    descend_interior,
                 ),
+            };
+
+            let beneficiary: MultiLocation = match to.clone() {
+                Some(to_inner) => MultiLocation {
+                    parents: 0,
+                    interior: Junctions::X1(Junction::AccountId32 {
+                        network: None,
+                        id: to_inner.into(),
+                    }),
+                },
+                None => core_multilocation,
             };
 
             let message = if asset_location.starts_with(&dest) {
                 Xcm(vec![
+                    Instruction::UniversalOrigin(Junction::GlobalConsensus(
+                        <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
+                    )),
+                    Instruction::DescendOrigin(descend_interior.into()),
                     WithdrawAsset(vec![fee_multiasset.clone(), multiasset.clone()].into()),
                     Instruction::BuyExecution {
                         fees: fee_multiasset,
@@ -417,6 +418,10 @@ pub mod pallet {
                 ])
             } else {
                 Xcm(vec![
+                    Instruction::UniversalOrigin(Junction::GlobalConsensus(
+                        <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
+                    )),
+                    Instruction::DescendOrigin(descend_interior.into()),
                     // Pay execution fees
                     Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                     Instruction::BuyExecution {
@@ -447,7 +452,7 @@ pub mod pallet {
                 ])
             };
 
-            pallet_xcm::Pallet::<T>::send_xcm(interior, from_chain_location, message)
+            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, from_chain_location, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::AssetsBridged {
