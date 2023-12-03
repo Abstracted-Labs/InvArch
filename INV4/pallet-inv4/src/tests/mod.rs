@@ -45,7 +45,7 @@ fn create_core_works() {
         assert_eq!(
             INV4::core_storage(0u32),
             Some(CoreInfo {
-                account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                account: INV4::derive_core_account(0u32),
                 metadata: vec![].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(1),
                 required_approval: Perbill::from_percent(1),
@@ -77,7 +77,7 @@ fn create_core_works() {
         assert_eq!(
             INV4::core_storage(1u32),
             Some(CoreInfo {
-                account: account_derivation::derive_core_account::<Test, u32, u32>(1u32),
+                account: INV4::derive_core_account(1u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -160,7 +160,7 @@ fn set_parameters_works() {
         assert_eq!(
             INV4::core_storage(0u32),
             Some(CoreInfo {
-                account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                account: INV4::derive_core_account(0u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -438,7 +438,7 @@ fn operate_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 call: call.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -468,7 +468,7 @@ fn operate_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteStarted {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 votes_added: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -815,7 +815,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -866,7 +866,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1043,7 +1043,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -1093,7 +1093,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_removed: Vote::Nay(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1134,7 +1134,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: account_derivation::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 votes_removed: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),

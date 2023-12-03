@@ -13,22 +13,23 @@ use orml_asset_registry::AssetMetadata;
 use pallet_balances::AccountData;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup};
+use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
 use sp_std::{convert::TryInto, vec};
+use xcm::latest::NetworkId;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
-
-type AccountId = u32;
 type BlockNumber = u64;
+
+type AccountId = AccountId32;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
-pub const ALICE: AccountId = 0;
-pub const BOB: AccountId = 1;
-pub const CHARLIE: AccountId = 2;
-pub const DAVE: AccountId = 3;
+pub const ALICE: AccountId = AccountId::new([0u8; 32]);
+pub const BOB: AccountId = AccountId::new([1u8; 32]);
+pub const CHARLIE: AccountId = AccountId::new([2u8; 32]);
+pub const DAVE: AccountId = AccountId::new([3u8; 32]);
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -281,7 +282,7 @@ impl MultisigFeeHandler<Test> for FeeCharger {
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         Ok((
             0u128,
-            *who,
+            who.clone(),
             (),
             match fee_asset {
                 FeeAsset::TNKR => None,
@@ -323,7 +324,6 @@ impl pallet::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
@@ -331,6 +331,9 @@ impl pallet::Config for Test {
     type KSMCoreCreationFee = KSMCoreCreationFee;
 
     type MaxCallSize = MaxCallSize;
+
+    const GLOBAL_NETWORK_ID: NetworkId = NetworkId::Kusama;
+    const PARA_ID: u32 = 2125;
 }
 
 pub struct ExtBuilder;
@@ -354,10 +357,7 @@ impl ExtBuilder {
                 (ALICE, INITIAL_BALANCE),
                 (BOB, INITIAL_BALANCE),
                 (CHARLIE, INITIAL_BALANCE),
-                (
-                    account_derivation::derive_core_account::<Test, u32, u32>(0u32),
-                    INITIAL_BALANCE,
-                ),
+                (INV4::derive_core_account(0u32), INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)
