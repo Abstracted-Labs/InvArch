@@ -313,10 +313,6 @@ parameter_types! {
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT;
-    pub const GenesisHash: <Test as frame_system::Config>::Hash = H256([
-        212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
-        243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
-    ]);
 
     pub const KSMCoreCreationFee: Balance = UNIT;
 }
@@ -455,13 +451,15 @@ impl pallet_inv4::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
     type KSMAssetId = RelayAssetId;
     type KSMCoreCreationFee = KSMCoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
+
+    const GLOBAL_NETWORK_ID: NetworkId = NetworkId::Kusama;
+    const PARA_ID: u32 = 2125;
 }
 
 parameter_types! {
@@ -472,9 +470,7 @@ parameter_types! {
 
 impl pallet::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type ParaId = ParaId;
     type Chains = Chains;
-    type INV4PalletIndex = INV4PalletIndex;
     type WeightInfo = weights::SubstrateWeight<Test>;
     type MaxXCMCallLength = ConstU32<100_000>;
     type MaintenanceOrigin = EnsureRoot<AccountId>;
