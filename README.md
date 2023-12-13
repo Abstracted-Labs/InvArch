@@ -65,4 +65,4 @@ Please make sure to update tests as appropriate.
 
 ### Additional Resources
 • [GPL License](https://github.com/InvArch/InvArch/blob/main/LICENSE) (Open-Source)<br>
-• [Substrate Node Template](https://github.com/substrate-developer-hub/substrate-node-template/blob/tutorials/solutions/build-a-dapp-v3%2B1/README.md)
+• [Substrate Node Template](https://github.com/substrate-developer-hub/substrate-node-template/blob/main/README.md)
