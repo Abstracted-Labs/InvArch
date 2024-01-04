@@ -135,7 +135,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("invarch"),
     impl_name: create_runtime_str!("invarch"),
     authoring_version: 1,
-    spec_version: 3,
+    spec_version: 4,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -217,7 +217,7 @@ parameter_types! {
         })
         .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
         .build_or_panic();
-    pub const SS58Prefix: u16 = 42;
+    pub const SS58Prefix: u16 = 117;
 }
 
 // Configure FRAME pallets to include in runtime.
