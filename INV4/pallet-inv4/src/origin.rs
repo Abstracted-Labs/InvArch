@@ -7,6 +7,7 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{error::BadOrigin, RuntimeDebug};
 use scale_info::TypeInfo;
 
+/// Origin representing a core by its id.
 #[derive(PartialEq, Eq, Encode, Decode, TypeInfo, MaxEncodedLen, Clone, RuntimeDebug)]
 pub enum INV4Origin<T: pallet::Config> {
     Multisig(MultisigInternalOrigin<T>),

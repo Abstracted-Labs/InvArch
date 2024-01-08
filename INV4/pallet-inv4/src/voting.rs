@@ -17,7 +17,7 @@ use sp_std::vec::Vec;
 pub type Votes<T> = BalanceOf<T>;
 pub type Core<T> = <T as Config>::CoreId;
 
-/// Aggregated votes for an ongoing poll by members of the ranked collective.
+/// Aggregated votes for an ongoing poll by members of a core.
 #[derive(
     CloneNoBound,
     PartialEqNoBound,

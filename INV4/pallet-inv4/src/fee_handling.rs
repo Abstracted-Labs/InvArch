@@ -10,6 +10,7 @@ use sp_runtime::{
     DispatchResult,
 };
 
+/// Asset to be used by the multisig for paying fees transaction fees.
 #[derive(Clone, TypeInfo, Encode, Decode, MaxEncodedLen, Debug, PartialEq, Eq)]
 pub enum FeeAsset {
     TNKR,
@@ -21,6 +22,8 @@ pub enum FeeAssetNegativeImbalance<TNKRNegativeImbalance, KSMNegativeImbalance> 
     KSM(KSMNegativeImbalance),
 }
 
+/// Fee handler trait.
+/// This should be implemented properly in the runtime to account for native and non-native assets.
 pub trait MultisigFeeHandler<T: Config> {
     type Pre;
 

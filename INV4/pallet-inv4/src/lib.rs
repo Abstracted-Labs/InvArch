@@ -1,20 +1,22 @@
-//! # Pallet IPS
-//! Intellectual Property Sets
+//! # Pallet INV4
 //!
 //! - [`Config`]
 //! - [`Call`]
 //! - [`Pallet`]
 //!
 //! ## Overview
-//! This pallet demonstrates how to create and manage IP Sets, which are sets of tokenized IP components, or IP Tokens.
+//! This pallet handles advanced virtual multisigs (internally called cores).
 //!
 //! ### Pallet Functions
 //!
-//! - `create` - Create a new IP Set
-//! - `send` - Transfer IP Set owner account address
-//! - `list` - List an IP Set for sale
-//! - `buy` - Buy an IP Set
-//! - `destroy` - Delete an IP Set and all of its contents
+//! - `create_core` - Create a new core
+//! - `token_mint` - Mint the core's voting token to a target (called by a core origin)
+//! - `token_burn` - Burn the core's voting token from a target (called by a core origin)
+//! - `operate_multisig` - Create a new multisig proposal, auto-executing if caller passes execution threshold requirements
+//! - `vote_multisig` - Vote on an existing multisig proposal, auto-executing if caller puts vote tally past execution threshold requirements
+//! - `withdraw_vote_multisig` - Remove caller's vote from an existing multisig proposal
+//! - `cancel_multisig_proposal` - Cancel an existing multisig proposal (called by a core origin)
+//! - `set_parameters` - Change core parameters incl. voting thresholds and token freeze state (called by a core origin)
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -90,9 +92,9 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_balances::Config {
-        /// The IPS Pallet Events
+        /// Runtime event type
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// The IPS ID type
+        /// Integer id type for the core id
         type CoreId: Parameter
             + Member
             + AtLeast32BitUnsigned
@@ -103,9 +105,10 @@ pub mod pallet {
             + Clone
             + Into<u32>;
 
+        /// Currency type
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
-        /// The overarching call type.
+        /// The overarching call type
         type RuntimeCall: Parameter
             + Dispatchable<
                 Info = frame_support::dispatch::DispatchInfo,
@@ -116,13 +119,11 @@ pub mod pallet {
             + GetCallMetadata
             + Encode;
 
-        /// The maximum numbers of caller accounts on a single Multisig call
+        /// The maximum numbers of caller accounts on a single multisig proposal
         #[pallet::constant]
         type MaxCallers: Get<u32>;
 
-        #[pallet::constant]
-        type MaxSubAssets: Get<u32>;
-
+        /// The maximum length of the core metadata and the metadata of multisig proposals
         #[pallet::constant]
         type MaxMetadata: Get<u32>;
 
@@ -131,40 +132,52 @@ pub mod pallet {
             + From<<Self as frame_system::Config>::RuntimeOrigin>
             + From<RawOrigin<<Self as frame_system::Config>::AccountId>>;
 
+        /// Base voting token balance to give callers when creating a core
         #[pallet::constant]
         type CoreSeedBalance: Get<BalanceOf<Self>>;
 
+        /// Fee for creating a core in the native token
         #[pallet::constant]
         type CoreCreationFee: Get<BalanceOf<Self>>;
 
+        /// Fee for creating a core in the relay token
         #[pallet::constant]
         type KSMCoreCreationFee: Get<
             <<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
         >;
 
+        /// Relay token asset id in the runtime
         #[pallet::constant]
         type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
+        /// Provider of assets functionality for the voting tokens
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::CoreId>;
 
+        /// Provider of balance tokens in the runtime
         type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
 
+        /// Implementation of the fee handler for both core creation fee and multisig call fees
         type FeeCharger: MultisigFeeHandler<Self>;
 
+        /// NetworkId for the absolute location of global consensus system, to be used for deriving the core account id
         const GLOBAL_NETWORK_ID: NetworkId;
 
+        /// ParaId of the parachain, to be used for deriving the core account id
         const PARA_ID: u32;
 
+        /// Maximum size of a multisig proposal call
         #[pallet::constant]
         type MaxCallSize: Get<u32>;
 
+        /// Weight info for dispatchable calls
         type WeightInfo: WeightInfo;
     }
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
+    /// The custom core origin.
     #[pallet::origin]
     pub type Origin<T> = INV4Origin<T>;
 
@@ -177,16 +190,17 @@ pub mod pallet {
     #[pallet::getter(fn next_core_id)]
     pub type NextCoreId<T: Config> = StorageValue<_, T::CoreId, ValueQuery>;
 
-    /// Store Core info.
+    /// Core info storage.
     #[pallet::storage]
     #[pallet::getter(fn core_storage)]
     pub type CoreStorage<T: Config> = StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
+    /// Mapping of account id -> core id.
     #[pallet::storage]
     #[pallet::getter(fn core_by_account)]
     pub type CoreByAccount<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::CoreId>;
 
-    /// Details of a multisig call. Only holds data for calls while they are in the voting stage.
+    /// Details of a multisig call.
     ///
     /// Key: (Core ID, call hash)
     #[pallet::storage]
@@ -211,7 +225,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// An IP Set was created
+        /// A core was created
         CoreCreated {
             core_account: T::AccountId,
             core_id: T::CoreId,
@@ -219,6 +233,8 @@ pub mod pallet {
             minimum_support: Perbill,
             required_approval: Perbill,
         },
+
+        /// A core had parameters changed
         ParametersSet {
             core_id: T::CoreId,
             metadata: Option<Vec<u8>>,
@@ -226,21 +242,22 @@ pub mod pallet {
             required_approval: Option<Perbill>,
             frozen_tokens: Option<bool>,
         },
-        /// IP Tokens were minted
+
+        /// A core's voting token was minted
         Minted {
             core_id: T::CoreId,
             target: T::AccountId,
             amount: BalanceOf<T>,
         },
-        /// IP Tokens were burned
+
+        /// A core's voting token was burned
         Burned {
             core_id: T::CoreId,
             target: T::AccountId,
             amount: BalanceOf<T>,
         },
-        /// A vote to execute a call has begun. The call needs more votes to pass.
-        ///
-        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
+
+        /// A multisig proposal has started, it needs more votes to pass
         MultisigVoteStarted {
             core_id: T::CoreId,
             executor_account: T::AccountId,
@@ -248,9 +265,8 @@ pub mod pallet {
             votes_added: VoteRecord<T>,
             call_hash: T::Hash,
         },
-        /// Voting weight was added towards the vote threshold, but not enough to execute the `Call`
-        ///
-        /// Params: caller derived account ID, caller weighted balance, IPT0 token supply, the call hash, the `Call`
+
+        /// A vote was added to an existing multisig proposal
         MultisigVoteAdded {
             core_id: T::CoreId,
             executor_account: T::AccountId,
@@ -259,6 +275,8 @@ pub mod pallet {
             current_votes: Tally<T>,
             call_hash: T::Hash,
         },
+
+        /// A vote was removed from an existing multisig proposal
         MultisigVoteWithdrawn {
             core_id: T::CoreId,
             executor_account: T::AccountId,
@@ -266,9 +284,8 @@ pub mod pallet {
             votes_removed: VoteRecord<T>,
             call_hash: T::Hash,
         },
-        /// Multisig call was executed.
-        ///
-        /// Params: caller derived account ID, OpaqueCall, dispatch result is ok
+
+        /// A multisig proposal passed and it's call was executed
         MultisigExecuted {
             core_id: T::CoreId,
             executor_account: T::AccountId,
@@ -277,42 +294,42 @@ pub mod pallet {
             call: CallOf<T>,
             result: DispatchResult,
         },
-        /// A multisig call was cancelled
+
+        /// A multisig proposal was cancelled
         MultisigCanceled {
             core_id: T::CoreId,
             call_hash: T::Hash,
         },
     }
 
-    /// Errors for IPF pallet
+    /// Errors for INV4 pallet
     #[pallet::error]
     pub enum Error<T> {
         /// No available Core ID
         NoAvailableCoreId,
         /// Core not found
         CoreNotFound,
-        /// The operator has no permission
-        /// Ex: Attempting to add a file owned by another account to your IP set
+        /// The caller has no permissions in the core
         NoPermission,
-        /// Failed because the Maximum amount of metadata was exceeded
+        /// Maximum metadata length exceeded
         MaxMetadataExceeded,
-        /// Failed because the multisig call has been voted by more than the limit amount of members.
+        /// Maximum amount of callers exceeded
         MaxCallersExceeded,
-        /// Multisig call not found.
+        /// Multisig call not found
         MultisigCallNotFound,
-        /// Failed to decode stored multisig call.
+        /// Failed to decode stored multisig call
         FailedDecodingCall,
-        /// Multisig operation already exists and is available for voting.
+        /// Multisig proposal already exists and is being voted on
         MultisigCallAlreadyExists,
-        /// Cannot withdraw a vote on a multisig transaction you have not voted on.
+        /// Cannot withdraw a vote on a multisig transaction you have not voted on
         NotAVoter,
-        /// Failed to extract metadata from a `Call`
+        /// Failed to extract metadata from a call
         CallHasTooFewBytes,
-        /// Incomplete vote cleanup.
+        /// Incomplete vote cleanup
         IncompleteVoteCleanup,
-        /// Multisig fee payment failed, probably due to lack of funds to pay for fees.
+        /// Multisig fee payment failed, probably due to lack of funds to pay for fees
         CallFeePaymentFailed,
-
+        /// Call is too long
         MaxCallLengthExceeded,
     }
 
@@ -327,7 +344,11 @@ pub mod pallet {
         <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
-        /// Create IP (Intellectual Property) Set (IPS)
+        /// Create a new core
+        /// - `metadata`: Arbitrary byte vec to be attached to the core info
+        /// - `minimum_support`: Minimum amount of positive votes out of total token supply required to approve a proposal
+        /// - `required_approval`: Minimum amount of positive votes out of current positive + negative votes required to approve a proposal
+        /// - `creation_fee_asset`: Token to be used to pay the core creation fee
         #[pallet::call_index(0)]
         #[transactional]
         #[pallet::weight(<T as Config>::WeightInfo::create_core(metadata.len() as u32))]
@@ -352,7 +373,9 @@ pub mod pallet {
             })
         }
 
-        /// Mint `amount` of specified token to `target` account
+        /// Mint the core's voting token to a target (called by a core origin)
+        /// - `amount`: Balance amount
+        /// - `target`: Account receiving the minted tokens
         #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::token_mint())]
         pub fn token_mint(
@@ -363,7 +386,9 @@ pub mod pallet {
             Pallet::<T>::inner_token_mint(origin, amount, target)
         }
 
-        /// Burn `amount` of specified token from `target` account
+        /// Burn the core's voting token from a target (called by a core origin)
+        /// - `amount`: Balance amount
+        /// - `target`: Account having tokens burned
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::token_burn())]
         pub fn token_burn(
@@ -374,6 +399,13 @@ pub mod pallet {
             Pallet::<T>::inner_token_burn(origin, amount, target)
         }
 
+        /// Create a new multisig proposal, auto-executing if caller passes execution threshold requirements
+        /// Fees are calculated using the length of the metadata and the call
+        /// The proposed call's weight is used internally to charge the multisig instead of the user proposing the call
+        /// - `core_id`: Id of the core to propose the call in
+        /// - `metadata`: Arbitrary byte vec to be attached to the proposal
+        /// - `fee_asset`: Token to be used by the multisig to pay for call fees
+        /// - `call`: The actual call to be proposed
         #[pallet::call_index(3)]
         #[pallet::weight(
             <T as Config>::WeightInfo::operate_multisig(
@@ -391,6 +423,10 @@ pub mod pallet {
             Pallet::<T>::inner_operate_multisig(caller, core_id, metadata, fee_asset, call)
         }
 
+        /// Vote on an existing multisig proposal, auto-executing if caller puts vote tally past execution threshold requirements
+        /// - `core_id`: Id of the core where the proposal is
+        /// - `call_hash`: Hash of the call identifying the proposal
+        /// - `aye`: Wheter or not to vote positively
         #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::vote_multisig())]
         pub fn vote_multisig(
@@ -402,6 +438,9 @@ pub mod pallet {
             Pallet::<T>::inner_vote_multisig(caller, core_id, call_hash, aye)
         }
 
+        /// Remove caller's vote from an existing multisig proposal
+        /// - `core_id`: Id of the core where the proposal is
+        /// - `call_hash`: Hash of the call identifying the proposal
         #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw_vote_multisig())]
         pub fn withdraw_vote_multisig(
@@ -412,6 +451,8 @@ pub mod pallet {
             Pallet::<T>::inner_withdraw_vote_multisig(caller, core_id, call_hash)
         }
 
+        /// Cancel an existing multisig proposal (called by a core origin)
+        /// - `call_hash`: Hash of the call identifying the proposal
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::cancel_multisig_proposal())]
         pub fn cancel_multisig_proposal(
@@ -421,6 +462,11 @@ pub mod pallet {
             Pallet::<T>::inner_cancel_multisig_proposal(caller, call_hash)
         }
 
+        /// Change core parameters incl. voting thresholds and token freeze state (called by a core origin)
+        /// - `metadata`: Arbitrary byte vec to be attached to the core info
+        /// - `minimum_support`: Minimum amount of positive votes out of total token supply required to approve a proposal
+        /// - `required_approval`: Minimum amount of positive votes out of current positive + negative votes required to approve a proposal
+        /// - `frozen_tokens`: Wheter or not the core's voting token should be transferable by the holders
         #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::set_parameters(
             metadata.clone().map(|m| m.len()).unwrap_or(0) as u32

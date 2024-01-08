@@ -30,7 +30,7 @@ pub const MAX_SIZE: u32 = 50 * 1024;
 
 pub type BoundedCallBytes<T> = BoundedVec<u8, <T as Config>::MaxCallSize>;
 
-/// Details of a multisig operation
+/// Details of a multisig operation.
 #[derive(Clone, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo, PartialEq, Eq)]
 pub struct MultisigOperation<AccountId, TallyOf, Call, Metadata> {
     pub tally: TallyOf,
@@ -54,15 +54,17 @@ where
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
-    /// Mint `amount` of specified token to `target` account
+    /// Inner function for the token_mint call.
     pub(crate) fn inner_token_mint(
         origin: OriginFor<T>,
         amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
+        // Grab the core id from the origin
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
+        // Mint the core's voting token to the target.
         T::AssetsProvider::mint_into(core_id, &target, amount)?;
 
         Self::deposit_event(Event::Minted {
@@ -74,15 +76,17 @@ where
         Ok(())
     }
 
-    /// Burn `amount` of specified token from `target` account
+    /// Inner function for the token_burn call.
     pub(crate) fn inner_token_burn(
         origin: OriginFor<T>,
         amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
+        // Grab the core id from the origin
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
+        // Burn the core's voting token from the target.
         T::AssetsProvider::burn_from(
             core_id,
             &target,
@@ -100,7 +104,7 @@ where
         Ok(())
     }
 
-    /// Initiates a multisig transaction. If `caller` has enough votes, execute `call` immediately, otherwise a vote begins.
+    /// Inner function for the operate_multisig call.
     pub(crate) fn inner_operate_multisig(
         caller: OriginFor<T>,
         core_id: T::CoreId,
@@ -110,24 +114,29 @@ where
     ) -> DispatchResultWithPostInfo {
         let owner = ensure_signed(caller)?;
 
+        // Get the voting token balance of the caller
         let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
 
         ensure!(!owner_balance.is_zero(), Error::<T>::NoPermission);
 
+        // Get the minimum support value of the target core
         let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(core_id)
             .ok_or(Error::<T>::CoreNotFound)?;
 
+        // Get the total issuance of the core's voting token
         let total_issuance: BalanceOf<T> = T::AssetsProvider::total_issuance(core_id);
 
-        // Compute the `call` hash
+        // Compute the call hash
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call);
 
+        // Make sure this exact multisig call doesn't already exist
         ensure!(
             Multisig::<T>::get(core_id, call_hash).is_none(),
             Error::<T>::MultisigCallAlreadyExists
         );
 
-        // If `caller` has enough balance to meet/exeed the threshold, then go ahead and execute the `call` now.
+        // If caller has enough balance to meet/exeed the threshold, then go ahead and execute the call now
+        // There is no need to check against required_approval as it's assumed the caller is voting aye
         if Perbill::from_rational(owner_balance, total_issuance) >= minimum_support {
             let dispatch_result =
                 crate::dispatch::dispatch_call::<T>(core_id, &fee_asset, *call.clone());
@@ -141,12 +150,13 @@ where
                 result: dispatch_result.map(|_| ()).map_err(|e| e.error),
             });
         } else {
+            // Wrap the call making sure it fits the size boundary
             let bounded_call: BoundedCallBytes<T> = (*call)
                 .encode()
                 .try_into()
                 .map_err(|_| Error::<T>::MaxCallLengthExceeded)?;
 
-            // Multisig call is now in the voting stage, so update storage.
+            // Insert proposal in storage, it's now in the voting stage
             Multisig::<T>::insert(
                 core_id,
                 call_hash,
@@ -179,7 +189,7 @@ where
         Ok(().into())
     }
 
-    /// Vote on a multisig transaction that has not been executed yet
+    /// Inner function for the vote_multisig call.
     pub(crate) fn inner_vote_multisig(
         caller: OriginFor<T>,
         core_id: T::CoreId,
@@ -189,12 +199,16 @@ where
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
+            // Get the voting token balance of the caller
             let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
 
+            // If caller doesn't own the token, they have no voting power
             ensure!(!voter_balance.is_zero(), Error::<T>::NoPermission);
 
+            // Get the multisig call data from the storage
             let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
+            // Get the minimum support and required approval values of the target core
             let (minimum_support, required_approval) =
                 Pallet::<T>::minimum_support_and_required_approval(core_id)
                     .ok_or(Error::<T>::CoreNotFound)?;
@@ -205,6 +219,7 @@ where
                 Vote::Nay(voter_balance)
             };
 
+            // Mutate tally with the new vote
             old_data
                 .tally
                 .process_vote(owner.clone(), Some(new_vote_record))?;
@@ -212,14 +227,16 @@ where
             let support = old_data.tally.support(core_id);
             let approval = old_data.tally.approval(core_id);
 
+            // Decode the call
             let decoded_call = <T as Config>::RuntimeCall::decode(&mut &old_data.actual_call[..])
                 .map_err(|_| Error::<T>::FailedDecodingCall)?;
 
+            // Check if the multisig proposal passes the thresholds with the added vote
             if (support >= minimum_support) && (approval >= required_approval) {
-                // Multisig storage records are removed when the transaction is executed or the vote on the transaction is withdrawn
+                // If the proposal thresholds are met, remove proposal from storage
                 *data = None;
 
-                // Actually dispatch this call and return the result of it
+                // Dispatch the call and get the result
                 let dispatch_result = crate::dispatch::dispatch_call::<T>(
                     core_id,
                     &old_data.fee_asset,
@@ -235,6 +252,7 @@ where
                     result: dispatch_result.map(|_| ()).map_err(|e| e.error),
                 });
             } else {
+                // If the thresholds aren't met, update storage with the new tally
                 *data = Some(old_data.clone());
 
                 Self::deposit_event(Event::MultisigVoteAdded {
@@ -251,7 +269,7 @@ where
         })
     }
 
-    /// Withdraw vote from an ongoing multisig operation
+    /// Inner function for the withdraw_token_multisig call.
     pub(crate) fn inner_withdraw_vote_multisig(
         caller: OriginFor<T>,
         core_id: T::CoreId,
@@ -260,10 +278,13 @@ where
         Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
+            // Get the voting token balance of the caller
             let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
+            // Try to mutate tally to remove the vote
             let old_vote = old_data.tally.process_vote(owner.clone(), None)?;
 
+            // Update storage with the new tally
             *data = Some(old_data.clone());
 
             Self::deposit_event(Event::MultisigVoteWithdrawn {
@@ -278,13 +299,16 @@ where
         })
     }
 
+    /// Inner function for the cancel_multisig_proposal call.
     pub(crate) fn inner_cancel_multisig_proposal(
         origin: OriginFor<T>,
         call_hash: T::Hash,
     ) -> DispatchResultWithPostInfo {
+        // Ensure that this is being called by the multisig origin rather than by a normal caller
         let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
         let core_id = core_origin.id;
 
+        // Remove the proposal from storage
         Multisig::<T>::remove(core_id, call_hash);
 
         Self::deposit_event(Event::<T>::MultisigCanceled { core_id, call_hash });

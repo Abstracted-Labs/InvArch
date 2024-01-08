@@ -3,6 +3,7 @@ use codec::{Compact, Encode};
 use sp_io::hashing::blake2_256;
 use xcm::latest::{BodyId, BodyPart, Junction, Junctions};
 
+// Trait providing the XCM location and the derived account of a core.
 pub trait CoreAccountDerivation<T: Config> {
     fn derive_core_account(core_id: T::CoreId) -> T::AccountId;
     fn core_location(core_id: T::CoreId) -> Junctions;
@@ -13,6 +14,8 @@ where
     T::AccountId: From<[u8; 32]>,
 {
     fn derive_core_account(core_id: T::CoreId) -> T::AccountId {
+        // Account derivation using absolute locations.
+        // See RFC 34 (https://github.com/polkadot-fellows/RFCs/pull/34).
         (
             b"GlobalConsensus",
             T::GLOBAL_NETWORK_ID,
@@ -24,6 +27,8 @@ where
             .into()
     }
 
+    // Core location is defined as a plurality within the parachain.
+    // Absolute location is necessary so that we can statically derive the same account locally and externally.
     fn core_location(core_id: T::CoreId) -> Junctions {
         Junctions::X3(
             Junction::GlobalConsensus(T::GLOBAL_NETWORK_ID),
