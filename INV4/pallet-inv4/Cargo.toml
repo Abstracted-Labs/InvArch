@@ -1,11 +1,11 @@
 [package]
 authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'IPS Pallet for creating and managing sets of tokenized IP'
-edition = '2018'
+description = ''
+edition = '2021'
 homepage = 'https://invarch.network'
 license = 'GPLv3'
 name = 'pallet-inv4'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
+repository = 'https://github.com/InvArch/InvArch-Frames'
 version = '0.1.0-dev'
 
 [dependencies]
