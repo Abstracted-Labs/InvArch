@@ -3,8 +3,8 @@ use crate::{
     common_types::{AssetId, CommonId},
     constants::currency::UNIT,
     fee_handling::DealWithKSMFees,
-    AccountId, Balance, Balances, CoreAssets, DealWithFees, Runtime, RuntimeCall, RuntimeEvent,
-    RuntimeOrigin, Tokens,
+    AccountId, Balance, Balances, CoreAssets, DealWithFees, ParachainInfo, Runtime, RuntimeCall,
+    RuntimeEvent, RuntimeOrigin, Tokens,
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -14,7 +14,7 @@ use frame_support::{
 use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use scale_info::TypeInfo;
-use sp_core::{ConstU32, H256};
+use sp_core::ConstU32;
 use sp_runtime::traits::{One, SignedExtension, Zero};
 
 parameter_types! {
@@ -22,13 +22,11 @@ parameter_types! {
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT * 100;
-    pub const GenesisHash: <Runtime as frame_system::Config>::Hash = H256([
-        212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
-        243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
-    ]);
 
     pub const KSMCoreCreationFee: Balance = UNIT;
     pub const MaxCallSize: u32 = 50 * 1024;
+
+    pub ParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -38,14 +36,11 @@ impl pallet_inv4::Config for Runtime {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    // type AssetFreezer = AssetFreezer;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 
     type Tokens = Tokens;
@@ -53,6 +48,8 @@ impl pallet_inv4::Config for Runtime {
     type KSMCoreCreationFee = KSMCoreCreationFee;
 
     type MaxCallSize = MaxCallSize;
+
+    type ParaId = ParaId;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]

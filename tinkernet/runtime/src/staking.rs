@@ -1,5 +1,5 @@
 use crate::{
-    Balance, Balances, BlockNumber, CommonId, ExistentialDeposit, Runtime, RuntimeEvent, DAYS, UNIT,
+    Balance, Balances, BlockNumber, ExistentialDeposit, Runtime, RuntimeEvent, DAYS, UNIT,
 };
 use frame_support::{parameter_types, PalletId};
 
@@ -22,7 +22,6 @@ parameter_types! {
 impl pallet_ocif_staking::Config for Runtime {
     type Currency = Balances;
     type BlocksPerEra = BlocksPerEra;
-    type CoreId = CommonId;
     type RegisterDeposit = RegisterDeposit;
     type RuntimeEvent = RuntimeEvent;
     type MaxStakersPerCore = MaxStakersPerCore;
