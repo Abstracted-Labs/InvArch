@@ -1,5 +1,6 @@
 use crate::{Config, Pallet};
 use codec::{Compact, Encode};
+use frame_support::traits::Get;
 use sp_io::hashing::blake2_256;
 use xcm::latest::{BodyId, BodyPart, Junction, Junctions};
 
@@ -20,7 +21,7 @@ where
         blake2_256(
             &(
                 b"SiblingChain",
-                Compact::<u32>::from(T::PARA_ID),
+                Compact::<u32>::from(T::ParaId::get()),
                 (b"Body", BodyId::Index(core_id.into()), BodyPart::Voice).encode(),
             )
                 .encode(),
@@ -31,7 +32,7 @@ where
     fn core_location(core_id: T::CoreId) -> Junctions {
         // Core location is defined as a plurality within the parachain.
         Junctions::X2(
-            Junction::Parachain(T::PARA_ID),
+            Junction::Parachain(T::ParaId::get()),
             Junction::Plurality {
                 id: BodyId::Index(core_id.into()),
                 part: BodyPart::Voice,

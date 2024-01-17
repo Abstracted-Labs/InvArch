@@ -457,8 +457,7 @@ impl pallet_inv4::Config for Test {
     type KSMCoreCreationFee = KSMCoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
 
-    const GLOBAL_NETWORK_ID: NetworkId = NetworkId::Kusama;
-    const PARA_ID: u32 = 2125;
+    type ParaId = ConstU32<2125>;
 }
 
 parameter_types! {

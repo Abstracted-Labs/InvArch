@@ -18,7 +18,6 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     AccountId32, Perbill,
 };
-use xcm::latest::NetworkId;
 
 pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
@@ -247,8 +246,7 @@ impl pallet_inv4::Config for Test {
     type KSMCoreCreationFee = CoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
 
-    const GLOBAL_NETWORK_ID: NetworkId = NetworkId::Kusama;
-    const PARA_ID: u32 = 2125;
+    type ParaId = ConstU32<2125>;
 }
 
 impl pallet_ocif_staking::Config for Test {

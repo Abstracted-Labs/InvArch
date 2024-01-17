@@ -76,7 +76,6 @@ pub mod pallet {
         Perbill,
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
-    use xcm::latest::NetworkId;
 
     pub use super::{inv4_core, multisig};
 
@@ -160,11 +159,8 @@ pub mod pallet {
         /// Implementation of the fee handler for both core creation fee and multisig call fees
         type FeeCharger: MultisigFeeHandler<Self>;
 
-        /// NetworkId for the absolute location of global consensus system, to be used for deriving the core account id
-        const GLOBAL_NETWORK_ID: NetworkId;
-
         /// ParaId of the parachain, to be used for deriving the core account id
-        const PARA_ID: u32;
+        type ParaId: Get<u32>;
 
         /// Maximum size of a multisig proposal call
         #[pallet::constant]

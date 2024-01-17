@@ -15,7 +15,6 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
 use sp_std::{convert::TryInto, vec};
-use xcm::latest::NetworkId;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -331,8 +330,7 @@ impl pallet::Config for Test {
 
     type MaxCallSize = MaxCallSize;
 
-    const GLOBAL_NETWORK_ID: NetworkId = NetworkId::Kusama;
-    const PARA_ID: u32 = 2125;
+    type ParaId = ConstU32<2125>;
 }
 
 pub struct ExtBuilder;

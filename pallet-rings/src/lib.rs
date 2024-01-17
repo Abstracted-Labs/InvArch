@@ -151,10 +151,9 @@ pub mod pallet {
             let fee_asset_location = fee_asset.get_asset_location();
 
             let beneficiary: MultiLocation = MultiLocation {
-                parents: 0,
-                interior: Junctions::X3(
-                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
-                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                parents: 1,
+                interior: Junctions::X2(
+                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
@@ -165,10 +164,6 @@ pub mod pallet {
             };
 
             let message = Xcm(vec![
-                Instruction::UniversalOrigin(Junction::GlobalConsensus(
-                    <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
-                )),
-                Instruction::DescendOrigin(descend_interior.into()),
                 Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                 Instruction::BuyExecution {
                     fees: fee_multiasset,
@@ -186,7 +181,7 @@ pub mod pallet {
                 },
             ]);
 
-            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, dest, message)
+            pallet_xcm::Pallet::<T>::send_xcm(descend_interior, dest, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::CallSent {
@@ -242,10 +237,9 @@ pub mod pallet {
             };
 
             let core_multilocation: MultiLocation = MultiLocation {
-                parents: 0,
-                interior: Junctions::X3(
-                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
-                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                parents: 1,
+                interior: Junctions::X2(
+                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
@@ -256,10 +250,6 @@ pub mod pallet {
             };
 
             let message = Xcm(vec![
-                Instruction::UniversalOrigin(Junction::GlobalConsensus(
-                    <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
-                )),
-                Instruction::DescendOrigin(descend_interior.into()),
                 // Pay execution fees
                 Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                 Instruction::BuyExecution {
@@ -279,7 +269,7 @@ pub mod pallet {
                 },
             ]);
 
-            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, dest, message)
+            pallet_xcm::Pallet::<T>::send_xcm(descend_interior, dest, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::AssetsTransferred {
@@ -361,10 +351,9 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::FailedToReanchorAsset)?;
 
             let core_multilocation: MultiLocation = MultiLocation {
-                parents: 0,
-                interior: Junctions::X3(
-                    Junction::GlobalConsensus(<T as pallet_inv4::Config>::GLOBAL_NETWORK_ID),
-                    Junction::Parachain(<T as pallet_inv4::Config>::PARA_ID),
+                parents: 1,
+                interior: Junctions::X2(
+                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
@@ -382,10 +371,6 @@ pub mod pallet {
 
             let message = if asset_location.starts_with(&dest) {
                 Xcm(vec![
-                    Instruction::UniversalOrigin(Junction::GlobalConsensus(
-                        <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
-                    )),
-                    Instruction::DescendOrigin(descend_interior.into()),
                     WithdrawAsset(vec![fee_multiasset.clone(), multiasset.clone()].into()),
                     Instruction::BuyExecution {
                         fees: fee_multiasset,
@@ -418,10 +403,6 @@ pub mod pallet {
                 ])
             } else {
                 Xcm(vec![
-                    Instruction::UniversalOrigin(Junction::GlobalConsensus(
-                        <T as pallet_inv4::Config>::GLOBAL_NETWORK_ID,
-                    )),
-                    Instruction::DescendOrigin(descend_interior.into()),
                     // Pay execution fees
                     Instruction::WithdrawAsset(fee_multiasset.clone().into()),
                     Instruction::BuyExecution {
@@ -452,7 +433,7 @@ pub mod pallet {
                 ])
             };
 
-            pallet_xcm::Pallet::<T>::send_xcm(Junctions::Here, from_chain_location, message)
+            pallet_xcm::Pallet::<T>::send_xcm(descend_interior, from_chain_location, message)
                 .map_err(|_| Error::<T>::SendingFailed)?;
 
             Self::deposit_event(Event::AssetsBridged {
