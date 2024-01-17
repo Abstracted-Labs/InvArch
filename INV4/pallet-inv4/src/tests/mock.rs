@@ -318,7 +318,6 @@ impl pallet::Config for Test {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;

@@ -1260,3 +1260,17 @@ fn withdraw_vote_multisig_fails() {
         );
     });
 }
+
+#[test]
+fn core_address_matches() {
+    const ACCOUNT_IN_ASSET_HUB: [u8; 32] = [
+        147, 83, 7, 98, 71, 245, 98, 15, 146, 176, 22, 221, 20, 216, 188, 203, 166, 234, 117, 86,
+        56, 214, 204, 37, 238, 26, 161, 82, 2, 174, 180, 74,
+    ];
+
+    let core_account = <Pallet<Test> as CoreAccountDerivation<Test>>::derive_core_account(0);
+
+    let core_account_bytes: [u8; 32] = core_account.into();
+
+    assert_eq!(core_account_bytes, ACCOUNT_IN_ASSET_HUB);
+}
