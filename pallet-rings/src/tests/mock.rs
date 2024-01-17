@@ -18,7 +18,7 @@ use pallet_inv4::fee_handling::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
-pub use sp_std::{cell::RefCell, fmt::Debug, marker::PhantomData};
+pub use sp_std::{cell::RefCell, fmt::Debug};
 use sp_std::{convert::TryInto, vec};
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -445,7 +445,6 @@ impl pallet_inv4::Config for Test {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
