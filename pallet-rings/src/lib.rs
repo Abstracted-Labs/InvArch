@@ -170,7 +170,7 @@ pub mod pallet {
                     weight_limit: WeightLimit::Unlimited,
                 },
                 Instruction::Transact {
-                    origin_kind: OriginKind::Native,
+                    origin_kind: OriginKind::SovereignAccount,
                     require_weight_at_most: weight,
                     call: <DoubleEncoded<_> as From<Vec<u8>>>::from(call.clone().to_vec()),
                 },
