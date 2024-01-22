@@ -142,7 +142,7 @@ parameter_types! {
         212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
-    pub const KSMAssetId: u32 = 9999;
+    pub const RelayAssetId: u32 = 9999;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
@@ -172,8 +172,8 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
             who.clone(),
             (),
             match fee_asset {
-                pallet_inv4::fee_handling::FeeAsset::TNKR => None,
-                pallet_inv4::fee_handling::FeeAsset::KSM => Some(1u32),
+                pallet_inv4::fee_handling::FeeAsset::Native => None,
+                pallet_inv4::fee_handling::FeeAsset::Relay => Some(1u32),
             },
         ))
     }
@@ -242,8 +242,8 @@ impl pallet_inv4::Config for Test {
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
 
     type Tokens = CoreAssets;
-    type KSMAssetId = KSMAssetId;
-    type KSMCoreCreationFee = CoreCreationFee;
+    type RelayAssetId = RelayAssetId;
+    type RelayCoreCreationFee = CoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
 
     type ParaId = ConstU32<2125>;

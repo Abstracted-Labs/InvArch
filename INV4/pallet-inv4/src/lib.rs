@@ -141,13 +141,13 @@ pub mod pallet {
 
         /// Fee for creating a core in the relay token
         #[pallet::constant]
-        type KSMCoreCreationFee: Get<
+        type RelayCoreCreationFee: Get<
             <<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
         >;
 
         /// Relay token asset id in the runtime
         #[pallet::constant]
-        type KSMAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
+        type RelayAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         /// Provider of assets functionality for the voting tokens
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::CoreId>

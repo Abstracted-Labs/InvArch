@@ -63,8 +63,8 @@ where
 
             // Charge creation fee from the caller
             T::FeeCharger::handle_creation_fee(match creation_fee_asset {
-                FeeAsset::TNKR => {
-                    FeeAssetNegativeImbalance::TNKR(<T as Config>::Currency::withdraw(
+                FeeAsset::Native => {
+                    FeeAssetNegativeImbalance::Native(<T as Config>::Currency::withdraw(
                         &creator,
                         T::CoreCreationFee::get(),
                         WithdrawReasons::TRANSACTION_PAYMENT,
@@ -72,14 +72,16 @@ where
                     )?)
                 }
 
-                FeeAsset::KSM => FeeAssetNegativeImbalance::KSM(<T as Config>::Tokens::withdraw(
-                    T::KSMAssetId::get(),
-                    &creator,
-                    T::KSMCoreCreationFee::get(),
-                    Precision::Exact,
-                    Preservation::Protect,
-                    Fortitude::Force,
-                )?),
+                FeeAsset::Relay => {
+                    FeeAssetNegativeImbalance::Relay(<T as Config>::Tokens::withdraw(
+                        T::RelayAssetId::get(),
+                        &creator,
+                        T::RelayCoreCreationFee::get(),
+                        Precision::Exact,
+                        Preservation::Protect,
+                        Fortitude::Force,
+                    )?)
+                }
             });
 
             // Update core storages
