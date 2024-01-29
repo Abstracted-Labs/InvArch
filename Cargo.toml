@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = "2"
 members = [
     "INV4/pallet-inv4",
     "OCIF/staking",

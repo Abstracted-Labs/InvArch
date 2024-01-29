@@ -1,8 +1,8 @@
 use super::pallet::*;
 use crate::{
+    account_derivation::CoreAccountDerivation,
     fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
     origin::{ensure_multisig, INV4Origin},
-    util::derive_core_account,
 };
 use frame_support::{
     pallet_prelude::*,
@@ -23,12 +23,11 @@ pub type CoreMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 
 impl<T: Config> Pallet<T>
 where
-    Result<
-        INV4Origin<T, <T as crate::pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
-    /// Create IP Set
+    /// Inner function for the create_core call.
     pub(crate) fn inner_create_core(
         origin: OriginFor<T>,
         metadata: BoundedVec<u8, T::MaxMetadata>,
@@ -39,23 +38,21 @@ where
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
             let creator = ensure_signed(origin)?;
 
-            // Increment counter
+            // Increment core id counter
             let current_id = *next_id;
             *next_id = next_id
                 .checked_add(&One::one())
                 .ok_or(Error::<T>::NoAvailableCoreId)?;
 
-            // Generate new `AccountId` to represent new IP Set being created
-            let core_account = derive_core_account::<
-                T,
-                <T as Config>::CoreId,
-                <T as frame_system::Config>::AccountId,
-            >(current_id);
+            // Derive the account of this core based on the core id
+            let core_account = Self::derive_core_account(current_id);
 
+            // Mint base amount of voting token to the caller
             let seed_balance = <T as Config>::CoreSeedBalance::get();
-
             T::AssetsProvider::mint_into(current_id, &creator, seed_balance)?;
 
+            // Build the structure of the new core
+            // Tokens are set to frozen by default
             let info = CoreInfo {
                 account: core_account.clone(),
                 metadata: metadata.clone(),
@@ -64,9 +61,10 @@ where
                 frozen_tokens: true,
             };
 
+            // Charge creation fee from the caller
             T::FeeCharger::handle_creation_fee(match creation_fee_asset {
-                FeeAsset::TNKR => {
-                    FeeAssetNegativeImbalance::TNKR(<T as Config>::Currency::withdraw(
+                FeeAsset::Native => {
+                    FeeAssetNegativeImbalance::Native(<T as Config>::Currency::withdraw(
                         &creator,
                         T::CoreCreationFee::get(),
                         WithdrawReasons::TRANSACTION_PAYMENT,
@@ -74,17 +72,19 @@ where
                     )?)
                 }
 
-                FeeAsset::KSM => FeeAssetNegativeImbalance::KSM(<T as Config>::Tokens::withdraw(
-                    T::KSMAssetId::get(),
-                    &creator,
-                    T::KSMCoreCreationFee::get(),
-                    Precision::Exact,
-                    Preservation::Protect,
-                    Fortitude::Force,
-                )?),
+                FeeAsset::Relay => {
+                    FeeAssetNegativeImbalance::Relay(<T as Config>::Tokens::withdraw(
+                        T::RelayAssetId::get(),
+                        &creator,
+                        T::RelayCoreCreationFee::get(),
+                        Precision::Exact,
+                        Preservation::Protect,
+                        Fortitude::Force,
+                    )?)
+                }
             });
 
-            // Update core storage
+            // Update core storages
             CoreStorage::<T>::insert(current_id, info);
             CoreByAccount::<T>::insert(core_account.clone(), current_id);
 
@@ -100,6 +100,7 @@ where
         })
     }
 
+    /// Inner function for the set_parameters call.
     pub(crate) fn inner_set_parameters(
         origin: OriginFor<T>,
         metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
@@ -143,6 +144,7 @@ where
         })
     }
 
+    /// Checks if the voting asset is frozen.
     pub fn is_asset_frozen(core_id: T::CoreId) -> Option<bool> {
         CoreStorage::<T>::get(core_id).map(|c| c.frozen_tokens)
     }

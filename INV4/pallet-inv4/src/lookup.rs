@@ -17,6 +17,7 @@ impl<T: Config> Pallet<T> {
     }
 }
 
+/// StaticLookup implementor using MultiAddress::Index for looking up cores by id.
 pub struct INV4Lookup<T: Config>(PhantomData<T>);
 
 impl<T: Config> StaticLookup for INV4Lookup<T> {

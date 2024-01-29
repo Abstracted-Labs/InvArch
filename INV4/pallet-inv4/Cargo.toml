@@ -1,11 +1,11 @@
 [package]
 authors = ['InvArchitects <https://github.com/InvArch>']
-description = 'IPS Pallet for creating and managing sets of tokenized IP'
-edition = '2018'
+description = ''
+edition = '2021'
 homepage = 'https://invarch.network'
 license = 'GPLv3'
 name = 'pallet-inv4'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ips'
+repository = 'https://github.com/InvArch/InvArch-Frames'
 version = '0.1.0-dev'
 
 [dependencies]
@@ -33,6 +33,8 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate.git', default
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', default-features = false, optional = true , branch = "polkadot-v0.9.43" }
 
 orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.43" }
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

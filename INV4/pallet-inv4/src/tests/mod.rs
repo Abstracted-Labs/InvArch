@@ -37,7 +37,7 @@ fn create_core_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR
+            FeeAsset::Native
         ));
 
         assert_eq!(INV4::next_core_id(), 1u32);
@@ -45,7 +45,7 @@ fn create_core_works() {
         assert_eq!(
             INV4::core_storage(0u32),
             Some(CoreInfo {
-                account: util::derive_core_account::<Test, u32, u32>(0u32),
+                account: INV4::derive_core_account(0u32),
                 metadata: vec![].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(1),
                 required_approval: Perbill::from_percent(1),
@@ -69,7 +69,7 @@ fn create_core_works() {
             vec![1, 2, 3].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::KSM
+            FeeAsset::Relay
         ));
 
         assert_eq!(INV4::next_core_id(), 2u32);
@@ -77,7 +77,7 @@ fn create_core_works() {
         assert_eq!(
             INV4::core_storage(1u32),
             Some(CoreInfo {
-                account: util::derive_core_account::<Test, u32, u32>(1u32),
+                account: INV4::derive_core_account(1u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -86,8 +86,8 @@ fn create_core_works() {
         );
 
         assert_eq!(
-            Tokens::accounts(BOB, KSM_ASSET_ID).free,
-            INITIAL_BALANCE - KSMCoreCreationFee::get()
+            Tokens::accounts(BOB, RELAY_ASSET_ID).free,
+            INITIAL_BALANCE - RelayCoreCreationFee::get()
         );
     });
 }
@@ -109,7 +109,7 @@ fn create_core_fails() {
                 vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
                 Perbill::from_percent(1),
-                FeeAsset::TNKR
+                FeeAsset::Native
             ),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
@@ -117,9 +117,9 @@ fn create_core_fails() {
         assert_eq!(INV4::next_core_id(), 0u32);
         assert_eq!(INV4::core_storage(0u32), None);
 
-        // With KSM.
+        // With Relay token.
 
-        assert_eq!(Tokens::accounts(DAVE, KSM_ASSET_ID).free, 0u128);
+        assert_eq!(Tokens::accounts(DAVE, RELAY_ASSET_ID).free, 0u128);
 
         assert_err!(
             INV4::create_core(
@@ -127,7 +127,7 @@ fn create_core_fails() {
                 vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
                 Perbill::from_percent(1),
-                FeeAsset::KSM
+                FeeAsset::Relay
             ),
             TokenError::FundsUnavailable
         );
@@ -145,7 +145,7 @@ fn set_parameters_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -160,7 +160,7 @@ fn set_parameters_works() {
         assert_eq!(
             INV4::core_storage(0u32),
             Some(CoreInfo {
-                account: util::derive_core_account::<Test, u32, u32>(0u32),
+                account: INV4::derive_core_account(0u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -178,7 +178,7 @@ fn set_parameters_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -218,7 +218,7 @@ fn token_mint_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -250,7 +250,7 @@ fn token_mint_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -280,7 +280,7 @@ fn token_burn_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -333,7 +333,7 @@ fn token_burn_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
             Perbill::from_percent(1),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -395,7 +395,7 @@ fn operate_multisig_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -413,7 +413,7 @@ fn operate_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone())
         ));
 
@@ -438,7 +438,7 @@ fn operate_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 call: call.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -461,14 +461,14 @@ fn operate_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone())
         ));
 
         System::assert_has_event(
             Event::MultisigVoteStarted {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 votes_added: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -483,7 +483,7 @@ fn operate_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
                 tally: Tally::from_parts(
@@ -508,7 +508,7 @@ fn operate_multisig_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -525,7 +525,7 @@ fn operate_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -536,7 +536,7 @@ fn operate_multisig_fails() {
                 RawOrigin::Signed(CHARLIE).into(),
                 0u32,
                 Some(vec![1, 2, 3].try_into().unwrap()),
-                FeeAsset::TNKR,
+                FeeAsset::Native,
                 Box::new(call.clone())
             ),
             Error::<Test>::NoPermission
@@ -548,7 +548,7 @@ fn operate_multisig_fails() {
                 RawOrigin::Signed(ALICE).into(),
                 0u32,
                 None,
-                FeeAsset::TNKR,
+                FeeAsset::Native,
                 Box::new(
                     frame_system::pallet::Call::<Test>::remark {
                         remark: vec![0u8; MAX_SIZE as usize]
@@ -564,7 +564,7 @@ fn operate_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -573,7 +573,7 @@ fn operate_multisig_fails() {
                 RawOrigin::Signed(ALICE).into(),
                 0u32,
                 None,
-                FeeAsset::TNKR,
+                FeeAsset::Native,
                 Box::new(call.clone())
             ),
             Error::<Test>::MultisigCallAlreadyExists
@@ -589,7 +589,7 @@ fn cancel_multisig_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -605,7 +605,7 @@ fn cancel_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -616,7 +616,7 @@ fn cancel_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -628,7 +628,7 @@ fn cancel_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
                 tally: Tally::from_parts(
@@ -666,7 +666,7 @@ fn cancel_multisig_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -682,7 +682,7 @@ fn cancel_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -693,7 +693,7 @@ fn cancel_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call.clone()),
         )
         .unwrap();
@@ -714,7 +714,7 @@ fn cancel_multisig_fails() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: Some(vec![1, 2, 3].try_into().unwrap()),
                 tally: Tally::from_parts(
@@ -739,7 +739,7 @@ fn vote_multisig_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -763,7 +763,7 @@ fn vote_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call1.clone()),
         )
         .unwrap();
@@ -776,7 +776,7 @@ fn vote_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call2.clone()),
         )
         .unwrap();
@@ -788,7 +788,7 @@ fn vote_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -815,7 +815,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -839,7 +839,7 @@ fn vote_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -866,7 +866,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -893,7 +893,7 @@ fn vote_multisig_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -917,7 +917,7 @@ fn vote_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call1.clone()),
         )
         .unwrap();
@@ -930,7 +930,7 @@ fn vote_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call2.clone()),
         )
         .unwrap();
@@ -942,7 +942,7 @@ fn vote_multisig_fails() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -989,7 +989,7 @@ fn withdraw_vote_multisig_works() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -1013,7 +1013,7 @@ fn withdraw_vote_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call1.clone()),
         )
         .unwrap();
@@ -1026,7 +1026,7 @@ fn withdraw_vote_multisig_works() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call2.clone()),
         )
         .unwrap();
@@ -1043,7 +1043,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -1067,7 +1067,7 @@ fn withdraw_vote_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -1093,7 +1093,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: BOB,
                 votes_removed: Vote::Nay(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1108,7 +1108,7 @@ fn withdraw_vote_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -1134,7 +1134,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: util::derive_core_account::<Test, u32, u32>(0u32),
+                executor_account: INV4::derive_core_account(0u32),
                 voter: ALICE,
                 votes_removed: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1149,7 +1149,7 @@ fn withdraw_vote_multisig_works() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(Zero::zero(), Zero::zero(), BoundedBTreeMap::new()),
@@ -1166,7 +1166,7 @@ fn withdraw_vote_multisig_fails() {
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
             Perbill::from_percent(100),
-            FeeAsset::TNKR,
+            FeeAsset::Native,
         )
         .unwrap();
 
@@ -1190,7 +1190,7 @@ fn withdraw_vote_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call1.clone()),
         )
         .unwrap();
@@ -1203,7 +1203,7 @@ fn withdraw_vote_multisig_fails() {
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
-            FeeAsset::TNKR,
+            FeeAsset::Native,
             Box::new(call2.clone()),
         )
         .unwrap();
@@ -1244,7 +1244,7 @@ fn withdraw_vote_multisig_fails() {
             ),
             Some(MultisigOperation {
                 actual_call: BoundedCallBytes::<Test>::try_from(call2.clone().encode()).unwrap(),
-                fee_asset: FeeAsset::TNKR,
+                fee_asset: FeeAsset::Native,
                 original_caller: ALICE,
                 metadata: None,
                 tally: Tally::from_parts(
@@ -1259,4 +1259,18 @@ fn withdraw_vote_multisig_fails() {
             })
         );
     });
+}
+
+#[test]
+fn core_address_matches() {
+    const ACCOUNT_IN_ASSET_HUB: [u8; 32] = [
+        147, 83, 7, 98, 71, 245, 98, 15, 146, 176, 22, 221, 20, 216, 188, 203, 166, 234, 117, 86,
+        56, 214, 204, 37, 238, 26, 161, 82, 2, 174, 180, 74,
+    ];
+
+    let core_account = <Pallet<Test> as CoreAccountDerivation<Test>>::derive_core_account(0);
+
+    let core_account_bytes: [u8; 32] = core_account.into();
+
+    assert_eq!(core_account_bytes, ACCOUNT_IN_ASSET_HUB);
 }

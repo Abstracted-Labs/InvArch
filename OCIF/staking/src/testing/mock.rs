@@ -9,16 +9,17 @@ use frame_support::{
     weights::Weight,
     PalletId,
 };
+use pallet_inv4::CoreAccountDerivation;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
+    AccountId32, Perbill,
 };
 
-pub(crate) type AccountId = u64;
+pub(crate) type AccountId = AccountId32;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type EraIndex = u32;
@@ -141,7 +142,7 @@ parameter_types! {
         212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
-    pub const KSMAssetId: u32 = 9999;
+    pub const RelayAssetId: u32 = 9999;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
@@ -168,11 +169,11 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         Ok((
             0u128,
-            *who,
+            who.clone(),
             (),
             match fee_asset {
-                pallet_inv4::fee_handling::FeeAsset::TNKR => None,
-                pallet_inv4::fee_handling::FeeAsset::KSM => Some(1u32),
+                pallet_inv4::fee_handling::FeeAsset::Native => None,
+                pallet_inv4::fee_handling::FeeAsset::Relay => Some(1u32),
             },
         ))
     }
@@ -233,19 +234,19 @@ impl pallet_inv4::Config for Test {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
 
     type Tokens = CoreAssets;
-    type KSMAssetId = KSMAssetId;
-    type KSMCoreCreationFee = CoreCreationFee;
+    type RelayAssetId = RelayAssetId;
+    type RelayCoreCreationFee = CoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
+
+    type ParaId = ConstU32<2125>;
 }
 
 impl pallet_ocif_staking::Config for Test {
@@ -253,7 +254,6 @@ impl pallet_ocif_staking::Config for Test {
     type Currency = Balances;
     type BlocksPerEra = BlockPerEra;
     type RegisterDeposit = RegisterDeposit;
-    type CoreId = CoreId;
     type MaxStakersPerCore = MaxStakersPerCore;
     type MinimumStakingAmount = MinimumStakingAmount;
     type PotId = PotId;
@@ -272,7 +272,7 @@ impl pallet_ocif_staking::Config for Test {
 pub struct ExternalityBuilder;
 
 pub fn account(core: CoreId) -> AccountId {
-    pallet_inv4::util::derive_core_account::<Test, CoreId, AccountId>(core)
+    INV4::derive_core_account(core)
 }
 
 pub const A: CoreId = 0;

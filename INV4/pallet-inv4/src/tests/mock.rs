@@ -13,22 +13,22 @@ use orml_asset_registry::AssetMetadata;
 use pallet_balances::AccountData;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup};
+use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
 use sp_std::{convert::TryInto, vec};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
-
-type AccountId = u32;
 type BlockNumber = u64;
+
+type AccountId = AccountId32;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
-pub const ALICE: AccountId = 0;
-pub const BOB: AccountId = 1;
-pub const CHARLIE: AccountId = 2;
-pub const DAVE: AccountId = 3;
+pub const ALICE: AccountId = AccountId::new([0u8; 32]);
+pub const BOB: AccountId = AccountId::new([1u8; 32]);
+pub const CHARLIE: AccountId = AccountId::new([2u8; 32]);
+pub const DAVE: AccountId = AccountId::new([3u8; 32]);
 
 frame_support::construct_runtime!(
     pub enum Test where
@@ -185,17 +185,17 @@ parameter_types! {
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
 
-    pub const KSMCoreCreationFee: Balance = UNIT;
+    pub const RelayCoreCreationFee: Balance = UNIT;
 }
 
 pub type AssetId = u32;
 
-pub const CORE_ASSET_ID: AssetId = 0;
-pub const KSM_ASSET_ID: AssetId = 1;
+pub const NATIVE_ASSET_ID: AssetId = 0;
+pub const RELAY_ASSET_ID: AssetId = 1;
 
 parameter_types! {
-    pub const NativeAssetId: AssetId = CORE_ASSET_ID;
-    pub const RelayAssetId: AssetId = KSM_ASSET_ID;
+    pub const NativeAssetId: AssetId = NATIVE_ASSET_ID;
+    pub const RelayAssetId: AssetId = RELAY_ASSET_ID;
     pub const ExistentialDeposit: u128 = 100000000000;
     pub const MaxLocks: u32 = 1;
     pub const MaxReserves: u32 = 1;
@@ -235,7 +235,7 @@ pub type Amount = i128;
 
 orml_traits::parameter_type_with_key! {
       pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
-          if currency_id == &CORE_ASSET_ID {
+          if currency_id == &RELAY_ASSET_ID {
               ExistentialDeposit::get()
           } else {
               orml_asset_registry::ExistentialDeposits::<Test>::get(currency_id)
@@ -281,11 +281,11 @@ impl MultisigFeeHandler<Test> for FeeCharger {
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         Ok((
             0u128,
-            *who,
+            who.clone(),
             (),
             match fee_asset {
-                FeeAsset::TNKR => None,
-                FeeAsset::KSM => Some(1u32),
+                FeeAsset::Native => None,
+                FeeAsset::Relay => Some(1u32),
             },
         ))
     }
@@ -317,20 +317,20 @@ impl pallet::Config for Test {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
-    type KSMAssetId = RelayAssetId;
-    type KSMCoreCreationFee = KSMCoreCreationFee;
+    type RelayAssetId = RelayAssetId;
+    type RelayCoreCreationFee = RelayCoreCreationFee;
 
     type MaxCallSize = MaxCallSize;
+
+    type ParaId = ConstU32<2125>;
 }
 
 pub struct ExtBuilder;
@@ -354,10 +354,7 @@ impl ExtBuilder {
                 (ALICE, INITIAL_BALANCE),
                 (BOB, INITIAL_BALANCE),
                 (CHARLIE, INITIAL_BALANCE),
-                (
-                    util::derive_core_account::<Test, u32, u32>(0u32),
-                    INITIAL_BALANCE,
-                ),
+                (INV4::derive_core_account(0u32), INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)
@@ -397,9 +394,9 @@ impl ExtBuilder {
 
         orml_tokens::GenesisConfig::<Test> {
             balances: vec![
-                (ALICE, KSM_ASSET_ID, INITIAL_BALANCE),
-                (BOB, KSM_ASSET_ID, INITIAL_BALANCE),
-                (CHARLIE, KSM_ASSET_ID, INITIAL_BALANCE),
+                (ALICE, RELAY_ASSET_ID, INITIAL_BALANCE),
+                (BOB, RELAY_ASSET_ID, INITIAL_BALANCE),
+                (CHARLIE, RELAY_ASSET_ID, INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)

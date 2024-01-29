@@ -8,11 +8,15 @@ use frame_support::{
     pallet_prelude::*,
 };
 
+// Dispatch a call executing pre/post dispatch for proper fee handling.
 pub fn dispatch_call<T: Config>(
     core_id: <T as Config>::CoreId,
     fee_asset: &FeeAsset,
     call: <T as Config>::RuntimeCall,
-) -> DispatchResultWithPostInfo {
+) -> DispatchResultWithPostInfo
+where
+    T::AccountId: From<[u8; 32]>,
+{
     let internal_origin = MultisigInternalOrigin::new(core_id);
     let multisig_account = internal_origin.to_account_id();
     let origin = INV4Origin::Multisig(internal_origin).into();
@@ -20,6 +24,7 @@ pub fn dispatch_call<T: Config>(
     let info = call.get_dispatch_info();
     let len = call.encode().len();
 
+    // Execute pre dispatch using the multisig account instead of the extrinsic caller.
     let pre = <T::FeeCharger as MultisigFeeHandler<T>>::pre_dispatch(
         fee_asset,
         &multisig_account,

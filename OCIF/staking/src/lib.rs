@@ -52,7 +52,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::fmt::Display;
 use frame_support::{
     dispatch::{Pays, PostDispatchInfo},
     ensure,
@@ -65,7 +64,6 @@ use frame_support::{
     PalletId,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_runtime::{
     traits::{AccountIdConversion, Saturating, Zero},
     Perbill,
@@ -95,7 +93,7 @@ pub use pallet::*;
 pub mod pallet {
     use pallet_inv4::{
         origin::{ensure_multisig, INV4Origin},
-        util::derive_core_account,
+        CoreAccountDerivation,
     };
 
     use super::*;
@@ -127,15 +125,15 @@ pub mod pallet {
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>;
 
-        type CoreId: Parameter
-            + Member
-            + AtLeast32BitUnsigned
-            + Default
-            + Copy
-            + Display
-            + MaxEncodedLen
-            + Clone
-            + From<<Self as pallet_inv4::Config>::CoreId>;
+        // type CoreId: Parameter
+        //     + Member
+        //     + AtLeast32BitUnsigned
+        //     + Default
+        //     + Copy
+        //     + Display
+        //     + MaxEncodedLen
+        //     + Clone
+        //     + From<<Self as pallet_inv4::Config>::CoreId>;
 
         #[pallet::constant]
         type BlocksPerEra: Get<BlockNumberFor<Self>>;
@@ -202,7 +200,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn core_info)]
     pub(crate) type RegisteredCore<T: Config> =
-        StorageMap<_, Blake2_128Concat, <T as pallet::Config>::CoreId, CoreInfoOf<T>>;
+        StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn general_era_info)]
@@ -213,7 +211,7 @@ pub mod pallet {
     pub type CoreEraStake<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        <T as pallet::Config>::CoreId,
+        T::CoreId,
         Twox64Concat,
         Era,
         CoreStakeInfo<BalanceOf<T>>,
@@ -224,7 +222,7 @@ pub mod pallet {
     pub type GeneralStakerInfo<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        <T as pallet::Config>::CoreId,
+        T::CoreId,
         Blake2_128Concat,
         T::AccountId,
         StakerInfo<BalanceOf<T>>,
@@ -240,12 +238,12 @@ pub mod pallet {
     pub enum Event<T: Config> {
         Staked {
             staker: T::AccountId,
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
             amount: BalanceOf<T>,
         },
         Unstaked {
             staker: T::AccountId,
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
             amount: BalanceOf<T>,
         },
         Withdrawn {
@@ -253,22 +251,22 @@ pub mod pallet {
             amount: BalanceOf<T>,
         },
         CoreRegistered {
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
         },
         CoreUnregistered {
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
         },
         NewEra {
             era: u32,
         },
         StakerClaimed {
             staker: T::AccountId,
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
             era: u32,
             amount: BalanceOf<T>,
         },
         CoreClaimed {
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
             destination_account: T::AccountId,
             era: u32,
             amount: BalanceOf<T>,
@@ -277,14 +275,14 @@ pub mod pallet {
             is_halted: bool,
         },
         MetadataChanged {
-            core: <T as Config>::CoreId,
+            core: T::CoreId,
             old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
             new_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
         },
         StakeMoved {
             staker: T::AccountId,
-            from_core: <T as Config>::CoreId,
-            to_core: <T as Config>::CoreId,
+            from_core: T::CoreId,
+            to_core: T::CoreId,
             amount: BalanceOf<T>,
         },
     }
@@ -351,14 +349,9 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
-        Result<
-            INV4Origin<
-                T,
-                <T as pallet_inv4::Config>::CoreId,
-                <T as frame_system::Config>::AccountId,
-            >,
-            <T as frame_system::Config>::RuntimeOrigin,
-        >: From<<T as frame_system::Config>::RuntimeOrigin>,
+        Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+            From<<T as frame_system::Config>::RuntimeOrigin>,
+        T::AccountId: From<[u8; 32]>,
     {
         #[pallet::call_index(0)]
         #[pallet::weight(
@@ -378,7 +371,7 @@ pub mod pallet {
 
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_account = core.to_account_id();
-            let core_id = core.id.into();
+            let core_id = core.id;
 
             ensure!(
                 !RegisteredCore::<T>::contains_key(core_id),
@@ -419,7 +412,7 @@ pub mod pallet {
 
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
             let core_account = core.to_account_id();
-            let core_id = core.id.into();
+            let core_id = core.id;
 
             ensure!(
                 RegisteredCore::<T>::get(core_id).is_some(),
@@ -506,7 +499,7 @@ pub mod pallet {
             Self::ensure_not_halted()?;
 
             let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-            let core_id = core_origin.id.into();
+            let core_id = core_origin.id;
 
             RegisteredCore::<T>::try_mutate(core_id, |core| {
                 let mut new_core = core.take().ok_or(Error::<T>::NotRegistered)?;
@@ -545,7 +538,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::stake())]
         pub fn stake(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
+            core_id: T::CoreId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -599,7 +592,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::unstake())]
         pub fn unstake(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
+            core_id: T::CoreId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -687,7 +680,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::staker_claim_rewards())]
         pub fn staker_claim_rewards(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
+            core_id: T::CoreId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -732,7 +725,7 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::core_claim_rewards())]
         pub fn core_claim_rewards(
             origin: OriginFor<T>,
-            core_id: <T as pallet::Config>::CoreId,
+            core_id: T::CoreId,
             #[pallet::compact] era: Era,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -765,7 +758,7 @@ pub mod pallet {
             )?;
 
             let core_account =
-                derive_core_account::<T, <T as pallet::Config>::CoreId, T::AccountId>(core_id);
+                <pallet_inv4::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(core_id);
 
             <T as pallet::Config>::Currency::resolve_creating(&core_account, reward_imbalance);
             Self::deposit_event(Event::<T>::CoreClaimed {
@@ -801,9 +794,9 @@ pub mod pallet {
         #[pallet::weight(<T as Config>::WeightInfo::move_stake())]
         pub fn move_stake(
             origin: OriginFor<T>,
-            from_core: <T as pallet::Config>::CoreId,
+            from_core: T::CoreId,
             #[pallet::compact] amount: BalanceOf<T>,
-            to_core: <T as pallet::Config>::CoreId,
+            to_core: T::CoreId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
@@ -988,7 +981,7 @@ pub mod pallet {
 
         fn update_staker_info(
             staker: &T::AccountId,
-            core_id: <T as pallet::Config>::CoreId,
+            core_id: T::CoreId,
             staker_info: StakerInfo<BalanceOf<T>>,
         ) {
             if staker_info.is_empty() {

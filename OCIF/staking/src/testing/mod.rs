@@ -1,5 +1,6 @@
 use crate::{testing::mock::*, Config, Event, *};
 use frame_support::assert_ok;
+use pallet_inv4::CoreAccountDerivation;
 
 pub mod mock;
 pub mod test;
@@ -25,7 +26,7 @@ impl MemorySnapshot {
 }
 
 pub(crate) fn assert_register(core: mock::CoreId) {
-    let account = pallet_inv4::util::derive_core_account::<Test, CoreId, AccountId>(core);
+    let account = INV4::derive_core_account(core);
 
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account);
 
@@ -51,7 +52,7 @@ pub(crate) fn assert_register(core: mock::CoreId) {
 
 pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
     let current_era = OcifStaking::current_era();
-    let init_state = MemorySnapshot::all(current_era, &core, staker);
+    let init_state = MemorySnapshot::all(current_era, &core, staker.clone());
 
     let available_for_staking = init_state.free_balance
         - init_state.ledger.locked
@@ -59,20 +60,23 @@ pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
     let staking_value = available_for_staking.min(value);
 
     assert_ok!(OcifStaking::stake(
-        RuntimeOrigin::signed(staker),
+        RuntimeOrigin::signed(staker.clone()),
         core.clone(),
         value
     ));
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Staked {
-        staker,
+        staker: staker.clone(),
         core: core.clone(),
         amount: staking_value,
     }));
 
-    let final_state = MemorySnapshot::all(current_era, &core, staker);
+    let final_state = MemorySnapshot::all(current_era, &core, staker.clone());
 
     if init_state.staker_info.latest_staked_value() == 0 {
-        assert!(GeneralStakerInfo::<Test>::contains_key(core, &staker));
+        assert!(GeneralStakerInfo::<Test>::contains_key(
+            core,
+            &staker.clone()
+        ));
         assert_eq!(
             final_state.core_stake_info.number_of_stakers,
             init_state.core_stake_info.number_of_stakers + 1
@@ -103,7 +107,7 @@ pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
 
 pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
     let current_era = OcifStaking::current_era();
-    let init_state = MemorySnapshot::all(current_era, &core, staker);
+    let init_state = MemorySnapshot::all(current_era, &core, staker.clone());
 
     let remaining_staked = init_state
         .staker_info
@@ -117,17 +121,17 @@ pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
     let remaining_staked = init_state.staker_info.latest_staked_value() - expected_unbond_amount;
 
     assert_ok!(OcifStaking::unstake(
-        RuntimeOrigin::signed(staker),
+        RuntimeOrigin::signed(staker.clone()),
         core.clone(),
         value
     ));
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Unstaked {
-        staker,
+        staker: staker.clone(),
         core: core.clone(),
         amount: expected_unbond_amount,
     }));
 
-    let final_state = MemorySnapshot::all(current_era, &core, staker);
+    let final_state = MemorySnapshot::all(current_era, &core, staker.clone());
     let expected_unlock_era = current_era + UNBONDING_PERIOD;
     match init_state
         .ledger
@@ -158,7 +162,7 @@ pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
 
     assert_eq!(init_state.ledger.locked, final_state.ledger.locked);
     if final_state.ledger.is_empty() {
-        assert!(!Ledger::<Test>::contains_key(&staker));
+        assert!(!Ledger::<Test>::contains_key(&staker.clone()));
     }
 
     assert_eq!(
@@ -193,14 +197,14 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
     let expected_unbond_amount = valid_info.sum();
 
     assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
-        staker
+        staker.clone()
     ),));
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
-        staker,
+        staker: staker.clone(),
         amount: expected_unbond_amount,
     }));
 
-    let final_ledger = Ledger::<Test>::get(&staker);
+    let final_ledger = Ledger::<Test>::get(&staker.clone());
     assert_eq!(remaining_info, final_ledger.unbonding_info);
     if final_ledger.unbonding_info.is_empty() && final_ledger.locked == 0 {
         assert!(!Ledger::<Test>::contains_key(&staker));
@@ -242,8 +246,8 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
 
     System::reset_events();
 
-    let init_state_claim_era = MemorySnapshot::all(claim_era, &core, claimer);
-    let init_state_current_era = MemorySnapshot::all(current_era, &core, claimer);
+    let init_state_claim_era = MemorySnapshot::all(claim_era, &core, claimer.clone());
+    let init_state_current_era = MemorySnapshot::all(current_era, &core, claimer.clone());
 
     let (_, stakers_joint_reward) = OcifStaking::core_stakers_split(
         &init_state_claim_era.core_stake_info,
@@ -258,11 +262,11 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
     let issuance_before_claim = <Test as Config>::Currency::total_issuance();
 
     assert_ok!(OcifStaking::staker_claim_rewards(
-        RuntimeOrigin::signed(claimer),
+        RuntimeOrigin::signed(claimer.clone()),
         core
     ));
 
-    let final_state_current_era = MemorySnapshot::all(current_era, &core, claimer);
+    let final_state_current_era = MemorySnapshot::all(current_era, &core, claimer.clone());
 
     assert_reward(
         &init_state_current_era,
@@ -271,7 +275,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
     );
 
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-        staker: claimer,
+        staker: claimer.clone(),
         core,
         era: claim_era,
         amount: calculated_reward,
@@ -280,7 +284,10 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
     let (new_era, _) = final_state_current_era.staker_info.clone().claim();
     if final_state_current_era.staker_info.is_empty() {
         assert!(new_era.is_zero());
-        assert!(!GeneralStakerInfo::<Test>::contains_key(core, &claimer));
+        assert!(!GeneralStakerInfo::<Test>::contains_key(
+            core,
+            &claimer.clone()
+        ));
     } else {
         assert!(new_era > claim_era);
     }
@@ -357,8 +364,8 @@ pub(crate) fn assert_move_stake(
     amount: Balance,
 ) {
     let current_era = OcifStaking::current_era();
-    let from_init_state = MemorySnapshot::all(current_era, &from_core, staker);
-    let to_init_state = MemorySnapshot::all(current_era, &to_core, staker);
+    let from_init_state = MemorySnapshot::all(current_era, &from_core, staker.clone());
+    let to_init_state = MemorySnapshot::all(current_era, &to_core, staker.clone());
 
     let init_staked_value = from_init_state.staker_info.latest_staked_value();
     let expected_transfer_amount = if init_staked_value - amount >= MINIMUM_STAKING_AMOUNT {
@@ -368,20 +375,20 @@ pub(crate) fn assert_move_stake(
     };
 
     assert_ok!(OcifStaking::move_stake(
-        RuntimeOrigin::signed(staker),
+        RuntimeOrigin::signed(staker.clone()),
         from_core.clone(),
         amount,
         to_core.clone()
     ));
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakeMoved {
-        staker,
+        staker: staker.clone(),
         from_core: from_core.clone(),
         amount: expected_transfer_amount,
         to_core: to_core.clone(),
     }));
 
-    let from_final_state = MemorySnapshot::all(current_era, &from_core, staker);
-    let to_final_state = MemorySnapshot::all(current_era, &to_core, staker);
+    let from_final_state = MemorySnapshot::all(current_era, &from_core, staker.clone());
+    let to_final_state = MemorySnapshot::all(current_era, &to_core, staker.clone());
 
     assert_eq!(
         from_final_state.staker_info.latest_staked_value(),

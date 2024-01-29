@@ -150,21 +150,21 @@ fn general_staker_info_is_ok() {
 
         let starting_era = 3;
         advance_to_era(starting_era);
-        assert_stake(staker_1, &A, amount);
-        assert_stake(staker_2, &A, amount);
+        assert_stake(staker_1.clone(), &A, amount);
+        assert_stake(staker_2.clone(), &A, amount);
 
         let mid_era = 7;
         advance_to_era(mid_era);
-        assert_unstake(staker_2, &A, amount);
-        assert_stake(staker_3, &A, amount);
-        assert_stake(staker_3, &B, amount);
+        assert_unstake(staker_2.clone(), &A, amount);
+        assert_stake(staker_3.clone(), &A, amount);
+        assert_stake(staker_3.clone(), &B, amount);
 
         let final_era = 12;
         advance_to_era(final_era);
 
-        let mut first_staker_info = OcifStaking::staker_info(&A, &staker_1);
-        let mut second_staker_info = OcifStaking::staker_info(&A, &staker_2);
-        let mut third_staker_info = OcifStaking::staker_info(&A, &staker_3);
+        let mut first_staker_info = OcifStaking::staker_info(&A, &staker_1.clone());
+        let mut second_staker_info = OcifStaking::staker_info(&A, &staker_2.clone());
+        let mut third_staker_info = OcifStaking::staker_info(&A, &staker_3.clone());
 
         for era in starting_era..mid_era {
             let core_info = OcifStaking::core_stake_info(&A, era).unwrap();
@@ -317,17 +317,17 @@ fn unregister_stake_and_unstake_is_not_ok() {
         let staker = account(C);
 
         assert_register(A);
-        assert_stake(staker, &A, 100);
-        assert_unstake(staker, &A, 10);
+        assert_stake(staker.clone(), &A, 100);
+        assert_unstake(staker.clone(), &A, 10);
 
         assert_unregister(A);
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker), A, 100),
+            OcifStaking::stake(RuntimeOrigin::signed(staker.clone()), A, 100),
             Error::<Test>::NotRegistered
         );
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(staker), A, 100),
+            OcifStaking::unstake(RuntimeOrigin::signed(staker.clone()), A, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -347,28 +347,28 @@ fn withdraw_from_unregistered_is_ok() {
 
         assert_register(core_id);
         assert_register(dummy_core_id);
-        assert_stake(staker_1, &core_id, staked_value_1);
-        assert_stake(staker_2, &core_id, staked_value_2);
+        assert_stake(staker_1.clone(), &core_id, staked_value_1);
+        assert_stake(staker_2.clone(), &core_id, staked_value_2);
 
-        assert_stake(staker_1, &dummy_core_id, staked_value_1);
+        assert_stake(staker_1.clone(), &dummy_core_id, staked_value_1);
 
         advance_to_era(5);
 
         assert_unregister(core_id);
 
         for era in 1..OcifStaking::current_era() {
-            assert_claim_staker(staker_1, core_id);
-            assert_claim_staker(staker_2, core_id);
+            assert_claim_staker(staker_1.clone(), core_id);
+            assert_claim_staker(staker_2.clone(), core_id);
 
             assert_claim_core(core_id, era);
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_1), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_1.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_2), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_2.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
@@ -399,7 +399,7 @@ fn bond_and_stake_different_eras_is_ok() {
         let current_era = OcifStaking::current_era();
         assert!(OcifStaking::core_stake_info(&core_id, current_era).is_none());
 
-        assert_stake(staker_id, &core_id, 100);
+        assert_stake(staker_id.clone(), &core_id, 100);
 
         advance_to_era(current_era + 2);
 
@@ -419,7 +419,7 @@ fn bond_and_stake_two_different_core_is_ok() {
         assert_register(first_core_id);
         assert_register(second_core_id);
 
-        assert_stake(staker_id, &first_core_id, 100);
+        assert_stake(staker_id.clone(), &first_core_id, 100);
         assert_stake(staker_id, &second_core_id, 300);
     })
 }
@@ -454,24 +454,24 @@ fn bond_and_stake_different_value_is_ok() {
 
         let staker_free_balance =
             Balances::free_balance(&staker_id).saturating_sub(EXISTENTIAL_DEPOSIT);
-        assert_stake(staker_id, &core_id, staker_free_balance - 1);
+        assert_stake(staker_id.clone(), &core_id, staker_free_balance - 1);
 
-        assert_stake(staker_id, &core_id, 1);
+        assert_stake(staker_id.clone(), &core_id, 1);
 
         let staker_id = account(C);
         let staker_free_balance = Balances::free_balance(&staker_id);
-        assert_stake(staker_id, &core_id, staker_free_balance + 1);
+        assert_stake(staker_id.clone(), &core_id, staker_free_balance + 1);
 
         let transferable_balance =
-            Balances::free_balance(&staker_id) - Ledger::<Test>::get(staker_id).locked;
+            Balances::free_balance(&staker_id.clone()) - Ledger::<Test>::get(staker_id).locked;
         assert_eq!(EXISTENTIAL_DEPOSIT, transferable_balance);
 
         let staker_id = account(D);
         let staker_free_balance =
             Balances::free_balance(&staker_id).saturating_sub(EXISTENTIAL_DEPOSIT);
-        assert_stake(staker_id, &core_id, staker_free_balance - 200);
+        assert_stake(staker_id.clone(), &core_id, staker_free_balance - 200);
 
-        assert_stake(staker_id, &core_id, 500);
+        assert_stake(staker_id.clone(), &core_id, 500);
     })
 }
 
@@ -502,18 +502,18 @@ fn bond_and_stake_insufficient_value() {
 
         assert_noop!(
             OcifStaking::stake(
-                RuntimeOrigin::signed(staker_id),
+                RuntimeOrigin::signed(staker_id.clone()),
                 core_id,
                 MINIMUM_STAKING_AMOUNT - 1
             ),
             Error::<Test>::InsufficientBalance
         );
 
-        let staker_free_balance = Balances::free_balance(&staker_id);
-        assert_stake(staker_id, &core_id, staker_free_balance);
+        let staker_free_balance = Balances::free_balance(&staker_id.clone());
+        assert_stake(staker_id.clone(), &core_id, staker_free_balance);
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_id), core_id, 1),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_id.clone()), core_id, 1),
             Error::<Test>::StakingNothing
         );
     })
@@ -553,7 +553,7 @@ fn bond_and_stake_too_many_era_stakes() {
 
         let start_era = OcifStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
-            assert_stake(staker_id, &core_id, 100);
+            assert_stake(staker_id.clone(), &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
@@ -575,14 +575,14 @@ fn unbond_and_unstake_multiple_time_is_ok() {
         let old_era = OcifStaking::current_era();
 
         assert_register(core_id);
-        assert_stake(staker_id, &core_id, original_staked_value);
+        assert_stake(staker_id.clone(), &core_id, original_staked_value);
         advance_to_era(old_era + 1);
 
         let unstaked_value = 100;
-        assert_unstake(staker_id, &core_id, unstaked_value);
+        assert_unstake(staker_id.clone(), &core_id, unstaked_value);
 
         let unstaked_value = 50;
-        assert_unstake(staker_id, &core_id, unstaked_value);
+        assert_unstake(staker_id.clone(), &core_id, unstaked_value);
     })
 }
 
@@ -597,11 +597,11 @@ fn unbond_and_unstake_value_below_staking_threshold() {
         let staked_value = first_value_to_unstake + MINIMUM_STAKING_AMOUNT;
 
         assert_register(core_id);
-        assert_stake(staker_id, &core_id, staked_value);
+        assert_stake(staker_id.clone(), &core_id, staked_value);
 
-        assert_unstake(staker_id, &core_id, first_value_to_unstake);
+        assert_unstake(staker_id.clone(), &core_id, first_value_to_unstake);
 
-        assert_unstake(staker_id, &core_id, 1);
+        assert_unstake(staker_id.clone(), &core_id, 1);
     })
 }
 
@@ -615,15 +615,15 @@ fn unbond_and_unstake_in_different_eras() {
         let staked_value = 500;
 
         assert_register(core_id);
-        assert_stake(first_staker_id, &core_id, staked_value);
-        assert_stake(second_staker_id, &core_id, staked_value);
+        assert_stake(first_staker_id.clone(), &core_id, staked_value);
+        assert_stake(second_staker_id.clone(), &core_id, staked_value);
 
         advance_to_era(OcifStaking::current_era() + 10);
         let current_era = OcifStaking::current_era();
-        assert_unstake(first_staker_id, &core_id, 100);
+        assert_unstake(first_staker_id.clone(), &core_id, 100);
 
         advance_to_era(current_era + 10);
-        assert_unstake(second_staker_id, &core_id, 333);
+        assert_unstake(second_staker_id.clone(), &core_id, 333);
     })
 }
 
@@ -636,11 +636,11 @@ fn unbond_and_unstake_calls_in_same_era_can_exceed_max_chunks() {
         assert_register(core_id);
 
         let staker = account(B);
-        assert_stake(staker, &core_id, 200 * MAX_UNLOCKING as Balance);
+        assert_stake(staker.clone(), &core_id, 200 * MAX_UNLOCKING as Balance);
 
         for _ in 0..MAX_UNLOCKING * 2 {
-            assert_unstake(staker, &core_id, 10);
-            assert_eq!(1, Ledger::<Test>::get(&staker).unbonding_info.len());
+            assert_unstake(staker.clone(), &core_id, 10);
+            assert_eq!(1, Ledger::<Test>::get(&staker.clone()).unbonding_info.len());
         }
     })
 }
@@ -685,23 +685,23 @@ fn unbond_and_unstake_too_many_unlocking_chunks_is_not_ok() {
         let unstake_amount = 10;
         let stake_amount = MINIMUM_STAKING_AMOUNT * 10 + unstake_amount * MAX_UNLOCKING as Balance;
 
-        assert_stake(staker, &core_id, stake_amount);
+        assert_stake(staker.clone(), &core_id, stake_amount);
 
         for _ in 0..MAX_UNLOCKING {
             advance_to_era(OcifStaking::current_era() + 1);
-            assert_unstake(staker, &core_id, unstake_amount);
+            assert_unstake(staker.clone(), &core_id, unstake_amount);
         }
 
         assert_eq!(
             MAX_UNLOCKING,
             OcifStaking::ledger(&staker).unbonding_info.len()
         );
-        assert_unstake(staker, &core_id, unstake_amount);
+        assert_unstake(staker.clone(), &core_id, unstake_amount);
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_noop!(
             OcifStaking::unstake(
-                RuntimeOrigin::signed(staker),
+                RuntimeOrigin::signed(staker.clone()),
                 core_id.clone(),
                 unstake_amount
             ),
@@ -736,7 +736,7 @@ fn unbond_and_unstake_too_many_era_stakes() {
 
         let start_era = OcifStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
-            assert_stake(staker_id, &core_id, 100);
+            assert_stake(staker_id.clone(), &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
@@ -756,44 +756,44 @@ fn withdraw_unbonded_is_ok() {
         assert_register(core_id);
 
         let staker_id = account(B);
-        assert_stake(staker_id, &core_id, 1000);
+        assert_stake(staker_id.clone(), &core_id, 1000);
 
         let first_unbond_value = 75;
         let second_unbond_value = 39;
         let initial_era = OcifStaking::current_era();
 
-        assert_unstake(staker_id, &core_id, first_unbond_value);
+        assert_unstake(staker_id.clone(), &core_id, first_unbond_value);
 
         advance_to_era(initial_era + 1);
-        assert_unstake(staker_id, &core_id, second_unbond_value);
+        assert_unstake(staker_id.clone(), &core_id, second_unbond_value);
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
             Error::<Test>::NothingToWithdraw
         );
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
-            staker_id
+            staker_id.clone()
         ),));
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
-            staker: staker_id,
+            staker: staker_id.clone(),
             amount: first_unbond_value,
         }));
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
-            staker_id
+            staker_id.clone()
         ),));
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
-            staker: staker_id,
+            staker: staker_id.clone(),
             amount: second_unbond_value,
         }));
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
             Error::<Test>::NothingToWithdraw
         );
     })
@@ -808,21 +808,30 @@ fn withdraw_unbonded_full_vector_is_ok() {
         assert_register(core_id);
 
         let staker_id = account(B);
-        assert_stake(staker_id, &core_id, 1000);
+        assert_stake(staker_id.clone(), &core_id, 1000);
 
         let init_unbonding_amount = 15;
         for x in 1..=MAX_UNLOCKING {
-            assert_unstake(staker_id, &core_id, init_unbonding_amount * x as u128);
+            assert_unstake(
+                staker_id.clone(),
+                &core_id,
+                init_unbonding_amount * x as u128,
+            );
             advance_to_era(OcifStaking::current_era() + 1);
         }
 
-        assert_withdraw_unbonded(staker_id);
+        assert_withdraw_unbonded(staker_id.clone());
 
-        assert!(!Ledger::<Test>::get(&staker_id).unbonding_info.is_empty());
+        assert!(!Ledger::<Test>::get(&staker_id.clone())
+            .unbonding_info
+            .is_empty());
 
-        while !Ledger::<Test>::get(&staker_id).unbonding_info.is_empty() {
+        while !Ledger::<Test>::get(&staker_id.clone())
+            .unbonding_info
+            .is_empty()
+        {
             advance_to_era(OcifStaking::current_era() + 1);
-            assert_withdraw_unbonded(staker_id);
+            assert_withdraw_unbonded(staker_id.clone());
         }
     })
 }
@@ -871,14 +880,14 @@ fn claim_not_registered_core() {
         let core_id = A;
 
         assert_register(core_id);
-        assert_stake(staker, &core_id, 100);
+        assert_stake(staker.clone(), &core_id, 100);
 
         advance_to_era(OcifStaking::current_era() + 1);
         assert_unregister(core_id);
 
-        assert_claim_staker(staker, core_id);
+        assert_claim_staker(staker.clone(), core_id);
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
@@ -900,11 +909,11 @@ fn claim_invalid_era() {
 
         let start_era = OcifStaking::current_era();
         assert_register(core_id);
-        assert_stake(staker, &core_id, 100);
+        assert_stake(staker.clone(), &core_id, 100);
         advance_to_era(start_era + 5);
 
         for era in start_era..OcifStaking::current_era() {
-            assert_claim_staker(staker, core_id);
+            assert_claim_staker(staker.clone(), core_id);
             assert_claim_core(core_id, era);
         }
 
@@ -962,26 +971,26 @@ fn claim_is_ok() {
 
         assert_register(first_core_id);
         assert_register(second_core_id);
-        assert_stake(first_staker, &first_core_id, 100);
-        assert_stake(second_staker, &first_core_id, 45);
+        assert_stake(first_staker.clone(), &first_core_id, 100);
+        assert_stake(second_staker.clone(), &first_core_id, 45);
 
-        assert_stake(first_staker, &second_core_id, 33);
-        assert_stake(second_staker, &second_core_id, 22);
+        assert_stake(first_staker.clone(), &second_core_id, 33);
+        assert_stake(second_staker.clone(), &second_core_id, 22);
 
         let eras_advanced = 3;
         advance_to_era(start_era + eras_advanced);
 
         for x in 0..eras_advanced.into() {
-            assert_stake(first_staker, &first_core_id, 20 + x * 3);
-            assert_stake(second_staker, &first_core_id, 5 + x * 5);
+            assert_stake(first_staker.clone(), &first_core_id, 20 + x * 3);
+            assert_stake(second_staker.clone(), &first_core_id, 5 + x * 5);
             advance_to_era(OcifStaking::current_era() + 1);
         }
 
         let current_era = OcifStaking::current_era();
         for era in start_era..current_era {
-            assert_claim_staker(first_staker, first_core_id);
+            assert_claim_staker(first_staker.clone(), first_core_id);
             assert_claim_core(first_core_id, era);
-            assert_claim_staker(second_staker, first_core_id);
+            assert_claim_staker(second_staker.clone(), first_core_id);
         }
 
         assert_noop!(
@@ -1031,8 +1040,8 @@ fn claim_check_amount() {
         assert_eq!(System::block_number(), 2);
 
         // User stakes in the middle of era 1, their stake should not account for era 1.
-        assert_stake(first_staker, &first_core_id, 100);
-        assert_stake(second_staker, &second_core_id, 30);
+        assert_stake(first_staker.clone(), &first_core_id, 100);
+        assert_stake(second_staker.clone(), &second_core_id, 30);
 
         advance_to_era_no_rewards(2);
 
@@ -1172,7 +1181,7 @@ fn claim_check_amount() {
         }));
 
         // User stakes in the middle of era 3, their stake should not account for era 3.
-        assert_stake(first_staker, &second_core_id, 20);
+        assert_stake(first_staker.clone(), &second_core_id, 20);
 
         advance_to_era_no_rewards(4);
 
@@ -1251,7 +1260,7 @@ fn claim_check_amount() {
         // Now let's check the same stuff for the stakers instead of the core.
 
         assert_eq!(
-            OcifStaking::staker_info(first_core_id, first_staker),
+            OcifStaking::staker_info(first_core_id, first_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake {
                     staked: 100,
@@ -1261,21 +1270,21 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::staker_info(second_core_id, first_staker),
+            OcifStaking::staker_info(second_core_id, first_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake { staked: 20, era: 3 }]
             }
         );
 
         assert_eq!(
-            OcifStaking::staker_info(second_core_id, second_staker),
+            OcifStaking::staker_info(second_core_id, second_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake { staked: 30, era: 1 }]
             }
         );
 
         assert_eq!(
-            OcifStaking::staker_info(first_core_id, second_staker),
+            OcifStaking::staker_info(first_core_id, second_staker.clone()),
             StakerInfo { stakes: vec![] }
         );
 
@@ -1283,13 +1292,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 1.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: first_staker,
+            staker: first_staker.clone(),
             core: first_core_id,
             era: 1,
             amount: 100,
@@ -1297,13 +1306,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 1.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: second_staker,
+            staker: second_staker.clone(),
             core: second_core_id,
             era: 1,
             amount: 30,
@@ -1313,13 +1322,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 2.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: first_staker,
+            staker: first_staker.clone(),
             core: first_core_id,
             era: 2,
             amount: 100,
@@ -1327,13 +1336,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 2.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: second_staker,
+            staker: second_staker.clone(),
             core: second_core_id,
             era: 2,
             amount: 30,
@@ -1343,13 +1352,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: first_staker,
+            staker: first_staker.clone(),
             core: first_core_id,
             era: 3,
             amount: 0,
@@ -1357,13 +1366,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: first_staker,
+            staker: first_staker.clone(),
             core: second_core_id,
             era: 3,
             amount: 0,
@@ -1371,13 +1380,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: second_staker,
+            staker: second_staker.clone(),
             core: second_core_id,
             era: 3,
             amount: 0,
@@ -1387,13 +1396,13 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the first core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 150, because the second staker had 30 staked in era 4 and first staker had 20 in the second core.
         System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
-            staker: first_staker,
+            staker: first_staker.clone(),
             core: first_core_id,
             era: 4,
             amount: 100,
@@ -1401,7 +1410,7 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the first staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(first_staker),
+            RuntimeOrigin::signed(first_staker.clone()),
             second_core_id,
         ));
 
@@ -1415,7 +1424,7 @@ fn claim_check_amount() {
 
         // Let's try claiming rewards for the second staker in the second core...
         assert_ok!(OcifStaking::staker_claim_rewards(
-            RuntimeOrigin::signed(second_staker),
+            RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
@@ -1440,17 +1449,17 @@ fn claim_after_unregister_is_ok() {
         let start_era = OcifStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(start_era + 5);
-        assert_unstake(staker, &core_id, stake_value);
+        assert_unstake(staker.clone(), &core_id, stake_value);
         let full_unstake_era = OcifStaking::current_era();
         let number_of_staking_eras = full_unstake_era - start_era;
 
         advance_to_era(OcifStaking::current_era() + 3);
         let stake_value = 75;
         let restake_era = OcifStaking::current_era();
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(OcifStaking::current_era() + 3);
         assert_unregister(core_id);
@@ -1459,7 +1468,7 @@ fn claim_after_unregister_is_ok() {
         advance_to_era(OcifStaking::current_era() + 2);
 
         for _ in 0..number_of_staking_eras {
-            assert_claim_staker(staker, core_id);
+            assert_claim_staker(staker.clone(), core_id);
         }
         assert_noop!(
             OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id.clone()),
@@ -1494,7 +1503,7 @@ fn claim_only_payout_is_ok() {
         let start_era = OcifStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(start_era + 1);
 
@@ -1513,10 +1522,10 @@ fn claim_with_zero_staked_is_ok() {
         assert_register(core_id);
 
         let stake_value = 100;
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
         advance_to_era(start_era + 1);
 
-        assert_unstake(staker, &core_id, stake_value);
+        assert_unstake(staker.clone(), &core_id, stake_value);
 
         assert_claim_staker(staker, core_id);
     })
@@ -1533,19 +1542,19 @@ fn claim_core_with_zero_stake_periods_is_ok() {
         let start_era = OcifStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(start_era + 5);
         let first_full_unstake_era = OcifStaking::current_era();
-        assert_unstake(staker, &core_id, stake_value);
+        assert_unstake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(OcifStaking::current_era() + 7);
         let restake_era = OcifStaking::current_era();
-        assert_stake(staker, &core_id, stake_value);
+        assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(OcifStaking::current_era() + 4);
         let second_full_unstake_era = OcifStaking::current_era();
-        assert_unstake(staker, &core_id, stake_value);
+        assert_unstake(staker.clone(), &core_id, stake_value);
         advance_to_era(OcifStaking::current_era() + 10);
 
         for era in start_era..first_full_unstake_era {
@@ -2005,17 +2014,17 @@ fn pallet_halt_is_ok() {
         );
 
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_account)),
+            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_account.clone())),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_account), core_id, 100),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(staker_account), core_id, 100),
+            OcifStaking::unstake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
             Error::<Test>::Halted
         );
 
@@ -2074,14 +2083,14 @@ fn move_stake_is_ok() {
         assert_register(core_id_a);
         assert_register(core_id_b);
         let stake_value = 100;
-        assert_stake(staker, &core_id_a, stake_value);
+        assert_stake(staker.clone(), &core_id_a, stake_value);
 
-        assert_move_stake(staker, &core_id_a, &core_id_b, stake_value / 2);
-        assert!(!GeneralStakerInfo::<Test>::get(&core_id_a, &staker)
+        assert_move_stake(staker.clone(), &core_id_a, &core_id_b, stake_value / 2);
+        assert!(!GeneralStakerInfo::<Test>::get(&core_id_a, &staker.clone())
             .latest_staked_value()
             .is_zero());
 
-        assert_move_stake(staker, &core_id_a, &core_id_b, stake_value / 2);
+        assert_move_stake(staker.clone(), &core_id_a, &core_id_b, stake_value / 2);
         assert!(GeneralStakerInfo::<Test>::get(&core_id_a, &staker)
             .latest_staked_value()
             .is_zero());
@@ -2098,7 +2107,7 @@ fn move_stake_to_same_contract_err() {
 
         assert_register(core_id_a);
         let stake_value = 100;
-        assert_stake(staker, &core_id_a, stake_value);
+        assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
             OcifStaking::move_stake(
@@ -2124,11 +2133,11 @@ fn move_stake_to_unregistered_core_err() {
 
         assert_register(core_id_a);
         let stake_value = 100;
-        assert_stake(staker, &core_id_a, stake_value);
+        assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
             OcifStaking::move_stake(
-                RuntimeOrigin::signed(staker),
+                RuntimeOrigin::signed(staker.clone()),
                 core_id_b,
                 stake_value,
                 core_id_c,
@@ -2138,7 +2147,7 @@ fn move_stake_to_unregistered_core_err() {
 
         assert_noop!(
             OcifStaking::move_stake(
-                RuntimeOrigin::signed(staker),
+                RuntimeOrigin::signed(staker.clone()),
                 core_id_a,
                 stake_value,
                 core_id_b,
@@ -2195,7 +2204,7 @@ fn move_stake_with_no_amount_err() {
         assert_register(core_id_a);
         assert_register(core_id_b);
         let stake_value = 100;
-        assert_stake(staker, &core_id_a, stake_value);
+        assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
             OcifStaking::move_stake(
@@ -2221,7 +2230,7 @@ fn move_stake_with_insufficient_amount_err() {
         assert_register(core_id_a);
         assert_register(core_id_b);
         let stake_value = 100;
-        assert_stake(staker, &core_id_a, stake_value);
+        assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
             OcifStaking::move_stake(
@@ -2248,20 +2257,25 @@ fn move_stake_core_has_too_many_era_stake_err() {
         assert_register(core_id_b);
 
         for _ in 1..MAX_ERA_STAKE_VALUES {
-            assert_stake(staker, &core_id_a, MINIMUM_STAKING_AMOUNT);
+            assert_stake(staker.clone(), &core_id_a, MINIMUM_STAKING_AMOUNT);
             advance_to_era(OcifStaking::current_era() + 1);
         }
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker), core_id_a, 15),
+            OcifStaking::stake(RuntimeOrigin::signed(staker.clone()), core_id_a, 15),
             Error::<Test>::TooManyEraStakeValues
         );
 
         assert_noop!(
-            OcifStaking::move_stake(RuntimeOrigin::signed(staker), core_id_a, 15, core_id_b),
+            OcifStaking::move_stake(
+                RuntimeOrigin::signed(staker.clone()),
+                core_id_a,
+                15,
+                core_id_b
+            ),
             Error::<Test>::TooManyEraStakeValues
         );
 
-        assert_stake(staker, &core_id_b, 15);
+        assert_stake(staker.clone(), &core_id_b, 15);
         assert_noop!(
             OcifStaking::move_stake(RuntimeOrigin::signed(staker), core_id_b, 15, core_id_a),
             Error::<Test>::TooManyEraStakeValues
@@ -2282,17 +2296,18 @@ fn move_stake_max_number_of_stakers_exceeded_err() {
         assert_register(core_id_a);
         assert_register(core_id_b);
 
-        assert_stake(staker_a, &core_id_a, 23);
-        assert_stake(staker_b, &core_id_b, 37);
+        assert_stake(staker_a.clone(), &core_id_a, 23);
+        assert_stake(staker_b.clone(), &core_id_b, 37);
         assert_stake(staker_b, &core_id_b, 41);
 
-        for temp_staker in (staker_b + 1)..(MAX_NUMBER_OF_STAKERS as u64 + staker_b) {
-            Balances::resolve_creating(&temp_staker, Balances::issue(100));
-            assert_stake(temp_staker, &core_id_b, 13);
+        for temp_staker in (4u32)..(MAX_NUMBER_OF_STAKERS as u32 + 3u32) {
+            let staker = account(temp_staker);
+            Balances::resolve_creating(&staker, Balances::issue(100));
+            assert_stake(staker, &core_id_b, 13);
         }
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_a), core_id_b, 19),
+            OcifStaking::stake(RuntimeOrigin::signed(staker_a.clone()), core_id_b, 19),
             Error::<Test>::MaxStakersReached
         );
 

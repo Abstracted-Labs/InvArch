@@ -17,7 +17,7 @@ use sp_std::vec::Vec;
 pub type Votes<T> = BalanceOf<T>;
 pub type Core<T> = <T as Config>::CoreId;
 
-/// Aggregated votes for an ongoing poll by members of the ranked collective.
+/// Aggregated votes for an ongoing poll by members of a core.
 #[derive(
     CloneNoBound,
     PartialEqNoBound,
@@ -212,10 +212,8 @@ pub type VoteRecord<T> = Vote<Votes<T>>;
 
 impl<T: Config> Pallet<T>
 where
-    Result<
-        INV4Origin<T, <T as crate::pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
 {
     pub fn minimum_support_and_required_approval(core_id: T::CoreId) -> Option<(Perbill, Perbill)> {
         CoreStorage::<T>::get(core_id).map(|core| (core.minimum_support, core.required_approval))

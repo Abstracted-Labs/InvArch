@@ -18,7 +18,7 @@ use pallet_inv4::fee_handling::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
-pub use sp_std::{cell::RefCell, fmt::Debug, marker::PhantomData};
+pub use sp_std::{cell::RefCell, fmt::Debug};
 use sp_std::{convert::TryInto, vec};
 use xcm::latest::prelude::*;
 use xcm_builder::{
@@ -313,22 +313,18 @@ parameter_types! {
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT;
-    pub const GenesisHash: <Test as frame_system::Config>::Hash = H256([
-        212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
-        243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
-    ]);
 
-    pub const KSMCoreCreationFee: Balance = UNIT;
+    pub const RelayCoreCreationFee: Balance = UNIT;
 }
 
 pub type AssetId = u32;
 
-pub const CORE_ASSET_ID: AssetId = 0;
-pub const KSM_ASSET_ID: AssetId = 1;
+pub const NATIVE_ASSET_ID: AssetId = 0;
+pub const RELAY_ASSET_ID: AssetId = 1;
 
 parameter_types! {
-    pub const NativeAssetId: AssetId = CORE_ASSET_ID;
-    pub const RelayAssetId: AssetId = KSM_ASSET_ID;
+    pub const NativeAssetId: AssetId = NATIVE_ASSET_ID;
+    pub const RelayAssetId: AssetId = RELAY_ASSET_ID;
     pub const ExistentialDeposit: u128 = 100000000000;
     pub const MaxLocks: u32 = 1;
     pub const MaxReserves: u32 = 1;
@@ -367,7 +363,7 @@ pub type Amount = i128;
 
 orml_traits::parameter_type_with_key! {
       pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
-          if currency_id == &CORE_ASSET_ID {
+          if currency_id == &NATIVE_ASSET_ID {
               ExistentialDeposit::get()
           } else {
               orml_asset_registry::ExistentialDeposits::<Test>::get(currency_id)
@@ -416,8 +412,8 @@ impl MultisigFeeHandler<Test> for FeeCharger {
             who.clone(),
             (),
             match fee_asset {
-                FeeAsset::TNKR => None,
-                FeeAsset::KSM => Some(1u32),
+                FeeAsset::Native => None,
+                FeeAsset::Relay => Some(1u32),
             },
         ))
     }
@@ -449,19 +445,19 @@ impl pallet_inv4::Config for Test {
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type MaxSubAssets = MaxCallers;
     type CoreSeedBalance = CoreSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type GenesisHash = GenesisHash;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
-    type KSMAssetId = RelayAssetId;
-    type KSMCoreCreationFee = KSMCoreCreationFee;
+    type RelayAssetId = RelayAssetId;
+    type RelayCoreCreationFee = RelayCoreCreationFee;
     type MaxCallSize = ConstU32<51200>;
+
+    type ParaId = ConstU32<2125>;
 }
 
 parameter_types! {
@@ -472,9 +468,7 @@ parameter_types! {
 
 impl pallet::Config for Test {
     type RuntimeEvent = RuntimeEvent;
-    type ParaId = ParaId;
     type Chains = Chains;
-    type INV4PalletIndex = INV4PalletIndex;
     type WeightInfo = weights::SubstrateWeight<Test>;
     type MaxXCMCallLength = ConstU32<100_000>;
     type MaintenanceOrigin = EnsureRoot<AccountId>;
@@ -613,9 +607,9 @@ impl ExtBuilder {
 
         orml_tokens::GenesisConfig::<Test> {
             balances: vec![
-                (ALICE, KSM_ASSET_ID, INITIAL_BALANCE),
-                (BOB, KSM_ASSET_ID, INITIAL_BALANCE),
-                (CHARLIE, KSM_ASSET_ID, INITIAL_BALANCE),
+                (ALICE, RELAY_ASSET_ID, INITIAL_BALANCE),
+                (BOB, RELAY_ASSET_ID, INITIAL_BALANCE),
+                (CHARLIE, RELAY_ASSET_ID, INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)
