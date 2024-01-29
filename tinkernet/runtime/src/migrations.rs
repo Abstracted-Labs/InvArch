@@ -1,9 +1,11 @@
-use frame_support::{dispatch::GetStorageVersion, traits::OnRuntimeUpgrade, weights::Weight};
+#![allow(clippy::type_complexity)]
+
+use frame_support::{traits::OnRuntimeUpgrade, weights::Weight};
 use log::{info, warn};
 
 pub mod new_core_account_derivation {
     use super::*;
-    use crate::{common_types::CommonId, AccountId, Identity, Runtime, RuntimeOrigin, Vec, INV4};
+    use crate::{common_types::CommonId, AccountId, Identity, Runtime, RuntimeOrigin, Vec};
     use frame_support::dispatch::GetDispatchInfo;
     use pallet_identity::IdentityInfo;
     use pallet_inv4::{
