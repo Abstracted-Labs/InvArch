@@ -103,6 +103,9 @@ mod staking;
 mod weights;
 pub mod xcm_config;
 
+#[cfg(test)]
+mod xcm_simulator;
+
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 

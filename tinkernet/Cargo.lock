@@ -3845,7 +3845,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#d83e95692d178982cc2bd4279f31f3eba31d9c97"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6020,7 +6020,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#d83e95692d178982cc2bd4279f31f3eba31d9c97"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6279,7 +6279,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#d83e95692d178982cc2bd4279f31f3eba31d9c97"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6452,7 +6452,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#d83e95692d178982cc2bd4279f31f3eba31d9c97"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6601,7 +6601,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#d83e95692d178982cc2bd4279f31f3eba31d9c97"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12451,6 +12451,7 @@ dependencies = [
  "pallet-identity",
  "pallet-inv4",
  "pallet-maintenance-mode",
+ "pallet-message-queue",
  "pallet-multisig",
  "pallet-ocif-staking",
  "pallet-preimage",
@@ -12467,8 +12468,10 @@ dependencies = [
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
+ "polkadot-core-primitives",
  "polkadot-parachain",
  "polkadot-runtime-common",
+ "polkadot-runtime-parachains",
  "scale-info",
  "serde",
  "smallvec",
@@ -12488,6 +12491,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "xcm-simulator",
 ]
 
 [[package]]
@@ -14281,6 +14285,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.28",
+]
+
+[[package]]
+name = "xcm-simulator"
+version = "0.9.43"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.43#ba42b9ce51d25bdaf52d2c61e0763a6e3da50d25"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

@@ -10,6 +10,8 @@ mod basilisk;
 use basilisk::Basilisk;
 mod picasso;
 use picasso::Picasso;
+mod asset_hub;
+use asset_hub::AssetHub;
 
 parameter_types! {
     pub MaxXCMCallLength: u32 = 100_000;
@@ -35,12 +37,14 @@ pub trait RingsChain {
 pub enum Chains {
     Basilisk,
     Picasso,
+    AssetHub,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum ChainAssets {
     Basilisk(<Basilisk as RingsChain>::Assets),
     Picasso(<Picasso as RingsChain>::Assets),
+    AssetHub(<AssetHub as RingsChain>::Assets),
 }
 
 impl ChainAssetsList for ChainAssets {
@@ -50,6 +54,7 @@ impl ChainAssetsList for ChainAssets {
         match self {
             Self::Basilisk(_) => Chains::Basilisk,
             Self::Picasso(_) => Chains::Picasso,
+            Self::AssetHub(_) => Chains::AssetHub,
         }
     }
 
@@ -57,6 +62,7 @@ impl ChainAssetsList for ChainAssets {
         match self {
             Self::Basilisk(asset) => Basilisk::get_asset_location(asset),
             Self::Picasso(asset) => Picasso::get_asset_location(asset),
+            Self::AssetHub(asset) => AssetHub::get_asset_location(asset),
         }
     }
 }
@@ -69,6 +75,7 @@ impl ChainList for Chains {
         match self {
             Self::Basilisk => Basilisk::get_location(),
             Self::Picasso => Picasso::get_location(),
+            Self::AssetHub => AssetHub::get_location(),
         }
     }
 
@@ -76,6 +83,7 @@ impl ChainList for Chains {
         match self {
             Self::Basilisk => ChainAssets::Basilisk(Basilisk::get_main_asset()),
             Self::Picasso => ChainAssets::Picasso(Picasso::get_main_asset()),
+            Self::AssetHub => ChainAssets::AssetHub(AssetHub::get_main_asset()),
         }
     }
 

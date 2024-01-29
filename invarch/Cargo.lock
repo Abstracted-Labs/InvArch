@@ -3956,7 +3956,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#bf425e26fc062940452b53056ae1a1edba460f39"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6081,7 +6081,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#bf425e26fc062940452b53056ae1a1edba460f39"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6339,7 +6339,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#bf425e26fc062940452b53056ae1a1edba460f39"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6496,7 +6496,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=gabriel-new_derivation#bf425e26fc062940452b53056ae1a1edba460f39"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
 dependencies = [
  "frame-support",
  "frame-system",

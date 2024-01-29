@@ -44,8 +44,8 @@ impl pallet_inv4::Config for Runtime {
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 
     type Tokens = Tokens;
-    type KSMAssetId = RelayAssetId;
-    type KSMCoreCreationFee = KSMCoreCreationFee;
+    type RelayAssetId = RelayAssetId;
+    type RelayCoreCreationFee = KSMCoreCreationFee;
 
     type MaxCallSize = MaxCallSize;
 
@@ -75,10 +75,10 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
-            FeeAsset::TNKR => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), None)
+            FeeAsset::Native => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), None)
                 .pre_dispatch(who, call, info, len),
 
-            FeeAsset::KSM => {
+            FeeAsset::Relay => {
                 ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), Some(KSM_ASSET_ID))
                     .pre_dispatch(who, call, info, len)
             }
@@ -94,11 +94,11 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         result: &sp_runtime::DispatchResult,
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
-            FeeAsset::TNKR => {
+            FeeAsset::Native => {
                 ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
             }
 
-            FeeAsset::KSM => {
+            FeeAsset::Relay => {
                 ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
             }
         }
@@ -111,9 +111,9 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         >,
     ) {
         match imbalance {
-            FeeAssetNegativeImbalance::TNKR(imb) => DealWithFees::on_unbalanced(imb),
+            FeeAssetNegativeImbalance::Native(imb) => DealWithFees::on_unbalanced(imb),
 
-            FeeAssetNegativeImbalance::KSM(imb) => DealWithKSMFees::on_unbalanced(imb),
+            FeeAssetNegativeImbalance::Relay(imb) => DealWithKSMFees::on_unbalanced(imb),
         }
     }
 }
