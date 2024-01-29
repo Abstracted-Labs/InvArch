@@ -8,7 +8,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
-    construct_runtime,
     dispatch::DispatchClass,
     parameter_types,
     traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
@@ -38,7 +37,12 @@ use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+mod assets;
 pub mod balances;
+mod common_types;
+mod inflation;
+mod inv4;
+mod staking;
 mod weights;
 pub mod xcm_config;
 
@@ -135,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("invarch"),
     impl_name: create_runtime_str!("invarch"),
     authoring_version: 1,
-    spec_version: 4,
+    spec_version: 5,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -150,12 +154,14 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// Change this to adjust the block time.
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
+pub const TWELVE_SECONDS_IN_MILLISECS: u64 = 12000;
+
 // NOTE: Currently it is not possible to change the slot duration after the chain has started.
 //       Attempting to do so will brick block production.
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
 // Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+pub const MINUTES: BlockNumber = 60_000 / (TWELVE_SECONDS_IN_MILLISECS as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
@@ -415,8 +421,22 @@ impl pallet_tx_pause::Config for Runtime {
     type WhitelistedCalls = TxPauseWhitelistedCalls;
 }
 
+use modified_construct_runtime::construct_runtime_modified;
+
+impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeOrigin> {
+    fn from(val: RuntimeOrigin) -> Self {
+        match val.caller {
+            OriginCaller::system(l) => Ok(l),
+            OriginCaller::INV4(pallet_inv4::origin::INV4Origin::Multisig(l)) => {
+                Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
+            }
+            _ => Err(val),
+        }
+    }
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
-construct_runtime!(
+construct_runtime_modified!(
     pub enum Runtime where
         Block = Block,
         NodeBlock = opaque::Block,
@@ -455,6 +475,13 @@ construct_runtime!(
 
         // Extra
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 40,
+
+        CheckedInflation: pallet_checked_inflation::{Pallet, Storage, Event<T>, Call} = 50,
+        OcifStaking: pallet_ocif_staking::{Pallet, Call, Storage, Event<T>} = 51,
+
+        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
+        CoreAssets: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+        // 73 reserved for pallet-rings
 
     }
 );

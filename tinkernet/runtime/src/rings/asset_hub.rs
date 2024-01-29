@@ -3,30 +3,22 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
-pub struct Statemine;
+pub struct AssetHub;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
-pub enum StatemineAssets {
+pub enum AssetHubAssets {
     KSM,
-    BILLCOIN,
 }
 
-impl RingsChain for Statemine {
-    type Assets = StatemineAssets;
+impl RingsChain for AssetHub {
+    type Assets = AssetHubAssets;
 
     fn get_asset_location(asset: &Self::Assets) -> MultiLocation {
-        use StatemineAssets::*;
+        use AssetHubAssets::*;
         match asset {
             KSM => MultiLocation {
                 parents: 1,
                 interior: Junctions::Here,
-            },
-            BILLCOIN => MultiLocation {
-                parents: 0,
-                interior: Junctions::X2(
-                    Junction::PalletInstance(50u8),
-                    Junction::GeneralIndex(223u128),
-                ),
             },
         }
     }
@@ -39,6 +31,6 @@ impl RingsChain for Statemine {
     }
 
     fn get_main_asset() -> Self::Assets {
-        StatemineAssets::KSM
+        AssetHubAssets::KSM
     }
 }

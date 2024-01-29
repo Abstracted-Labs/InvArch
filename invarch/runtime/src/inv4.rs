@@ -1,18 +1,17 @@
 use crate::{
-    assets::{RelayAssetId, KSM_ASSET_ID},
-    common_types::{AssetId, CommonId},
-    constants::currency::UNIT,
-    fee_handling::DealWithKSMFees,
-    AccountId, Balance, Balances, CoreAssets, DealWithFees, ParachainInfo, Runtime, RuntimeCall,
-    RuntimeEvent, RuntimeOrigin, Tokens,
+    balances::DealWithFees, common_types::CommonId, AccountId, Balance, Balances, CoreAssets,
+    ParachainInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UNIT,
 };
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
-    traits::{fungibles::Credit, Contains, Currency, OnUnbalanced},
+    traits::{
+        fungibles::{Balanced, Credit, Inspect, Unbalanced},
+        Contains, Currency, OnUnbalanced,
+    },
 };
-use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
+use pallet_transaction_payment::ChargeTransactionPayment;
 use scale_info::TypeInfo;
 use sp_core::ConstU32;
 use sp_runtime::traits::{One, SignedExtension, Zero};
@@ -23,10 +22,12 @@ parameter_types! {
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT * 100;
 
-    pub const KSMCoreCreationFee: Balance = UNIT;
+    pub const RelayCoreCreationFee: Balance = UNIT;
     pub const MaxCallSize: u32 = 50 * 1024;
 
     pub ParaId: u32 = ParachainInfo::parachain_id().into();
+
+    pub const NoId: () = ();
 }
 
 impl pallet_inv4::Config for Runtime {
@@ -43,29 +44,104 @@ impl pallet_inv4::Config for Runtime {
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
 
-    type Tokens = Tokens;
-    type RelayAssetId = RelayAssetId;
-    type RelayCoreCreationFee = KSMCoreCreationFee;
+    type Tokens = NoTokens;
+    type RelayAssetId = NoId;
+    type RelayCoreCreationFee = RelayCoreCreationFee;
 
     type MaxCallSize = MaxCallSize;
 
     type ParaId = ParaId;
 }
 
+pub struct NoTokens;
+
+impl Inspect<AccountId> for NoTokens {
+    type AssetId = ();
+    type Balance = u128;
+
+    fn total_issuance(_asset: Self::AssetId) -> Self::Balance {
+        Zero::zero()
+    }
+
+    fn minimum_balance(_asset: Self::AssetId) -> Self::Balance {
+        Zero::zero()
+    }
+
+    fn total_balance(_asset: Self::AssetId, _who: &AccountId) -> Self::Balance {
+        Zero::zero()
+    }
+
+    fn balance(_asset: Self::AssetId, _who: &AccountId) -> Self::Balance {
+        Zero::zero()
+    }
+
+    fn reducible_balance(
+        _asset: Self::AssetId,
+        _who: &AccountId,
+        _preservation: frame_support::traits::tokens::Preservation,
+        _force: frame_support::traits::tokens::Fortitude,
+    ) -> Self::Balance {
+        Zero::zero()
+    }
+
+    fn can_deposit(
+        _asset: Self::AssetId,
+        _who: &AccountId,
+        _amount: Self::Balance,
+        _provenance: frame_support::traits::tokens::Provenance,
+    ) -> frame_support::traits::tokens::DepositConsequence {
+        frame_support::traits::tokens::DepositConsequence::UnknownAsset
+    }
+
+    fn can_withdraw(
+        _asset: Self::AssetId,
+        _who: &AccountId,
+        _amount: Self::Balance,
+    ) -> frame_support::traits::tokens::WithdrawConsequence<Self::Balance> {
+        frame_support::traits::tokens::WithdrawConsequence::UnknownAsset
+    }
+
+    fn asset_exists(_asset: Self::AssetId) -> bool {
+        false
+    }
+
+    fn active_issuance(_asset: Self::AssetId) -> Self::Balance {
+        Zero::zero()
+    }
+}
+
+impl Unbalanced<AccountId> for NoTokens {
+    fn handle_dust(_dust: frame_support::traits::fungibles::Dust<AccountId, Self>) {}
+
+    fn write_balance(
+        _asset: Self::AssetId,
+        _who: &AccountId,
+        _amount: Self::Balance,
+    ) -> Result<Option<Self::Balance>, sp_runtime::DispatchError> {
+        Err(sp_runtime::DispatchError::Token(
+            sp_runtime::TokenError::UnknownAsset,
+        ))
+    }
+
+    fn set_total_issuance(_asset: Self::AssetId, _amount: Self::Balance) {}
+}
+
+pub struct NoHandle;
+impl frame_support::traits::tokens::fungibles::HandleImbalanceDrop<(), u128> for NoHandle {
+    fn handle(_asset: (), _amount: u128) {}
+}
+
+impl Balanced<AccountId> for NoTokens {
+    type OnDropCredit = NoHandle;
+    type OnDropDebt = NoHandle;
+}
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
 pub struct FeeCharger;
 
 impl MultisigFeeHandler<Runtime> for FeeCharger {
-    type Pre = (
-        // tip
-        Balance,
-        // who paid the fee
-        AccountId,
-        // imbalance resulting from withdrawing the fee
-        pallet_asset_tx_payment::InitialPayment<Runtime>,
-        // asset_id for the transaction payment
-        Option<AssetId>,
-    );
+    type Pre =
+        <pallet_transaction_payment::ChargeTransactionPayment<Runtime> as SignedExtension>::Pre;
 
     fn pre_dispatch(
         fee_asset: &FeeAsset,
@@ -75,13 +151,12 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
-            FeeAsset::Native => ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), None)
+            FeeAsset::Native => ChargeTransactionPayment::<Runtime>::from(Zero::zero())
                 .pre_dispatch(who, call, info, len),
 
-            FeeAsset::Relay => {
-                ChargeAssetTxPayment::<Runtime>::from(Zero::zero(), Some(KSM_ASSET_ID))
-                    .pre_dispatch(who, call, info, len)
-            }
+            FeeAsset::Relay => Err(frame_support::unsigned::TransactionValidityError::Invalid(
+                sp_runtime::transaction_validity::InvalidTransaction::Payment,
+            )),
         }
     }
 
@@ -94,31 +169,31 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
         result: &sp_runtime::DispatchResult,
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
         match fee_asset {
-            FeeAsset::Native => {
-                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
-            }
+            FeeAsset::Native => ChargeTransactionPayment::<Runtime>::post_dispatch(
+                pre, info, post_info, len, result,
+            ),
 
-            FeeAsset::Relay => {
-                ChargeAssetTxPayment::<Runtime>::post_dispatch(pre, info, post_info, len, result)
-            }
+            FeeAsset::Relay => Err(frame_support::unsigned::TransactionValidityError::Invalid(
+                sp_runtime::transaction_validity::InvalidTransaction::Payment,
+            )),
         }
     }
 
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
-            Credit<AccountId, Tokens>,
+            Credit<AccountId, NoTokens>,
         >,
     ) {
         match imbalance {
             FeeAssetNegativeImbalance::Native(imb) => DealWithFees::on_unbalanced(imb),
 
-            FeeAssetNegativeImbalance::Relay(imb) => DealWithKSMFees::on_unbalanced(imb),
+            FeeAssetNegativeImbalance::Relay(_) => {}
         }
     }
 }
 
-orml_traits2::parameter_type_with_key! {
+orml_traits::parameter_type_with_key! {
     pub CoreExistentialDeposits: |_currency_id: <Runtime as pallet_inv4::Config>::CoreId| -> Balance {
         Balance::one()
     };
@@ -132,8 +207,7 @@ impl Contains<AccountId> for CoreDustRemovalWhitelist {
 }
 
 pub struct DisallowIfFrozen;
-impl
-    orml_traits2::currency::OnTransfer<AccountId, <Runtime as pallet_inv4::Config>::CoreId, Balance>
+impl orml_traits::currency::OnTransfer<AccountId, <Runtime as pallet_inv4::Config>::CoreId, Balance>
     for DisallowIfFrozen
 {
     fn on_transfer(
@@ -153,7 +227,7 @@ impl
 }
 
 pub struct HandleNewMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+impl orml_traits::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
     for HandleNewMembers
 {
     fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
@@ -162,7 +236,7 @@ impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId
 }
 
 pub struct HandleRemovedMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+impl orml_traits::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
     for HandleRemovedMembers
 {
     fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
@@ -172,7 +246,7 @@ impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId
 
 pub struct INV4TokenHooks;
 impl
-    orml_traits2::currency::MutationHooks<
+    orml_traits::currency::MutationHooks<
         AccountId,
         <Runtime as pallet_inv4::Config>::CoreId,
         Balance,
@@ -188,7 +262,7 @@ impl
     type OnKilledTokenAccount = HandleRemovedMembers;
 }
 
-impl orml_tokens2::Config for Runtime {
+impl orml_tokens::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;

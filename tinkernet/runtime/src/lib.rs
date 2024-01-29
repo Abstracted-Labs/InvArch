@@ -96,11 +96,15 @@ mod fee_handling;
 use fee_handling::TnkrToKsm;
 mod inflation;
 mod inv4;
+mod migrations;
 mod nft;
 mod rings;
 mod staking;
 mod weights;
 pub mod xcm_config;
+
+#[cfg(test)]
+mod xcm_simulator;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
@@ -158,6 +162,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    migrations::new_core_account_derivation::MigrateToNewDerivation,
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -188,7 +193,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 20,
+    spec_version: 21,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,

@@ -3006,7 +3006,7 @@ dependencies = [
  "Inflector",
  "cfg-expr",
  "derive-syn-parse",
- "frame-support-procedural-tools",
+ "frame-support-procedural-tools 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43)",
  "itertools 0.10.5",
  "proc-macro-warning",
  "proc-macro2",
@@ -3017,10 +3017,30 @@ dependencies = [
 [[package]]
 name = "frame-support-procedural-tools"
 version = "4.0.0-dev"
+dependencies = [
+ "frame-support-procedural-tools-derive 3.0.0",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
+name = "frame-support-procedural-tools"
+version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "frame-support-procedural-tools-derive",
+ "frame-support-procedural-tools-derive 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43)",
  "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
+name = "frame-support-procedural-tools-derive"
+version = "3.0.0"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.39",
@@ -3934,6 +3954,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "invarch-primitives"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "invarch-runtime"
 version = "1.0.0"
 dependencies = [
@@ -3955,13 +3989,19 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal 0.3.4",
  "log",
+ "modified-construct-runtime",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43)",
  "orml-vesting",
  "orml-xcm",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
+ "pallet-checked-inflation",
  "pallet-collator-selection",
  "pallet-identity",
+ "pallet-inv4",
+ "pallet-ocif-staking",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
@@ -5295,6 +5335,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "modified-construct-runtime"
+version = "4.0.0-dev"
+dependencies = [
+ "Inflector",
+ "cfg-expr",
+ "derive-syn-parse",
+ "frame-support-procedural-tools 4.0.0-dev",
+ "itertools 0.10.5",
+ "proc-macro-warning",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
 name = "multiaddr"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5712,6 +5767,101 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43#28a2e6f0df9540d91db4018c7ecebb8bfc217a2a"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae#7ecebeab7e3dbc2226ed58d32ee159271a8176ae"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits 0.4.1-dev (git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-arithmetic",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43#28a2e6f0df9540d91db4018c7ecebb8bfc217a2a"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "orml-utilities 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae#7ecebeab7e3dbc2226ed58d32ee159271a8176ae"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "orml-utilities 0.4.1-dev (git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43#28a2e6f0df9540d91db4018c7ecebb8bfc217a2a"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae#7ecebeab7e3dbc2226ed58d32ee159271a8176ae"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-vesting"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=polkadot-v0.9.43#28a2e6f0df9540d91db4018c7ecebb8bfc217a2a"
@@ -5925,6 +6075,26 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-checked-inflation"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-session",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
  "sp-std",
 ]
 
@@ -6167,6 +6337,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-inv4"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "invarch-primitives",
+ "log",
+ "orml-tokens 0.4.1-dev (git+https://github.com/arrudagates/open-runtime-module-library?rev=7ecebeab7e3dbc2226ed58d32ee159271a8176ae)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "pallet-membership"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
@@ -6296,6 +6490,29 @@ dependencies = [
  "pallet-nomination-pools",
  "parity-scale-codec",
  "sp-api",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-ocif-staking"
+version = "0.1.0-dev"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=ce1c1421550019472c622b7896e3fbd7f03d2ec5#ce1c1421550019472c622b7896e3fbd7f03d2ec5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "num-traits",
+ "pallet-balances",
+ "pallet-inv4",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
  "sp-std",
 ]
 

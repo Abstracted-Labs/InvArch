@@ -11,7 +11,7 @@ parameter_types! {
     pub const MaxEraStakeValues: u32 = 5;
     pub const MaxUnlockingChunks: u32 = 5;
     pub const UnbondingPeriod: u32 = 7;
-    pub const OcifStakingPot: PalletId = PalletId(*b"tkr/ocif");
+    pub const OcifStakingPot: PalletId = PalletId(*b"inv/stak");
     pub const RewardRatio: (u32, u32) = (60, 40);
     pub const StakeThresholdForActiveCore: Balance = 25000 * UNIT;
     pub const MaxNameLength: u32 = 20;

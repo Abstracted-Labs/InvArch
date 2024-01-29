@@ -60,7 +60,7 @@ impl WeightToFeePolynomial for WeightToFee {
     }
 }
 
-type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+pub type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 pub struct ToCollatorPot;
 impl OnUnbalanced<NegativeImbalance> for ToCollatorPot {
