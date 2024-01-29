@@ -20,6 +20,12 @@ log = { version = "0.4.17", default-features = false }
 scale-info = { version = "2.3.1", default-features = false, features = ["derive"] }
 smallvec = "1.10.0"
 
+modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
+
+# InvArch
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-new_derivation",  default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-new_derivation",  default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "gabriel-new_derivation",  default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.43" }
@@ -58,6 +64,8 @@ pallet-tx-pause = { path = "../pallet-tx-pause", default-features = false }
 # ORML
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.43" }
 orml-vesting = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.43" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.43" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "polkadot-v0.9.43" }
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.43" }
@@ -100,21 +108,22 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
-  "orml-vesting/std",
-  "orml-xcm/std",
+	"orml-tokens/std",
+  	"orml-vesting/std",
+  	"orml-xcm/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
 	"pallet-collator-selection/std",
-  "pallet-identity/std",
+  	"pallet-identity/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-  "pallet-treasury/std",
-  "pallet-tx-pause/std",
-  "pallet-utility/std",
+  	"pallet-treasury/std",
+  	"pallet-tx-pause/std",
+  	"pallet-utility/std",
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"polkadot-parachain/std",
@@ -133,6 +142,12 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+
+	"modified-construct-runtime/std",
+
+	"pallet-inv4/std",
+	"pallet-checked-inflation/std",
+	"pallet-ocif-staking/std"
 ]
 
 runtime-benchmarks = [

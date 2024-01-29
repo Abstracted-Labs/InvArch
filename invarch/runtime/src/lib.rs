@@ -8,7 +8,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
-    construct_runtime,
     dispatch::DispatchClass,
     parameter_types,
     traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
@@ -38,7 +37,12 @@ use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+mod assets;
 pub mod balances;
+mod common_types;
+mod inflation;
+mod inv4;
+mod staking;
 mod weights;
 pub mod xcm_config;
 
@@ -415,8 +419,22 @@ impl pallet_tx_pause::Config for Runtime {
     type WhitelistedCalls = TxPauseWhitelistedCalls;
 }
 
+use modified_construct_runtime::construct_runtime_modified;
+
+impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeOrigin> {
+    fn from(val: RuntimeOrigin) -> Self {
+        match val.caller {
+            OriginCaller::system(l) => Ok(l),
+            OriginCaller::INV4(pallet_inv4::origin::INV4Origin::Multisig(l)) => {
+                Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
+            }
+            _ => Err(val),
+        }
+    }
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
-construct_runtime!(
+construct_runtime_modified!(
     pub enum Runtime where
         Block = Block,
         NodeBlock = opaque::Block,
@@ -455,6 +473,13 @@ construct_runtime!(
 
         // Extra
         Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 40,
+
+        CheckedInflation: pallet_checked_inflation::{Pallet, Storage, Event<T>, Call} = 50,
+        OcifStaking: pallet_ocif_staking::{Pallet, Call, Storage, Event<T>} = 51,
+
+        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
+        CoreAssets: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+        // 73 reserved for pallet-rings
 
     }
 );
