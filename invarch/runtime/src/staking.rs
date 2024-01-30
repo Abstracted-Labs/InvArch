@@ -5,15 +5,15 @@ use frame_support::{parameter_types, PalletId};
 
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
-    pub const RegisterDeposit: Balance = 500 * UNIT;
+    pub const RegisterDeposit: Balance = 5000 * UNIT;
     pub const MaxStakersPerCore: u32 = 10000;
-    pub const MinimumStakingAmount: Balance = 10 * UNIT;
+    pub const MinimumStakingAmount: Balance = 50 * UNIT;
     pub const MaxEraStakeValues: u32 = 5;
     pub const MaxUnlockingChunks: u32 = 5;
-    pub const UnbondingPeriod: u32 = 7;
+    pub const UnbondingPeriod: u32 = 28;
     pub const OcifStakingPot: PalletId = PalletId(*b"inv/stak");
     pub const RewardRatio: (u32, u32) = (60, 40);
-    pub const StakeThresholdForActiveCore: Balance = 25000 * UNIT;
+    pub const StakeThresholdForActiveCore: Balance = 250_000 * UNIT;
     pub const MaxNameLength: u32 = 20;
     pub const MaxDescriptionLength: u32 = 300;
     pub const MaxImageUrlLength: u32 = 100;

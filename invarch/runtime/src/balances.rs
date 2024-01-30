@@ -49,8 +49,8 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
     type Balance = Balance;
     fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-        let p = MILLIUNIT;
-        let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+        let p = 10 * MILLIUNIT;
+        let q = 2 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
         smallvec::smallvec![WeightToFeeCoefficient {
             degree: 1,
             negative: false,

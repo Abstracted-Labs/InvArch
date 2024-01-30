@@ -20,7 +20,7 @@ parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
-    pub const CoreCreationFee: Balance = UNIT * 100;
+    pub const CoreCreationFee: Balance = UNIT * 1000;
 
     pub const RelayCoreCreationFee: Balance = UNIT;
     pub const MaxCallSize: u32 = 50 * 1024;
