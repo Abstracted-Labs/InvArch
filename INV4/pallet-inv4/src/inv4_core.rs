@@ -1,3 +1,14 @@
+//! Core creation and internal management.
+//!
+//! ## Overview
+//!
+//! This module handles the mechanics of creating multisigs (referred to as "cores") and their lifecycle management. Key functions include:
+//!
+//!  - `inner_create_core`: Sets up a new core, deriving its AccountId, distributing voting tokens, and handling creation fees.
+//!  - `inner_set_parameters`: Updates the cores's operational rules based on passed proposals.
+//! Use with caution as breaking changes caused by bad inputs are not checked.
+//! - `is_asset_frozen`: Utility function for checking if wether a core's voting asset is frozen if it exists.
+
 use super::pallet::*;
 use crate::{
     account_derivation::CoreAccountDerivation,

@@ -1,3 +1,10 @@
+//! MultisigFeeHandler trait.
+//!
+//! ## Overview
+//!
+//! Defines how transaction fees are charged to the multisig account.
+//! This trait requires proper runtime implementation to allow the usage of native or non-native assets.
+
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
@@ -10,23 +17,38 @@ use sp_runtime::{
     DispatchResult,
 };
 
-/// Asset to be used by the multisig for paying fees transaction fees.
+/// Represents the asset to be used by the multisig for paying fees transaction fees.
+///
+/// This enum plays a role in marking the desired asset in the `MultisigFeeHandler` trait.
 #[derive(Clone, TypeInfo, Encode, Decode, MaxEncodedLen, Debug, PartialEq, Eq)]
 pub enum FeeAsset {
     Native,
     Relay,
 }
 
+/// Represents a potential negative asset balance incurred during fee payment operations
+/// within a multisig context.
+///
+/// This enum handles imbalances in either the native token or
+/// a relay chain asset used for fees.
+///
+/// - `Native(NativeNegativeImbalance)`: Indicates a deficit balance in the chain's native asset.
+/// - `Relay(RelayNegativeImbalance)`: Indicates a deficit balance in an asset originating on the relay chain.
+///
+/// This enum plays a role in resolving deficit balances in the `MultisigFeeHandler` trait.
 pub enum FeeAssetNegativeImbalance<NativeNegativeImbalance, RelayNegativeImbalance> {
     Native(NativeNegativeImbalance),
     Relay(RelayNegativeImbalance),
 }
 
 /// Fee handler trait.
+///
 /// This should be implemented properly in the runtime to account for native and non-native assets.
 pub trait MultisigFeeHandler<T: Config> {
+    /// Type returned by `pre_dispatch` - implementation dependent.
     type Pre;
 
+    /// Checks if the fee can be paid using the selected asset.
     fn pre_dispatch(
         asset: &FeeAsset,
         who: &T::AccountId,
@@ -35,6 +57,7 @@ pub trait MultisigFeeHandler<T: Config> {
         len: usize,
     ) -> Result<Self::Pre, TransactionValidityError>;
 
+    /// Charges the call dispatching fee from the multisig directly.
     fn post_dispatch(
         asset: &FeeAsset,
         pre: Option<Self::Pre>,
@@ -44,6 +67,7 @@ pub trait MultisigFeeHandler<T: Config> {
         result: &DispatchResult,
     ) -> Result<(), TransactionValidityError>;
 
+    /// Charges the fee for creating the core(multisig).
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <T::Currency as Currency<T::AccountId>>::NegativeImbalance,

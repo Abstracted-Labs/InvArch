@@ -1,3 +1,11 @@
+//! Dispatches calls internally, charging fees to the multisig account.
+//!
+//! ## Overview
+//!
+//! This module employs a custom `MultisigInternalOrigin` to ensure calls originate
+//! from the multisig account itself, automating fee payments. The `dispatch_call` function
+//! includes pre and post dispatch handling for streamlined fee management within the multisig context.
+
 use crate::{
     fee_handling::{FeeAsset, MultisigFeeHandler},
     origin::{INV4Origin, MultisigInternalOrigin},
@@ -8,7 +16,7 @@ use frame_support::{
     pallet_prelude::*,
 };
 
-// Dispatch a call executing pre/post dispatch for proper fee handling.
+/// Dispatch a call executing pre/post dispatch for proper fee handling.
 pub fn dispatch_call<T: Config>(
     core_id: <T as Config>::CoreId,
     fee_asset: &FeeAsset,
@@ -17,6 +25,7 @@ pub fn dispatch_call<T: Config>(
 where
     T::AccountId: From<[u8; 32]>,
 {
+    // Create new custom origin as the multisig.
     let internal_origin = MultisigInternalOrigin::new(core_id);
     let multisig_account = internal_origin.to_account_id();
     let origin = INV4Origin::Multisig(internal_origin).into();

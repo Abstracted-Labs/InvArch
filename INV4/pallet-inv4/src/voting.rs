@@ -1,3 +1,12 @@
+//! Voting Mechanism.
+//!
+//! ## Overview
+//!
+//! This module provides a weighted voting [`Tally`] implementation used for managing the multisig's proposals.
+//! Members each have a balance in voting tokens and this balance differentiate their voting power
+//! as every vote utilizes the entire `power` of the said member.
+//! This empowers decision-making where certain members possess greater influence.
+
 use crate::{origin::INV4Origin, BalanceOf, Config, CoreStorage, Error, Multisig, Pallet};
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use core::marker::PhantomData;
@@ -38,6 +47,7 @@ pub struct Tally<T: Config> {
 }
 
 impl<T: Config> Tally<T> {
+    /// Used manually building a `Tally`.
     pub fn from_parts(
         ayes: Votes<T>,
         nays: Votes<T>,
@@ -51,6 +61,7 @@ impl<T: Config> Tally<T> {
         }
     }
 
+    /// Cheks if a vote is valid then adds the voters balance to his desired vote.
     pub fn process_vote(
         &mut self,
         account: T::AccountId,
@@ -202,12 +213,16 @@ impl<T: Config> CustomPolling<Tally<T>> for Pallet<T> {
     }
 }
 
+/// Represents a proposal vote within a multisig context.
+///
+/// This is both the vote and it's strenght as in how many tokens are being voted.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub enum Vote<Votes> {
     Aye(Votes),
     Nay(Votes),
 }
 
+/// This type is used for checkign how many votes a voting option has.
 pub type VoteRecord<T> = Vote<Votes<T>>;
 
 impl<T: Config> Pallet<T>
@@ -215,6 +230,7 @@ where
     Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
 {
+    /// Cheks the minimum support and approval required for passing a proposal on said core.
     pub fn minimum_support_and_required_approval(core_id: T::CoreId) -> Option<(Perbill, Perbill)> {
         CoreStorage::<T>::get(core_id).map(|core| (core.minimum_support, core.required_approval))
     }
