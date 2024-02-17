@@ -6,6 +6,7 @@
 //!
 //! ## Overview
 //! This pallet handles advanced virtual multisigs (internally called cores).
+//!
 //! Lower level implementation details of this pallet's calls are contained in separate modules each of them
 //! containing their own docs.
 //!
