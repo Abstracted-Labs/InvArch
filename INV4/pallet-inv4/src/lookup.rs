@@ -1,10 +1,10 @@
-//! Core's XCM location utilities.
+//! Custom account lookup implementation.
 //!
 //! ## Overview
 //!
-//! This module implements the [`StaticLookup`] trait allowing for convenient conversion between a
-//! Core's id and it's derived AccountId.
-//! This implementation abstracs on top of two lower level functions:
+//! This module implements the [`StaticLookup`] trait allowing for convenient lookup of a core's
+//! AccountId from its CoreId.
+//! This implementation abstracts on top of two lower level functions:
 //! - `lookup_core`: Used for accessing the storage and retrieving a core's AccountId.
 //! - `lookup_address`: Used for converting from a `MultiAddress::Index` that contains a CoreId to this core's AccountId.
 

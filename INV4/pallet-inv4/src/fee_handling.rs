@@ -17,9 +17,9 @@ use sp_runtime::{
     DispatchResult,
 };
 
-/// Represents the asset to be used by the multisig for paying fees transaction fees.
+/// Represents the asset to be used by the multisig for paying transaction fees.
 ///
-/// This enum plays a role in marking the desired asset in the `MultisigFeeHandler` trait.
+/// This enum defines the assets that can be used to pay for transaction fees.
 #[derive(Clone, TypeInfo, Encode, Decode, MaxEncodedLen, Debug, PartialEq, Eq)]
 pub enum FeeAsset {
     Native,
@@ -67,7 +67,7 @@ pub trait MultisigFeeHandler<T: Config> {
         result: &DispatchResult,
     ) -> Result<(), TransactionValidityError>;
 
-    /// Charges the fee for creating the core(multisig).
+    /// Charges the fee for creating the core (multisig).
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <T::Currency as Currency<T::AccountId>>::NegativeImbalance,
