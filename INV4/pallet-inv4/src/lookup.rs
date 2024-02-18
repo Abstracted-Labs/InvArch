@@ -1,13 +1,26 @@
+//! Custom account lookup implementation.
+//!
+//! ## Overview
+//!
+//! This module implements the [`StaticLookup`] trait allowing for convenient lookup of a core's
+//! AccountId from its CoreId.
+//! This implementation abstracts on top of two lower level functions:
+//! - `lookup_core`: Used for accessing the storage and retrieving a core's AccountId.
+//! - `lookup_address`: Used for converting from a `MultiAddress::Index` that contains a CoreId to this core's AccountId.
+
 use crate::{Config, CoreByAccount, CoreStorage, Pallet};
 use core::marker::PhantomData;
 use frame_support::error::LookupError;
 use sp_runtime::{traits::StaticLookup, MultiAddress};
 
 impl<T: Config> Pallet<T> {
+    /// Queries `CoreStorage` to retrieve the AccountId of a core.
     pub fn lookup_core(core_id: T::CoreId) -> Option<T::AccountId> {
         CoreStorage::<T>::get(core_id).map(|core| core.account)
     }
 
+    /// Matches `MultiAddress` to allow for a `MultiAddress::Index` containing a CoreId to be converted
+    /// to it's derived AccountId.
     pub fn lookup_address(a: MultiAddress<T::AccountId, T::CoreId>) -> Option<T::AccountId> {
         match a {
             MultiAddress::Id(i) => Some(i),

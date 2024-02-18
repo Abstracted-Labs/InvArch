@@ -1,3 +1,15 @@
+//! Multisig Operations.
+//!
+//! ## Overview
+//!
+//! Handles the core actions within an already established multisig.
+//!
+//! ### Core functionalities:
+//! - Minting/Burning voting tokens to existing and new members.
+//! - Handling proposal votes.
+//! - Dispatching approved proposals when both support and approval meet/exceed their minimum required thresholds.
+//! - Canceling proposals.
+
 use super::pallet::{self, *};
 use crate::{
     account_derivation::CoreAccountDerivation,
@@ -202,7 +214,7 @@ where
             // Get the voting token balance of the caller
             let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
 
-            // If caller doesn't own the token, they have no voting power
+            // If caller doesn't own the token, they have no voting power.
             ensure!(!voter_balance.is_zero(), Error::<T>::NoPermission);
 
             // Get the multisig call data from the storage
