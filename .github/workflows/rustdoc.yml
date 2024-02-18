@@ -22,7 +22,7 @@ jobs:
       run: rustup target list --installed
 
     - name: Build Documentation
-      run: RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo +nightly doc --no-deps --document-private-items
+      run: RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo doc --no-deps --document-private-items
 
     - name: Deploy Docs
       uses: peaceiris/actions-gh-pages@v3
