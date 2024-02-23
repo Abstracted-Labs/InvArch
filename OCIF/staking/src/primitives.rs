@@ -1,8 +1,24 @@
-//! Pallet Primitives.
+//! Provides supporting types and traits for the staking pallet.
 //!
 //! ## Overview
 //!
-//! zzzz
+//! Primitives provides the foundational types and traits for a staking pallet.  
+//! The staking pallet is likely a part of a blockchain system, given the use of terms like Balance, Era, and Stake.
+//!
+//! ## Types overview:
+//!
+//! - `BalanceOf` - A type alias for the balance of a currency in the system.
+//! - `CoreMetadata` - A struct that holds metadata for a core entity in the system.
+//! - `CoreInfo` - A struct that holds information about a core entity, including its account ID and metadata.
+//! - `RewardInfo` - A struct that holds information about rewards, including the balance for stakers and the core.
+//! - `EraInfo` - A struct that holds information about a specific era, including rewards, staked balance, active stake, and locked balance.
+//! - `CoreStakeInfo` - A struct that holds information about a core's stake, including the total balance,
+//! number of stakers, and whether a reward has been claimed.
+//! - `EraStake` - A struct that holds information about the stake for a specific era.
+//! - `StakerInfo` - A struct that holds information about a staker's stakes across different eras.
+//! - `UnlockingChunk` - A struct that holds information about an unlocking chunk of balance.
+//! - `UnbondingInfo` - A struct that holds information about unbonding chunks of balance.
+//! - `AccountLedger` - A struct that holds information about an account's locked balance and unbonding information.
 
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use frame_support::traits::Currency;
@@ -15,11 +31,13 @@ use sp_std::{ops::Add, prelude::*};
 
 pub use crate::pallet::*;
 
+/// The balance type of this pallet.
 pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 const MAX_ASSUMED_VEC_LEN: u32 = 10;
 
+/// Metadata for a core entity in the system.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct CoreMetadata<Name, Description, Image> {
     pub name: Name,
@@ -27,12 +45,14 @@ pub struct CoreMetadata<Name, Description, Image> {
     pub image: Image,
 }
 
+/// Information about a core entity, including its account ID and metadata.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct CoreInfo<AccountId, Metadata> {
     pub account: AccountId,
     pub metadata: Metadata,
 }
 
+/// Information about rewards, including the balance for stakers and the core.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct RewardInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
@@ -41,6 +61,7 @@ pub struct RewardInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) core: Balance,
 }
 
+/// Information about a specific era, including rewards, staked balance, active stake, and locked balance.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct EraInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) rewards: RewardInfo<Balance>,
@@ -52,6 +73,7 @@ pub struct EraInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) locked: Balance,
 }
 
+/// Information about a core's stake, including the total balance, number of stakers, and whether a reward has been claimed.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct CoreStakeInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
@@ -62,6 +84,7 @@ pub struct CoreStakeInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) active: bool,
 }
 
+/// Information about the stake for a specific era.
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub(crate) struct EraStake<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> {
     #[codec(compact)]
@@ -70,6 +93,7 @@ pub(crate) struct EraStake<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen>
     pub(crate) era: Era,
 }
 
+/// Information about a staker's stakes across different eras.
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct StakerInfo<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> {
     pub(crate) stakes: Vec<EraStake<Balance>>,
@@ -95,6 +119,7 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
         self.stakes.len() as u32
     }
 
+    /// Stakes the given value in the current era, mutates StakerInfo in-place.
     pub(crate) fn stake(&mut self, current_era: Era, value: Balance) -> Result<(), &str> {
         if let Some(era_stake) = self.stakes.last_mut() {
             if era_stake.era > current_era {
@@ -124,6 +149,7 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
         Ok(())
     }
 
+    /// Unstakes the given value in the current era, mutates StakerInfo in-place.
     pub(crate) fn unstake(&mut self, current_era: Era, value: Balance) -> Result<(), &str> {
         if let Some(era_stake) = self.stakes.last_mut() {
             if era_stake.era > current_era {
@@ -151,6 +177,8 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
         Ok(())
     }
 
+    /// Claims the stake for the current era, mutates StakerInfo in-place.  
+    /// Returns the era and the staked balance.
     pub(crate) fn claim(&mut self) -> (Era, Balance) {
         if let Some(era_stake) = self.stakes.first() {
             let era_stake = *era_stake;
@@ -174,11 +202,13 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
         }
     }
 
+    /// Returns the latest staked balance.
     pub(crate) fn latest_staked_value(&self) -> Balance {
         self.stakes.last().map_or(Zero::zero(), |x| x.staked)
     }
 }
 
+/// A chunk of balance that is unlocked until a specific era.
 #[derive(
     Clone, PartialEq, Eq, Copy, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen,
 )]
@@ -193,11 +223,13 @@ impl<Balance> UnlockingChunk<Balance>
 where
     Balance: Add<Output = Balance> + Copy + MaxEncodedLen,
 {
+    /// Adds the given amount to the chunk's amount.
     pub(crate) fn add_amount(&mut self, amount: Balance) {
         self.amount = self.amount + amount
     }
 }
 
+/// Information about unbonding chunks of balance.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 pub(crate) struct UnbondingInfo<Balance: AtLeast32BitUnsigned + Default + Copy + MaxEncodedLen> {
     pub(crate) unlocking_chunks: Vec<UnlockingChunk<Balance>>,
@@ -228,6 +260,7 @@ where
         self.unlocking_chunks.is_empty()
     }
 
+    /// Returns the total amount of the unlocking chunks.
     pub(crate) fn sum(&self) -> Balance {
         self.unlocking_chunks
             .iter()
@@ -236,6 +269,7 @@ where
             .unwrap_or_default()
     }
 
+    /// Adds the given chunk to the unbonding info.
     pub(crate) fn add(&mut self, chunk: UnlockingChunk<Balance>) {
         match self
             .unlocking_chunks
@@ -246,6 +280,7 @@ where
         }
     }
 
+    /// returns the chucks before and after a given era.
     pub(crate) fn partition(self, era: Era) -> (Self, Self) {
         let (matching_chunks, other_chunks): (
             Vec<UnlockingChunk<Balance>>,
@@ -266,6 +301,7 @@ where
     }
 }
 
+/// Information about an account's locked balance and unbonding information.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct AccountLedger<Balance: AtLeast32BitUnsigned + Default + Copy + MaxEncodedLen> {
     #[codec(compact)]

@@ -1,6 +1,5 @@
 //! # OCIF Staking pallet
-//! A pallet for for allowing INV-Cores to be staked towards.
-//!
+//! A pallet for allowing INV-Cores to be staked towards.
 //!
 //! ## Overview
 //!
@@ -22,12 +21,11 @@
 //! Unlike Cores, Stakers get their fraction of the rewards based on their own stake and regardless of
 //! the `active` state of the Core they staked towards.
 //!
-//!
 //! ## Relevant runtime configs
 //!
 //! * `BlocksPerEra` - Defines how many blocks constitute an era.
 //! * `RegisterDeposit` - Defines the deposit amount for a Core to register in the system.
-//! * `MaxStakersPerCore` - Defines the maximum amount of Stakers allowed to stake simultaneously towards the same Core.
+//! * `MaxStakersPerCore` - Defines the maximum amount of Stakers allowed staking simultaneously towards the same Core.
 //! * `MinimumStakingAmount` - Defines the minimum amount a Staker has to stake to participate.
 //! * `UnbondingPeriod` - Defines the period, in blocks, that it takes to unbond a stake.
 //! * `RewardRatio` - Defines the ratio of balance from the pot to distribute to Cores and Stakers, respectively.
@@ -41,7 +39,7 @@
 //! * `unregister_core` - Unregisters a Core from the system, starting the unbonding period for the Stakers.
 //! * `change_core_metadata` - Changes the metadata tied to a Core.
 //! * `stake` - Stakes tokens towards a Core.
-//! * `untake` - Unstakes tokens from a core and starts the unbonding period for those tokens.
+//! * `unstake` - Unstakes tokens from a core and starts the unbonding period for those tokens.
 //! * `withdraw_unstaked` - Withdraws tokens that have already been through the unbonding period.
 //! * `staker_claim_rewards` - Claims rewards available for a Staker.
 //! * `core_claim_rewards` - Claims rewards available for a Core.
@@ -85,7 +83,7 @@ pub mod weights;
 
 pub use weights::WeightInfo;
 
-/// Staking lock dentifier.
+/// Staking lock identifier.
 const LOCK_ID: LockIdentifier = *b"ocif-stk";
 
 pub use pallet::*;
@@ -174,15 +172,16 @@ pub mod pallet {
         type MaxUnlocking: Get<u32>;
 
         /// Number of blocks that need to pass until unstaked value can be withdrawn.
-        /// When set to `0`, it's equal to having no unbonding period.
+        /// When set to `0`, it's equal to have no unbound period.
         #[pallet::constant]
         type UnbondingPeriod: Get<u32>;
 
         /// Max number of unique `EraStake` values that can exist for a `(staker, core)` pairing.
+        ///
         /// When stakers claims rewards, they will either keep the number of `EraStake` values the same or they will reduce them by one.
         /// Stakers cannot add an additional `EraStake` value by calling `bond&stake` or `unbond&unstake` if they've reached the max number of values.
         ///
-        /// This ensures that history doesn't grow indefinitely - if there are too many chunks, stakers should first claim their former rewards
+        /// This ensures that history doesn't grow indefinitely - if there are too  many chunks, stakers should first claim their former rewards
         /// before adding additional `EraStake` values.
         #[pallet::constant]
         type MaxEraStakeValues: Get<u32>;
@@ -195,15 +194,15 @@ pub mod pallet {
         #[pallet::constant]
         type StakeThresholdForActiveCore: Get<BalanceOf<Self>>;
 
-        /// Maximum lenght of a core's name.
+        /// Maximum length of a core's name.
         #[pallet::constant]
         type MaxNameLength: Get<u32>;
 
-        /// Maximum lenght of a core's description.
+        /// Maximum length of a core's description.
         #[pallet::constant]
         type MaxDescriptionLength: Get<u32>;
 
-        /// Maximum lenght of a core's image url.
+        /// Maximum length of a core's image URL.
         #[pallet::constant]
         type MaxImageUrlLength: Get<u32>;
 
@@ -222,7 +221,7 @@ pub mod pallet {
     #[pallet::getter(fn current_era)]
     pub type CurrentEra<T> = StorageValue<_, Era, ValueQuery>;
 
-    /// Accumulator for block rewards during an era. It is reset at every new era
+    /// Accumulator for block rewards during an era. It is reset at every new era.
     #[pallet::storage]
     #[pallet::getter(fn reward_accumulator)]
     pub type RewardAccumulator<T> = StorageValue<_, RewardInfo<BalanceOf<T>>, ValueQuery>;
@@ -268,7 +267,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// Denotes whether pallet is halted(disabled).
+    /// Denotes whether the pallet is halted(disabled).
     #[pallet::storage]
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
@@ -381,7 +380,7 @@ pub mod pallet {
         MaxNameExceeded,
         /// Description exceeds maximum length.
         MaxDescriptionExceeded,
-        /// Image url exceeds maximum length.
+        /// Image URL exceeds maximum length.
         MaxImageExceeded,
         /// Core not registered.
         NotRegistered,
@@ -397,8 +396,8 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             // As long as pallet is disabled, we shouldn't allow any storage modifications.
-            // This means we might prolong an era but it's acceptable.
-            // Runtime upgrade should be timed so we ensure that we complete it before
+            // This means we might prolong an era, but it's acceptable.
+            // Runtime upgrade should be timed, so we ensure that we complete it before
             // a new era is triggered. This code is just a safety net to ensure nothing is broken
             // if we fail to do that.
             if Self::is_halted() {
@@ -445,7 +444,7 @@ pub mod pallet {
         ///
         /// - `name`: Name of the core.
         /// - `description`: Description of the core.
-        /// - `image`: Image url of the core.
+        /// - `image`: Image URL of the core.
         #[pallet::call_index(0)]
         #[pallet::weight(
             <T as Config>::WeightInfo::register_core(
@@ -585,9 +584,11 @@ pub mod pallet {
 
         /// Used to change the metadata of a core.
         ///
+        /// The origin has to be from the multisig of the core.
+        ///
         /// - `name`: Name of the core.
         /// - `description`: Description of the core.
-        /// - `image`: Image url of the core.
+        /// - `image`: Image URL of the core.
         #[pallet::call_index(2)]
         #[pallet::weight(
             <T as Config>::WeightInfo::change_core_metadata(
@@ -772,6 +773,8 @@ pub mod pallet {
         ///
         /// If there are unbonding chunks which will be fully unbonded in future eras,
         /// they will remain and can be withdrawn later.
+        ///
+        /// The dispatch origin for this call must be _Signed_ by the staker's account.
         #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::withdraw_unstaked())]
         pub fn withdraw_unstaked(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
@@ -805,6 +808,14 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Calculate the starker rewards.
+        ///
+        /// If successful, returns reward amount.
+        /// In case reward cannot be claimed or was already claimed, an error is raised.
+        ///
+        /// The dispatch origin for this call must be _Signed_ by the staker's account.
+        ///
+        /// - `core_id`: Id of the core to claim rewards from.
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::staker_claim_rewards())]
         pub fn staker_claim_rewards(
@@ -850,6 +861,13 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Calculate the core reward for the specified era.
+        ///
+        /// If successful, returns reward amount.
+        /// In case reward cannot be claimed or was already claimed, an error is raised.
+        ///
+        /// - `core_id`: Id of the core to claim rewards from.
+        /// - `era`: Era for which rewards are to be claimed.
         #[pallet::call_index(7)]
         #[pallet::weight(<T as Config>::WeightInfo::core_claim_rewards())]
         pub fn core_claim_rewards(
@@ -903,6 +921,11 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Halt or unhalt the pallet.
+        ///
+        /// The dispatch origin for this call must be _Root_.
+        ///
+        /// - `halt`: `true` to halt, `false` to unhalt.
         #[pallet::call_index(8)]
         #[pallet::weight((<T as Config>::WeightInfo::halt_unhalt_pallet(), Pays::No))]
         pub fn halt_unhalt_pallet(origin: OriginFor<T>, halt: bool) -> DispatchResultWithPostInfo {
@@ -919,6 +942,13 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Move stake from one core to another.
+        ///
+        /// The dispatch origin for this call must be _Signed_ by the staker's account.
+        ///
+        /// - `from_core`: Id of the core to move stake from.
+        /// - `amount`: Amount to move.
+        /// - `to_core`: Id of the core to move stake to.
         #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::move_stake())]
         pub fn move_stake(
@@ -977,6 +1007,8 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Internal function responsible for validating a stake and updating in-place
+        /// both the staker's and core staking info.
         fn internal_stake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
             staking_info: &mut CoreStakeInfo<BalanceOf<T>>,
@@ -1011,6 +1043,8 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Internal function responsible for validating an unstake and updating in-place
+        /// both the staker's and core staking info.
         fn internal_unstake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
             core_stake_info: &mut CoreStakeInfo<BalanceOf<T>>,
@@ -1070,7 +1104,7 @@ pub mod pallet {
             }
         }
 
-        /// The block rewards are accumulated on the pallets's account during an era.
+        /// The block rewards are accumulated on the pallet's account during an era.
         /// This function takes a snapshot of the pallet's balance accrued during current era
         /// and stores it for future distribution
         ///
