@@ -119,7 +119,7 @@ pub mod pallet {
     /// The core information type, containing a core's AccountId and CoreMetadataOf.
     pub type CoreInfoOf<T> = CoreInfo<<T as frame_system::Config>::AccountId, CoreMetadataOf<T>>;
 
-    /// Counter for the number of eras that have passed.
+    /// Alias type for the era identifier type.
     pub type Era = u32;
 
     #[pallet::config]
@@ -127,7 +127,7 @@ pub mod pallet {
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
-        /// The staking balance.
+        /// The currency used in staking.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>;
 
@@ -154,7 +154,7 @@ pub mod pallet {
         type MaxStakersPerCore: Get<u32>;
 
         /// Minimum amount user must have staked on a core.
-        /// User can stake less if they already have the minimum staking amount staked on that particular core.
+        /// User can stake less if they already have the minimum staking amount staked.
         #[pallet::constant]
         type MinimumStakingAmount: Get<BalanceOf<Self>>;
 
@@ -171,8 +171,8 @@ pub mod pallet {
         #[pallet::constant]
         type MaxUnlocking: Get<u32>;
 
-        /// Number of blocks that need to pass until unstaked value can be withdrawn.
-        /// When set to `0`, it's equal to have no unbound period.
+        /// Number of eras that need to pass until unstaked value can be withdrawn.
+        /// When set to `0`, it's equal to having no unbonding period.
         #[pallet::constant]
         type UnbondingPeriod: Get<u32>;
 
@@ -181,7 +181,7 @@ pub mod pallet {
         /// When stakers claims rewards, they will either keep the number of `EraStake` values the same or they will reduce them by one.
         /// Stakers cannot add an additional `EraStake` value by calling `bond&stake` or `unbond&unstake` if they've reached the max number of values.
         ///
-        /// This ensures that history doesn't grow indefinitely - if there are too  many chunks, stakers should first claim their former rewards
+        /// This ensures that history doesn't grow indefinitely - if there are too many chunks, stakers should first claim their former rewards
         /// before adding additional `EraStake` values.
         #[pallet::constant]
         type MaxEraStakeValues: Get<u32>;
@@ -190,7 +190,7 @@ pub mod pallet {
         #[pallet::constant]
         type RewardRatio: Get<(u32, u32)>;
 
-        /// Threshold of staked tokens necessary for the core to become active.
+        /// Threshold of staked tokens necessary for a core to become active.
         #[pallet::constant]
         type StakeThresholdForActiveCore: Get<BalanceOf<Self>>;
 
@@ -254,7 +254,7 @@ pub mod pallet {
         CoreStakeInfo<BalanceOf<T>>,
     >;
 
-    /// Info about stakers stakes on particular core.
+    /// Info about staker's stakes on a particular core.
     #[pallet::storage]
     #[pallet::getter(fn staker_info)]
     pub type GeneralStakerInfo<T: Config> = StorageDoubleMap<
@@ -267,7 +267,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// Denotes whether the pallet is halted(disabled).
+    /// Denotes whether the pallet is halted (disabled).
     #[pallet::storage]
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
@@ -275,14 +275,14 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Account has staked funds on a core.
+        /// Account has staked funds to a core.
         Staked {
             staker: T::AccountId,
             core: T::CoreId,
             amount: BalanceOf<T>,
         },
 
-        /// Account has unstaked funds on a core.
+        /// Account has unstaked funds from a core.
         Unstaked {
             staker: T::AccountId,
             core: T::CoreId,
@@ -295,16 +295,16 @@ pub mod pallet {
             amount: BalanceOf<T>,
         },
 
-        /// New core added for staking.
+        /// New core registered for staking.
         CoreRegistered { core: T::CoreId },
 
-        /// Core removed.
+        /// Core unregistered.
         CoreUnregistered { core: T::CoreId },
 
         /// Beginning of a new era.
         NewEra { era: u32 },
 
-        /// Staker claimed staking rewards.
+        /// Staker claimed rewards.
         StakerClaimed {
             staker: T::AccountId,
             core: T::CoreId,
@@ -312,7 +312,7 @@ pub mod pallet {
             amount: BalanceOf<T>,
         },
 
-        /// Core claimed staking rewards.
+        /// Rewards claimed for core.
         CoreClaimed {
             core: T::CoreId,
             destination_account: T::AccountId,
@@ -320,16 +320,17 @@ pub mod pallet {
             amount: BalanceOf<T>,
         },
 
-        /// Halted status changed.
+        /// Halt status changed.
         HaltChanged { is_halted: bool },
 
+/// Core metadata changed.
         MetadataChanged {
             core: T::CoreId,
             old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
             new_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
         },
 
-        /// Staker moved his stake.
+        /// Staker moved an amount of stake to another core.
         StakeMoved {
             staker: T::AccountId,
             from_core: T::CoreId,
@@ -342,7 +343,7 @@ pub mod pallet {
     pub enum Error<T> {
         /// Staking nothing.
         StakingNothing,
-        /// Staker tried to stake less than the minimum staking amount.
+        /// Attempted to stake less than the minimum amount.
         InsufficientBalance,
         /// Maximum number of stakers reached.
         MaxStakersReached,
@@ -388,18 +389,14 @@ pub mod pallet {
         Halted,
         /// No halt change.
         NoHaltChange,
-        /// Staker moved staking to the same core.
+        /// Attempted to move stake to the same core.
         MoveStakeToSameCore,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: BlockNumberFor<T>) -> Weight {
-            // As long as pallet is disabled, we shouldn't allow any storage modifications.
-            // This means we might prolong an era, but it's acceptable.
-            // Runtime upgrade should be timed, so we ensure that we complete it before
-            // a new era is triggered. This code is just a safety net to ensure nothing is broken
-            // if we fail to do that.
+            // If the pallet is halted we don't process a new era.
             if Self::is_halted() {
                 return T::DbWeight::get().reads(1);
             }
@@ -407,7 +404,7 @@ pub mod pallet {
             let previous_era = Self::current_era();
             let next_era_starting_block = Self::next_era_starting_block();
 
-            // Value is compared to 1 since genesis block is ignored
+            // Process a new era if past the start block of next era or if this is the first ever era.
             if now >= next_era_starting_block || previous_era.is_zero() {
                 let blocks_per_era = T::BlocksPerEra::get();
                 let next_era = previous_era + 1;
@@ -436,9 +433,8 @@ pub mod pallet {
         T::AccountId: From<[u8; 32]>,
     {
         /// Used to register core for staking.
-        /// The origin has to be from the multisig of the core.
+        /// The origin has to be the core origin.
         ///
-        /// Depending on the pallet configuration/state it is possible that developer needs to be whitelisted prior to registration.
         ///
         /// As part of this call, `RegisterDeposit` will be reserved from the core account.
         ///
@@ -497,7 +493,7 @@ pub mod pallet {
         /// Unregister existing core for staking, making it ineligible for rewards from current era onwards and
         /// starts the unbonding period for the stakers.
         ///
-        /// The origin has to be from the multisig of the core.
+        /// The origin has to be the core origin.
         ///
         /// Deposit is returned to the core account.
         ///
@@ -584,7 +580,7 @@ pub mod pallet {
 
         /// Used to change the metadata of a core.
         ///
-        /// The origin has to be from the multisig of the core.
+        /// The origin has to be the core origin.
         ///
         /// - `name`: Name of the core.
         /// - `description`: Description of the core.
@@ -710,8 +706,8 @@ pub mod pallet {
         /// User needs to wait for the unbonding period to finish before being able to withdraw
         /// the funds via `withdraw_unstaked` call.
         ///
-        /// In case remaining staked balance on contract is below minimum staking amount,
-        /// entire stake for that contract will be unstaked.
+        /// In case remaining staked balance is below minimum staking amount,
+        /// entire stake will be unstaked.
         ///
         /// - `core_id`: Id of the core to unstake from.
         #[pallet::call_index(4)]
@@ -808,9 +804,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Calculate the starker rewards.
+        /// Claim the staker's rewards.
         ///
-        /// If successful, returns reward amount.
         /// In case reward cannot be claimed or was already claimed, an error is raised.
         ///
         /// The dispatch origin for this call must be _Signed_ by the staker's account.
@@ -861,9 +856,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Calculate the core reward for the specified era.
+        /// Claim core reward for the specified era.
         ///
-        /// If successful, returns reward amount.
         /// In case reward cannot be claimed or was already claimed, an error is raised.
         ///
         /// - `core_id`: Id of the core to claim rewards from.
@@ -1176,7 +1170,7 @@ pub mod pallet {
             free_balance.saturating_sub(ledger.locked)
         }
 
-        /// Returns total value locked by core-staking.
+        /// Returns total value locked by staking.
         ///
         /// Note that this can differ from _total staked value_ since some funds might be undergoing the unbonding period.
         pub fn tvl() -> BalanceOf<T> {

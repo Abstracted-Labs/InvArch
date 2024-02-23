@@ -18,7 +18,7 @@ Stakers are individual accounts that engage in locking tokens in favor of a Core
 - `RegisterDeposit`: Specifies the deposit amount required for Core registration.
 - `MaxStakersPerCore`: Limits the maximum number of Stakers that can simultaneously stake towards a single Core.
 - `MinimumStakingAmount`: Sets the minimum amount required for a Staker to participate in staking.
-- `UnbondingPeriod`: Determines the period, in blocks, required for unbonding staked tokens.
+- `UnbondingPeriod`: Determines the period, in eras, required for unbonding staked tokens.
 - `RewardRatio`: Establishes the distribution ratio of rewards between Cores and Stakers.
 - `StakeThresholdForActiveCore`: Sets the stake threshold required for a Core to become `active`.
 
@@ -26,13 +26,13 @@ Stakers are individual accounts that engage in locking tokens in favor of a Core
 
 - `register_core`: Allows Cores to register themselves in the system.
 - `unregister_core`: Enables Cores to unregister from the system, initiating the unbonding period for Stakers.
-- `change_core_metadata`: Facilitates changes to the metadata associated with a Core.
+- `change_core_metadata`: Changes the metadata associated to a Core.
 - `stake`: Allows Stakers to lock tokens in favor of a Core.
-- `unstake`: Permits Stakers to unlock tokens previously staked on a Core, starting the unbonding period.
-- `withdraw_unstaked`: Enables Stakers to withdraw tokens that have completed the unbonding period.
+- `unstake`: Unstakes tokens previously staked to a Core, starting the unbonding period.
+- `withdraw_unstaked`: Allows Stakers to withdraw tokens that have completed the unbonding period.
 - `staker_claim_rewards`: Allows Stakers to claim available rewards.
-- `core_claim_rewards`: Enables Cores to claim available rewards.
-- `halt_unhalt_pallet`: Grants Root permissions to halt or resume the staking operations within the pallet.
+- `core_claim_rewards`: Allows rewards to be claimed for Cores.
+- `halt_unhalt_pallet`: Allows Root to trigger a halt of the system, eras will stop counting and rewards won't be distributed.
 
 ## Events
 

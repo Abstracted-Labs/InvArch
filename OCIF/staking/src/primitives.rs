@@ -3,7 +3,6 @@
 //! ## Overview
 //!
 //! Primitives provides the foundational types and traits for a staking pallet.  
-//! The staking pallet is likely a part of a blockchain system, given the use of terms like Balance, Era, and Stake.
 //!
 //! ## Types overview:
 //!
@@ -208,7 +207,7 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
     }
 }
 
-/// A chunk of balance that is unlocked until a specific era.
+/// A chunk of balance that is unlocking until a specific era.
 #[derive(
     Clone, PartialEq, Eq, Copy, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen,
 )]
