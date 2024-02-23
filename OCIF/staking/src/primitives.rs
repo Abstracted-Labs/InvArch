@@ -1,3 +1,9 @@
+//! Pallet Primitives.
+//!
+//! ## Overview
+//!
+//! zzzz
+
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use frame_support::traits::Currency;
 use scale_info::TypeInfo;
