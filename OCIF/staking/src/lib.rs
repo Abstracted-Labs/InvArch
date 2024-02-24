@@ -27,7 +27,7 @@
 //! * `RegisterDeposit` - Defines the deposit amount for a Core to register in the system.
 //! * `MaxStakersPerCore` - Defines the maximum amount of Stakers allowed staking simultaneously towards the same Core.
 //! * `MinimumStakingAmount` - Defines the minimum amount a Staker has to stake to participate.
-//! * `UnbondingPeriod` - Defines the period, in blocks, that it takes to unbond a stake.
+//! * `UnbondingPeriod` - Defines the period, in eras, that it takes to unbond a stake.
 //! * `RewardRatio` - Defines the ratio of balance from the pot to distribute to Cores and Stakers, respectively.
 //! * `StakeThresholdForActiveCore` - Defines the threshold of stake a Core needs to surpass to become active.
 //!
@@ -323,7 +323,7 @@ pub mod pallet {
         /// Halt status changed.
         HaltChanged { is_halted: bool },
 
-/// Core metadata changed.
+        /// Core metadata changed.
         MetadataChanged {
             core: T::CoreId,
             old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
@@ -433,6 +433,7 @@ pub mod pallet {
         T::AccountId: From<[u8; 32]>,
     {
         /// Used to register core for staking.
+        ///
         /// The origin has to be the core origin.
         ///
         ///
