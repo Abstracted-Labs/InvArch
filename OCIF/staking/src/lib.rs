@@ -436,7 +436,6 @@ pub mod pallet {
         ///
         /// The origin has to be the core origin.
         ///
-        ///
         /// As part of this call, `RegisterDeposit` will be reserved from the core account.
         ///
         /// - `name`: Name of the core.
