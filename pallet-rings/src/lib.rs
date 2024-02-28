@@ -1,3 +1,22 @@
+//! # Rings Pallet
+//!
+//! - [`Config`]
+//! - [`Call`]
+//! - [`Pallet`]
+//!
+//! ## Overview
+//! This pallet provides a XCM abstraction layer for INV-Cores, allowing them to manage assets easily across multiple chains.
+//!
+//! The module [`traits`] contains traits that provide an abstraction on top of XCM [`MultiLocation`] and has to be correctly implemented in the runtime.
+//!
+//! ## Dispatchable Functions
+//!
+//! - `set_maintenance_status` - Sets the maintenance status of a chain, requires the origin to be authorized as a `MaintenanceOrigin`.
+//! - `send_call` - Allows a core to send a XCM call to a destination chain.
+//! - `transfer_assets` - Allows a core to transfer fungible assets to an account.
+//! - `bridge_assets` - Allows a core to bridge fungible assets to another chain having either a third party account or
+//! the core account as beneficiary in the destination chain.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::Get;
@@ -33,18 +52,24 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_inv4::Config + pallet_xcm::Config {
+        /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+        /// Higher level type providing an abstraction over a chain's asset and location.
         type Chains: ChainList;
 
+        /// Max length of an XCM call.
         #[pallet::constant]
         type MaxXCMCallLength: Get<u32>;
 
+        /// Origin that can set maintenance status.
         type MaintenanceOrigin: EnsureOrigin<<Self as frame_system::Config>::RuntimeOrigin>;
 
+        /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
+    /// Maps chain's and their maintenance status.
     #[pallet::storage]
     #[pallet::getter(fn is_under_maintenance)]
     pub type ChainsUnderMaintenance<T: Config> =
@@ -52,24 +77,33 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Failed to send XCM.
         SendingFailed,
+        /// Weight exceeds `MaxXCMCallLength`.
         WeightTooHigh,
+        /// Failed to calculate XCM fee.
         FailedToCalculateXcmFee,
+        /// Failed to reanchor asset.
         FailedToReanchorAsset,
+        /// Failed to invert location.
         FailedToInvertLocation,
+        /// Asset is not supported in the destination chain.
         DifferentChains,
+        /// Chain is under maintenance.
         ChainUnderMaintenance,
     }
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A XCM call was sent.
         CallSent {
             sender: <T as pallet_inv4::Config>::CoreId,
             destination: <T as pallet::Config>::Chains,
             call: Vec<u8>,
         },
 
+        /// Assets were transferred.
         AssetsTransferred {
             chain: <<<T as pallet::Config>::Chains as ChainList>::ChainAssets as ChainAssetsList>::Chains,
             asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
@@ -78,6 +112,7 @@ pub mod pallet {
             to: <T as frame_system::Config>::AccountId,
         },
 
+        /// Assets were bridged.
         AssetsBridged {
             origin_chain_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
@@ -85,6 +120,7 @@ pub mod pallet {
             to: <T as frame_system::Config>::AccountId,
         },
 
+        /// A Chain's maintenance status changed.
         ChainMaintenanceStatusChanged {
             chain: <T as Config>::Chains,
             under_maintenance: bool,
@@ -102,6 +138,12 @@ pub mod pallet {
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
         T::AccountId: From<[u8; 32]>,
     {
+        /// Set the maintenance status of a chain.
+        ///
+        /// The origin has to be `MaintenanceOrigin`.
+        ///
+        /// - `chain`: referred chain.
+        /// - `under_maintenance`: maintenance status.
         #[pallet::call_index(0)]
         #[pallet::weight((<T as Config>::WeightInfo::set_maintenance_status(), Pays::No))]
         pub fn set_maintenance_status(
@@ -121,6 +163,15 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Send a XCM call to a destination chain.
+        ///
+        /// The origin has to be the core origin.
+        ///
+        /// - `destination`: destination chain.
+        /// - `weight`: weight of the call.
+        /// - `fee_asset`: asset used to pay the fee.
+        /// - `fee`: fee amount.
+        /// - `call`: XCM call.
         #[pallet::call_index(1)]
         #[pallet::weight(
             <T as Config>::WeightInfo::send_call(call.len() as u32)
@@ -193,6 +244,17 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Transfer fungible assets to an account.
+        ///
+        /// Both asset and fee_asset have to be in the same chain.
+        ///
+        /// The origin has to be the core origin.
+        ///
+        /// - `asset`: asset to transfer.
+        /// - `amount`: amount to transfer.
+        /// - `to`: account receiving the asset.
+        /// - `fee_asset`: asset used to pay the fee.
+        /// - `fee`: fee amount.
         #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::transfer_assets())]
         pub fn transfer_assets(
@@ -283,6 +345,15 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Bridge fungible assets to another chain.
+        ///
+        /// The origin has to be the core origin.
+        ///
+        /// - `asset`: asset to bridge.
+        /// - `destination`: destination chain.
+        /// - `fee`: fee amount.
+        /// - `amount`: amount to bridge.
+        /// - `to`: account receiving the asset, None defaults to core account.
         #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::bridge_assets())]
         pub fn bridge_assets(
@@ -369,9 +440,11 @@ pub mod pallet {
                 None => core_multilocation,
             };
 
+            // If the asset is in the destination chain, we need to handle fees differently.
             let message = if asset_location.starts_with(&dest) {
                 Xcm(vec![
                     WithdrawAsset(vec![fee_multiasset.clone(), multiasset.clone()].into()),
+                    // Core pays for the execution fee incurred on sending the XCM.
                     Instruction::BuyExecution {
                         fees: fee_multiasset,
                         weight_limit: WeightLimit::Unlimited,
@@ -380,6 +453,7 @@ pub mod pallet {
                         assets: multiasset.into(),
                         reserve: inverted_destination,
                         xcm: Xcm(vec![
+                            // the beneficiary buys execution fee in the destination chain for the deposit.
                             Instruction::BuyExecution {
                                 fees: reanchored_multiasset,
                                 weight_limit: WeightLimit::Unlimited,
@@ -389,6 +463,7 @@ pub mod pallet {
                                 beneficiary,
                             },
                             Instruction::RefundSurplus,
+                            // Refunds the beneficiary the surplus of the execution fees in the destination chain.
                             Instruction::DepositAsset {
                                 assets: All.into(),
                                 beneficiary,
@@ -396,6 +471,7 @@ pub mod pallet {
                         ]),
                     },
                     Instruction::RefundSurplus,
+                    // Refunds the core the surplus of the execution fees incurred on sending the XCM.
                     Instruction::DepositAsset {
                         assets: All.into(),
                         beneficiary: core_multilocation,
