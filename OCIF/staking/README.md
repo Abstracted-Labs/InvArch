@@ -1,55 +1,47 @@
-# pallet-ocif-staking
+# OCIF Staking Pallet
 
-## OCIF Staking pallet
-A pallet for for allowing INV-Cores to be staked towards.
+## Overview
 
+The OCIF Staking Pallet is a pallet designed to facilitate staking towards INV-Cores within a blockchain network. This pallet introduces a staking mechanism that allows two distinct sets of entities, namely Cores and Stakers, to participate in the distribution of tokens from a predefined pot. The allocation of rewards is determined based on the amount staked by each entity and the total stake towards each Core.
 
-### Overview
+### Cores
 
-This pallet provides functionality to allow 2 sets of entities to participate in distribution of tokens
-available in a predefined pot account.
-The tokens provided to the pot account are to be handled by the Runtime,
-either directly or with the assistance of another pallet.
+Cores represent virtual accounts identified by unique IDs, which are responsible for registering themselves within the staking ecosystem. The primary role of Cores is to attract Stakers to lock tokens in their favor. The rewards allocated to Cores are proportional to the total amount staked towards them by Stakers. However, for a Core to be eligible for rewards, it must have a total stake above a predefined threshold, thereby becoming `active`.
 
-The 2 entity sets will be referred to in code as Cores and Stakers:
+### Stakers
 
-#### Cores
-Cores are virtual accounts that have an ID used to derive their own account address,
-their task in the process is to register themselves and have Stakers lock tokens in favor of a specifc Core.
-Cores receive their fraction of the pot rewards based on the total amount staked towards them by Stakers,
-however, a Core must have total stake above the defined threshold (making it `active`), otherwise they won't be entitled to rewards.
+Stakers are individual accounts that engage in locking tokens in favor of a Core. Unlike Cores, Stakers receive a fraction of the rewards based on their own stake.
 
-#### Stakers
-Stakers are any account existing on the chain, their task is to lock tokens in favor of a Core.
-Unlike Cores, Stakers get their fraction of the rewards based on their own stake and regardless of
-the `active` state of the Core they staked towards.
+## Runtime Configuration Parameters
 
+- `BlocksPerEra`: Defines the duration of an era in terms of block numbers.
+- `RegisterDeposit`: Specifies the deposit amount required for Core registration.
+- `MaxStakersPerCore`: Limits the maximum number of Stakers that can simultaneously stake towards a single Core.
+- `MinimumStakingAmount`: Sets the minimum amount required for a Staker to participate in staking.
+- `UnbondingPeriod`: Determines the period, in eras, required for unbonding staked tokens.
+- `RewardRatio`: Establishes the distribution ratio of rewards between Cores and Stakers.
+- `StakeThresholdForActiveCore`: Sets the stake threshold required for a Core to become `active`.
 
-### Relevant runtime configs
+## Dispatchable Functions
 
-* `BlocksPerEra` - Defines how many blocks constitute an era.
-* `RegisterDeposit` - Defines the deposit amount for a Core to register in the system.
-* `MaxStakersPerCore` - Defines the maximum amount of Stakers allowed to stake simultaneously towards the same Core.
-* `MinimumStakingAmount` - Defines the minimum amount a Staker has to stake to participate.
-* `UnbondingPeriod` - Defines the period, in blocks, that it takes to unbond a stake.
-* `RewardRatio` - Defines the ratio of balance from the pot to distribute to Cores and Stakers, respectively.
-* `StakeThresholdForActiveCore` - Defines the threshold of stake a Core needs to surpass to become active.
+- `register_core`: Allows Cores to register themselves in the system.
+- `unregister_core`: Enables Cores to unregister from the system, initiating the unbonding period for Stakers.
+- `change_core_metadata`: Changes the metadata associated to a Core.
+- `stake`: Allows Stakers to lock tokens in favor of a Core.
+- `unstake`: Unstakes tokens previously staked to a Core, starting the unbonding period.
+- `withdraw_unstaked`: Allows Stakers to withdraw tokens that have completed the unbonding period.
+- `staker_claim_rewards`: Allows Stakers to claim available rewards.
+- `core_claim_rewards`: Allows rewards to be claimed for Cores.
+- `halt_unhalt_pallet`: Allows Root to trigger a halt of the system, eras will stop counting and rewards won't be distributed.
 
-**Example Runtime implementation can be found in [src/testing/mock.rs](./src/testing/mock.rs)**
+## Events
 
-### Dispatchable Functions
+The pallet emits events such as `Staked`, `Unstaked`, `CoreRegistered`, `CoreUnregistered`, and others to signal various operations and state changes within the staking ecosystem.
 
-* `register_core` - Registers a Core in the system.
-* `unregister_core` - Unregisters a Core from the system, starting the unbonding period for the Stakers.
-* `change_core_metadata` - Changes the metadata tied to a Core.
-* `stake` - Stakes tokens towards a Core.
-* `untake` - Unstakes tokens from a core and starts the unbonding period for those tokens.
-* `withdraw_unstaked` - Withdraws tokens that have already been through the unbonding period.
-* `staker_claim_rewards` - Claims rewards available for a Staker.
-* `core_claim_rewards` - Claims rewards available for a Core.
-* `halt_unhalt_pallet` - Allows Root to trigger a halt of the system, eras will stop counting and rewards won't be distributed.
+## Errors
 
-[`Call`]: ./enum.Call.html
-[`Config`]: ./trait.Config.html
+Errors such as `StakingNothing`, `InsufficientBalance`, `MaxStakersReached`, and others are defined to handle exceptional scenarios encountered during pallet operations.
 
-License: GPLv3
+## Example Runtime Implementation
+
+For an example runtime implementation that integrates this pallet, refer to [src/testing/mock.rs](./src/testing/mock.rs).
