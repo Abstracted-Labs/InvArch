@@ -2,12 +2,12 @@
 
 ## Overview
 
-The Rings pallet provides a cross-consensus message (XCM) abstraction layer for INV-Cores, enabling them to manage assets effortlessly across multiple chains. It abstracts XCM [`MultiLocation`] complexities, facilitating easier handling of cross-chain transactions.
+The Rings pallet provides a cross-consensus message (XCM) abstraction layer for INV4 Cores, enabling them to manage assets effortlessly across multiple chains. It abstracts XCM complexities, facilitating easier handling of cross-chain transactions.
 
 ## Key Features
 
 - **Maintenance Mode**: Chains can be put under maintenance, restricting certain operations to ensure system integrity during upgrades or when issues are detected.
-- **Cross-chain Calls**: Enables sending XCM calls to other chains, allowing for a wide range of cross-consensus interactions.
+- **Cross-chain Calls**: Enables sending XCM calls to other chains, allowing for a wide range of interactions.
 - **Asset Transfers**: Supports transferring fungible assets between accounts across different chains.
 - **Asset Bridging**: Facilitates the bridging of assets between chains, enhancing liquidity and asset interoperability.
 
@@ -35,11 +35,11 @@ Allows sending a XCM call to another chain. Can be initiated by a core.
 - `weight`: The call's weight.
 - `fee_asset`: The asset used for fee payment.
 - `fee`: The fee amount.
-- `call`: The XCM call data.
+- `call`: The call data.
 
 ### `transfer_assets`
 
-Enables cross-chain transfer of fungible assets to an account.  
+Allows transfers of fungible assets to another account in the destination chain.  
 **Requires asset and fee_asset to be located in the same chain**.
 
 - `asset`: The asset to transfer.
@@ -52,23 +52,23 @@ Enables cross-chain transfer of fungible assets to an account.
 
 Allows bridging of assets to another chain, with either the core account or a third-party account as the beneficiary.
 
-- `asset`: The asset to bridge.
+- `asset`: The asset to bridge and it's origin chain.
 - `destination`: The destination chain.
 - `fee`: The bridging fee.
 - `amount`: The amount to bridge.
-- `to`: Optional beneficiary account on the destination chain.
+- `to`: Optional beneficiary account on the destination chain. (Defaults to the core account)
 
 ## Events
 
 - `CallSent`: Emitted when a XCM call is sent to another chain.
-- `AssetsTransferred`: Triggered when assets are transferred to another account on a different chain.
-- `AssetsBridged`: Occurs when assets are bridged to another chain.
+- `AssetsTransferred`: Emitted when assets are transferred to another account on a different chain.
+- `AssetsBridged`: Emitted when assets are bridged to another chain.
 - `ChainMaintenanceStatusChanged`: Indicates a change in a chain's maintenance status.
 
 ## Errors
 
-- `SendingFailed`: Occurs when sending a XCM message fails.
-- `WeightTooHigh`: Triggered when the call's weight exceeds the maximum allowed.
+- `SendingFailed`: Emitted when sending a XCM message fails.
+- `WeightTooHigh`: Emitted when the call's weight exceeds the maximum allowed.
 - `FailedToCalculateXcmFee`: Emitted when calculating the XCM fee fails.
 - `FailedToReanchorAsset`, `FailedToInvertLocation`: Errors related to asset reanchoring or location inversion.
 - `DifferentChains`, `ChainUnderMaintenance`: Indicate issues with the target chain or maintenance status.

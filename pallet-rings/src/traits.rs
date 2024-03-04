@@ -43,7 +43,7 @@ pub trait ChainList: Parameter + MaxEncodedLen {
 pub trait ChainAssetsList: Parameter + MaxEncodedLen {
     type Chains: ChainList;
 
-    /// Returns this asset parent chain.
+    /// Returns the asset's parent chain.
     fn get_chain(&self) -> Self::Chains;
 
     /// Returns the asset's [`MultiLocation`].

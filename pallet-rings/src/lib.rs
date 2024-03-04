@@ -5,7 +5,7 @@
 //! - [`Pallet`]
 //!
 //! ## Overview
-//! This pallet provides a XCM abstraction layer for INV-Cores, allowing them to manage assets easily across multiple chains.
+//! This pallet provides a XCM abstraction layer for INV4 Cores, allowing them to manage assets easily across multiple chains.
 //!
 //! The module [`traits`] contains traits that provide an abstraction on top of XCM [`MultiLocation`] and has to be correctly implemented in the runtime.
 //!
@@ -13,7 +13,7 @@
 //!
 //! - `set_maintenance_status` - Sets the maintenance status of a chain, requires the origin to be authorized as a `MaintenanceOrigin`.
 //! - `send_call` - Allows a core to send a XCM call to a destination chain.
-//! - `transfer_assets` - Allows a core to transfer fungible assets to an account.
+//! - `transfer_assets` - Allows a core to transfer fungible assets to another account in the destination chain.
 //! - `bridge_assets` - Allows a core to bridge fungible assets to another chain having either a third party account or
 //! the core account as beneficiary in the destination chain.
 
@@ -165,7 +165,7 @@ pub mod pallet {
 
         /// Send a XCM call to a destination chain.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be a core.
         ///
         /// - `destination`: destination chain.
         /// - `weight`: weight of the call.
@@ -244,11 +244,11 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Transfer fungible assets to an account.
+        /// Transfer fungible assets to another account in the destination chain.
         ///
         /// Both asset and fee_asset have to be in the same chain.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be a core.
         ///
         /// - `asset`: asset to transfer.
         /// - `amount`: amount to transfer.
@@ -347,9 +347,9 @@ pub mod pallet {
 
         /// Bridge fungible assets to another chain.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be a core.
         ///
-        /// - `asset`: asset to bridge.
+        /// - `asset`: asset to bridge and the chain to bridge from.
         /// - `destination`: destination chain.
         /// - `fee`: fee amount.
         /// - `amount`: amount to bridge.
@@ -440,7 +440,7 @@ pub mod pallet {
                 None => core_multilocation,
             };
 
-            // If the asset is in the destination chain, we need to handle fees differently.
+            // If the asset originates from the destination chain, we need to reverse the reserve-transfer.
             let message = if asset_location.starts_with(&dest) {
                 Xcm(vec![
                     WithdrawAsset(vec![fee_multiasset.clone(), multiasset.clone()].into()),
