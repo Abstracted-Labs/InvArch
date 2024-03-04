@@ -148,7 +148,7 @@ pub mod pallet {
             minted: BalanceOf<T>,
         },
 
-        /// Too many tokens were minted on a previous era.
+        /// Total supply of the token is higher than expected by Checked Inflation.
         OverInflationDetected {
             expected_issuance: BalanceOf<T>,
             current_issuance: BalanceOf<T>,
