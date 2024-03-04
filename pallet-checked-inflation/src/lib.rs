@@ -1,3 +1,22 @@
+//! # Checked Inflation Pallet
+//!
+//! - [`Config`]
+//! - [`Call`]
+//! - [`Pallet`]
+//!
+//! ## Overview
+//! This is a supporting pallet that provides the functionality for inflation. It is used to mint new tokens at the beginning of every era.
+//!
+//! The amount of tokens minted is determined by the inflation method and its amount, and is configurable in the runtime,
+//! see the [`inflation`] module for the methods of inflation available and how their inflation amounts are calculated.
+//!
+//! Most of the logic is implemented in the `on_initialize` hook, which is called at the beginning of every block.
+//!
+//! ## Dispatchable Functions
+//!
+//! - `set_first_year_supply` - For configuring the pallet, sets the token's `YearStartIssuance` to its current total issuance.
+//! - `halt_unhalt_pallet` - To start or stop the inflation process.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::traits::Get;
@@ -34,9 +53,11 @@ pub mod pallet {
     };
     use num_traits::CheckedSub;
 
+    /// The balance type of this pallet.
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+    /// The opaque token type for an imbalance. This is returned by unbalanced operations and must be dealt with.
     type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
@@ -46,23 +67,30 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+        /// The currency (token) used in this pallet.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
             + ReservableCurrency<Self::AccountId>
             + Currency<Self::AccountId>;
 
+        /// Number of blocks per era.
         #[pallet::constant]
         type BlocksPerEra: Get<BlockNumberFor<Self>>;
 
+        /// Number of eras per year.
         #[pallet::constant]
         type ErasPerYear: Get<u32>;
 
+        /// The inflation method and its amount.
         #[pallet::constant]
         type Inflation: Get<InflationMethod<BalanceOf<Self>>>;
 
+        /// The `NegativeImbalanceOf` the currency, i.e. the amount of inflation to be applied.
         type DealWithInflation: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+        /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
@@ -86,29 +114,33 @@ pub mod pallet {
     #[pallet::getter(fn inflation_per_era)]
     pub type YearlyInflationPerEra<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
-    /// Wheter or not the inflation process should be halted.
+    /// Whether the inflation process is halted.
     #[pallet::storage]
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The pallet is already in the state that the user is trying to change it to.
         NoHaltChange,
     }
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T: Config> {
+        /// Beginning of a new year.
         NewYear {
             starting_issuance: BalanceOf<T>,
             next_era_starting_block: BlockNumberFor<T>,
         },
 
+        /// Beginning of a new era.
         NewEra {
             era: u32,
             next_era_starting_block: BlockNumberFor<T>,
         },
 
+        /// Tokens minted due to inflation.
         InflationMinted {
             year_start_issuance: BalanceOf<T>,
             current_issuance: BalanceOf<T>,
@@ -116,14 +148,14 @@ pub mod pallet {
             minted: BalanceOf<T>,
         },
 
+        /// Total supply of the token is higher than expected by Checked Inflation.
         OverInflationDetected {
             expected_issuance: BalanceOf<T>,
             current_issuance: BalanceOf<T>,
         },
 
-        HaltChanged {
-            is_halted: bool,
-        },
+        /// Halt status changed.
+        HaltChanged { is_halted: bool },
     }
 
     #[pallet::hooks]
@@ -257,6 +289,9 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// This call is used for configuring the inflation mechanism and sets the token's `YearStartIssuance` to its current total issuance.
+        ///
+        /// The origin has to have `root` access.
         #[pallet::call_index(0)]
         #[pallet::weight(
             <T as Config>::WeightInfo::set_first_year_supply()
@@ -271,6 +306,11 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Halts or unhalts the inflation process.
+        ///
+        /// The origin has to have `root` access.
+        ///
+        /// - `halt`: `true` to halt the inflation process, `false` to unhalt it.
         #[pallet::call_index(1)]
         #[pallet::weight(
             <T as Config>::WeightInfo::halt_unhalt_pallet()
@@ -291,11 +331,13 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Internal function for minting tokens to the currency due to inflation.
         fn mint(amount: BalanceOf<T>) {
             let inflation = T::Currency::issue(amount);
             <T as Config>::DealWithInflation::on_unbalanced(inflation);
         }
 
+        /// Internal function to set the halt status to storage.
         pub fn internal_halt_unhalt(halt: bool) {
             Halted::<T>::put(halt);
         }
