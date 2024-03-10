@@ -5,9 +5,13 @@ use xcm::latest::{Junction, Junctions, MultiLocation};
 
 pub struct Moonriver;
 
+#[allow(non_camel_case_types)]
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum MoonriverAssets {
     MOVR,
+    xcKSM,
+    xcTNKR,
+    Erc20([u8; 20]),
 }
 
 impl RingsChain for Moonriver {
@@ -19,6 +23,24 @@ impl RingsChain for Moonriver {
             MOVR => MultiLocation {
                 parents: 0,
                 interior: Junctions::X1(Junction::PalletInstance(3)),
+            },
+            xcKSM => MultiLocation {
+                parents: 1,
+                interior: Junctions::Here,
+            },
+            xcTNKR => MultiLocation {
+                parents: 0,
+                interior: Junctions::X2(Junction::Parachain(2125), Junction::GeneralIndex(0)),
+            },
+            Erc20(erc_20) => MultiLocation {
+                parents: 0,
+                interior: Junctions::X2(
+                    Junction::PalletInstance(48),
+                    Junction::AccountKey20 {
+                        network: None,
+                        key: *erc_20,
+                    },
+                ),
             },
         }
     }
