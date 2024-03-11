@@ -18,6 +18,8 @@ mod karura;
 use karura::Karura;
 mod moonriver;
 use moonriver::Moonriver;
+mod kusama;
+use kusama::Kusama;
 
 parameter_types! {
     pub MaxXCMCallLength: u32 = 100_000;
@@ -47,6 +49,7 @@ pub enum Chains {
     Shiden,
     Karura,
     Moonriver,
+    Kusama,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
@@ -57,6 +60,7 @@ pub enum ChainAssets {
     Shiden(<Shiden as RingsChain>::Assets),
     Karura(<Karura as RingsChain>::Assets),
     Moonriver(<Moonriver as RingsChain>::Assets),
+    Kusama(<Kusama as RingsChain>::Assets),
 }
 
 impl ChainAssetsList for ChainAssets {
@@ -70,6 +74,7 @@ impl ChainAssetsList for ChainAssets {
             Self::Shiden(_) => Chains::Shiden,
             Self::Karura(_) => Chains::Karura,
             Self::Moonriver(_) => Chains::Moonriver,
+            Self::Kusama(_) => Chains::Kusama,
         }
     }
 
@@ -81,6 +86,7 @@ impl ChainAssetsList for ChainAssets {
             Self::Shiden(asset) => Shiden::get_asset_location(asset),
             Self::Karura(asset) => Karura::get_asset_location(asset),
             Self::Moonriver(asset) => Moonriver::get_asset_location(asset),
+            Self::Kusama(asset) => Kusama::get_asset_location(asset),
         }
     }
 }
@@ -97,6 +103,7 @@ impl ChainList for Chains {
             Self::Shiden => Shiden::get_location(),
             Self::Karura => Karura::get_location(),
             Self::Moonriver => Moonriver::get_location(),
+            Self::Kusama => Kusama::get_location(),
         }
     }
 
@@ -108,6 +115,7 @@ impl ChainList for Chains {
             Self::Shiden => ChainAssets::Shiden(Shiden::get_main_asset()),
             Self::Karura => ChainAssets::Karura(Karura::get_main_asset()),
             Self::Moonriver => ChainAssets::Moonriver(Moonriver::get_main_asset()),
+            Self::Kusama => ChainAssets::Kusama(Kusama::get_main_asset()),
         }
     }
 
