@@ -25,19 +25,19 @@ impl RingsChain for Karura {
             KAR => MultiLocation {
                 parents: 0,
                 interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
-                    &hex_literal::hex!("0000000000000000000100000000000000000080"),
+                    &hex_literal::hex!("0080"),
                 ))),
             },
             LKSM => MultiLocation {
                 parents: 0,
                 interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
-                    &hex_literal::hex!("0000000000000000000100000000000000000083"),
+                    &hex_literal::hex!("0083"),
                 ))),
             },
             tKSM => MultiLocation {
                 parents: 0,
                 interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
-                    &hex_literal::hex!("0000000000000000000200000000820000000083"),
+                    &hex_literal::hex!("0300000000"),
                 ))),
             },
             KSM => MultiLocation {
