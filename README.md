@@ -4,12 +4,6 @@
 
 <div align="Center">
 <h1>InvArch FRAME Pallet Library</h1>
-<h2> Multichain MPC & DAO Infrastructure </h2>
-
-
-Official Repository for the InvArch FRAME Pallet Library
-💡Built on Substrate
-
 
 
 [![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArchNetwork)
