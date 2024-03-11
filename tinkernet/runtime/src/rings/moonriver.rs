@@ -201,7 +201,7 @@ impl RingsChain for Moonriver {
             xcMGX => MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
-                    Junsction::Parachain(2110),
+                    Junction::Parachain(2110),
                     Junction::from(BoundedSlice::truncate_from(&hex_literal::hex!("00000000"))),
                 ),
             },

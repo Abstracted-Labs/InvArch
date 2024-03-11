@@ -23,7 +23,10 @@ impl RingsChain for AssetHub {
             },
             Local(asset_id) => MultiLocation {
                 parents: 0,
-                interior: Junctions::X2(Junction::PalletKey(50), Junction::GeneralIndex(*asset_id)),
+                interior: Junctions::X2(
+                    Junction::PalletInstance(50),
+                    Junction::GeneralIndex((*asset_id).into()),
+                ),
             },
         }
     }
