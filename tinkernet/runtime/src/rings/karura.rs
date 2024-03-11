@@ -1,7 +1,6 @@
 use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::BoundedSlice;
-use pallet_transaction_payment::Multiplier;
 use scale_info::TypeInfo;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
