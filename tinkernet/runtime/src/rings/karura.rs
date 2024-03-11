@@ -1,6 +1,7 @@
 use super::RingsChain;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::BoundedSlice;
+use pallet_transaction_payment::Multiplier;
 use scale_info::TypeInfo;
 use xcm::latest::{Junction, Junctions, MultiLocation};
 
@@ -13,6 +14,7 @@ pub enum KaruraAssets {
     LKSM,
     tKSM,
     KSM,
+    Local([u8; 20]),
 }
 
 impl RingsChain for Karura {
@@ -42,6 +44,10 @@ impl RingsChain for Karura {
             KSM => MultiLocation {
                 parents: 1,
                 interior: Junctions::Here,
+            },
+            Local(address) => MultiLocation {
+                parents: 0,
+                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(address))),
             },
         }
     }
