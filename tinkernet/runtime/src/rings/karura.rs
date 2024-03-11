@@ -24,21 +24,21 @@ impl RingsChain for Karura {
         match asset {
             KAR => MultiLocation {
                 parents: 0,
-                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(&[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128,
-                ]))),
+                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
+                    &hex_literal::hex!("0000000000000000000100000000000000000080"),
+                ))),
             },
             LKSM => MultiLocation {
                 parents: 0,
-                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(&[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 131,
-                ]))),
+                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
+                    &hex_literal::hex!("0000000000000000000100000000000000000083"),
+                ))),
             },
             tKSM => MultiLocation {
                 parents: 0,
-                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(&[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 130, 0, 0, 0, 0, 131,
-                ]))),
+                interior: Junctions::X1(Junction::from(BoundedSlice::truncate_from(
+                    &hex_literal::hex!("0000000000000000000200000000820000000083"),
+                ))),
             },
             KSM => MultiLocation {
                 parents: 1,
