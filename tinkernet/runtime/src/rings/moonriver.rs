@@ -59,7 +59,7 @@ pub enum MoonriverAssets {
     xcMGX,
     /// Turing Network.
     xcTUR,
-    Erc20([u8; 20]),
+    Local([u8; 20]),
 }
 
 impl RingsChain for Moonriver {
@@ -209,7 +209,7 @@ impl RingsChain for Moonriver {
                 parents: 1,
                 interior: Junctions::X1(Junction::Parachain(2114)),
             },
-            Erc20(address) => MultiLocation {
+            Local(address) => MultiLocation {
                 parents: 0,
                 interior: Junctions::X2(
                     Junction::PalletInstance(48),
