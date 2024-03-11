@@ -14,9 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-09-01
+    - name: Install & display rust toolchain
+      run: rustup show
     - name: Build
       run: cargo build --verbose
       
@@ -24,9 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-09-01
+    - name: Install & display rust toolchain
+      run: rustup show
     - name: Run tests
       run: cargo test --verbose
       
@@ -34,19 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2022-09-01
-          components: clippy
+      - name: Install & display rust toolchain
+        run: rustup show
       - name: Run clippy
         run: cargo clippy -- -D warnings
   fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2022-09-01
-          components: rustfmt
+      - name: Install & display rust toolchain
+        run: rustup show
       - name: Run cargofmt
         run: cargo fmt --all -- --check
