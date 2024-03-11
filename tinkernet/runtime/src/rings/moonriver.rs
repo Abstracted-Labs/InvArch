@@ -29,16 +29,16 @@ impl RingsChain for Moonriver {
                 interior: Junctions::Here,
             },
             xcTNKR => MultiLocation {
-                parents: 0,
+                parents: 1,
                 interior: Junctions::X2(Junction::Parachain(2125), Junction::GeneralIndex(0)),
             },
-            Erc20(erc_20) => MultiLocation {
+            Erc20(address) => MultiLocation {
                 parents: 0,
                 interior: Junctions::X2(
                     Junction::PalletInstance(48),
                     Junction::AccountKey20 {
                         network: None,
-                        key: *erc_20,
+                        key: *address,
                     },
                 ),
             },
