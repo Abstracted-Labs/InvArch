@@ -9,39 +9,39 @@ repository = 'https://github.com/InvArch/InvArch-Frames'
 version = '0.1.0-dev'
 
 [dependencies]
-serde = { version = "1.0.132", optional = true }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-std = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-frame-support = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-frame-system = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-smallvec = "1.6.1"
+serde = { workspace = true, optional = true }
+codec = {workspace = true}
+sp-runtime = {workspace = true}
+sp-arithmetic = {workspace = true}
+sp-std = {workspace = true}
+frame-support = {workspace = true}
+smallvec = {workspace = true}
 
-scale-info = { version = "2.0.0", features = ["derive"], default-features = false }
+scale-info = {workspace = true}
 
-log = { version = "0.4.14", default-features = false }
+log = {workspace = true}
 
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 
-sp-io = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-core = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
+sp-io = {workspace = true}
+sp-core = {workspace = true}
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', default-features = false , branch = "polkadot-v0.9.43" }
+pallet-balances = {workspace = true}
 
-frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', default-features = false, optional = true , branch = "polkadot-v0.9.43" }
+frame-system = {workspace = true} # frame-benchmarking requires system
+frame-benchmarking = { workspace = true, optional = true }
 
-orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-tokens2 = {workspace = true}
 
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.43" }
+xcm = {workspace = true}
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-traits2 = { package = "orml-traits", git = "https://github.com/arrudagates/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+sp-core = {workspace = true}
+orml-traits = {workspace = true}
+orml-traits2 = {workspace = true}
+orml-tokens = {workspace = true}
+orml-asset-registry = {workspace = true}
 
 [features]
 default = ["std"]
