@@ -101,7 +101,6 @@ pub mod pallet {
     /// Block that the next era starts at.
     #[pallet::storage]
     #[pallet::getter(fn next_era_starting_block)]
-    // zz
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     /// Total token supply at the very beginning of the year before any inflation has been minted.
