@@ -31,51 +31,30 @@ frame_support::construct_runtime!(
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
-    type RuntimeTask = ();
     type RuntimeOrigin = RuntimeOrigin;
     type Nonce = u64;
-    // type BlockNumber = BlockNumber;
     type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    // type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
-    type BlockWeights = ();
-    type BlockLength = ();
-    type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = AccountData<Balance>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type DbWeight = ();
-    type BaseCallFilter = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = ();
-    type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
 }
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
 impl pallet_balances::Config for Test {
     type MaxLocks = ConstU32<50>;
-    /// The type for recording an account's balance.
     type Balance = Balance;
     type RuntimeEvent = RuntimeEvent;
-    type DustRemoval = ();
     type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
     type AccountStore = System;
-    type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
-    type RuntimeFreezeReason = ();
-    type RuntimeHoldReason = ();
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    // type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
