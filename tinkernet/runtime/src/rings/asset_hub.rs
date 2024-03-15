@@ -8,6 +8,7 @@ pub struct AssetHub;
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum AssetHubAssets {
     KSM,
+    Local(u32),
 }
 
 impl RingsChain for AssetHub {
@@ -19,6 +20,13 @@ impl RingsChain for AssetHub {
             KSM => MultiLocation {
                 parents: 1,
                 interior: Junctions::Here,
+            },
+            Local(asset_id) => MultiLocation {
+                parents: 0,
+                interior: Junctions::X2(
+                    Junction::PalletInstance(50),
+                    Junction::GeneralIndex((*asset_id).into()),
+                ),
             },
         }
     }

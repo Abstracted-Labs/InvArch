@@ -8,6 +8,7 @@ pub struct Shiden;
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum ShidenAssets {
     SDN,
+    KSM,
 }
 
 impl RingsChain for Shiden {
@@ -18,6 +19,10 @@ impl RingsChain for Shiden {
         match asset {
             SDN => MultiLocation {
                 parents: 0,
+                interior: Junctions::Here,
+            },
+            KSM => MultiLocation {
+                parents: 1,
                 interior: Junctions::Here,
             },
         }
