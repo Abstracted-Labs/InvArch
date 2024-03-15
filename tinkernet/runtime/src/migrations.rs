@@ -7,7 +7,6 @@ pub mod new_core_account_derivation {
     use super::*;
     use crate::{common_types::CommonId, AccountId, Identity, Runtime, RuntimeOrigin, Vec};
     use frame_support::dispatch::GetDispatchInfo;
-    use pallet_identity::IdentityInfo;
     use pallet_inv4::{
         account_derivation::CoreAccountDerivation, CoreInfoOf, Pallet as INV4Pallet,
     };
@@ -129,88 +128,91 @@ pub mod new_core_account_derivation {
                 >,
             >,
         )>,
-    ) {
+    ) -> Weight {
+        let mut weight: Weight = Default::default();
+
         new_identities
             .into_iter()
             .for_each(|(new_account, maybe_identity)| {
                 if let Some(identity) = maybe_identity {
                     let _ = Identity::set_identity(
                         RuntimeOrigin::signed(new_account.clone()),
-                        Box::new(identity.info),
+                        Box::new(identity.info.clone()),
+                    );
+
+                    weight.saturating_accrue(
+                        pallet_identity::Call::<Runtime>::set_identity {
+                            info: Box::new(identity.info),
+                        }
+                        .get_dispatch_info()
+                        .weight,
                     );
                 }
-            })
+            });
+
+        return weight;
     }
 
     pub struct MigrateToNewDerivation;
     impl OnRuntimeUpgrade for MigrateToNewDerivation {
-        #[cfg(feature = "try-runtime")]
-        fn pre_upgrade() -> Result<sp_std::prelude::Vec<u8>, sp_runtime::DispatchError> {
-            frame_support::ensure!(
-                INV4::current_storage_version() == 2,
-                "Required v2 before migrating core accounts"
-            );
-
-            Ok(Default::default())
-        }
-
         fn on_runtime_upgrade() -> Weight {
+            let mut weight = <Runtime as frame_system::Config>::DbWeight::get().reads(1);
+
             let spec = crate::System::runtime_version().spec_version;
 
             if spec == 21 {
+                weight
+                    .saturating_accrue(<Runtime as frame_system::Config>::DbWeight::get().reads(1));
                 let old_accounts = get_old_accounts();
                 let old_accounts_len = old_accounts.len() as u64;
 
-                migrate_inv4_storages(old_accounts.clone());
-                migrate_staking_storages(old_accounts.clone());
-                let new_identities = clear_identities(old_accounts.clone());
-                migrate_balances_storages(old_accounts.clone());
-                set_new_identities(new_identities.clone());
+                if let Some((acc, id)) = old_accounts.first() {
+                    let new_acc =
+                <INV4Pallet<Runtime> as CoreAccountDerivation<Runtime>>::derive_core_account(
+                    *id,
+                );
 
-                info!("applied successfully");
+                    if *acc != new_acc {
+                        weight.saturating_accrue(
+                            <Runtime as frame_system::Config>::DbWeight::get().reads_writes(2, 2)
+                                * old_accounts_len,
+                        );
+                        migrate_inv4_storages(old_accounts.clone());
 
-                let clear_identities_weight = <Runtime as frame_system::Config>::DbWeight::get()
-                    .reads(old_accounts_len)
-                    + (pallet_identity::Call::<Runtime>::clear_identity {}
-                        .get_dispatch_info()
-                        .weight
-                        * old_accounts_len);
+                        weight.saturating_accrue(
+                            <Runtime as frame_system::Config>::DbWeight::get().reads_writes(3, 2)
+                                * old_accounts_len,
+                        );
+                        migrate_staking_storages(old_accounts.clone());
 
-                let set_new_identities_weight = pallet_identity::Call::<Runtime>::set_identity {
-                    info: Box::new(IdentityInfo {
-                        additional: Default::default(),
-                        display: Default::default(),
-                        legal: Default::default(),
-                        riot: Default::default(),
-                        web: Default::default(),
-                        twitter: Default::default(),
-                        email: Default::default(),
-                        pgp_fingerprint: Default::default(),
-                        image: Default::default(),
-                    }),
+                        let clear_identities_weight =
+                            <Runtime as frame_system::Config>::DbWeight::get()
+                                .reads(old_accounts_len)
+                                + (pallet_identity::Call::<Runtime>::clear_identity {}
+                                    .get_dispatch_info()
+                                    .weight
+                                    * old_accounts_len);
+                        weight.saturating_accrue(clear_identities_weight);
+                        let new_identities = clear_identities(old_accounts.clone());
+
+                        weight.saturating_accrue(
+                            <Runtime as frame_system::Config>::DbWeight::get().reads_writes(6, 6)
+                                * old_accounts_len,
+                        );
+                        migrate_balances_storages(old_accounts.clone());
+
+                        let set_identities_weight = set_new_identities(new_identities.clone());
+
+                        weight.saturating_accrue(set_identities_weight);
+
+                        info!("applied successfully");
+                    }
                 }
-                .get_dispatch_info()
-                .weight
-                    * (new_identities.clone().len() as u64);
-
-                clear_identities_weight
-                    + set_new_identities_weight
-                    + <Runtime as frame_system::Config>::DbWeight::get().reads(2)
-                    + <Runtime as frame_system::Config>::DbWeight::get()
-                        .reads_writes(old_accounts_len, old_accounts_len * 2)
-                    + <Runtime as frame_system::Config>::DbWeight::get()
-                        .reads_writes(old_accounts_len, old_accounts_len * 2)
-                    + <Runtime as frame_system::Config>::DbWeight::get()
-                        .writes(old_accounts_len * 6)
             } else {
                 warn!("Skipping, should be removed");
-                <Runtime as frame_system::Config>::DbWeight::get().reads(1)
             }
-        }
 
-        #[cfg(feature = "try-runtime")]
-        fn post_upgrade(_state: sp_std::vec::Vec<u8>) -> Result<(), sp_runtime::DispatchError> {
-            Ok(())
+            return weight;
         }
     }
 }
