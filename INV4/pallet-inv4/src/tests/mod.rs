@@ -1304,7 +1304,7 @@ fn vote_multisig_stack_overflow() {
         }
         .into();
 
-        for _ in 0..300 {
+        for _ in 0..(sp_api::MAX_EXTRINSIC_DEPTH / 4) + 1 {
             nested_call = pallet::Call::operate_multisig {
                 core_id: 0u32,
                 metadata: None,
@@ -1362,7 +1362,7 @@ fn vote_multisig_stack_overflow() {
                 RawOrigin::Signed(BOB).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&nested_call),
-                false
+                true
             ),
             Error::<Test>::FailedDecodingCall
         );
