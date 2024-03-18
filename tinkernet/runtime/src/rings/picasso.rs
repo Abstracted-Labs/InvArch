@@ -13,6 +13,7 @@ pub enum PicassoAssets {
     USDT,
     kUSD,
     KSM,
+    TNKR,
 }
 
 impl RingsChain for Picasso {
@@ -49,6 +50,11 @@ impl RingsChain for Picasso {
             KSM => MultiLocation {
                 parents: 1,
                 interior: Junctions::Here,
+            },
+
+            TNKR => MultiLocation {
+                parents: 1,
+                interior: Junctions::X2(Junction::Parachain(2125), Junction::GeneralIndex(0)),
             },
         }
     }
