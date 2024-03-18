@@ -17,6 +17,7 @@ use crate::{
     origin::{ensure_multisig, INV4Origin},
     voting::{Tally, Vote},
 };
+use codec::DecodeLimit;
 use core::{
     convert::{TryFrom, TryInto},
     iter::Sum,
@@ -239,12 +240,15 @@ where
             let support = old_data.tally.support(core_id);
             let approval = old_data.tally.approval(core_id);
 
-            // Decode the call
-            let decoded_call = <T as Config>::RuntimeCall::decode(&mut &old_data.actual_call[..])
-                .map_err(|_| Error::<T>::FailedDecodingCall)?;
-
             // Check if the multisig proposal passes the thresholds with the added vote
             if (support >= minimum_support) && (approval >= required_approval) {
+                // Decode the call
+                let decoded_call = <T as Config>::RuntimeCall::decode_all_with_depth_limit(
+                    sp_api::MAX_EXTRINSIC_DEPTH / 4,
+                    &mut &old_data.actual_call[..],
+                )
+                .map_err(|_| Error::<T>::FailedDecodingCall)?;
+
                 // If the proposal thresholds are met, remove proposal from storage
                 *data = None;
 

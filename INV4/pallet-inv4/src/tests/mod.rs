@@ -1274,3 +1274,97 @@ fn core_address_matches() {
 
     assert_eq!(core_account_bytes, ACCOUNT_IN_ASSET_HUB);
 }
+
+// SRLabs tests.
+#[test]
+fn vote_multisig_stack_overflow() {
+    ExtBuilder::default().build().execute_with(|| {
+        INV4::create_core(
+            RawOrigin::Signed(ALICE).into(),
+            vec![].try_into().unwrap(),
+            Perbill::from_percent(100),
+            Perbill::from_percent(100),
+            FeeAsset::Native,
+        )
+        .unwrap();
+
+        System::set_block_number(1);
+
+        let call1: RuntimeCall = pallet::Call::token_mint {
+            amount: CoreSeedBalance::get(),
+            target: BOB,
+        }
+        .into();
+
+        let mut nested_call: RuntimeCall = pallet::Call::operate_multisig {
+            core_id: 0u32,
+            metadata: None,
+            fee_asset: FeeAsset::Native,
+            call: Box::new(call1.clone()),
+        }
+        .into();
+
+        for _ in 0..(sp_api::MAX_EXTRINSIC_DEPTH / 4) + 1 {
+            nested_call = pallet::Call::operate_multisig {
+                core_id: 0u32,
+                metadata: None,
+                fee_asset: FeeAsset::Native,
+                call: Box::new(nested_call.clone()),
+            }
+            .into();
+        }
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::Native,
+            Box::new(call1.clone()),
+        )
+        .unwrap();
+
+        System::set_block_number(2);
+
+        INV4::operate_multisig(
+            RawOrigin::Signed(ALICE).into(),
+            0u32,
+            None,
+            FeeAsset::Native,
+            Box::new(nested_call.clone()),
+        )
+        .unwrap();
+
+        assert_eq!(
+            INV4::multisig(
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&nested_call)
+            ),
+            Some(MultisigOperation {
+                actual_call: BoundedCallBytes::<Test>::try_from(nested_call.clone().encode())
+                    .unwrap(),
+                fee_asset: FeeAsset::Native,
+                original_caller: ALICE,
+                metadata: None,
+                tally: Tally::from_parts(
+                    CoreSeedBalance::get(),
+                    Zero::zero(),
+                    BoundedBTreeMap::try_from(BTreeMap::from([(
+                        ALICE,
+                        Vote::Aye(CoreSeedBalance::get())
+                    )]))
+                    .unwrap()
+                ),
+            })
+        );
+
+        assert_err!(
+            INV4::vote_multisig(
+                RawOrigin::Signed(BOB).into(),
+                0u32,
+                <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&nested_call),
+                true
+            ),
+            Error::<Test>::FailedDecodingCall
+        );
+    });
+}
