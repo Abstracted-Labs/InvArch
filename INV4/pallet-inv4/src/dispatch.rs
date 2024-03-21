@@ -11,10 +11,9 @@ use crate::{
     origin::{INV4Origin, MultisigInternalOrigin},
     Config, Error,
 };
-use frame_support::{
-    dispatch::{Dispatchable, GetDispatchInfo},
-    pallet_prelude::*,
-};
+use frame_support::{dispatch::GetDispatchInfo, pallet_prelude::*};
+
+use sp_runtime::traits::Dispatchable;
 
 /// Dispatch a call executing pre/post dispatch for proper fee handling.
 pub fn dispatch_call<T: Config>(

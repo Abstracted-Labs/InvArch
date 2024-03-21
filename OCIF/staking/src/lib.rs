@@ -128,7 +128,7 @@ pub mod pallet {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// The currency used in staking.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
+        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>
             + ReservableCurrency<Self::AccountId>;
 
         // type CoreId: Parameter
@@ -229,7 +229,7 @@ pub mod pallet {
     /// Stores the block number of when the next era starts.
     #[pallet::storage]
     #[pallet::getter(fn next_era_starting_block)]
-    pub type NextEraStartingBlock<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+    pub type NextEraStartingBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
     /// Simple map where CoreId points to the respective core information.
     #[pallet::storage]

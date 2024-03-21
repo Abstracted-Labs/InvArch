@@ -2,7 +2,7 @@ use crate as pallet_ocif_staking;
 use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
 use frame_support::{
-    construct_runtime, parameter_types,
+    construct_runtime, derive_impl, parameter_types,
     traits::{
         fungibles::Credit, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
     },
@@ -14,9 +14,8 @@ use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::TestExternalities;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    AccountId32, Perbill,
+    AccountId32, BuildStorage, Perbill,
 };
 
 pub(crate) type AccountId = AccountId32;
@@ -24,7 +23,6 @@ pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 pub(crate) type EraIndex = u32;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub(crate) const EXISTENTIAL_DEPOSIT: Balance = 2;
@@ -38,17 +36,17 @@ pub(crate) const REGISTER_DEPOSIT: Balance = 10;
 
 construct_runtime!(
     pub struct Test
-    where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+// where
+    //     Block = Block,
+    //     NodeBlock = Block,
+    //     UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system,
         Balances: pallet_balances,
         Timestamp: pallet_timestamp,
         OcifStaking: pallet_ocif_staking,
-        INV4: pallet_inv4,
         CoreAssets: orml_tokens,
+        INV4: pallet_inv4,
     }
 );
 
@@ -58,19 +56,18 @@ parameter_types! {
         frame_system::limits::BlockWeights::simple_max(Weight::from_parts(1024, 0));
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
-    type BlockWeights = ();
-    type BlockLength = ();
+    type RuntimeTask = RuntimeTask;
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
+    type Nonce = u64;
     type RuntimeCall = RuntimeCall;
-    type BlockNumber = BlockNumber;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type DbWeight = ();
@@ -90,6 +87,7 @@ parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
 }
 
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type MaxReserves = ();
@@ -100,10 +98,8 @@ impl pallet_balances::Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
-    type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
+    type FreezeIdentifier = [u8; 8];
     type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -292,8 +288,8 @@ pub const N: CoreId = 13;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
-        let storage = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+        let storage = frame_system::GenesisConfig::<Test>::default()
+            .build_storage()
             .unwrap();
 
         let mut ext = TestExternalities::from(storage);
