@@ -27,6 +27,7 @@ log = { workspace = true, default-features = false }
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 
 sp-io = { workspace = true, default-features = false }
+sp-api = { workspace = true, default-features = false }
 sp-core = { workspace = true, default-features = false }
 
 pallet-balances = { workspace = true, default-features = false }
