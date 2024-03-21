@@ -11,14 +11,14 @@ repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipt'
 
 [dependencies]
 serde = { workspace = true, optional = true }
-codec = {workspace = true}
-scale-info = {workspace = true}
+codec = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false }
 
-frame-system = {workspace = true}
-sp-core = {workspace = true}
-sp-runtime = {workspace = true}
-sp-std = {workspace = true}
-sp-io = {workspace = true}
+frame-system = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+sp-io = { workspace = true, default-features = false }
 
 
 [features]
@@ -30,5 +30,6 @@ std = [
     "frame-system/std",
     "sp-std/std",
     "scale-info/std",
-    "sp-io/std"
+    "sp-io/std",
+    "sp-runtime/std",
 ]
