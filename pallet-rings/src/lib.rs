@@ -227,7 +227,7 @@ pub mod pallet {
                 },
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
-                    assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                    assets: MultiAssetFilter::Wild(WildMultiAsset::AllCounted(1)),
                     beneficiary,
                 },
             ]);
@@ -326,7 +326,7 @@ pub mod pallet {
                 // Refund unused fees
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
-                    assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                    assets: MultiAssetFilter::Wild(WildMultiAsset::AllCounted(1)),
                     beneficiary: core_multilocation,
                 },
             ]);
@@ -459,13 +459,13 @@ pub mod pallet {
                                 weight_limit: WeightLimit::Unlimited,
                             },
                             Instruction::DepositAsset {
-                                assets: All.into(),
+                                assets: AllCounted(1).into(),
                                 beneficiary,
                             },
                             Instruction::RefundSurplus,
                             // Refunds the beneficiary the surplus of the execution fees in the destination chain.
                             Instruction::DepositAsset {
-                                assets: All.into(),
+                                assets: AllCounted(1).into(),
                                 beneficiary,
                             },
                         ]),
@@ -473,7 +473,7 @@ pub mod pallet {
                     Instruction::RefundSurplus,
                     // Refunds the core the surplus of the execution fees incurred on sending the XCM.
                     Instruction::DepositAsset {
-                        assets: All.into(),
+                        assets: AllCounted(1).into(),
                         beneficiary: core_multilocation,
                     },
                 ])
@@ -495,7 +495,7 @@ pub mod pallet {
                                 weight_limit: WeightLimit::Unlimited,
                             },
                             Instruction::DepositAsset {
-                                assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                                assets: MultiAssetFilter::Wild(WildMultiAsset::AllCounted(1)),
                                 beneficiary,
                             },
                         ]),
@@ -503,7 +503,7 @@ pub mod pallet {
                     // Refund unused fees
                     Instruction::RefundSurplus,
                     Instruction::DepositAsset {
-                        assets: MultiAssetFilter::Wild(WildMultiAsset::All),
+                        assets: MultiAssetFilter::Wild(WildMultiAsset::AllCounted(1)),
                         beneficiary: core_multilocation,
                     },
                 ])

@@ -61,6 +61,7 @@ pub mod pallet {
     };
 
     use super::*;
+    use codec::FullCodec;
     use frame_support::{
         dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
         pallet_prelude::*,
@@ -119,7 +120,7 @@ pub mod pallet {
             > + GetDispatchInfo
             + From<frame_system::Call<Self>>
             + GetCallMetadata
-            + Encode;
+            + FullCodec;
 
         /// The maximum numbers of caller accounts on a single multisig proposal
         #[pallet::constant]
