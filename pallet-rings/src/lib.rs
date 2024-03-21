@@ -117,7 +117,7 @@ pub mod pallet {
             origin_chain_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
             from: <T as pallet_inv4::Config>::CoreId,
-            to: <T as frame_system::Config>::AccountId,
+            to: Option<<T as frame_system::Config>::AccountId>,
         },
 
         /// A Chain's maintenance status changed.
@@ -201,13 +201,15 @@ pub mod pallet {
 
             let fee_asset_location = fee_asset.get_asset_location();
 
-            let beneficiary: MultiLocation = MultiLocation {
+            let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
+
+            mutate_if_relay(&mut core_multilocation, &dest);
 
             let fee_multiasset = MultiAsset {
                 id: AssetId::Concrete(fee_asset_location),
@@ -228,7 +230,7 @@ pub mod pallet {
                 Instruction::RefundSurplus,
                 Instruction::DepositAsset {
                     assets: MultiAssetFilter::Wild(WildMultiAsset::AllCounted(1)),
-                    beneficiary,
+                    beneficiary: core_multilocation,
                 },
             ]);
 
@@ -298,13 +300,15 @@ pub mod pallet {
                 }),
             };
 
-            let core_multilocation: MultiLocation = MultiLocation {
+            let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
+
+            mutate_if_relay(&mut core_multilocation, &dest);
 
             let fee_multiasset = MultiAsset {
                 id: AssetId::Concrete(fee_asset.get_asset_location()),
@@ -367,7 +371,6 @@ pub mod pallet {
             let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
 
             let core_id = core.id.into();
-            let core_account = core.to_account_id();
 
             let from_chain = asset.get_chain();
             let from_chain_location = from_chain.get_location();
@@ -421,7 +424,7 @@ pub mod pallet {
                 })
                 .map_err(|_| Error::<T>::FailedToReanchorAsset)?;
 
-            let core_multilocation: MultiLocation = MultiLocation {
+            let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
                     Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
@@ -437,8 +440,16 @@ pub mod pallet {
                         id: to_inner.into(),
                     }),
                 },
-                None => core_multilocation,
+                None => {
+                    let mut dest_core_multilocation = core_multilocation.clone();
+
+                    mutate_if_relay(&mut dest_core_multilocation, &dest);
+
+                    dest_core_multilocation
+                }
             };
+
+            mutate_if_relay(&mut core_multilocation, &dest);
 
             // If the asset originates from the destination chain, we need to reverse the reserve-transfer.
             let message = if asset_location.starts_with(&dest) {
@@ -516,10 +527,16 @@ pub mod pallet {
                 origin_chain_asset: asset,
                 from: core.id,
                 amount,
-                to: to.unwrap_or(core_account),
+                to,
             });
 
             Ok(())
+        }
+    }
+
+    pub fn mutate_if_relay(origin: &mut MultiLocation, dest: &MultiLocation) {
+        if dest.contains_parents_only(1) {
+            origin.dec_parent();
         }
     }
 }
