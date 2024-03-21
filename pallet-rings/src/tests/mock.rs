@@ -476,6 +476,7 @@ impl pallet::Config for Test {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum Chains {
+    Relay,
     ChainA,
     ChainB,
 }
@@ -488,6 +489,7 @@ pub enum Assets {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, Debug, TypeInfo)]
 pub enum ChainAssets {
+    Relay(Assets),
     ChainA(Assets),
     ChainB(Assets),
 }
@@ -499,6 +501,7 @@ impl ChainAssetsList for ChainAssets {
         match self {
             Self::ChainA(_) => Chains::ChainA,
             Self::ChainB(_) => Chains::ChainB,
+            Self::Relay(_) => Chains::Relay,
         }
     }
 
@@ -507,6 +510,7 @@ impl ChainAssetsList for ChainAssets {
             match self {
                 Self::ChainA(asset) => asset,
                 Self::ChainB(asset) => asset,
+                Self::Relay(asset) => asset,
             }
         } {
             Assets::AssetA => MultiLocation {
@@ -536,6 +540,10 @@ impl ChainList for Chains {
                 parents: 1,
                 interior: Junctions::X1(Junction::Parachain(2345)),
             },
+            Self::Relay => MultiLocation {
+                parents: 1,
+                interior: Junctions::Here,
+            },
         }
     }
 
@@ -543,6 +551,7 @@ impl ChainList for Chains {
         match self {
             Self::ChainA => ChainAssets::ChainA(Assets::AssetA),
             Self::ChainB => ChainAssets::ChainB(Assets::AssetB),
+            Self::Relay => ChainAssets::Relay(Assets::AssetA),
         }
     }
 }
