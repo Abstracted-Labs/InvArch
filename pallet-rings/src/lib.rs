@@ -441,7 +441,7 @@ pub mod pallet {
                     }),
                 },
                 None => {
-                    let mut dest_core_multilocation = core_multilocation.clone();
+                    let mut dest_core_multilocation = core_multilocation;
 
                     mutate_if_relay(&mut dest_core_multilocation, &dest);
 
