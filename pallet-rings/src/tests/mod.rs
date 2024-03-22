@@ -6,7 +6,7 @@ use frame_system::RawOrigin;
 use mock::*;
 use pallet_inv4::{origin::MultisigInternalOrigin, Origin};
 use sp_std::vec;
-use xcm::latest::Weight;
+use xcm::latest::{BodyId, BodyPart, Junction, Junctions, MultiLocation, Weight};
 
 #[test]
 fn set_maintenance_status() {
@@ -238,4 +238,53 @@ fn bridge_assets_fails() {
             Error::<Test>::ChainUnderMaintenance
         );
     })
+}
+
+#[test]
+fn mutate_location_if_dest_is_relay() {
+    let relay_dest = Chains::Relay.get_location();
+    let para_dest = Chains::ChainA.get_location();
+
+    let mut core_multilocation = MultiLocation {
+        parents: 1,
+        interior: Junctions::X2(
+            Junction::Parachain(2125),
+            Junction::Plurality {
+                id: BodyId::Index(0),
+                part: BodyPart::Voice,
+            },
+        ),
+    };
+
+    crate::pallet::mutate_if_relay(&mut core_multilocation, &para_dest);
+
+    assert_eq!(
+        core_multilocation,
+        MultiLocation {
+            parents: 1,
+            interior: Junctions::X2(
+                Junction::Parachain(2125),
+                Junction::Plurality {
+                    id: BodyId::Index(0),
+                    part: BodyPart::Voice,
+                }
+            )
+        }
+    );
+
+    crate::pallet::mutate_if_relay(&mut core_multilocation, &relay_dest);
+
+    assert_eq!(
+        core_multilocation,
+        MultiLocation {
+            parents: 0,
+            interior: Junctions::X2(
+                Junction::Parachain(2125),
+                Junction::Plurality {
+                    id: BodyId::Index(0),
+                    part: BodyPart::Voice,
+                }
+            )
+        }
+    );
 }
