@@ -3845,7 +3845,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=b416567669b2598ebe13441166e6ce5693e268b9#b416567669b2598ebe13441166e6ce5693e268b9"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f#07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6020,7 +6020,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=b416567669b2598ebe13441166e6ce5693e268b9#b416567669b2598ebe13441166e6ce5693e268b9"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f#07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6279,7 +6279,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=b416567669b2598ebe13441166e6ce5693e268b9#b416567669b2598ebe13441166e6ce5693e268b9"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f#07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6453,7 +6453,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=b416567669b2598ebe13441166e6ce5693e268b9#b416567669b2598ebe13441166e6ce5693e268b9"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f#07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6602,7 +6602,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=b416567669b2598ebe13441166e6ce5693e268b9#b416567669b2598ebe13441166e6ce5693e268b9"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f#07fc0de337cb9856d165d56d4f9ce42ff4bc5f9f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12335,7 +12335,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-node"
-version = "1.6.0"
+version = "1.6.2"
 dependencies = [
  "async-trait",
  "clap",
@@ -12409,7 +12409,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-runtime"
-version = "1.6.0"
+version = "1.6.2"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
