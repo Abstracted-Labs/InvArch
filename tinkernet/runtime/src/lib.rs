@@ -281,7 +281,6 @@ parameter_types! {
     pub const BlockHashCount: BlockNumber = 1200;
 }
 
-
 pub struct BaseFilter;
 impl Contains<RuntimeCall> for BaseFilter {
     fn contains(_c: &RuntimeCall) -> bool {
