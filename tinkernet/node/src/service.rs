@@ -1,21 +1,17 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
 // Local Runtime Types
-#[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{api, native_version as _native_version, opaque::Block, Hash};
-
-use cumulus_client_cli::CollatorOptions;
+use cumulus_client_cli::{CollatorOptions, RelayChainMode};
 use cumulus_client_consensus_aura::{AuraConsensus, BuildAuraConsensusParams, SlotProportion};
 use cumulus_client_consensus_common::{
     ParachainBlockImport as TParachainBlockImport, ParachainConsensus,
 };
+use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use cumulus_client_service::{
-    prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
+    prepare_node_config, start_collator, start_full_node, CollatorSybilResistance,
+    StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_primitives_parachain_inherent::{
-    MockValidationDataInherentDataProvider, MockXcmConfig,
-};
 use cumulus_relay_chain_interface::{RelayChainInterface, RelayChainResult};
 use jsonrpsee::RpcModule;
 use polkadot_service::CollatorPair;
@@ -31,6 +27,8 @@ use sp_keystore::KeystorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use std::{sync::Arc, time::Duration};
 use substrate_prometheus_endpoint::Registry;
+#[cfg(feature = "tinkernet")]
+use tinkernet_runtime::{api, native_version as _native_version, opaque::Block, Hash};
 
 // Our native executor instance.
 pub struct ParachainNativeExecutor;
@@ -83,7 +81,7 @@ pub fn new_partial<BIQ>(
         ParachainClient,
         ParachainBackend,
         (),
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
+        sc_consensus::DefaultImportQueue<Block>,
         sc_transaction_pool::FullPool<Block, ParachainClient>,
         (
             ParachainBlockImport,
@@ -94,17 +92,15 @@ pub fn new_partial<BIQ>(
     sc_service::Error,
 >
 where
-    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>:
+        sc_client_api::StateBackend<BlakeTwo256>,
     BIQ: FnOnce(
         Arc<ParachainClient>,
         ParachainBlockImport,
         &Configuration,
         Option<TelemetryHandle>,
         &TaskManager,
-    ) -> Result<
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
-        sc_service::Error,
-    >,
+    ) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -178,21 +174,22 @@ async fn build_relay_chain_interface(
     Arc<(dyn RelayChainInterface + 'static)>,
     Option<CollatorPair>,
 )> {
-    if !collator_options.relay_chain_rpc_urls.is_empty() {
-        cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node(
-            polkadot_config,
-            task_manager,
-            collator_options.relay_chain_rpc_urls,
-        )
-        .await
-    } else {
-        cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain(
+    match collator_options.relay_chain_mode {
+        RelayChainMode::ExternalRpc(urls) if !urls.is_empty() => {
+            cumulus_relay_chain_minimal_node::build_minimal_relay_chain_node_with_rpc(
+                polkadot_config,
+                task_manager,
+                urls,
+            )
+            .await
+        }
+        _ => cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain(
             polkadot_config,
             parachain_config,
             telemetry_worker_handle,
             task_manager,
             None,
-        )
+        ),
     }
 }
 
@@ -211,7 +208,8 @@ async fn start_node_impl<RB, BIQ, BIC>(
     build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<ParachainClient>)>
 where
-    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>:
+        sc_client_api::StateBackend<BlakeTwo256>,
     RB: Fn(Arc<ParachainClient>) -> Result<RpcModule<()>, sc_service::Error> + Send + 'static,
     BIQ: FnOnce(
             Arc<ParachainClient>,
@@ -219,10 +217,8 @@ where
             &Configuration,
             Option<TelemetryHandle>,
             &TaskManager,
-        ) -> Result<
-            sc_consensus::DefaultImportQueue<Block, ParachainClient>,
-            sc_service::Error,
-        > + 'static,
+        ) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error>
+        + 'static,
     BIC: FnOnce(
         Arc<ParachainClient>,
         ParachainBlockImport,
@@ -276,6 +272,7 @@ where
             relay_chain_interface: relay_chain_interface.clone(),
             para_id: id,
             net_config,
+            sybil_resistance_level: CollatorSybilResistance::Resistant,
         })
         .await?;
 
@@ -385,7 +382,7 @@ pub fn parachain_build_import_queue(
     config: &Configuration,
     telemetry: Option<TelemetryHandle>,
     task_manager: &TaskManager,
-) -> Result<sc_consensus::DefaultImportQueue<Block, ParachainClient>, sc_service::Error> {
+) -> Result<sc_consensus::DefaultImportQueue<Block>, sc_service::Error> {
     let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
     cumulus_client_consensus_aura::import_queue::<
@@ -464,7 +461,7 @@ pub async fn start_parachain_node(
                     let relay_chain_interface = relay_chain_interface.clone();
                     async move {
                         let parachain_inherent =
-                            cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+                            cumulus_client_parachain_inherent::ParachainInherentDataProvider::create_at(
                                 relay_parent,
                                 &relay_chain_interface,
                                 &validation_data,
@@ -507,7 +504,8 @@ pub async fn start_parachain_node(
 
 pub fn start_solo_dev(config: Configuration) -> Result<TaskManager, sc_service::error::Error>
 where
-    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>:
+        sc_client_api::StateBackend<BlakeTwo256>,
 {
     let sc_service::PartialComponents {
         client,
@@ -532,6 +530,7 @@ where
             block_announce_validator_builder: None,
             warp_sync_params: None,
             net_config,
+            block_relay: None,
         })?;
 
     let prometheus_registry = config.prometheus_registry().cloned();
@@ -599,6 +598,7 @@ where
                         raw_horizontal_messages: vec![],
                         para_blocks_per_relay_epoch: 0,
                         relay_randomness_config: (),
+                        additional_key_values: None,
                     };
 
                     Ok((slot, timestamp, mocked_parachain))
@@ -672,14 +672,15 @@ pub fn new_solo_partial(
         ParachainClient,
         ParachainBackend,
         sc_consensus::LongestChain<ParachainBackend, Block>,
-        sc_consensus::DefaultImportQueue<Block, ParachainClient>,
+        sc_consensus::DefaultImportQueue<Block>,
         sc_transaction_pool::FullPool<Block, ParachainClient>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
     sc_service::Error,
 >
 where
-    sc_client_api::StateBackendFor<ParachainBackend, Block>: sp_api::StateBackend<BlakeTwo256>,
+    sc_client_api::StateBackendFor<ParachainBackend, Block>:
+        sc_client_api::StateBackend<BlakeTwo256>,
 {
     let telemetry = config
         .telemetry_endpoints
@@ -758,6 +759,7 @@ where
                             raw_horizontal_messages: vec![],
                             para_blocks_per_relay_epoch: 0,
                             relay_randomness_config: (),
+                            additional_key_values: None,
                         };
 
                         Ok((slot, timestamp, mocked_parachain))
@@ -806,7 +808,6 @@ mod instant_finalize {
         I: BlockImport<Block> + Send,
     {
         type Error = I::Error;
-        type Transaction = I::Transaction;
 
         async fn check_block(
             &mut self,
@@ -817,7 +818,7 @@ mod instant_finalize {
 
         async fn import_block(
             &mut self,
-            mut block_import_params: sc_consensus::BlockImportParams<Block, Self::Transaction>,
+            mut block_import_params: sc_consensus::BlockImportParams<Block>,
         ) -> Result<sc_consensus::ImportResult, Self::Error> {
             block_import_params.finalized = true;
             self.0.import_block(block_import_params).await

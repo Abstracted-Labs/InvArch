@@ -21,14 +21,14 @@
 
 #[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{
-    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
-    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
-    EXISTENTIAL_DEPOSIT, WASM_BINARY,
+    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, ParachainInfoConfig,
+    PolkadotXcmConfig, RuntimeGenesisConfig, SessionConfig, SessionKeys, Signature, SudoConfig,
+    SystemConfig, EXISTENTIAL_DEPOSIT, WASM_BINARY,
 };
 
 //#[cfg(feature = "brainstorm")]
 //use brainstorm_runtime::{
-//    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
+//    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, RuntimeGenesisConfig, ParachainInfoConfig,
 //    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
 //    EXISTENTIAL_DEPOSIT, WASM_BINARY,
 //};
@@ -47,7 +47,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -159,6 +159,7 @@ pub fn development_config() -> ChainSpec {
             relay_chain: "rococo-local".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
         },
+        Vec::<u8>::new().as_slice(),
     )
 }
 
@@ -220,6 +221,7 @@ pub fn solo_dev_config() -> ChainSpec {
             relay_chain: "dev".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
         },
+        Vec::<u8>::new().as_slice(),
     )
 }
 
@@ -281,6 +283,7 @@ pub fn local_testnet_config() -> ChainSpec {
             relay_chain: "kusama-local".into(), // You MUST set this to the correct network!
             para_id: 1000,
         },
+        Vec::<u8>::new().as_slice(),
     )
 }
 
@@ -290,14 +293,9 @@ fn testnet_genesis(
     invulnerables: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
     id: ParaId,
-) -> GenesisConfig {
-    GenesisConfig {
-        system: SystemConfig {
-            // Add Wasm runtime to storage.
-            code: WASM_BINARY
-                .expect("WASM binary was not build, please build it!")
-                .to_vec(),
-        },
+) -> RuntimeGenesisConfig {
+    RuntimeGenesisConfig {
+        system: Default::default(),
         balances: BalancesConfig {
             // Configure endowed accounts with initial balance of 1 << 60.
             balances: endowed_accounts
@@ -306,7 +304,10 @@ fn testnet_genesis(
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        parachain_info: ParachainInfoConfig { parachain_id: id },
+        parachain_info: ParachainInfoConfig {
+            parachain_id: id,
+            ..Default::default()
+        },
         collator_selection: CollatorSelectionConfig {
             invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
             candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
@@ -331,6 +332,7 @@ fn testnet_genesis(
         parachain_system: Default::default(),
         polkadot_xcm: PolkadotXcmConfig {
             safe_xcm_version: Some(SAFE_XCM_VERSION),
+            ..Default::default()
         },
         sudo: SudoConfig {
             // Assign network admin rights.
@@ -344,5 +346,6 @@ fn testnet_genesis(
         #[cfg(feature = "tinkernet")]
         tokens: Default::default(),
         core_assets: Default::default(),
+        transaction_payment: Default::default(),
     }
 }

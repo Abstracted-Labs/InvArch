@@ -6,7 +6,7 @@
 #![warn(missing_docs)]
 
 #[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
+use tinkernet_runtime::{opaque::Block, AccountId, Balance, Hash, Nonce};
 
 //#[cfg(feature = "brainstorm")]
 //use brainstorm_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
