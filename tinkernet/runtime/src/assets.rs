@@ -2,7 +2,7 @@ use crate::{
     common_types::AssetId, constants::TreasuryAccount, AccountId, Balance, Balances, BlockNumber,
     ExistentialDeposit, MaxLocks, MaxReserves, Runtime, RuntimeEvent, RuntimeOrigin, Tokens,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     parameter_types,
     traits::{Contains, EnsureOrigin, EnsureOriginWithArg},
@@ -19,6 +19,7 @@ pub const KSM_ASSET_ID: AssetId = 1;
 parameter_types! {
     pub const NativeAssetId: AssetId = CORE_ASSET_ID;
     pub const RelayAssetId: AssetId = KSM_ASSET_ID;
+    pub const StringLimit: u32 = 255;
 }
 
 pub struct AssetAuthority;
@@ -29,7 +30,7 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
         origin: RuntimeOrigin,
         _asset_id: &Option<u32>,
     ) -> Result<Self::Success, RuntimeOrigin> {
-        EnsureRoot::try_origin(origin)
+        <EnsureRoot<AccountId> as EnsureOrigin<RuntimeOrigin>>::try_origin(origin)
     }
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -38,7 +39,7 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
     }
 }
 
-#[derive(Debug, TypeInfo, Encode, Decode, PartialEq, Eq, Clone)]
+#[derive(Debug, TypeInfo, Encode, Decode, PartialEq, Eq, Clone, MaxEncodedLen)]
 pub struct CustomAssetMetadata {
     pub fee_per_second: Option<u128>,
 }
@@ -51,6 +52,7 @@ impl orml_asset_registry::Config for Runtime {
     type AssetProcessor = orml_asset_registry::SequentialId<Runtime>;
     type CustomMetadata = CustomAssetMetadata;
     type WeightInfo = ();
+    type StringLimit = StringLimit;
 }
 
 pub struct DustRemovalWhitelist;
