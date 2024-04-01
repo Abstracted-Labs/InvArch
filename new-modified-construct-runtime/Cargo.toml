@@ -17,13 +17,20 @@ proc-macro = true
 [dependencies]
 derive-syn-parse = "0.1.5"
 Inflector = "0.11.4"
-cfg-expr = "0.15.1"
+cfg-expr = "0.15.5"
 itertools = "0.10.3"
 proc-macro2 = "1.0.56"
-quote = "1.0.26"
-syn = { version = "2.0.16", features = ["full"] }
-frame-support-procedural-tools = { version = "4.0.0-dev", path = "./tools" }
-proc-macro-warning = { version = "0.3.0", default-features = false }
+quote = "1.0.28"
+syn = { version = "2.0.48", features = ["full"] }
+frame-support-procedural-tools = { path = "./tools" }
+macro_magic = { version = "0.5.0", features = ["proc_support"] }
+proc-macro-warning = { version = "1.0.0", default-features = false }
+expander = "2.0.0"
+sp-core-hashing = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0" }
+
+[dev-dependencies]
+regex = "1"
+
 
 [features]
 default = ["std"]

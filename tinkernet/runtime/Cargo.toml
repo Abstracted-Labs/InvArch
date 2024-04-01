@@ -15,130 +15,120 @@ targets = ["x86_64-unknown-linux-gnu"]
 substrate-wasm-builder = { workspace = true }
 
 [dependencies]
-codec = { workspace = true , default-features = false, features = ["derive"]}
-hex-literal = { workspace = true  }
-log = { workspace = true , default-features = false }
-scale-info = { workspace = true , default-features = false, features = ["derive"] }
-serde = { workspace = true , optional = true, features = ["derive"] }
+codec = { workspace = true }
+hex-literal = { workspace = true }
+log = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true, optional = true }
 smallvec = { workspace = true }
-getrandom = { workspace = true , default-features = false, features = ["js"] }
+getrandom = { workspace = true }
 
-# InvArch Pallets
-pallet-inv4 = { workspace = true, default-features = false }
-pallet-ocif-staking = { workspace = true, default-features = false }
-pallet-checked-inflation = { workspace = true, default-features = false }
-pallet-rings = { workspace = true, default-features = false }
+## InvArch Pallets
+pallet-inv4 = { workspace = true }
+pallet-ocif-staking = { workspace = true }
+pallet-checked-inflation = { workspace = true }
+pallet-rings = { workspace = true }
 
-#pallet-inv4 = { path = "../../../InvArch-Frames/INV4/pallet-inv4", default-features = false }
-#pallet-ocif-staking = { path = "../../../InvArch-Frames/OCIF/staking", default-features = false }
-#pallet-checked-inflation = { path = "../../../InvArch-Frames/pallet-checked-inflation", default-features = false }
-#pallet-rings = { path = "../../../InvArch-Frames/pallet-rings", default-features = false }
+pallet-maintenance-mode = { workspace = true }
 
-pallet-maintenance-mode = { workspace = true, default-features = false, features = ["xcm-support"] }
-
-modified-construct-runtime = { path = "../../modified-construct-runtime", default-features = false }
+new-modified-construct-runtime = { workspace = true }
 
 ## Parity's Unique
-pallet-uniques = { workspace = true, default-features = false }
-
+pallet-uniques = { workspace = true }
 ## ORML Pallets
-orml-traits = { workspace = true, default-features = false }
-orml-xcm = { workspace = true, default-features = false }
-orml-vesting = { workspace = true, default-features = false }
-orml-asset-registry = { workspace = true, default-features = false }
-orml-xtokens = { workspace = true, default-features = false }
-orml-xcm-support = { workspace = true, default-features = false }
-orml-unknown-tokens = { workspace = true, default-features = false }
-orml-currencies = { workspace = true, default-features = false }
-orml-tokens = { workspace = true, default-features = false }
+orml-traits = { workspace = true }
+orml-xcm = { workspace = true }
+orml-vesting = { workspace = true }
+orml-asset-registry = { workspace = true }
+orml-xtokens = { workspace = true }
+orml-xcm-support = { workspace = true }
+orml-unknown-tokens = { workspace = true }
+orml-currencies = { workspace = true }
+orml-tokens = { workspace = true }
 
-orml-traits2 = { workspace = true, default-features = false }
-orml-tokens2 = { workspace = true, default-features = false }
+orml-traits2 = { workspace = true }
+orml-tokens2 = { workspace = true }
 
 ## Substrate Dependencies
 # Substrate FRAME Dependencies
-frame-benchmarking = { workspace = true, default-features = false, optional = true }
-frame-executive = { workspace = true, default-features = false }
-frame-support = { workspace = true, default-features = false }
-frame-system = { workspace = true, default-features = false }
-frame-system-benchmarking = { workspace = true, default-features = false, optional = true }
-frame-system-rpc-runtime-api = { workspace = true, default-features = false }
-frame-try-runtime = { workspace = true, default-features = false, optional = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-executive = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-system-benchmarking = { workspace = true, optional = true }
+frame-system-rpc-runtime-api = { workspace = true }
+frame-try-runtime = { workspace = true, optional = true }
 
 # Substrate Pallet Dependencies
-pallet-assets = { workspace = true, default-features = false }
-pallet-asset-tx-payment = { workspace = true, default-features = false }
-pallet-aura = { workspace = true, default-features = false }
-pallet-authorship = { workspace = true, default-features = false }
-pallet-balances = { workspace = true, default-features = false }
-pallet-identity = { workspace = true, default-features = false }
-pallet-multisig = { workspace = true, default-features = false }
-pallet-preimage = { workspace = true, default-features = false }
-pallet-scheduler = { workspace = true, default-features = false }
-pallet-session = { workspace = true, default-features = false }
-pallet-sudo = { workspace = true, default-features = false }
-pallet-timestamp = { workspace = true, default-features = false }
-pallet-treasury = { workspace = true, default-features = false }
-pallet-transaction-payment = { workspace = true, default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { workspace = true, default-features = false }
-pallet-utility = { workspace = true, default-features = false }
+pallet-assets = { workspace = true }
+pallet-asset-tx-payment = { workspace = true }
+pallet-aura = { workspace = true }
+pallet-authorship = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-identity = { workspace = true }
+pallet-multisig = { workspace = true }
+pallet-message-queue = { workspace = true }
+pallet-preimage = { workspace = true }
+pallet-scheduler = { workspace = true }
+pallet-session = { workspace = true }
+pallet-sudo = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-treasury = { workspace = true }
+pallet-transaction-payment = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+pallet-utility = { workspace = true }
 
 # Substrate Primitive Dependencies
-sp-api = { workspace = true, default-features = false }
-sp-block-builder = { workspace = true, default-features = false }
-sp-consensus-aura = { workspace = true, default-features = false }
-sp-core = { workspace = true, default-features = false }
-sp-inherents = { workspace = true, default-features = false }
-sp-io = { workspace = true, default-features = false }
-sp-offchain = { workspace = true, default-features = false }
-sp-runtime = { workspace = true, default-features = false }
-sp-session = { workspace = true, default-features = false }
-sp-std = { workspace = true, default-features = false }
-sp-transaction-pool = { workspace = true, default-features = false }
-sp-version = { workspace = true, default-features = false }
+sp-api = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-consensus-aura = { workspace = true }
+sp-core = { workspace = true }
+sp-inherents = { workspace = true }
+sp-io = { workspace = true }
+sp-offchain = { workspace = true }
+sp-runtime = { workspace = true }
+sp-session = { workspace = true }
+sp-std = { workspace = true }
+sp-transaction-pool = { workspace = true }
+sp-version = { workspace = true }
 
 # Polkadot Dependencies
-pallet-xcm = { workspace = true, default-features = false }
-polkadot-parachain = { workspace = true, default-features = false }
-polkadot-runtime-common = { workspace = true, default-features = false }
-xcm = { workspace = true, default-features = false }
-xcm-builder = { workspace = true, default-features = false }
-xcm-executor = { workspace = true, default-features = false }
+pallet-xcm = { workspace = true }
+polkadot-parachain = { workspace = true }
+polkadot-runtime-common = { workspace = true }
+xcm = { workspace = true }
+xcm-builder = { workspace = true }
+xcm-executor = { workspace = true }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { workspace = true, default-features = false }
-cumulus-pallet-dmp-queue = { workspace = true, default-features = false }
-cumulus-pallet-parachain-system = { workspace = true, default-features = false }
-cumulus-pallet-session-benchmarking = { workspace = true, default-features = false }
-cumulus-pallet-xcm = { workspace = true, default-features = false }
-cumulus-pallet-xcmp-queue = { workspace = true, default-features = false }
-cumulus-primitives-core = { workspace = true, default-features = false }
-cumulus-primitives-timestamp = { workspace = true, default-features = false }
-cumulus-primitives-utility = { workspace = true, default-features = false }
-pallet-collator-selection = { workspace = true, default-features = false }
-parachain-info = { workspace = true, default-features = false }
+cumulus-pallet-aura-ext = { workspace = true }
+cumulus-pallet-dmp-queue = { workspace = true }
+cumulus-pallet-parachain-system = { workspace = true }
+cumulus-pallet-session-benchmarking = { workspace = true }
+cumulus-pallet-xcm = { workspace = true }
+cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-primitives-core = { workspace = true }
+cumulus-primitives-timestamp = { workspace = true }
+cumulus-primitives-utility = { workspace = true }
+pallet-collator-selection = { workspace = true }
+parachain-info = { workspace = true }
+parachains-common = { workspace = true }
 
 [dev-dependencies]
-xcm-simulator = { workspace = true, default-features = false }
-polkadot-core-primitives = { workspace = true, default-features = false }
-polkadot-runtime-parachains = { workspace = true, default-features = false }
-pallet-message-queue = { workspace = true, default-features = false }
+xcm-simulator = { workspace = true }
+polkadot-core-primitives = { workspace = true }
+polkadot-runtime-parachains = { workspace = true }
 
 [features]
 
 aura = []
-default = [
-    "std",
-    "aura",
-    ]
+default = ["std", "aura"]
 manual-seal = []
 
 # A feature that should be enabled when the runtime should be build for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
-on-chain-release-build = [
-	"sp-api/disable-logging",
-]
+on-chain-release-build = ["sp-api/disable-logging"]
 
 # By default some types have documentation, `no-metadata-docs` allows to reduce the documentation
 # in the metadata.
@@ -150,13 +140,13 @@ std = [
     "scale-info/std",
     "serde",
     "cumulus-pallet-aura-ext/std",
-	  "cumulus-pallet-parachain-system/std",
-	  "cumulus-pallet-xcm/std",
-	  "cumulus-pallet-xcmp-queue/std",
-	  "cumulus-primitives-core/std",
-	  "cumulus-primitives-timestamp/std",
-	  "cumulus-primitives-utility/std",
-	  "cumulus-pallet-dmp-queue/std",
+    "cumulus-pallet-parachain-system/std",
+    "cumulus-pallet-xcm/std",
+    "cumulus-pallet-xcmp-queue/std",
+    "cumulus-primitives-core/std",
+    "cumulus-primitives-timestamp/std",
+    "cumulus-primitives-utility/std",
+    "cumulus-pallet-dmp-queue/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
@@ -182,7 +172,7 @@ std = [
     "pallet-xcm/std",
     "pallet-collator-selection/std",
     "parachain-info/std",
-	  "polkadot-parachain/std",
+    "polkadot-parachain/std",
     "sp-api/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
@@ -195,9 +185,9 @@ std = [
     "sp-std/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-	  "xcm-builder/std",
-	  "xcm-executor/std",
-	  "xcm/std",
+    "xcm-builder/std",
+    "xcm-executor/std",
+    "xcm/std",
     "orml-xcm/std",
     "orml-vesting/std",
     "orml-unknown-tokens/std",
@@ -213,7 +203,7 @@ std = [
     "pallet-checked-inflation/std",
     "pallet-rings/std",
     "pallet-asset-tx-payment/std",
-    "modified-construct-runtime/std",
+    "new-modified-construct-runtime/std",
 ]
 
 runtime-benchmarks = [

@@ -15,24 +15,26 @@ name = "tinkernet-collator"
 path = "src/main.rs"
 
 [dependencies]
-clap = { workspace = true, features = ["derive"] }
-derive_more = { workspace = true }
-log = { workspace = true }
-codec = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-hex-literal = { workspace = true }
 async-trait = { workspace = true }
-scale-info = { workspace = true, default-features = false, features = ["derive"] }
+clap = { workspace = true }
+codec = { workspace = true }
+derive_more = { workspace = true }
+hex-literal = { workspace = true }
+log = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true }
+# RPC related Dependencies
+
 
 ## RPC related Dependencies
-jsonrpsee = { workspace = true, features = ["server"] }
+jsonrpsee = { workspace = true }
 futures = { workspace = true }
 
 ## Local Dependencies
 tinkernet-runtime = { path = "../runtime", optional = true }
 
 ## Substrate Dependencies
-frame-benchmarking = { workspace = true }
+frame-benchmarking = { workspace = true, features = ["std"] }
 frame-benchmarking-cli = { workspace = true }
 pallet-transaction-payment-rpc = { workspace = true }
 
@@ -58,31 +60,31 @@ sc-transaction-pool = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
 
 ## Substrate Primitive
-sp-api = { workspace = true }
-sp-io = { workspace = true }
-sp-block-builder = { workspace = true }
+sp-api = { workspace = true, features = ["std"] }
+sp-io = { workspace = true, features = ["std"] }
+sp-block-builder = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
 sp-consensus = { workspace = true }
-sp-consensus-aura = { workspace = true }
-sp-core = { workspace = true }
-sp-inherents = { workspace = true }
+sp-consensus-aura = { workspace = true, features = ["std"] }
+sp-core = { workspace = true, features = ["std"] }
+sp-inherents = { workspace = true, features = ["std"] }
 sp-keystore = { workspace = true }
-sp-offchain = { workspace = true }
-sp-runtime = { workspace = true }
-sp-session = { workspace = true }
+sp-offchain = { workspace = true, features = ["std"] }
+sp-runtime = { workspace = true, features = ["std"] }
+sp-session = { workspace = true, features = ["std"] }
 sp-timestamp = { workspace = true }
-sp-transaction-pool = { workspace = true }
+sp-transaction-pool = { workspace = true, features = ["std"] }
 
 substrate-frame-rpc-system = { workspace = true }
 substrate-prometheus-endpoint = { workspace = true }
 try-runtime-cli = { workspace = true, optional = true }
 
 ## Polkadot dependencies Dependencies
-polkadot-cli = { workspace = true, features = ["rococo-native"]}
+polkadot-cli = { workspace = true, features = ["rococo-native"] }
 polkadot-parachain = { workspace = true }
 polkadot-primitives = { workspace = true }
 polkadot-service = { workspace = true }
-xcm = { workspace = true, default-features = false }
+xcm = { workspace = true }
 
 ## Cumulus dependencies Dependencies
 cumulus-client-cli = { workspace = true }
@@ -91,16 +93,16 @@ cumulus-client-consensus-aura = { workspace = true }
 cumulus-client-consensus-common = { workspace = true }
 cumulus-client-network = { workspace = true }
 cumulus-client-service = { workspace = true }
-cumulus-primitives-core = { workspace = true }
+cumulus-primitives-core = { workspace = true, features = ["std"] }
 cumulus-primitives-parachain-inherent = { workspace = true }
 cumulus-relay-chain-inprocess-interface = { workspace = true }
 cumulus-relay-chain-minimal-node = { workspace = true }
 cumulus-relay-chain-interface = { workspace = true }
 cumulus-relay-chain-rpc-interface = { workspace = true }
+cumulus-client-parachain-inherent = { workspace = true }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }
-
 
 [features]
 default = ["tinkernet"]
@@ -109,10 +111,7 @@ tinkernet = ["tinkernet-runtime"]
 
 runtime-benchmarks = [
     "tinkernet-runtime?/runtime-benchmarks",
-    "polkadot-cli/runtime-benchmarks"
-    ]
-
-try-runtime = [
-    "tinkernet-runtime?/try-runtime",
-    "try-runtime-cli/try-runtime",
+    "polkadot-cli/runtime-benchmarks",
 ]
+
+try-runtime = ["tinkernet-runtime?/try-runtime", "try-runtime-cli/try-runtime"]
