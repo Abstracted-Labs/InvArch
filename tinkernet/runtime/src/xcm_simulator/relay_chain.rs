@@ -17,8 +17,8 @@ use polkadot_runtime_parachains::{
 use xcm::latest::prelude::*;
 use xcm_builder::{
     Account32Hash, AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative,
-    ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
-    CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfFungible, FixedWeightBounds, IsConcrete,
+    ChildParachainConvertsVia, ChildSystemParachainAsSuperuser, FixedRateOfFungible,
+    FixedWeightBounds, FungibleAdapter as XcmCurrencyAdapter, IsConcrete,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
@@ -76,8 +76,8 @@ impl pallet_balances::Config for Runtime {
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
-    type RuntimeHoldReason = [u8; 8];
-    type RuntimeFreezeReason = [u8; 8];
+    type RuntimeHoldReason = ();
+    type RuntimeFreezeReason = ();
 }
 
 impl shared::Config for Runtime {}

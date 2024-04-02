@@ -13,20 +13,18 @@ use polkadot_parachain::primitives::{
 use scale_info::TypeInfo;
 use sp_core::{blake2_256, ConstU32, H256};
 use sp_runtime::{
-    testing::Header,
-    traits::{Hash, IdentityLookup},
+    traits::{Hash, IdentityLookup, TryConvert},
     AccountId32,
 };
 use sp_std::prelude::*;
 use xcm::{latest::prelude::*, VersionedXcm};
 use xcm_builder::{
-    Account32Hash, AccountId32Aliases, AllowUnpaidExecutionFrom,
-    CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-    IsConcrete, NativeAsset, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
-    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-    SovereignSignedViaLocation,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible,
+    FixedWeightBounds, FungibleAdapter as XcmCurrencyAdapter, IsConcrete, NativeAsset,
+    ParentAsSuperuser, ParentIsPreset, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+    SignedToAccountId32, SovereignSignedViaLocation,
 };
-use xcm_executor::{traits::Convert, Config, XcmExecutor};
+use xcm_executor::{traits::ConvertLocation, Config, XcmExecutor};
 use xcm_simulator::PhantomData;
 
 pub type SovereignAccountOf = (
@@ -142,8 +140,8 @@ impl<Suffix: DescribeLocation> DescribeLocation for DescribeFamily<Suffix> {
 }
 
 pub struct HashedDescription;
-impl Convert<MultiLocation, AccountId> for HashedDescription {
-    fn convert(value: MultiLocation) -> Result<AccountId, MultiLocation> {
+impl TryConvert<MultiLocation, AccountId> for HashedDescription {
+    fn try_convert(value: MultiLocation) -> Result<AccountId, MultiLocation> {
         log::trace!(target: "xcm::HashedDescription", "HashedDescription: location: {:?}", value);
         if let Some(l) = DescribeFamily::<DescribeBodyTerminal>::describe_location(&value) {
             let a: AccountId = blake2_256(&l).into();
@@ -152,6 +150,19 @@ impl Convert<MultiLocation, AccountId> for HashedDescription {
         } else {
             log::trace!(target: "xcm::HashedDescription", "HashedDescription Error");
             Err(value)
+        }
+    }
+}
+
+impl ConvertLocation<AccountId> for HashedDescription {
+    fn convert_location(location: &MultiLocation) -> Option<AccountId> {
+        if let Some(l) = DescribeFamily::<DescribeBodyTerminal>::describe_location(&location) {
+            let a: AccountId = blake2_256(&l).into();
+            log::trace!(target: "xcm::HashedDescription", "HashedDescription Some: location: {:?} account: {:?}", location, a);
+            Some(a)
+        } else {
+            log::trace!(target: "xcm::HashedDescription", "HashedDescription None");
+            None
         }
     }
 }
