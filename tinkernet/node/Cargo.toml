@@ -23,6 +23,7 @@ hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 # RPC related Dependencies
 
 
@@ -31,7 +32,7 @@ jsonrpsee = { workspace = true }
 futures = { workspace = true }
 
 ## Local Dependencies
-tinkernet-runtime = { path = "../runtime", optional = true }
+tinkernet-runtime = { path = "../runtime" }
 
 ## Substrate Dependencies
 frame-benchmarking = { workspace = true, features = ["std"] }
@@ -91,6 +92,7 @@ cumulus-client-cli = { workspace = true }
 cumulus-client-collator = { workspace = true }
 cumulus-client-consensus-aura = { workspace = true }
 cumulus-client-consensus-common = { workspace = true }
+cumulus-client-consensus-proposer = { workspace = true }
 cumulus-client-network = { workspace = true }
 cumulus-client-service = { workspace = true }
 cumulus-primitives-core = { workspace = true, features = ["std"] }
@@ -105,13 +107,9 @@ cumulus-client-parachain-inherent = { workspace = true }
 substrate-build-script-utils = { workspace = true }
 
 [features]
-default = ["tinkernet"]
-
-tinkernet = ["tinkernet-runtime"]
-
 runtime-benchmarks = [
-    "tinkernet-runtime?/runtime-benchmarks",
+    "tinkernet-runtime/runtime-benchmarks",
     "polkadot-cli/runtime-benchmarks",
 ]
 
-try-runtime = ["tinkernet-runtime?/try-runtime", "try-runtime-cli/try-runtime"]
+try-runtime = ["tinkernet-runtime/try-runtime", "try-runtime-cli/try-runtime"]

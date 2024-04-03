@@ -11,8 +11,8 @@ pub enum Subcommand {
     Key(sc_cli::KeySubcommand),
 
     /// Export the genesis state of the parachain.
-    #[clap(name = "export-genesis-state")]
-    ExportGenesisState(cumulus_client_cli::ExportGenesisHeadCommand),
+    #[command(alias = "export-genesis-state")]
+    ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
 
     /// Export the genesis wasm of the parachain.
     #[clap(name = "export-genesis-wasm")]

@@ -1,65 +1,33 @@
-// This file is part of Substrate.
-
-// Copyright (C) 2017-2021 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: Apache-2.0
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// 	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-#[cfg(feature = "tinkernet")]
-use tinkernet_runtime::{Block, VERSION};
-
-//#[cfg(feature = "brainstorm")]
-//use brainstorm_runtime::{Block, RuntimeApi, VERSION};
+use tinkernet_runtime::Block;
 
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
     service::{new_partial, ChainIdentify, ParachainNativeExecutor},
 };
-use codec::Encode;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
-use polkadot_primitives::HeadData;
 use sc_chain_spec::ChainSpec;
 use sc_cli::{
     CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams,
-    Result, RuntimeVersion, SharedParams, SubstrateCli,
+    Result, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::{
-    traits::{AccountIdConversion, Block as BlockT, Hash as HashT, Header as HeaderT, Zero},
-    StateVersion,
-};
-use std::{io::Write, net::SocketAddr};
+use sp_runtime::traits::AccountIdConversion;
+use std::net::SocketAddr;
 
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "solo-dev" => Box::new(chain_spec::solo_dev_config()),
         "dev" => Box::new(chain_spec::development_config()),
         "template-rococo" => Box::new(chain_spec::local_testnet_config()),
-        "" | "local" => Box::new(chain_spec::local_testnet_config()),
+        "local" => Box::new(chain_spec::local_testnet_config()),
+        "" | "tinkernet" => Box::new(chain_spec::tinkernet_live()),
         path => Box::new(chain_spec::ChainSpec::from_json_file(
             std::path::PathBuf::from(path),
         )?),
     })
-}
-
-impl Cli {
-    fn runtime_version(spec: &Box<dyn sc_service::ChainSpec>) -> &'static RuntimeVersion {
-        &VERSION
-    }
 }
 
 impl SubstrateCli for Cli {
@@ -94,37 +62,6 @@ impl SubstrateCli for Cli {
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
         load_spec(id)
     }
-}
-fn substrate_cli_native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-    #[cfg(feature = "kusama-native")]
-    if spec.is_kusama() {
-        return &service::kusama_runtime::VERSION;
-    }
-
-    #[cfg(feature = "westend-native")]
-    if spec.is_westend() {
-        return &service::westend_runtime::VERSION;
-    }
-
-    #[cfg(feature = "rococo-native")]
-    if spec.is_rococo() || spec.is_wococo() || spec.is_versi() {
-        return &service::rococo_runtime::VERSION;
-    }
-
-    #[cfg(not(all(
-        feature = "rococo-native",
-        feature = "westend-native",
-        feature = "kusama-native"
-    )))]
-    let _ = spec;
-
-    #[cfg(feature = "polkadot-native")]
-    {
-        return &service::polkadot_runtime::VERSION;
-    }
-
-    #[cfg(not(feature = "polkadot-native"))]
-    panic!("No runtime feature (polkadot, kusama, westend, rococo) is enabled")
 }
 
 impl SubstrateCli for RelayChainCli {
@@ -161,25 +98,12 @@ impl SubstrateCli for RelayChainCli {
     }
 }
 
-#[allow(clippy::borrowed_box)]
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-    let mut storage = chain_spec.build_storage()?;
-
-    storage
-        .top
-        .remove(sp_core::storage::well_known_keys::CODE)
-        .ok_or_else(|| "Could not find wasm file in genesis state!".into())
-}
-
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 		runner.async_run(|$config| {
-			let $components = new_partial::<
-				_
-			>(
-				&$config,
-				crate::service::parachain_build_import_queue,
+			let $components = new_partial(
+				&$config
 			)?;
 			let task_manager = $components.task_manager;
 			{ $( $code )* }.map(|v| (v, task_manager))
@@ -243,50 +167,20 @@ pub fn run() -> Result<()> {
                 Ok(cmd.run(components.client, components.backend, None))
             })
         }
-        Some(Subcommand::ExportGenesisState(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
+        Some(Subcommand::ExportGenesisHead(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.sync_run(|config| {
+                let partials = new_partial(&config)?;
 
-            let spec = load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
-            let state_version = Cli::runtime_version(&spec).state_version();
-            let block: Block = generate_genesis_block(&*spec, state_version)?;
-            let raw_header = block.header().encode();
-            let output_buf = if params.raw {
-                raw_header
-            } else {
-                format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
+                cmd.run(partials.client)
+            })
         }
-        Some(Subcommand::ExportGenesisWasm(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
-
-            let raw_wasm_blob = extract_genesis_wasm(
-                &cli.load_spec(&params.shared_params.chain.clone().unwrap_or_default())?,
-            )?;
-            let output_buf = if params.raw {
-                raw_wasm_blob
-            } else {
-                format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
+        Some(Subcommand::ExportGenesisWasm(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.sync_run(|_config| {
+                let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+                cmd.run(&*spec)
+            })
         }
         Some(Subcommand::Benchmark(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -384,12 +278,22 @@ pub fn run() -> Result<()> {
             let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
+                let hwbench = (!cli.no_hardware_benchmarks)
+                    .then_some(config.database.path().map(|database_path| {
+                        let _ = std::fs::create_dir_all(database_path);
+                        sc_sysinfo::gather_hwbench(Some(database_path))
+                    }))
+                    .flatten();
+
                 let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
                     .map(|e| e.para_id)
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
                 if is_solo_dev {
-                    return crate::service::start_solo_dev(config).map_err(Into::into);
+                    return crate::service::start_solo_dev(config)
+                        .await
+                        .map(|r| r.0)
+                        .map_err(Into::into);
                 }
 
                 let polkadot_cli = RelayChainCli::new(
@@ -406,12 +310,6 @@ pub fn run() -> Result<()> {
                         &id,
                     );
 
-                let state_version =
-                    substrate_cli_native_runtime_version(&config.chain_spec).state_version();
-                let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-                    .map_err(|e| format!("{:?}", e))?;
-                let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
-
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
                     SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
@@ -419,7 +317,6 @@ pub fn run() -> Result<()> {
 
                 info!("Parachain id: {:?}", id);
                 info!("Parachain Account: {}", parachain_account);
-                info!("Parachain genesis state: {}", genesis_state);
                 info!(
                     "Is collating: {}",
                     if config.role.is_authority() {
@@ -429,10 +326,16 @@ pub fn run() -> Result<()> {
                     }
                 );
 
-                crate::service::start_parachain_node(config, polkadot_config, collator_options, id)
-                    .await
-                    .map(|r| r.0)
-                    .map_err(Into::into)
+                crate::service::start_parachain_node(
+                    config,
+                    polkadot_config,
+                    collator_options,
+                    id,
+                    hwbench,
+                )
+                .await
+                .map(|r| r.0)
+                .map_err(Into::into)
             })
         }
     }
@@ -563,40 +466,4 @@ impl CliConfiguration<Self> for RelayChainCli {
     fn node_name(&self) -> Result<String> {
         self.base.base.node_name()
     }
-}
-
-/// Generate the genesis block from a given ChainSpec.
-pub fn generate_genesis_block<Block: BlockT>(
-    chain_spec: &dyn ChainSpec,
-    genesis_state_version: StateVersion,
-) -> std::result::Result<Block, String> {
-    let storage = chain_spec.build_storage()?;
-
-    let child_roots = storage.children_default.iter().map(|(sk, child_content)| {
-        let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
-            child_content.data.clone().into_iter().collect(),
-            genesis_state_version,
-        );
-        (sk.clone(), state_root.encode())
-    });
-    let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
-        storage.top.clone().into_iter().chain(child_roots).collect(),
-        genesis_state_version,
-    );
-
-    let extrinsics_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
-        Vec::new(),
-        genesis_state_version,
-    );
-
-    Ok(Block::new(
-        <<Block as BlockT>::Header as HeaderT>::new(
-            Zero::zero(),
-            extrinsics_root,
-            state_root,
-            Default::default(),
-            Default::default(),
-        ),
-        Default::default(),
-    ))
 }
