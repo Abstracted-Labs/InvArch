@@ -16,8 +16,8 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![cfg_attr(not(feature = "std"), no_std)]
-// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 512.
-#![recursion_limit = "512"]
+// `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
+#![recursion_limit = "256"]
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -29,7 +29,11 @@ use cumulus_primitives_core::DmpMessageHandler;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
     pallet_prelude::{ConstU32, EnsureOrigin},
-    traits::tokens::{PayFromAccount, UnityAssetBalanceConversion},
+    traits::{
+        fungible::HoldConsideration,
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        LinearStoragePrice,
+    },
     weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 };
 pub use frame_support::{
@@ -49,6 +53,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use pallet_identity::legacy::IdentityInfo;
 use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
@@ -459,8 +464,8 @@ impl pallet_balances::Config for Runtime {
     type MaxHolds = ConstU32<1>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type RuntimeHoldReason = ();
-    type RuntimeFreezeReason = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeFreezeReason = RuntimeFreezeReason;
 }
 
 parameter_types! {
@@ -734,10 +739,9 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 parameter_types! {
-    // Max size 4MB allowed: 4096 * 1024
-    pub const PreimageMaxSize: u32 = 4096 * 1024;
-      pub const PreimageBaseDeposit: Balance = deposit(2, 64);
-      pub const PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+    pub const PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -745,47 +749,36 @@ impl pallet_preimage::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type ManagerOrigin = EnsureRoot<AccountId>;
-    // type BaseDeposit = PreimageBaseDeposit;
-    // type ByteDeposit = PreimageByteDeposit;
-    #[doc = r" A means of providing some cost while data is stored on-chain."]
-    type Consideration = ();
+    type Consideration = HoldConsideration<
+        AccountId,
+        Balances,
+        PreimageHoldReason,
+        LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+    >;
 }
 
 parameter_types! {
     pub BasicDeposit: Balance = 5 * UNIT;
-    pub FieldDeposit: Balance = 2 * UNIT;
     pub const MaxAdditionalFields: u32 = 5;
     pub const MaxRegistrars: u32 = 10;
     pub const MaxSubAccounts: u32 = 10;
     pub SubAccountDeposit: Balance = 5 * UNIT;
-    // pub Iden: IdentityInfo<MaxAdditionalFields> = Identity;
-}
-
-#[derive(Encode, Decode, MaxEncodedLen, Clone, Debug, Eq, PartialEq, TypeInfo, Default)]
-pub struct DummyIdentity;
-
-impl pallet_identity::IdentityInformationProvider for DummyIdentity {
-    type FieldsIdentifier = DummyIdentity;
-    fn has_identity(&self, _who: DummyIdentity) -> bool {
-        true
-    }
+    pub const ByteDeposit: Balance = deposit(0, 1);
 }
 
 impl pallet_identity::Config for Runtime {
-    type BasicDeposit = BasicDeposit;
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
-    // type FieldDeposit = FieldDeposit;
     type ForceOrigin = EnsureRoot<AccountId>;
-    // type MaxAdditionalFields = MaxAdditionalFields;
     type MaxRegistrars = MaxRegistrars;
     type MaxSubAccounts = MaxSubAccounts;
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
     type WeightInfo = ();
-    type ByteDeposit = FieldDeposit;
-    type IdentityInformation = DummyIdentity;
+    type BasicDeposit = BasicDeposit;
+    type ByteDeposit = ByteDeposit;
+    type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
     type OffchainSignature = Signature;
     type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
     type UsernameAuthorityOrigin = EnsureRoot<AccountId>;
@@ -857,7 +850,7 @@ construct_runtime_modified!(
         CumulusXcm: cumulus_pallet_xcm = 32,
         // needs to be removed https://github.com/paritytech/polkadot-sdk/pull/1246
         DmpQueue: cumulus_pallet_dmp_queue = 33,
-        MessageQueue: pallet_message_queue = 97,
+        MessageQueue: pallet_message_queue = 34,
 
         // FRAME
         Sudo: pallet_sudo = 41,

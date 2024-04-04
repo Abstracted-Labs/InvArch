@@ -1,6 +1,9 @@
 use cumulus_client_cli::CollatorOptions;
 use cumulus_client_collator::service::CollatorService;
-use cumulus_client_consensus_aura::SlotProportion;
+use cumulus_client_consensus_aura::{
+    collators::basic::{self as basic_aura, Params as BasicAuraParams},
+    SlotProportion,
+};
 use cumulus_client_consensus_common::ParachainBlockImport as TParachainBlockImport;
 use cumulus_client_consensus_proposer::Proposer;
 use cumulus_client_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
@@ -372,10 +375,6 @@ fn start_consensus(
     overseer_handle: OverseerHandle,
     announce_block: Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>,
 ) -> Result<(), sc_service::Error> {
-    use cumulus_client_consensus_aura::collators::basic::{
-        self as basic_aura, Params as BasicAuraParams,
-    };
-
     // NOTE: because we use Aura here explicitly, we can use `CollatorSybilResistance::Resistant`
     // when starting the network.
 
