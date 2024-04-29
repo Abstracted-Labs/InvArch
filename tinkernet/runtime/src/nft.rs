@@ -1,11 +1,11 @@
 use crate::{
     common_types::CommonId,
     constants::currency::{MILLIUNIT, UNIT},
-    AccountId, Balance, Balances, Runtime, RuntimeEvent,
+    AccountId, Balance, Balances, RootOrGeneralManagement, Runtime, RuntimeEvent,
 };
 use frame_support::{parameter_types, traits::AsEnsureOriginWithArg};
 
-use frame_system::{EnsureRoot, EnsureSigned};
+use frame_system::EnsureSigned;
 
 parameter_types! {
       pub const CollectionDeposit: Balance = UNIT;
@@ -23,7 +23,7 @@ impl pallet_uniques::Config for Runtime {
     type CollectionId = CommonId;
     type ItemId = CommonId;
     type Currency = Balances;
-    type ForceOrigin = EnsureRoot<AccountId>;
+    type ForceOrigin = RootOrGeneralManagement;
     type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
     type Locker = ();
     type CollectionDeposit = CollectionDeposit;

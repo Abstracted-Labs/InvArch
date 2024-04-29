@@ -6,6 +6,7 @@ pub mod currency {
     use crate::Balance;
 
     pub const UNIT: Balance = 1_000_000_000_000;
+    pub const GRAND: Balance = UNIT * 1_000;
     pub const MILLIUNIT: Balance = 1_000_000_000;
     pub const MICROUNIT: Balance = 1_000_000;
 
