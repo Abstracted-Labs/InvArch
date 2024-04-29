@@ -85,9 +85,6 @@ impl pallet_referenda::Config for Runtime {
     type Tally = pallet_conviction_voting::TallyOf<Runtime>;
     type SubmissionDeposit = SubmissionDeposit;
     type MaxQueued = ConstU32<100>;
-    #[cfg(not(feature = "on-chain-release-build"))]
-    type UndecidingTimeout = UndecidingTimeout;
-    #[cfg(feature = "on-chain-release-build")]
     type UndecidingTimeout = UndecidingTimeout;
     type AlarmInterval = AlarmInterval;
     type Tracks = TracksInfo;
