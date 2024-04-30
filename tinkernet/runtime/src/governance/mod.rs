@@ -2,10 +2,7 @@ use self::councils::TinkerCouncil;
 
 use super::*;
 // use crate::xcm_config::CollectivesLocation;
-use frame_support::{
-    parameter_types,
-    traits::{EitherOf, EitherOfDiverse},
-};
+use frame_support::{parameter_types, traits::EitherOf};
 
 use frame_system::EnsureRootWithSuccess;
 use polkadot_runtime_common::prod_or_fast;
@@ -49,13 +46,13 @@ pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>
 pub type RootOrGeneralManagement = EitherOf<EnsureRoot<AccountId>, GeneralManagement>;
 
 pub type AllCouncil = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 1>;
-pub type CouncilTwoThirds =
-    pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 2, 3>;
 pub type ConcilHalf = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 2>;
+pub type CouncilThreeFifths =
+    pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 3, 5>;
 
-pub type CouncilApproveOrigin = EitherOfDiverse<EnsureRoot<AccountId>, CouncilTwoThirds>;
+pub type CouncilApproveOrigin = EitherOf<EnsureRoot<AccountId>, CouncilThreeFifths>;
 
-pub type CouncilRejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, ConcilHalf>;
+pub type CouncilRejectOrigin = EitherOf<EnsureRoot<AccountId>, ConcilHalf>;
 
 impl pallet_custom_origins::Config for Runtime {}
 

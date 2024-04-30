@@ -19,10 +19,9 @@ impl pallet_collective::Config<TinkerCouncil> for Runtime {
     /// The maximum number of proposals that can be open in council at once.
     type MaxProposals = ConstU32<20>;
     /// The maximum number of council members.
-    type MaxMembers = ConstU32<9>;
+    type MaxMembers = ConstU32<7>;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-    type SetMembersOrigin =
-        EitherOf<EitherOf<EnsureRoot<AccountId>, CouncilAdmin>, CouncilTwoThirds>;
+    type SetMembersOrigin = EitherOf<CouncilApproveOrigin, CouncilAdmin>;
     type MaxProposalWeight = MaxProposalWeight;
 }
