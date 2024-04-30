@@ -22,6 +22,7 @@ impl pallet_collective::Config<TinkerCouncil> for Runtime {
     type MaxMembers = ConstU32<9>;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-    type SetMembersOrigin = EitherOf<EnsureRoot<AccountId>, CouncilAdmin>;
+    type SetMembersOrigin =
+        EitherOf<EitherOf<EnsureRoot<AccountId>, CouncilAdmin>, CouncilTwoThirds>;
     type MaxProposalWeight = MaxProposalWeight;
 }

@@ -49,16 +49,13 @@ pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>
 pub type RootOrGeneralManagement = EitherOf<EnsureRoot<AccountId>, GeneralManagement>;
 
 pub type AllCouncil = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 1>;
+pub type CouncilTwoThirds =
+    pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 2, 3>;
+pub type ConcilHalf = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 2>;
 
-pub type CouncilApproveOrigin = EitherOfDiverse<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 2, 3>,
->;
+pub type CouncilApproveOrigin = EitherOfDiverse<EnsureRoot<AccountId>, CouncilTwoThirds>;
 
-pub type CouncilRejectOrigin = EitherOfDiverse<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionMoreThan<AccountId, TinkerCouncil, 1, 2>,
->;
+pub type CouncilRejectOrigin = EitherOfDiverse<EnsureRoot<AccountId>, ConcilHalf>;
 
 impl pallet_custom_origins::Config for Runtime {}
 
