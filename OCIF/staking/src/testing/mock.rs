@@ -36,10 +36,6 @@ pub(crate) const REGISTER_DEPOSIT: Balance = 10;
 
 construct_runtime!(
     pub struct Test
-// where
-    //     Block = Block,
-    //     NodeBlock = Block,
-    //     UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system,
         Balances: pallet_balances,

@@ -73,24 +73,3 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
-
-
-# std = [
-#     "serde",
-#     "codec/std",
-#     "sp-runtime/std",
-#     "sp-std/std",
-#     "frame-support/std",
-#     "frame-system/std",
-#     "sp-io/std",
-#     "sp-core/std",
-#     "scale-info/std",
-#     "pallet-balances/std",
-#     "frame-benchmarking?/std",
-#     # "orml-asset-registry/std",
-#     "orml-tokens/std",
-#     # "orml-tokens2/std",
-#     # "orml-traits/std",
-#     # "orml-traits2/std",
-#     "xcm/std",
-# ]

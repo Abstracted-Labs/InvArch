@@ -16,7 +16,6 @@ use sp_core::H256;
 use sp_runtime::{AccountId32, BuildStorage};
 use sp_std::{convert::TryInto, vec};
 
-// type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
 
@@ -28,43 +27,6 @@ pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const BOB: AccountId = AccountId::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId::new([2u8; 32]);
 pub const DAVE: AccountId = AccountId::new([3u8; 32]);
-// AssetRegistry: orml_asset_registry,
-// CoreAssets: orml_tokens2,
-
-// impl Config for Test {
-//     type RuntimeEvent = RuntimeEvent;
-//     type Currency = Balances;
-
-//     type CoreId = <INV4 as Config>::CoreId;
-
-//     type RuntimeCall = RuntimeCall;
-
-//     type MaxCallers = MaxCallers;
-
-//     type MaxMetadata = MaxCallers;
-
-//     type RuntimeOrigin = RuntimeOrigin;
-
-//     type CoreSeedBalance = CoreSeedBalance;
-
-//     type CoreCreationFee = CoreCreationFee;
-
-//     type RelayCoreCreationFee = RelayCoreCreationFee;
-
-//     type RelayAssetId = RelayAssetId;
-
-//     type AssetsProvider = Tokens;
-
-//     type Tokens = Tokens;
-
-//     type FeeCharger = FeeCharger;
-
-//     type ParaId = <INV4 as Config>::ParaId;
-
-//     type MaxCallSize = MaxCallSize;
-
-//     type WeightInfo = ();
-// }
 
 frame_support::construct_runtime!(
     pub enum Test
@@ -77,24 +39,6 @@ frame_support::construct_runtime!(
         INV4: pallet,
     }
 );
-// System: frame_system,
-// Balances: pallet_balances,
-// INV4: pallet,
-// Tokens: orml_tokens,
-
-// AssetRegistry: orml_asset_registry,
-// CoreAssets: orml_tokens2,
-
-// System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-// Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-// INV4: pallet::{Pallet, Call, Storage, Event<T>, Origin<T>},
-// Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-// AssetRegistry: orml_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>},
-// CoreAssets: orml_tokens2::{Pallet, Call, Storage, Event<T>},
-// where
-//     Block = Block,
-//     NodeBlock = Block,
-//     UncheckedExtrinsic = UncheckedExtrinsic,
 
 pub struct TestBaseCallFilter;
 impl Contains<RuntimeCall> for TestBaseCallFilter {
