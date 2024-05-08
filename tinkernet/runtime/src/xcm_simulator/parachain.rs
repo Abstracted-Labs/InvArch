@@ -13,20 +13,18 @@ use polkadot_parachain::primitives::{
 use scale_info::TypeInfo;
 use sp_core::{blake2_256, ConstU32, H256};
 use sp_runtime::{
-    testing::Header,
-    traits::{Hash, IdentityLookup},
+    traits::{Hash, IdentityLookup, TryConvert},
     AccountId32,
 };
 use sp_std::prelude::*;
 use xcm::{latest::prelude::*, VersionedXcm};
 use xcm_builder::{
-    Account32Hash, AccountId32Aliases, AllowUnpaidExecutionFrom,
-    CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-    IsConcrete, NativeAsset, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
-    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-    SovereignSignedViaLocation,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible,
+    FixedWeightBounds, FungibleAdapter as XcmCurrencyAdapter, IsConcrete, NativeAsset,
+    ParentAsSuperuser, ParentIsPreset, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+    SignedToAccountId32, SovereignSignedViaLocation,
 };
-use xcm_executor::{traits::Convert, Config, XcmExecutor};
+use xcm_executor::{traits::ConvertLocation, Config, XcmExecutor};
 use xcm_simulator::PhantomData;
 
 pub type SovereignAccountOf = (
@@ -45,14 +43,14 @@ parameter_types! {
 impl frame_system::Config for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u64;
+    type Block = Block;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
+    type RuntimeTask = RuntimeTask;
     type BlockHashCount = BlockHashCount;
     type BlockWeights = ();
     type BlockLength = ();
@@ -85,10 +83,11 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type HoldIdentifier = ();
     type FreezeIdentifier = ();
     type MaxHolds = ConstU32<0>;
     type MaxFreezes = ConstU32<0>;
+    type RuntimeFreezeReason = ();
+    type RuntimeHoldReason = ();
 }
 
 parameter_types! {
@@ -141,8 +140,8 @@ impl<Suffix: DescribeLocation> DescribeLocation for DescribeFamily<Suffix> {
 }
 
 pub struct HashedDescription;
-impl Convert<MultiLocation, AccountId> for HashedDescription {
-    fn convert(value: MultiLocation) -> Result<AccountId, MultiLocation> {
+impl TryConvert<MultiLocation, AccountId> for HashedDescription {
+    fn try_convert(value: MultiLocation) -> Result<AccountId, MultiLocation> {
         log::trace!(target: "xcm::HashedDescription", "HashedDescription: location: {:?}", value);
         if let Some(l) = DescribeFamily::<DescribeBodyTerminal>::describe_location(&value) {
             let a: AccountId = blake2_256(&l).into();
@@ -151,6 +150,19 @@ impl Convert<MultiLocation, AccountId> for HashedDescription {
         } else {
             log::trace!(target: "xcm::HashedDescription", "HashedDescription Error");
             Err(value)
+        }
+    }
+}
+
+impl ConvertLocation<AccountId> for HashedDescription {
+    fn convert_location(location: &MultiLocation) -> Option<AccountId> {
+        if let Some(l) = DescribeFamily::<DescribeBodyTerminal>::describe_location(&location) {
+            let a: AccountId = blake2_256(&l).into();
+            log::trace!(target: "xcm::HashedDescription", "HashedDescription Some: location: {:?} account: {:?}", location, a);
+            Some(a)
+        } else {
+            log::trace!(target: "xcm::HashedDescription", "HashedDescription None");
+            None
         }
     }
 }
@@ -217,6 +229,7 @@ impl Config for XcmConfig {
     type UniversalAliases = Nothing;
     type CallDispatcher = RuntimeCall;
     type SafeCallFilter = Everything;
+    type Aliasers = ();
 }
 
 #[frame_support::pallet]
@@ -506,16 +519,12 @@ impl pallet_rings::Config for Runtime {
 }
 
 construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Runtime
     {
-        System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        MsgQueue: mock_msg_queue::{Pallet, Storage, Event<T>},
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-
+        System: frame_system,
+        Balances: pallet_balances,
+        MsgQueue: mock_msg_queue,
+        PolkadotXcm: pallet_xcm,
         INV4: pallet_inv4,
         Tokens: orml_tokens,
         CoreAssets: orml_tokens2,

@@ -29,6 +29,11 @@ use cumulus_primitives_core::DmpMessageHandler;
 use frame_support::{
     dispatch::{DispatchClass, RawOrigin},
     pallet_prelude::{ConstU32, EnsureOrigin},
+    traits::{
+        fungible::HoldConsideration,
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        LinearStoragePrice,
+    },
     weights::constants::WEIGHT_REF_TIME_PER_SECOND,
 };
 pub use frame_support::{
@@ -48,6 +53,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use pallet_identity::legacy::IdentityInfo;
 use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
@@ -62,7 +68,9 @@ use sp_core::{
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+    traits::{
+        AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, IdentityLookup, Verify,
+    },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, FixedPointNumber, MultiSignature, Perquintill,
 };
@@ -96,7 +104,7 @@ mod fee_handling;
 use fee_handling::TnkrToKsm;
 mod inflation;
 mod inv4;
-mod migrations;
+// mod migrations;
 mod nft;
 mod rings;
 mod staking;
@@ -116,8 +124,8 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// Balance of an account.
 pub type Balance = u128;
 
-/// Index of a transaction in the chain.
-pub type Index = u32;
+/// Nonce of a transaction in the chain.
+pub type Nonce = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
@@ -162,7 +170,14 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (),
+    (
+        pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
+        pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+        pallet_preimage::migration::v1::Migration<Runtime>,
+        pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
+        cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+        pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+    ),
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -171,7 +186,10 @@ pub type Executive = frame_executive::Executive<
 /// to even the core data structures.
 pub mod opaque {
     use super::*;
-    use sp_runtime::{generic, traits::BlakeTwo256};
+    use sp_runtime::{
+        generic,
+        traits::{BlakeTwo256, Hash as HashT},
+    };
 
     pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
     /// Opaque block header type.
@@ -180,6 +198,8 @@ pub mod opaque {
     pub type Block = generic::Block<Header, UncheckedExtrinsic>;
     /// Opaque block identifier type.
     pub type BlockId = generic::BlockId<Block>;
+    /// Opaque block hash type.
+    pub type Hash = <BlakeTwo256 as HashT>::Output;
 }
 
 impl_opaque_keys! {
@@ -193,7 +213,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 22,
+    spec_version: 23,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -352,14 +372,7 @@ impl pallet_maintenance_mode::Config for Runtime {
     type NormalCallFilter = BaseFilter;
     type MaintenanceCallFilter = MaintenanceFilter;
     type MaintenanceOrigin = EnsureRoot<AccountId>;
-    // We use AllPalletsReversedWithSystemFirst because we dont want to change the hooks in normal
-    // operation
-    type NormalExecutiveHooks = AllPalletsWithSystem;
-    type MaintenanceExecutiveHooks = MaintenanceHooks;
-
     type XcmExecutionManager = ();
-    type NormalDmpHandler = NoHandler;
-    type MaintenanceDmpHandler = NoHandler;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -372,19 +385,19 @@ impl frame_system::Config for Runtime {
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
     type Lookup = INV4Lookup<Runtime>;
     /// The index type for storing how many extrinsics an account has signed.
-    type Index = Index;
-    /// The index type for blocks.
-    type BlockNumber = BlockNumber;
+    type Nonce = Nonce;
     /// The type for hashing blocks and tries.
     type Hash = Hash;
     /// The hashing algorithm used.
     type Hashing = BlakeTwo256;
-    /// The header type.
-    type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// The block type.
+    type Block = Block;
     /// The ubiquitous event type.
     type RuntimeEvent = RuntimeEvent;
     /// The ubiquitous origin type.
     type RuntimeOrigin = RuntimeOrigin;
+    /// The runtime task type.
+    type RuntimeTask = RuntimeTask;
     /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
     type BlockHashCount = BlockHashCount;
     /// Version of the runtime.
@@ -454,11 +467,11 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-
     type MaxHolds = ConstU32<1>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeFreezeReason = RuntimeFreezeReason;
 }
 
 parameter_types! {
@@ -536,12 +549,13 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type OnSystemEvent = ();
     type SelfParaId = parachain_info::Pallet<Runtime>;
-    type DmpMessageHandler = DmpQueue;
+    type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
     type ReservedDmpWeight = ReservedDmpWeight;
     type OutboundXcmpMessageSource = XcmpQueue;
     type XcmpMessageHandler = XcmpQueue;
     type ReservedXcmpWeight = ReservedXcmpWeight;
     type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
+    type WeightInfo = cumulus_pallet_parachain_system::weights::SubstrateWeight<Runtime>;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -552,6 +566,7 @@ parameter_types! {
     pub const Period: u32 = 6 * HOURS;
     pub const Offset: u32 = 0;
     pub const MaxAuthorities: u32 = 100_000;
+    pub const AllowMultipleBlocksPerSlot: bool = false;
 }
 
 impl pallet_session::Config for Runtime {
@@ -572,6 +587,7 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
     type DisabledValidators = ();
     type MaxAuthorities = MaxAuthorities;
+    type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
 }
 
 parameter_types! {
@@ -592,7 +608,7 @@ impl pallet_collator_selection::Config for Runtime {
     type UpdateOrigin = CollatorSelectionUpdateOrigin;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
-    type MinCandidates = MinCandidates;
+    type MinEligibleCollators = MinCandidates;
     type MaxInvulnerables = MaxInvulnerables;
     // should be a multiple of session or things will get inconsistent
     type KickThreshold = Period;
@@ -620,9 +636,14 @@ parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(1);
     pub const ProposalBondMinimum: Balance = 100 * UNIT;
     pub const SpendPeriod: BlockNumber = DAYS;
+    pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
+}
+
+parameter_types! {
+    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -642,6 +663,12 @@ impl pallet_treasury::Config for Runtime {
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
     type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
+    type AssetKind = ();
+    type Beneficiary = AccountId;
+    type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
+    type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
+    type BalanceConverter = UnityAssetBalanceConversion;
+    type PayoutPeriod = PayoutSpendPeriod;
 }
 
 parameter_types! {
@@ -718,10 +745,9 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 parameter_types! {
-    // Max size 4MB allowed: 4096 * 1024
-    pub const PreimageMaxSize: u32 = 4096 * 1024;
-      pub const PreimageBaseDeposit: Balance = deposit(2, 64);
-      pub const PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+    pub const PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
 }
 
 impl pallet_preimage::Config for Runtime {
@@ -729,32 +755,42 @@ impl pallet_preimage::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type ManagerOrigin = EnsureRoot<AccountId>;
-    type BaseDeposit = PreimageBaseDeposit;
-    type ByteDeposit = PreimageByteDeposit;
+    type Consideration = HoldConsideration<
+        AccountId,
+        Balances,
+        PreimageHoldReason,
+        LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+    >;
 }
 
 parameter_types! {
     pub BasicDeposit: Balance = 5 * UNIT;
-    pub FieldDeposit: Balance = 2 * UNIT;
     pub const MaxAdditionalFields: u32 = 5;
     pub const MaxRegistrars: u32 = 10;
     pub const MaxSubAccounts: u32 = 10;
     pub SubAccountDeposit: Balance = 5 * UNIT;
+    pub const ByteDeposit: Balance = deposit(0, 1);
 }
 
 impl pallet_identity::Config for Runtime {
-    type BasicDeposit = BasicDeposit;
     type Currency = Balances;
     type RuntimeEvent = RuntimeEvent;
-    type FieldDeposit = FieldDeposit;
     type ForceOrigin = EnsureRoot<AccountId>;
-    type MaxAdditionalFields = MaxAdditionalFields;
     type MaxRegistrars = MaxRegistrars;
     type MaxSubAccounts = MaxSubAccounts;
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
-    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = ();
+    type BasicDeposit = BasicDeposit;
+    type ByteDeposit = ByteDeposit;
+    type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
+    type OffchainSignature = Signature;
+    type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
+    type UsernameAuthorityOrigin = EnsureRoot<AccountId>;
+    type PendingUsernameExpiration = ();
+    type MaxSuffixLength = ();
+    type MaxUsernameLength = ();
 }
 
 parameter_types! {
@@ -773,7 +809,7 @@ impl pallet_multisig::Config for Runtime {
     type WeightInfo = ();
 }
 
-use modified_construct_runtime::construct_runtime_modified;
+use new_modified_construct_runtime::construct_runtime_modified;
 
 impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeOrigin> {
     fn from(val: RuntimeOrigin) -> Self {
@@ -789,64 +825,61 @@ impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeO
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime_modified!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic
+    pub enum Runtime
     {
         // System support stuff
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-        Utility: pallet_utility::{Pallet, Call, Event} = 1,
-        ParachainSystem: cumulus_pallet_parachain_system::{
-            Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-        } = 2,
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-        ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 5,
-        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 6,
-        MaintenanceMode: pallet_maintenance_mode::{Pallet, Call, Config, Storage, Event} = 7,
+        System: frame_system = 0,
+        Utility: pallet_utility = 1,
+        ParachainSystem: cumulus_pallet_parachain_system = 2,
+        Timestamp: pallet_timestamp = 3,
+        ParachainInfo: parachain_info = 4,
+        Scheduler: pallet_scheduler = 5,
+        Preimage: pallet_preimage = 6,
+        MaintenanceMode: pallet_maintenance_mode = 7,
 
         // Monetary stuff
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 11,
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 12,
+        Balances: pallet_balances = 10,
+        TransactionPayment: pallet_transaction_payment = 11,
+        Treasury: pallet_treasury = 12,
         AssetTxPayment: pallet_asset_tx_payment = 13,
 
         // Collator support. The order of there 4 are important and shale not change.
-        Authorship: pallet_authorship::{Pallet, Storage } = 20,
-        CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-        Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-        AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+        Authorship: pallet_authorship = 20,
+        CollatorSelection: pallet_collator_selection = 21,
+        Session: pallet_session = 22,
+        Aura: pallet_aura = 23,
+        AuraExt: cumulus_pallet_aura_ext = 24,
 
         // XCM helpers
-        XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-        PolkadotXcm: pallet_xcm::{Pallet, Event<T>, Origin, Config, Call} = 31,
-        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
-        DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+        XcmpQueue: cumulus_pallet_xcmp_queue = 30,
+        PolkadotXcm: pallet_xcm = 31,
+        CumulusXcm: cumulus_pallet_xcm = 32,
+        // needs to be removed https://github.com/paritytech/polkadot-sdk/pull/1246
+        DmpQueue: cumulus_pallet_dmp_queue = 33,
+        MessageQueue: pallet_message_queue = 34,
 
         // FRAME
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 42,
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 43,
+        Sudo: pallet_sudo = 41,
+        Identity: pallet_identity = 42,
+        Multisig: pallet_multisig = 43,
 
         // InvArch stuff
-        CheckedInflation: pallet_checked_inflation::{Pallet, Storage, Event<T>, Call} = 50,
-        OcifStaking: pallet_ocif_staking::{Pallet, Call, Storage, Event<T>} = 51,
+        CheckedInflation: pallet_checked_inflation = 50,
+        OcifStaking: pallet_ocif_staking = 51,
 
-        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>} = 71,
-        CoreAssets: orml_tokens2::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
-        Rings: pallet_rings::{Pallet, Call, Storage, Event<T>} = 73,
+        INV4: pallet_inv4 = 71,
+        CoreAssets: orml_tokens2 = 72,
+        Rings: pallet_rings = 73,
 
-        Uniques: pallet_uniques::{Pallet, Storage, Event<T>} = 80,
+        Uniques: pallet_uniques = 80,
 
         OrmlXcm: orml_xcm = 90,
-        Vesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 91,
-        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 92,
-        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 93,
-        AssetRegistry: orml_asset_registry::{Pallet, Call, Config<T>, Storage, Event<T>} = 94,
-        Currencies: orml_currencies::{Pallet, Call} = 95,
-        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 96,
+        Vesting: orml_vesting = 91,
+        XTokens: orml_xtokens = 92,
+        UnknownTokens: orml_unknown_tokens = 93,
+        AssetRegistry: orml_asset_registry = 94,
+        Currencies: orml_currencies = 95,
+        Tokens: orml_tokens = 96,
     }
 );
 
@@ -954,8 +987,8 @@ impl_runtime_apis! {
         }
     }
 
-    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-        fn account_nonce(account: AccountId) -> Index {
+    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+        fn account_nonce(account: AccountId) -> Nonce {
             System::account_nonce(account)
         }
     }
@@ -1079,6 +1112,16 @@ impl_runtime_apis! {
                   if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 
                   Ok(batches)
+        }
+    }
+
+    impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
+        fn create_default_config() -> Vec<u8> {
+            frame_support::genesis_builder_helper::create_default_config::<RuntimeGenesisConfig>()
+        }
+
+        fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
+            frame_support::genesis_builder_helper::build_config::<RuntimeGenesisConfig>(config)
         }
     }
 }

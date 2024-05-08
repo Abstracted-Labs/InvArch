@@ -19,35 +19,20 @@
 //! Learn more about Substrate chain specifications at
 //! https://docs.substrate.io/v3/runtime/chain-specs/
 
-#[cfg(feature = "tinkernet")]
 use tinkernet_runtime::{
-    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
-    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
-    EXISTENTIAL_DEPOSIT, WASM_BINARY,
+    AccountId, AuraId, RuntimeGenesisConfig, SessionKeys, Signature, EXISTENTIAL_DEPOSIT,
+    WASM_BINARY,
 };
-
-//#[cfg(feature = "brainstorm")]
-//use brainstorm_runtime::{
-//    AccountId, AuraId, BalancesConfig, CollatorSelectionConfig, GenesisConfig, ParachainInfoConfig,
-//    PolkadotXcmConfig, SessionConfig, SessionKeys, Signature, SudoConfig, SystemConfig,
-//    EXISTENTIAL_DEPOSIT, WASM_BINARY,
-//};
 
 use cumulus_primitives_core::ParaId;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
-// use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-// use hex_literal::hex;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-// use std::{collections::BTreeMap, str::FromStr};
-
-// The URL for the telemetry server.
-// const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -101,65 +86,63 @@ pub fn template_session_keys(keys: AuraId) -> SessionKeys {
     SessionKeys { aura: keys }
 }
 
+pub fn tinkernet_live() -> ChainSpec {
+    let mut properties = sc_chain_spec::Properties::new();
+    properties.insert("tokenSymbol".into(), "TNKR".into());
+    properties.insert("tokenDecimals".into(), 12u32.into());
+    properties.insert("ss58Format".into(), 117u32.into());
+
+    ChainSpec::from_json_bytes(include_bytes!("../res/tinker-raw.json").to_vec())
+        .expect("Should never fail.")
+}
+
 pub fn development_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
-    properties.insert("tokenSymbol".into(), "UNIT".into());
+    properties.insert("tokenSymbol".into(), "TNKR".into());
     properties.insert("tokenDecimals".into(), 12u32.into());
-    properties.insert("ss58Format".into(), 42u32.into());
+    properties.insert("ss58Format".into(), 117u32.into());
 
-    ChainSpec::from_genesis(
-        // Name
-        "InvArch Dev Net",
-        // ID
-        "invarch_dev_net",
-        ChainType::Development,
-        move || {
-            testnet_genesis(
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                // initial collators.
-                vec![
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    ),
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Bob"),
-                        get_collator_keys_from_seed("Bob"),
-                    ),
-                ],
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                1000.into(),
-            )
-        },
-        // Bootnodes
-        Vec::new(),
-        // Telemetry
-        None,
-        // Protocol ID
-        None,
-        // Properties
-        None,
-        None,
-        // Extensions
+    ChainSpec::builder(
+        WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
             relay_chain: "rococo-local".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
         },
     )
+    .with_name("Tinkernet Dev Net")
+    .with_id("tinkernet-dev")
+    .with_chain_type(ChainType::Development)
+    .with_properties(properties)
+    .with_genesis_config_patch(testnet_genesis(
+        vec![
+            (
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                get_collator_keys_from_seed("Alice"),
+            ),
+            (
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_collator_keys_from_seed("Bob"),
+            ),
+        ],
+        vec![
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        1000.into(),
+    ))
+    .build()
 }
 
 pub fn solo_dev_config() -> ChainSpec {
@@ -169,58 +152,46 @@ pub fn solo_dev_config() -> ChainSpec {
     properties.insert("tokenDecimals".into(), 12u32.into());
     properties.insert("ss58Format".into(), 117u32.into());
 
-    ChainSpec::from_genesis(
-        // Name
-        "InvArch Solo Dev Net",
-        // ID
-        "invarch-solo-dev",
-        ChainType::Development,
-        move || {
-            testnet_genesis(
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                // initial collators.
-                vec![
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    ),
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Bob"),
-                        get_collator_keys_from_seed("Bob"),
-                    ),
-                ],
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                1000.into(),
-            )
-        },
-        // Bootnodes
-        Vec::new(),
-        // Telemetry
-        None,
-        // Protocol ID
-        None,
-        // Properties
-        None,
-        None,
-        // Extensions
+    ChainSpec::builder(
+        WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
             relay_chain: "dev".into(), // TODO: You MUST set this to the correct network!
-            para_id: 1000,
+            para_id: 2125,
         },
     )
+    .with_name("Tinkernet Solo Dev Net")
+    .with_id("tinkernet-solo-dev")
+    .with_chain_type(ChainType::Development)
+    .with_properties(properties)
+    .with_genesis_config_patch(testnet_genesis(
+        vec![
+            (
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                get_collator_keys_from_seed("Alice"),
+            ),
+            (
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_collator_keys_from_seed("Bob"),
+            ),
+        ],
+        vec![
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        2125.into(),
+    ))
+    .build()
 }
 
 pub fn local_testnet_config() -> ChainSpec {
@@ -230,90 +201,67 @@ pub fn local_testnet_config() -> ChainSpec {
     properties.insert("tokenDecimals".into(), 12u32.into());
     properties.insert("ss58Format".into(), 42u32.into());
 
-    ChainSpec::from_genesis(
-        // Name
-        "InvArch Local Testnet",
-        // ID
-        "invarch_local_testnet",
-        ChainType::Local,
-        move || {
-            testnet_genesis(
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                // initial collators.
-                vec![
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Alice"),
-                        get_collator_keys_from_seed("Alice"),
-                    ),
-                    (
-                        get_account_id_from_seed::<sr25519::Public>("Bob"),
-                        get_collator_keys_from_seed("Bob"),
-                    ),
-                ],
-                vec![
-                    get_account_id_from_seed::<sr25519::Public>("Alice"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-                    get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-                    get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                1000.into(),
-            )
-        },
-        // Bootnodes
-        Vec::new(),
-        // Telemetry
-        None,
-        // Protocol ID
-        None,
-        // Properties
-        None,
-        None,
-        // Extensions
+    ChainSpec::builder(
+        WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
-            relay_chain: "kusama-local".into(), // You MUST set this to the correct network!
+            relay_chain: "kusama-local".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
         },
     )
+    .with_name("Tinkernet Local Testnet")
+    .with_id("tinkernet-local-testnet")
+    .with_chain_type(ChainType::Local)
+    .with_properties(properties)
+    .with_genesis_config_patch(testnet_genesis(
+        vec![
+            (
+                get_account_id_from_seed::<sr25519::Public>("Alice"),
+                get_collator_keys_from_seed("Alice"),
+            ),
+            (
+                get_account_id_from_seed::<sr25519::Public>("Bob"),
+                get_collator_keys_from_seed("Bob"),
+            ),
+        ],
+        vec![
+            get_account_id_from_seed::<sr25519::Public>("Alice"),
+            get_account_id_from_seed::<sr25519::Public>("Bob"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+            get_account_id_from_seed::<sr25519::Public>("Dave"),
+            get_account_id_from_seed::<sr25519::Public>("Eve"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+            get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+            get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+        ],
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        1000.into(),
+    ))
+    .build()
 }
 
-/// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
-    root_key: AccountId,
     invulnerables: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
+    root: AccountId,
     id: ParaId,
-) -> GenesisConfig {
-    GenesisConfig {
-        system: SystemConfig {
-            // Add Wasm runtime to storage.
-            code: WASM_BINARY
-                .expect("WASM binary was not build, please build it!")
-                .to_vec(),
+) -> serde_json::Value {
+    serde_json::json!({
+        "balances": {
+            "balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
         },
-        balances: BalancesConfig {
-            // Configure endowed accounts with initial balance of 1 << 60.
-            balances: endowed_accounts
-                .iter()
-                .cloned()
-                .map(|k| (k, 1 << 60))
-                .collect(),
+        "parachainInfo": {
+            "parachainId": id,
         },
-        parachain_info: ParachainInfoConfig { parachain_id: id },
-        collator_selection: CollatorSelectionConfig {
-            invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-            candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
-            ..Default::default()
+        "collatorSelection": {
+            "invulnerables": invulnerables.iter().cloned().map(|(acc, _)| acc).collect::<Vec<_>>(),
+            "candidacyBond": EXISTENTIAL_DEPOSIT * 16,
         },
-        session: SessionConfig {
-            keys: invulnerables
+        "session": {
+            "keys": invulnerables
                 .into_iter()
                 .map(|(acc, aura)| {
                     (
@@ -322,27 +270,11 @@ fn testnet_genesis(
                         template_session_keys(aura), // session keys
                     )
                 })
-                .collect(),
+            .collect::<Vec<_>>(),
         },
-        // no need to pass anything to aura, in fact it will panic if we do. Session will take care
-        // of this.
-        aura: Default::default(),
-        aura_ext: Default::default(),
-        parachain_system: Default::default(),
-        polkadot_xcm: PolkadotXcmConfig {
-            safe_xcm_version: Some(SAFE_XCM_VERSION),
+        "polkadotXcm": {
+            "safeXcmVersion": Some(SAFE_XCM_VERSION),
         },
-        sudo: SudoConfig {
-            // Assign network admin rights.
-            key: Some(root_key),
-        },
-        treasury: Default::default(),
-        vesting: Default::default(),
-        maintenance_mode: Default::default(),
-        #[cfg(feature = "tinkernet")]
-        asset_registry: Default::default(),
-        #[cfg(feature = "tinkernet")]
-        tokens: Default::default(),
-        core_assets: Default::default(),
-    }
+        "sudo": { "key": Some(root) }
+    })
 }
