@@ -35,8 +35,7 @@ pub(crate) const BLOCKS_PER_ERA: BlockNumber = 3;
 pub(crate) const REGISTER_DEPOSIT: Balance = 10;
 
 construct_runtime!(
-    pub struct Test
-    {
+    pub struct Test {
         System: frame_system,
         Balances: pallet_balances,
         Timestamp: pallet_timestamp,
