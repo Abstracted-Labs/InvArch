@@ -23,7 +23,7 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use codec::{Decode, Encode, MaxEncodedLen};
+use codec::{Decode, Encode};
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use cumulus_primitives_core::DmpMessageHandler;
 use frame_support::{
@@ -57,7 +57,6 @@ use pallet_identity::legacy::IdentityInfo;
 use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
-use scale_info::TypeInfo;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -171,7 +170,14 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    // migrations::new_core_account_derivation::MigrateToNewDerivation,
+    (
+        pallet_identity::migration::versioned::V0ToV1<Runtime, 100>,
+        pallet_scheduler::migration::v3::MigrateToV4<Runtime>,
+        pallet_preimage::migration::v1::Migration<Runtime>,
+        pallet_collator_selection::migration::v1::MigrateToV1<Runtime>,
+        cumulus_pallet_xcmp_queue::migration::v4::MigrationToV4<Runtime>,
+        pallet_xcm::migration::v1::MigrateToV1<Runtime>,
+    ),
 >;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -207,7 +213,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 21,
+    spec_version: 23,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,

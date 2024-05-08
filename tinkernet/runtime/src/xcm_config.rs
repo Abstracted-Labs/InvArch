@@ -262,6 +262,8 @@ parameter_type_with_key! {
 
 parameter_types! {
     pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+    pub const MessageQueueMaxStale: u32 = 8;
+    pub const MessageQueueHeapSize: u32 = 128 * 1048;
 }
 
 impl pallet_message_queue::Config for Runtime {
@@ -279,8 +281,8 @@ impl pallet_message_queue::Config for Runtime {
     type Size = u32;
     type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
     type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
-    type HeapSize = sp_core::ConstU32<{ 64 * 1024 }>;
-    type MaxStale = sp_core::ConstU32<8>;
+    type HeapSize = MessageQueueHeapSize;
+    type MaxStale = MessageQueueMaxStale;
     type ServiceWeight = MessageQueueServiceWeight;
 }
 

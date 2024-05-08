@@ -251,7 +251,7 @@ pub fn run() -> Result<()> {
                 sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
                     .map_err(|e| format!("Error: {:?}", e))?;
 
-            let info_provider = timestamp_with_aura_info(MILLISECS_PER_BLOCK);
+            let info_provider = timestamp_with_aura_info(tinkernet_runtime::MILLISECS_PER_BLOCK);
 
             runner.async_run(|_| {
                 Ok((

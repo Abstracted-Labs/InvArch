@@ -4357,7 +4357,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-upgrade_polkadot_sdk_v1.6.0#4ce2810fb12724a79e4d11de642876c1702e34f0"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6560,7 +6560,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-upgrade_polkadot_sdk_v1.6.0#4ce2810fb12724a79e4d11de642876c1702e34f0"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6823,7 +6823,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-upgrade_polkadot_sdk_v1.6.0#4ce2810fb12724a79e4d11de642876c1702e34f0"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7001,7 +7001,7 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-upgrade_polkadot_sdk_v1.6.0#4ce2810fb12724a79e4d11de642876c1702e34f0"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -7150,7 +7150,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-upgrade_polkadot_sdk_v1.6.0#4ce2810fb12724a79e4d11de642876c1702e34f0"
+source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
