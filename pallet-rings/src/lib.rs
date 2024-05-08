@@ -43,7 +43,7 @@ pub mod pallet {
     use pallet_inv4::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
     use xcm::{
-        latest::{prelude::*, MultiAsset, Weight, WildMultiAsset},
+        v3::{prelude::*, MultiAsset, Weight, WildMultiAsset},
         DoubleEncoded,
     };
 
@@ -136,7 +136,7 @@ pub mod pallet {
         <T as pallet_inv4::Config>::CoreId: Into<u32>,
 
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
-        T::AccountId: From<[u8; 32]>,
+        <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
         /// Set the maintenance status of a chain.
         ///

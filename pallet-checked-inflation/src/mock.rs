@@ -2,19 +2,17 @@ use super::*;
 use crate::inflation::InflationMethod;
 use core::convert::TryFrom;
 use frame_support::{
-    parameter_types,
+    derive_impl, parameter_types,
     traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced},
 };
 use pallet_balances::AccountData;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
+use sp_runtime::{traits::IdentityLookup, BuildStorage, Perbill};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
 
 type AccountId = u32;
-type BlockNumber = u64;
 type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
@@ -23,60 +21,40 @@ pub const INFLATION_RECEIVER: AccountId = 0;
 pub const ALICE: AccountId = 1;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-    NodeBlock = Block,
-    UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        CheckedInflation: pallet::{Pallet, Call, Storage, Event<T>},
+        System: frame_system,
+        Balances: pallet_balances,
+        CheckedInflation: pallet,
     }
 );
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = BlockNumber;
+    type Nonce = u64;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
-    type BlockWeights = ();
-    type BlockLength = ();
-    type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = AccountData<Balance>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type DbWeight = ();
-    type BaseCallFilter = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = ();
-    type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
 }
 
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
 impl pallet_balances::Config for Test {
     type MaxLocks = ConstU32<50>;
-    /// The type for recording an account's balance.
     type Balance = Balance;
     type RuntimeEvent = RuntimeEvent;
-    type DustRemoval = ();
     type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
     type AccountStore = System;
-    type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
-
-    type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -115,8 +93,8 @@ pub const GENESIS_ISSUANCE: u128 = 11700000000000000000;
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+        let mut t = frame_system::GenesisConfig::<Test>::default()
+            .build_storage()
             .unwrap();
 
         pallet_balances::GenesisConfig::<Test> {

@@ -2,10 +2,10 @@ use crate::{fee_handling::*, *};
 use codec::{Decode, Encode};
 use core::convert::TryFrom;
 use frame_support::{
-    parameter_types,
+    derive_impl, parameter_types,
     traits::{
         fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
-        EnsureOriginWithArg, GenesisBuild,
+        EnsureOriginWithArg,
     },
 };
 use frame_system::EnsureRoot;
@@ -13,13 +13,11 @@ use orml_asset_registry::AssetMetadata;
 use pallet_balances::AccountData;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
+use sp_runtime::{AccountId32, BuildStorage};
 use sp_std::{convert::TryInto, vec};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
-type BlockNumber = u64;
 
 type AccountId = AccountId32;
 
@@ -31,17 +29,14 @@ pub const CHARLIE: AccountId = AccountId::new([2u8; 32]);
 pub const DAVE: AccountId = AccountId::new([3u8; 32]);
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-    NodeBlock = Block,
-    UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        INV4: pallet::{Pallet, Call, Storage, Event<T>, Origin<T>},
-        CoreAssets: orml_tokens2::{Pallet, Call, Storage, Event<T>},
-        Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-        AssetRegistry: orml_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>},
+        System: frame_system,
+        Balances: pallet_balances,
+        Tokens: orml_tokens,
+        AssetRegistry: orml_asset_registry,
+        CoreAssets: orml_tokens2,
+        INV4: pallet,
     }
 );
 
@@ -52,16 +47,16 @@ impl Contains<RuntimeCall> for TestBaseCallFilter {
     }
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = BlockNumber;
+    type Nonce = u64;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
+    type Lookup = sp_runtime::traits::IdentityLookup<AccountId>;
+    type Block = Block;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
     type BlockWeights = ();
@@ -79,30 +74,19 @@ impl frame_system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
 impl pallet_balances::Config for Test {
     type MaxLocks = ConstU32<50>;
-    /// The type for recording an account's balance.
     type Balance = Balance;
     type RuntimeEvent = RuntimeEvent;
-    type DustRemoval = ();
     type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
     type AccountStore = System;
-    type WeightInfo = ();
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
-    type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
+    type MaxFreezes = ConstU32<1>;
 }
 
 const UNIT: u128 = 1000000000000;
-
-orml_traits2::parameter_type_with_key! {
-    pub CoreExistentialDeposits: |_currency_id: <Test as pallet::Config>::CoreId| -> Balance {
-        1u128
-    };
-}
 
 pub struct CoreDustRemovalWhitelist;
 impl Contains<AccountId> for CoreDustRemovalWhitelist {
@@ -112,15 +96,19 @@ impl Contains<AccountId> for CoreDustRemovalWhitelist {
 }
 
 pub struct DisallowIfFrozen;
-impl orml_traits2::currency::OnTransfer<AccountId, <Test as pallet::Config>::CoreId, Balance>
-    for DisallowIfFrozen
+impl
+    orml_traits2::currency::OnTransfer<
+        <Test as frame_system::Config>::AccountId,
+        <Test as pallet::Config>::CoreId,
+        Balance,
+    > for DisallowIfFrozen
 {
     fn on_transfer(
         currency_id: <Test as pallet::Config>::CoreId,
         _from: &AccountId,
         _to: &AccountId,
         _amount: Balance,
-    ) -> sp_runtime::DispatchResult {
+    ) -> sp_std::result::Result<(), orml_traits::parameters::sp_runtime::DispatchError> {
         if let Some(true) = INV4::is_asset_frozen(currency_id) {
             Err(sp_runtime::DispatchError::Token(
                 sp_runtime::TokenError::Frozen,
@@ -132,15 +120,23 @@ impl orml_traits2::currency::OnTransfer<AccountId, <Test as pallet::Config>::Cor
 }
 
 pub struct HandleNewMembers;
-impl orml_traits2::Happened<(AccountId, <Test as pallet::Config>::CoreId)> for HandleNewMembers {
+impl
+    orml_traits2::Happened<(
+        <Test as frame_system::Config>::AccountId,
+        <Test as pallet::Config>::CoreId,
+    )> for HandleNewMembers
+{
     fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
         INV4::add_member(core_id, member)
     }
 }
 
 pub struct HandleRemovedMembers;
-impl orml_traits2::Happened<(AccountId, <Test as pallet::Config>::CoreId)>
-    for HandleRemovedMembers
+impl
+    orml_traits2::Happened<(
+        <Test as frame_system::Config>::AccountId,
+        <Test as pallet::Config>::CoreId,
+    )> for HandleRemovedMembers
 {
     fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
         INV4::remove_member(core_id, member)
@@ -148,8 +144,12 @@ impl orml_traits2::Happened<(AccountId, <Test as pallet::Config>::CoreId)>
 }
 
 pub struct INV4TokenHooks;
-impl orml_traits2::currency::MutationHooks<AccountId, <Test as pallet::Config>::CoreId, Balance>
-    for INV4TokenHooks
+impl
+    orml_traits2::currency::MutationHooks<
+        <Test as frame_system::Config>::AccountId,
+        <Test as pallet::Config>::CoreId,
+        Balance,
+    > for INV4TokenHooks
 {
     type PreTransfer = DisallowIfFrozen;
     type OnDust = ();
@@ -159,6 +159,12 @@ impl orml_traits2::currency::MutationHooks<AccountId, <Test as pallet::Config>::
     type PostTransfer = ();
     type OnNewTokenAccount = HandleNewMembers;
     type OnKilledTokenAccount = HandleRemovedMembers;
+}
+
+orml_traits2::parameter_type_with_key! {
+    pub CoreExistentialDeposits: |_currency_id: <Test as pallet::Config>::CoreId| -> Balance {
+        CExistentialDeposit::get()
+    };
 }
 
 impl orml_tokens2::Config for Test {
@@ -197,9 +203,11 @@ parameter_types! {
     pub const NativeAssetId: AssetId = NATIVE_ASSET_ID;
     pub const RelayAssetId: AssetId = RELAY_ASSET_ID;
     pub const ExistentialDeposit: u128 = 100000000000;
+    pub const CExistentialDeposit: u128 = 1;
     pub const MaxLocks: u32 = 1;
     pub const MaxReserves: u32 = 1;
     pub const MaxCallSize: u32 = 50 * 1024;
+    pub const StringLimit: u32 = 2125;
 }
 
 pub struct AssetAuthority;
@@ -210,7 +218,7 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
         origin: RuntimeOrigin,
         _asset_id: &Option<u32>,
     ) -> Result<Self::Success, RuntimeOrigin> {
-        EnsureRoot::try_origin(origin)
+        <EnsureRoot<_> as EnsureOrigin<RuntimeOrigin>>::try_origin(origin)
     }
 }
 
@@ -222,6 +230,7 @@ impl orml_asset_registry::Config for Test {
     type AssetProcessor = orml_asset_registry::SequentialId<Test>;
     type CustomMetadata = ();
     type WeightInfo = ();
+    type StringLimit = StringLimit;
 }
 
 pub struct DustRemovalWhitelist;
@@ -251,7 +260,7 @@ impl orml_tokens::Config for Test {
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
-    type DustRemovalWhitelist = DustRemovalWhitelist;
+    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = ();
@@ -345,8 +354,8 @@ pub const INITIAL_BALANCE: Balance = 100000000000000000;
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+        let mut t = frame_system::GenesisConfig::<Test>::default()
+            .build_storage()
             .unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
@@ -366,8 +375,8 @@ impl ExtBuilder {
                     0u32,
                     AssetMetadata {
                         decimals: 12,
-                        name: vec![],
-                        symbol: vec![],
+                        name: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
+                        symbol: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
                         existential_deposit: ExistentialDeposit::get(),
                         location: None,
                         additional: (),
@@ -378,8 +387,8 @@ impl ExtBuilder {
                     1u32,
                     AssetMetadata {
                         decimals: 12,
-                        name: vec![],
-                        symbol: vec![],
+                        name: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
+                        symbol: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
                         existential_deposit: ExistentialDeposit::get(),
                         location: None,
                         additional: (),

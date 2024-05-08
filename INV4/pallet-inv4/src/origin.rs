@@ -14,7 +14,7 @@ use crate::{
     Config,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
-use frame_support::{error::BadOrigin, RuntimeDebug};
+use frame_support::{error::BadOrigin, pallet_prelude::RuntimeDebug};
 use scale_info::TypeInfo;
 
 /// Origin representing a core by its id.

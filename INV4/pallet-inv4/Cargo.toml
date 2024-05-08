@@ -9,60 +9,67 @@ repository = 'https://github.com/InvArch/InvArch-Frames'
 version = '0.1.0-dev'
 
 [dependencies]
-serde = { version = "1.0.132", optional = true }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sp-api = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-std = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-frame-support = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-frame-system = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-smallvec = "1.6.1"
+serde = { workspace = true, optional = true }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+    "derive", "max-encoded-len"
+] }
+sp-runtime = { workspace = true, default-features = false }
+sp-arithmetic = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+frame-support = { workspace = true, default-features = false }
+smallvec = { workspace = true }
 
-scale-info = { version = "2.0.0", features = ["derive"], default-features = false }
+scale-info = { workspace = true, default-features = false }
 
-log = { version = "0.4.14", default-features = false }
+log = { workspace = true, default-features = false }
 
 # InvArch dependencies
 primitives = { package = "invarch-primitives", path = "../../primitives", default-features = false }
 
-sp-io = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
-sp-core = { git = "https://github.com/paritytech/substrate", default-features = false , branch = "polkadot-v0.9.43" }
+sp-io = { workspace = true, default-features = false }
+sp-api = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate.git', default-features = false , branch = "polkadot-v0.9.43" }
+pallet-balances = { workspace = true, default-features = false }
 
-frame-benchmarking = { git = 'https://github.com/paritytech/substrate.git', default-features = false, optional = true , branch = "polkadot-v0.9.43" }
+frame-system = { workspace = true, default-features = false }                        # frame-benchmarking requires system
+frame-benchmarking = { workspace = true, default-features = false, optional = true }
 
-orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
 
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "release-v0.9.43" }
+xcm = { workspace = true, default-features = false }
+orml-tokens2 = { workspace = true, default-features = false }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-traits2 = { package = "orml-traits", git = "https://github.com/arrudagates/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+
+orml-traits2 = { workspace = true, default-features = false }
+orml-tokens = { workspace = true, default-features = false }
+orml-traits = { workspace = true, default-features = false }
+orml-asset-registry = { workspace = true, default-features = false }
+
 
 [features]
 default = ["std"]
 std = [
-	"serde",
-	"codec/std",
-	"sp-runtime/std",
-	"sp-std/std",
-	"frame-support/std",
-	"frame-system/std",
-  "sp-io/std",
-  "scale-info/std",
-  "pallet-balances/std",
-	"frame-benchmarking?/std",
-  "orml-asset-registry/std",
-  "orml-tokens/std",
+    "serde",
+    "codec/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-io/std",
+    "scale-info/std",
+    "pallet-balances/std",
+    "frame-benchmarking?/std",
+    "xcm/std",
+    "orml-asset-registry/std",
+    "orml-tokens/std",
+    "orml-tokens2/std",
+    "orml-traits/std",
+    "orml-traits2/std",
 ]
 runtime-benchmarks = [
-	"frame-benchmarking/runtime-benchmarks",
-	"sp-runtime/runtime-benchmarks",
-	"frame-system/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]

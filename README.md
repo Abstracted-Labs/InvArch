@@ -11,7 +11,7 @@
 [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/InvArch)
 [![Knowledge Hub](https://img.shields.io/badge/🧠_Knwoledge_hub-gray)](https://abstracted.notion.site/Knowledge-Hub-eec0071f36364d6aa8138f0004ac8d85)
 <br />
-[![Substrate version](https://img.shields.io/badge/Substrate-v3.0.0-E6007A?logo=Parity%20Substrate)](https://github.com/paritytech/substrate/releases/tag/v3.0.0)
+[![Polkadot SDK version](https://img.shields.io/badge/Polkadot_SDK-V1.6.0-E6007A?logo=polkadot)](https://github.com/paritytech/polkadot-sdk/releases/tag/polkadot-v1.6.0)
 [![Medium](https://img.shields.io/badge/Medium-InvArch-E6007A?logo=medium)](https://invarch.medium.com/)
 [![License](https://img.shields.io/github/license/InvArch/InvArch?color=E6007A)](https://github.com/InvArch/InvArch/blob/main/LICENSE)
 [![Library Docs](https://img.shields.io/badge/Library-Docs%2Ers-E6007A?logo=docsdotrs)](https://invarch.github.io/InvArch-Frames/)
@@ -22,7 +22,7 @@
 
 ## Intro
 
-This repository should contain the Substrate FRAME Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
+This repository should contain the Polkadot SDK FRAME Pallets used in the InvArch blockchain, and reviews their relationships and functions. At the current stage, the goal of creating this document and repository is centered around getting feedback while we continue to write the code and develop InvArch. This is a WIP.
 
 Check out the [Knowledge Hub](https://abstracted.notion.site/Knowledge-Hub-eec0071f36364d6aa8138f0004ac8d85), it is the perfect place to dive into all things InvArch
 

@@ -5,10 +5,10 @@ use crate::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use core::convert::TryFrom;
 use frame_support::{
-    parameter_types,
+    derive_impl, parameter_types,
     traits::{
         fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
-        EnsureOriginWithArg, Everything, GenesisBuild, Nothing,
+        EnsureOriginWithArg, Everything, Nothing,
     },
 };
 use frame_system::EnsureRoot;
@@ -17,24 +17,22 @@ use pallet_balances::AccountData;
 use pallet_inv4::fee_handling::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
+use sp_runtime::{traits::IdentityLookup, AccountId32, BuildStorage};
 pub use sp_std::{cell::RefCell, fmt::Debug};
 use sp_std::{convert::TryInto, vec};
 use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfFungible,
-    FixedWeightBounds, IsConcrete, SignedAccountId32AsNative, SignedToAccountId32,
-    SovereignSignedViaLocation, TakeWeightCredit,
+    AllowTopLevelPaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds,
+    FungibleAdapter as XcmCurrencyAdapter, IsConcrete, SignedAccountId32AsNative,
+    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
 
 type AccountId = AccountId32;
-type BlockNumber = u64;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
@@ -49,19 +47,16 @@ pub const CHARLIE: AccountId = AccountId32::new([
 ]);
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-    NodeBlock = Block,
-    UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Event<T>, Config<T>},
-        INV4: pallet_inv4::{Pallet, Call, Storage, Event<T>, Origin<T>},
-        CoreAssets: orml_tokens2::{Pallet, Call, Storage, Event<T>},
-        Rings: pallet::{Pallet, Call, Storage, Event<T>},
-        XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config},
-        Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-        AssetRegistry: orml_asset_registry::{Pallet, Call, Storage, Event<T>, Config<T>},
+        System: frame_system,
+        Balances: pallet_balances,
+        Tokens: orml_tokens,
+        CoreAssets: orml_tokens2,
+        AssetRegistry: orml_asset_registry,
+        INV4: pallet_inv4,
+        Rings: pallet,
+        XcmPallet: pallet_xcm,
     }
 );
 
@@ -72,16 +67,17 @@ impl Contains<RuntimeCall> for TestBaseCallFilter {
     }
 }
 
+#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = BlockNumber;
+    type RuntimeTask = RuntimeTask;
+    type Nonce = u64;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = ConstU64<250>;
     type BlockWeights = ();
@@ -99,6 +95,7 @@ impl frame_system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
+#[derive_impl(pallet_balances::config_preludes::TestDefaultConfig as pallet_balances::DefaultConfig)]
 impl pallet_balances::Config for Test {
     type MaxLocks = ConstU32<50>;
     /// The type for recording an account's balance.
@@ -111,9 +108,7 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
     type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
 }
 
 thread_local! {
@@ -196,6 +191,7 @@ impl xcm_executor::Config for XcmConfig {
     type SafeCallFilter = Everything;
     type PalletInstancesInfo = AllPalletsWithSystem;
     type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+    type Aliasers = ();
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, AnyNetwork>;
@@ -313,7 +309,7 @@ parameter_types! {
     pub const MaxCallers: u32 = 10000;
     pub const CoreSeedBalance: Balance = 1000000u128;
     pub const CoreCreationFee: Balance = UNIT;
-
+    pub const StringLimit: u32 = 2125;
     pub const RelayCoreCreationFee: Balance = UNIT;
 }
 
@@ -338,7 +334,7 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
         origin: RuntimeOrigin,
         _asset_id: &Option<u32>,
     ) -> Result<Self::Success, RuntimeOrigin> {
-        EnsureRoot::try_origin(origin)
+        <EnsureRoot<_> as EnsureOrigin<RuntimeOrigin>>::try_origin(origin)
     }
 }
 
@@ -350,6 +346,7 @@ impl orml_asset_registry::Config for Test {
     type AssetProcessor = orml_asset_registry::SequentialId<Test>;
     type CustomMetadata = ();
     type WeightInfo = ();
+    type StringLimit = StringLimit;
 }
 
 pub struct DustRemovalWhitelist;
@@ -568,8 +565,8 @@ pub const INITIAL_BALANCE: Balance = 100000000000000000;
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+        let mut t = frame_system::GenesisConfig::<Test>::default()
+            .build_storage()
             .unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
@@ -588,8 +585,8 @@ impl ExtBuilder {
                     0u32,
                     AssetMetadata {
                         decimals: 12,
-                        name: vec![],
-                        symbol: vec![],
+                        name: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
+                        symbol: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
                         existential_deposit: ExistentialDeposit::get(),
                         location: None,
                         additional: (),
@@ -600,8 +597,8 @@ impl ExtBuilder {
                     1u32,
                     AssetMetadata {
                         decimals: 12,
-                        name: vec![],
-                        symbol: vec![],
+                        name: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
+                        symbol: sp_core::bounded_vec::BoundedVec::<u8, StringLimit>::new(),
                         existential_deposit: ExistentialDeposit::get(),
                         location: None,
                         additional: (),

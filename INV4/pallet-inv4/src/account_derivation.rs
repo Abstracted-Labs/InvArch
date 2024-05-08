@@ -14,7 +14,7 @@ use crate::{Config, Pallet};
 use codec::{Compact, Encode};
 use frame_support::traits::Get;
 use sp_io::hashing::blake2_256;
-use xcm::latest::{BodyId, BodyPart, Junction, Junctions};
+use xcm::v3::{BodyId, BodyPart, Junction, Junctions};
 /// Trait providing the XCM location and the derived account of a core.
 pub trait CoreAccountDerivation<T: Config> {
     /// Derives the core's AccountId.
