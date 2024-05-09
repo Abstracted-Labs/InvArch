@@ -2,7 +2,10 @@
   "name": "InvArch Network",
   "id": "invarch_polkadot",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns/invarch-boot.dwellir.com/tcp/443/wss/p2p/12D3KooWHWLn81PF8T29cxeeq12hpJoaPNbJbuvtZ6pJxJ8asnTY",
+    "/dns/invarch-boot.dwellir.com/tcp/30363/p2p/12D3KooWHWLn81PF8T29cxeeq12hpJoaPNbJbuvtZ6pJxJ8asnTY"
+  ],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
