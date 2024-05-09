@@ -7,7 +7,8 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
     pub const RegisterDeposit: Balance = 5000 * UNIT;
     pub const MaxStakersPerCore: u32 = 10000;
-    pub const MinimumStakingAmount: Balance = 50 * UNIT;
+    // Temporarily dropping down from 50 to 5.
+    pub const MinimumStakingAmount: Balance = 5 * UNIT;
     pub const MaxEraStakeValues: u32 = 5;
     pub const MaxUnlockingChunks: u32 = 5;
     pub const UnbondingPeriod: u32 = 28;

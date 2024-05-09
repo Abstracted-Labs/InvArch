@@ -43,10 +43,10 @@ derive_more = "0.99.2"
 
 
 ## InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-upgrade_polkadot_sdk_v1.6.0", default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-upgrade_polkadot_sdk_v1.6.0", default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-upgrade_polkadot_sdk_v1.6.0", default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-upgrade_polkadot_sdk_v1.6.0", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
 
 new-modified-construct-runtime = { path = "../new-modified-construct-runtime", default-features = false }
 
