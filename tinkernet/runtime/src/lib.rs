@@ -891,6 +891,7 @@ construct_runtime_modified!(
         ConvictionVoting: pallet_conviction_voting = 102,
         Origins: governance::pallet_custom_origins = 103,
         Whitelist: pallet_whitelist = 104,
+        Elections: pallet_elections_phragmen = 105,
 
     }
 );
