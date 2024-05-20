@@ -5,7 +5,6 @@ use super::*;
 use frame_support::{parameter_types, traits::EitherOf};
 
 use frame_system::EnsureRootWithSuccess;
-use polkadot_runtime_common::prod_or_fast;
 
 mod origins;
 pub use origins::{
@@ -18,7 +17,7 @@ pub use tracks::TracksInfo;
 mod councils;
 
 parameter_types! {
-    pub const VoteLockingPeriod: BlockNumber = prod_or_fast!(7 * DAYS, 1);
+    pub const VoteLockingPeriod: BlockNumber = 7 * DAYS;
 }
 
 impl pallet_conviction_voting::Config for Runtime {
@@ -34,7 +33,7 @@ impl pallet_conviction_voting::Config for Runtime {
 
 parameter_types! {
     pub const AlarmInterval: BlockNumber = 1;
-    pub const SubmissionDeposit: Balance = 1 * UNIT;
+    pub const SubmissionDeposit: Balance = UNIT;
     pub const UndecidingTimeout: BlockNumber = 14 * DAYS;
 }
 
@@ -42,16 +41,16 @@ parameter_types! {
     pub const MaxBalance: Balance = Balance::max_value();
 }
 
-pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
-pub type RootOrGeneralManagement = EitherOf<EnsureRoot<AccountId>, GeneralManagement>;
-
 pub type AllCouncil = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 1>;
+pub type CouncilMoreThanApprove =
+    pallet_collective::EnsureProportionMoreThan<AccountId, TinkerCouncil, 3, 5>;
 pub type ConcilHalf = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 2>;
 pub type CouncilThreeFifths =
     pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 3, 5>;
 
+pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
+pub type RootOrGeneralManagement = EitherOf<EnsureRoot<AccountId>, GeneralManagement>;
 pub type CouncilApproveOrigin = EitherOf<EnsureRoot<AccountId>, CouncilThreeFifths>;
-
 pub type CouncilRejectOrigin = EitherOf<EnsureRoot<AccountId>, ConcilHalf>;
 
 impl pallet_custom_origins::Config for Runtime {}
@@ -72,7 +71,8 @@ impl pallet_referenda::Config for Runtime {
     type Scheduler = Scheduler;
     type Currency = Balances;
     type SubmitOrigin = frame_system::EnsureSigned<AccountId>;
-    type CancelOrigin = EitherOf<EitherOf<EnsureRoot<AccountId>, ReferendumCanceller>, AllCouncil>;
+    type CancelOrigin =
+        EitherOf<EitherOf<EnsureRoot<AccountId>, ReferendumCanceller>, CouncilMoreThanApprove>;
     type KillOrigin = EitherOf<EitherOf<EnsureRoot<AccountId>, ReferendumKiller>, AllCouncil>;
     type Slash = Treasury;
     type Votes = pallet_conviction_voting::VotesOf<Runtime>;

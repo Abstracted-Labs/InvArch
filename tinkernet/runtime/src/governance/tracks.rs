@@ -88,7 +88,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
         pallet_referenda::TrackInfo {
             name: "general_management",
             max_deciding: 10,
-            decision_deposit: 20 * GRAND,
+            decision_deposit: 10 * GRAND,
             #[cfg(not(feature = "on-chain-release-build"))]
             prepare_period: 4 * MINUTES,
             #[cfg(feature = "on-chain-release-build")]
@@ -114,7 +114,7 @@ const TRACKS_DATA: [(u16, pallet_referenda::TrackInfo<Balance, BlockNumber>); 8]
         pallet_referenda::TrackInfo {
             name: "council_admin",
             max_deciding: 10,
-            decision_deposit: 5 * GRAND,
+            decision_deposit: 10 * GRAND,
             #[cfg(not(feature = "on-chain-release-build"))]
             prepare_period: 4 * MINUTES,
             #[cfg(feature = "on-chain-release-build")]
