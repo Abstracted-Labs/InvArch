@@ -1,13 +1,13 @@
 [package]
 name = "invarch-node"
-version = "1.1.1"
-authors = ["InvArchitects <https://github.com/InvArch>"]
+version.workspace = true
+authors.workspace = true
 description = "A Substrate-based InvArch Node."
-license = "GPL-3.0"
-homepage = "https://invarch.network"
+license.workspace = true
+homepage.workspace = true
 publish = false
-repository = "https://github.com/InvArch/InvArch-node/"
-edition = "2021"
+repository.workspace = true
+edition.workspace = true
 build = "build.rs"
 
 # [package.metadata.docs.rs]
