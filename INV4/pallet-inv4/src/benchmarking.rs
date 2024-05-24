@@ -5,7 +5,6 @@ use crate::{
     fee_handling::FeeAsset,
     multisig::MAX_SIZE,
     origin::{INV4Origin, MultisigInternalOrigin},
-    util::derive_core_account,
     voting::{Tally, Vote},
     BalanceOf,
 };
@@ -38,18 +37,21 @@ fn perbill_one() -> Perbill {
     Perbill::one()
 }
 
-fn derive_account<T: Config>(core_id: T::CoreId) -> T::AccountId {
-    derive_core_account::<T, T::CoreId, T::AccountId>(core_id)
+fn derive_account<T>(core_id: T::CoreId) -> T::AccountId
+where
+    T: Config,
+    T::AccountId: From<[u8; 32]>,
+{
+    INV4::<T>::derive_core_account(core_id)
 }
 
 fn mock_core<T: Config>() -> DispatchResultWithPostInfo
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
         Sum,
+    T::AccountId: From<[u8; 32]>,
 {
     T::Currency::make_free_balance_be(
         &whitelisted_caller(),
@@ -61,20 +63,18 @@ where
         vec![].try_into().unwrap(),
         perbill_one(),
         perbill_one(),
-        FeeAsset::TNKR,
+        FeeAsset::Native,
     )
 }
 
 fn mock_mint<T: Config>() -> Result<(), DispatchError>
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
         Sum,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     INV4::<T>::token_mint(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
@@ -85,14 +85,12 @@ where
 
 fn mock_mint_2<T: Config>() -> Result<(), DispatchError>
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
         Sum,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     INV4::<T>::token_mint(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
@@ -103,34 +101,30 @@ where
 
 fn mock_call<T: Config>() -> Result<PostDispatchInfo, DispatchErrorWithPostInfo<PostDispatchInfo>>
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
         Sum,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     INV4::<T>::operate_multisig(
         SystemOrigin::Signed(whitelisted_caller()).into(),
         0u32.into(),
         None,
-        FeeAsset::TNKR,
+        FeeAsset::Native,
         Box::new(frame_system::Call::<T>::remark { remark: vec![0] }.into()),
     )
 }
 
 fn mock_vote<T: Config>() -> Result<PostDispatchInfo, DispatchErrorWithPostInfo<PostDispatchInfo>>
 where
-    Result<
-        INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
         Sum,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     let call: <T as Config>::RuntimeCall =
         frame_system::Call::<T>::remark { remark: vec![0] }.into();
@@ -149,11 +143,12 @@ benchmarks! {
     where_clause {
       where
         Result<
-                INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>,
+                INV4Origin<T>,
             <T as frame_system::Config>::RuntimeOrigin,
             >: From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
-    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 }
 
     create_core {
@@ -163,7 +158,7 @@ benchmarks! {
         let caller = whitelisted_caller();
         let minimum_support = perbill_one();
         let required_approval = perbill_one();
-        let creation_fee_asset = FeeAsset::TNKR;
+        let creation_fee_asset = FeeAsset::Native;
 
         T::Currency::make_free_balance_be(&caller, T::CoreCreationFee::get() + T::CoreCreationFee::get());
     }: _(SystemOrigin::Signed(caller.clone()), metadata.clone(), minimum_support, required_approval, creation_fee_asset)
@@ -244,7 +239,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let core_id: T::CoreId = 0u32.into();
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
-        let fee_asset = FeeAsset::TNKR;
+        let fee_asset = FeeAsset::Native;
 
     }: _(SystemOrigin::Signed(caller.clone()), core_id, Some(metadata), fee_asset, Box::new(call.clone()))
         verify {

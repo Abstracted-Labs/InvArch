@@ -16,10 +16,7 @@ benchmarks! {
       where
         Result<
                 INV4Origin<
-                        T,
-                    <T as pallet_inv4::Config>::CoreId,
-                    <T as frame_system::Config>::AccountId,
-                    >,
+                        T>,
             <T as frame_system::Config>::RuntimeOrigin,
             >: From<<T as frame_system::Config>::RuntimeOrigin>,
 
@@ -28,7 +25,9 @@ benchmarks! {
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
 
     <T as frame_system::Config>::RuntimeOrigin:
-    From<INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    From<INV4Origin<T>>,
+
+    T::AccountId: From<[u8; 32]>,
 }
 
     set_maintenance_status {
