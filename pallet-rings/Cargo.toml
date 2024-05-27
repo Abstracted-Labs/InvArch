@@ -74,6 +74,7 @@ std = [
   "orml-tokens2/std",
   "orml-asset-registry/std",
   "xcm-builder/std",
+  "frame-benchmarking?/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",

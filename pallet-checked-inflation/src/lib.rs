@@ -209,7 +209,7 @@ pub mod pallet {
                     });
                 }
 
-                T::DbWeight::get().reads_writes(7, 3)
+                T::DbWeight::get().reads_writes(3, 4)
             } else {
                 let inflation_per_era = Self::inflation_per_era();
 
@@ -275,12 +275,12 @@ pub mod pallet {
                             }
                         }
 
-                        T::DbWeight::get().reads_writes(8, 2)
+                        T::DbWeight::get().reads_writes(5, 2)
                     } else {
-                        T::DbWeight::get().reads_writes(6, 2)
+                        T::DbWeight::get().reads_writes(4, 2)
                     }
                 } else {
-                    T::DbWeight::get().reads(6)
+                    T::DbWeight::get().reads(4)
                 }
             }
         }
