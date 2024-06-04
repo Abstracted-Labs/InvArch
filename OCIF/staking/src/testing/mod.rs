@@ -50,6 +50,19 @@ pub(crate) fn assert_register(core: mock::CoreId) {
     );
 }
 
+pub(crate) fn short_stake(staker: AccountId, core_id: &CoreId, value: Balance) {
+    assert_ok!(OcifStaking::stake(
+        RuntimeOrigin::signed(staker.clone()),
+        core_id.clone(),
+        value
+    ));
+    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Staked {
+        staker,
+        core: core_id.clone(),
+        amount: value,
+    }));
+}
+
 pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
     let current_era = OcifStaking::current_era();
     let init_state = MemorySnapshot::all(current_era, &core, staker.clone());
@@ -232,6 +245,15 @@ pub(crate) fn assert_unregister(core: CoreId) {
     System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreUnregistered {
         core,
     }));
+
+    // println!("storage info{:#?}", MessageQueue::storage_info());
+    // println!("get queue info{:#?}", MessageQueue::debug_info());
+    // println!(
+    //     "footprint: {:#?}",
+    //     MessageQueue::footprint(UnregisterMessageOrigin)
+    // );
+    run_for_blocks(1);
+    // println!("get queue info{:#?}", MessageQueue::debug_info());
 
     let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
     assert_eq!(

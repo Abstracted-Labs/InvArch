@@ -20,6 +20,7 @@ frame-support = { workspace = true, default-features = false }
 frame-system = { workspace = true, default-features = false }
 num-traits = { workspace = true, default-features = false }
 pallet-balances = { workspace = true, default-features = false, optional = true }
+pallet-message-queue = { workspace = true, default-features = false}
 pallet-session = { workspace = true, default-features = false }
 pallet-timestamp = { workspace = true, default-features = false, optional = true }
 sp-arithmetic = { workspace = true, default-features = false }
@@ -34,6 +35,7 @@ pallet-inv4 = { path = "../../INV4/pallet-inv4", default-features = false }
 frame-benchmarking = { workspace = true, default-features = false, optional = true }
 
 [dev-dependencies]
+cumulus-primitives-core = { workspace = true, default-features = false }
 orml-traits = { workspace = true, default-features = false }
 orml-tokens = { workspace = true, default-features = false }
 xcm = { workspace = true, default-features = false }
@@ -45,6 +47,7 @@ std = [
     "codec/std",
     "scale-info/std",
     "num-traits/std",
+    "cumulus-primitives-core/std",
     "sp-core/std",
     "sp-runtime/std",
     "sp-arithmetic/std",
@@ -55,6 +58,7 @@ std = [
     "frame-benchmarking?/std",
     "xcm/std",
     "pallet-balances/std",
+    "pallet-message-queue/std",
     "pallet-session/std",
     "pallet-timestamp/std",
     "pallet-inv4/std",
@@ -67,6 +71,7 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-inv4/runtime-benchmarks",
+    "pallet-message-queue/runtime-benchmarks",
 
 ]
 try-runtime = ["frame-support/try-runtime"]

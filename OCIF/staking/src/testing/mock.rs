@@ -1,12 +1,17 @@
-use crate as pallet_ocif_staking;
+use crate::{self as pallet_ocif_staking, ProcessUnregistrationMessages, UnregisterMessageOrigin};
 use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
 use frame_support::{
-    construct_runtime, derive_impl, parameter_types,
+    construct_runtime, derive_impl,
+    dispatch::DispatchClass,
+    parameter_types,
     traits::{
         fungibles::Credit, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
     },
-    weights::Weight,
+    weights::{
+        constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
+        Weight,
+    },
     PalletId,
 };
 use pallet_inv4::CoreAccountDerivation;
@@ -27,6 +32,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 
 pub(crate) const EXISTENTIAL_DEPOSIT: Balance = 2;
 pub(crate) const MAX_NUMBER_OF_STAKERS: u32 = 4;
+pub(crate) const _MAX_NUMBER_OF_STAKERS_TINKERNET: u32 = 10000;
 pub(crate) const MINIMUM_STAKING_AMOUNT: Balance = 10;
 pub(crate) const MAX_UNLOCKING: u32 = 4;
 pub(crate) const UNBONDING_PERIOD: EraIndex = 3;
@@ -42,6 +48,7 @@ construct_runtime!(
         OcifStaking: pallet_ocif_staking,
         CoreAssets: orml_tokens,
         INV4: pallet_inv4,
+        MessageQueue: pallet_message_queue,
     }
 );
 
@@ -258,8 +265,61 @@ impl pallet_ocif_staking::Config for Test {
     type RewardRatio = RewardRatio;
     type StakeThresholdForActiveCore = ConstU128<THRESHOLD>;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
+    type StakingMessage = MessageQueue;
 }
 
+/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
+/// `Operational` extrinsics. (from tinkernet)
+const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+
+/// We allow for 0.5 of a second of compute with a 12 second average block time.
+const MAXIMUM_BLOCK_WEIGHT: Weight = Weight::from_parts(
+    WEIGHT_REF_TIME_PER_SECOND.saturating_div(2),
+    cumulus_primitives_core::relay_chain::MAX_POV_SIZE as u64,
+);
+
+/// We assume that ~5% of the block weight is consumed by `on_initialize` handlers.
+/// This is used to limit the maximal weight of a single extrinsic.
+const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
+
+parameter_types! {
+    pub RuntimeBlockWeights: frame_system::limits::BlockWeights = frame_system::limits::BlockWeights::builder()
+    .base_block(BlockExecutionWeight::get())
+    .for_class(DispatchClass::all(), |weights| {
+        weights.base_extrinsic = ExtrinsicBaseWeight::get();
+    })
+    .for_class(DispatchClass::Normal, |weights| {
+        weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
+    })
+    .for_class(DispatchClass::Operational, |weights| {
+        weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
+        // Operational transactions have some extra reserved space, so that they
+        // are included even if block reached `MAXIMUM_BLOCK_WEIGHT`.
+        weights.reserved = Some(
+            MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
+        );
+    })
+    .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
+    .build_or_panic();
+    pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+    pub const MessageQueueMaxStale: u32 = 8;
+    pub const MessageQueueHeapSize: u32 = 128 * 1048;
+}
+
+impl pallet_message_queue::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_message_queue::weights::SubstrateWeight<Self>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<()>;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type MessageProcessor = ProcessUnregistrationMessages<UnregisterMessageOrigin, Self>;
+    type Size = u32;
+    type QueueChangeHandler = ();
+    type QueuePausedQuery = UnregisterMessageOrigin;
+    type HeapSize = MessageQueueHeapSize;
+    type MaxStale = MessageQueueMaxStale;
+    type ServiceWeight = MessageQueueServiceWeight;
+}
 pub struct ExternalityBuilder;
 
 pub fn account(core: CoreId) -> AccountId {
@@ -324,6 +384,7 @@ pub fn run_to_block(n: u64) {
         OcifStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
 
         OcifStaking::on_initialize(System::block_number());
+        MessageQueue::on_initialize(System::block_number());
     }
 }
 
@@ -332,6 +393,7 @@ pub fn run_to_block_no_rewards(n: u64) {
         OcifStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         OcifStaking::on_initialize(System::block_number());
+        MessageQueue::on_initialize(System::block_number());
     }
 }
 
@@ -363,6 +425,7 @@ pub fn initialize_first_block() {
     assert_eq!(System::block_number(), 1 as BlockNumber);
 
     OcifStaking::on_initialize(System::block_number());
+    MessageQueue::on_initialize(System::block_number());
     run_to_block(2);
 }
 

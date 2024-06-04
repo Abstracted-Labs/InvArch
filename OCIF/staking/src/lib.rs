@@ -55,11 +55,11 @@ use frame_support::{
     ensure,
     pallet_prelude::*,
     traits::{
-        Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
-        ReservableCurrency, WithdrawReasons,
+        Currency, EnqueueMessage, ExistenceRequirement, Get, Imbalance, LockIdentifier,
+        LockableCurrency, QueuePausedQuery, ReservableCurrency, WithdrawReasons,
     },
     weights::Weight,
-    PalletId,
+    BoundedSlice, PalletId,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
 use sp_runtime::{
@@ -95,6 +95,8 @@ pub mod pallet {
         CoreAccountDerivation,
     };
 
+    use pallet_message_queue::{self};
+
     use super::*;
 
     /// The balance type of this pallet.
@@ -123,7 +125,9 @@ pub mod pallet {
     pub type Era = u32;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_inv4::Config {
+    pub trait Config:
+        frame_system::Config + pallet_inv4::Config + pallet_message_queue::Config
+    {
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -208,6 +212,8 @@ pub mod pallet {
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+
+        type StakingMessage: EnqueueMessage<UnregisterMessageOrigin>;
     }
 
     /// General information about the staker.
@@ -271,6 +277,12 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
+
+    /// Placeholder for the core being unregistered and the era where it started.
+    #[pallet::storage]
+    #[pallet::getter(fn core_unregistering_staker_info)]
+    pub type UnregisteredCoreStakeInfo<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::CoreId, CoreStakeInfo<BalanceOf<T>>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -337,6 +349,16 @@ pub mod pallet {
             to_core: T::CoreId,
             amount: BalanceOf<T>,
         },
+        /// Core is being unregistered.
+        CoreUnregistrationQueueStarted { core: T::CoreId },
+        /// Core ungregistration chunk was processed.
+        CoreUnregistrationChunksProcessed {
+            core: T::CoreId,
+            accounts_processed_in_this_chunk: u64,
+            accounts_left: u64,
+        },
+        /// Sharded execution of the core unregistration process finished.
+        CoreUnregistrationQueueFinished { core: T::CoreId },
     }
 
     #[pallet::error]
@@ -391,6 +413,10 @@ pub mod pallet {
         NoHaltChange,
         /// Attempted to move stake to the same core.
         MoveStakeToSameCore,
+        /// No weight configured for unregistering.
+        NoWeightConfiguredForUnregistering,
+        /// Queue is full.
+        UnregisteringQueueFull,
     }
 
     #[pallet::hooks]
@@ -504,9 +530,12 @@ pub mod pallet {
                 <T as Config>::MaxStakersPerCore::get().div(100) * <T as Config>::WeightInfo::unstake()
         )]
         pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            // whats left to do is copy the storage to a temp storage for the unregistering
+            // set the stake info to zero.
+            // create the call to unregister parts, integrate pallet_messages.
             Self::ensure_not_halted()?;
 
-            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let core = ensure_multisig::<T, OriginFor<T>>(origin.clone())?;
             let core_account = core.to_account_id();
             let core_id = core.id;
 
@@ -517,63 +546,42 @@ pub mod pallet {
 
             let current_era = Self::current_era();
 
-            let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(core_id);
+            let mut _core_stake_info =
+                Self::core_stake_info(core_id, current_era).unwrap_or_default();
+            UnregisteredCoreStakeInfo::<T>::insert(core_id, _core_stake_info.clone());
+            GeneralEraInfo::<T>::mutate(current_era, |value| {
+                if let Some(x) = value {
+                    x.staked = x.staked.saturating_sub(_core_stake_info.total);
+                }
+            });
+            _core_stake_info.total = Zero::zero();
+            CoreEraStake::<T>::insert(core_id, current_era, _core_stake_info.clone());
 
-            let mut corrected_staker_length_fee = Zero::zero();
-
-            for staker in staker_info_prefix {
-                let mut core_stake_info =
-                    Self::core_stake_info(core_id, current_era).unwrap_or_default();
-
-                let mut staker_info = Self::staker_info(core_id, &staker);
-
-                let latest_staked_value = staker_info.latest_staked_value();
-
-                let value_to_unstake = Self::internal_unstake(
-                    &mut staker_info,
-                    &mut core_stake_info,
-                    latest_staked_value,
-                    current_era,
-                )?;
-
-                let mut ledger = Self::ledger(&staker);
-                ledger.unbonding_info.add(UnlockingChunk {
-                    amount: value_to_unstake,
-                    unlock_era: current_era + T::UnbondingPeriod::get(),
-                });
-
-                ensure!(
-                    ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
-                    Error::<T>::TooManyUnlockingChunks
-                );
-
-                Self::update_ledger(&staker, ledger);
-
-                GeneralEraInfo::<T>::mutate(current_era, |value| {
-                    if let Some(x) = value {
-                        x.staked = x.staked.saturating_sub(value_to_unstake);
-                    }
-                });
-                Self::update_staker_info(&staker, core_id, staker_info);
-                CoreEraStake::<T>::insert(core_id, current_era, core_stake_info);
-
-                Self::deposit_event(Event::<T>::Unstaked {
-                    staker,
-                    core: core_id,
-                    amount: value_to_unstake,
-                });
-
-                corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
-            }
+            let mut _corrected_staker_length_fee = Zero::zero();
 
             RegisteredCore::<T>::remove(core_id);
-
             <T as pallet::Config>::Currency::unreserve(&core_account, T::RegisterDeposit::get());
+
+            let _total_stakers = _core_stake_info.number_of_stakers;
+
+            let message = primitives::UnregisterMessage::<T> {
+                core_id: core_id.clone(),
+                era: current_era,
+                stakers_to_unstake: _total_stakers,
+            }
+            .encode();
+
+            T::StakingMessage::enqueue_message(
+                BoundedSlice::truncate_from(message.as_slice()),
+                UnregisterMessageOrigin {},
+            );
+
+            Self::deposit_event(Event::<T>::CoreUnregistrationQueueStarted { core: core_id });
 
             Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
 
             Ok(
-                Some(<T as Config>::WeightInfo::unregister_core() + corrected_staker_length_fee)
+                Some(<T as Config>::WeightInfo::unregister_core() + _corrected_staker_length_fee)
                     .into(),
             )
         }
@@ -828,24 +836,43 @@ pub mod pallet {
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
+            //  // Check if the ensure staking_info.total > Zero::zero(), is a good way to avoid this extra read.
+            // if let Some(unregister_era) = Self::is_core_unregistering(core_id) {
+            //     ensure!(era < unregister_era, Error::<T>::NoStakeAvailable);
+            // }
             let staking_info = Self::core_stake_info(core_id, era).unwrap_or_default();
-            let reward_and_stake =
-                Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
 
-            let (_, stakers_joint_reward) =
-                Self::core_stakers_split(&staking_info, &reward_and_stake);
-            let staker_reward =
-                Perbill::from_rational(staked, staking_info.total) * stakers_joint_reward;
+            // // Just in case the core is being unregistered and the staker was not unstaked yet.
+            // // Erroring here may require the front end to handle the case where the user is trying to claim rewards
+            // // before the core is unregistered.
+            // // I'll write another option for avoiding this error down here.
+            // ensure!(
+            //     staking_info.total > Zero::zero(),
+            //     Error::<T>::NoStakeAvailable
+            // );
 
-            let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
-                &Self::account_id(),
-                staker_reward,
-                WithdrawReasons::TRANSFER,
-                ExistenceRequirement::AllowDeath,
-            )?;
+            let mut staker_reward = Zero::zero();
 
-            <T as pallet::Config>::Currency::resolve_creating(&staker, reward_imbalance);
-            Self::update_staker_info(&staker, core_id, staker_info);
+            if staking_info.total > Zero::zero() {
+                let reward_and_stake =
+                    Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
+
+                let (_, stakers_joint_reward) =
+                    Self::core_stakers_split(&staking_info, &reward_and_stake);
+                staker_reward =
+                    Perbill::from_rational(staked, staking_info.total) * stakers_joint_reward;
+
+                let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
+                    &Self::account_id(),
+                    staker_reward,
+                    WithdrawReasons::TRANSFER,
+                    ExistenceRequirement::AllowDeath,
+                )?;
+
+                <T as pallet::Config>::Currency::resolve_creating(&staker, reward_imbalance);
+                Self::update_staker_info(&staker, core_id, staker_info);
+            }
+
             Self::deposit_event(Event::<T>::StakerClaimed {
                 staker,
                 core: core_id,
@@ -1247,5 +1274,87 @@ pub mod pallet {
                 Ok(())
             }
         }
+
+        /// Sharded execution of the core unregistration process.
+        ///
+        /// This function is called by the [`ProcessMessage`] trait implemented in [`primitives::ProcessUnregistrationMessages`]
+        pub(crate) fn process_core_unregistration_shard(
+            stakers: u32,
+            core_id: T::CoreId,
+            start_era: Era,
+            chunk_size: u64,
+        ) -> DispatchResultWithPostInfo {
+            let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(core_id);
+
+            let mut corrected_staker_length_fee = Zero::zero();
+
+            for staker in staker_info_prefix.take(chunk_size as usize) {
+                let mut core_stake_info =
+                    Self::core_unregistering_staker_info(core_id).unwrap_or_default();
+
+                let mut staker_info = Self::staker_info(core_id, &staker);
+
+                let latest_staked_value = staker_info.latest_staked_value();
+
+                let value_to_unstake = Self::internal_unstake(
+                    &mut staker_info,
+                    &mut core_stake_info,
+                    latest_staked_value,
+                    start_era,
+                )?;
+
+                let mut ledger = Self::ledger(&staker);
+                ledger.unbonding_info.add(UnlockingChunk {
+                    amount: value_to_unstake,
+                    unlock_era: start_era + T::UnbondingPeriod::get(),
+                });
+
+                ensure!(
+                    ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
+                    Error::<T>::TooManyUnlockingChunks
+                );
+
+                Self::update_ledger(&staker, ledger);
+
+                Self::update_staker_info(&staker, core_id, staker_info);
+
+                Self::deposit_event(Event::<T>::Unstaked {
+                    staker,
+                    core: core_id,
+                    amount: value_to_unstake,
+                });
+                corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
+            }
+
+            let total_remaning_stakers = stakers.saturating_sub(chunk_size as u32);
+            if total_remaning_stakers != 0 {
+                let _call: Vec<u8> = primitives::UnregisterMessage::<T> {
+                    core_id: core_id.clone(),
+                    stakers_to_unstake: total_remaning_stakers,
+                    era: start_era,
+                }
+                .encode();
+
+                T::StakingMessage::enqueue_message(
+                    BoundedSlice::truncate_from(_call.as_slice()),
+                    UnregisterMessageOrigin {},
+                );
+                Self::deposit_event(Event::<T>::CoreUnregistrationChunksProcessed {
+                    core: core_id,
+                    accounts_processed_in_this_chunk: chunk_size.min(stakers.into()),
+                    accounts_left: total_remaning_stakers as u64,
+                });
+            } else {
+                Self::deposit_event(Event::<T>::CoreUnregistrationQueueFinished { core: core_id });
+            }
+
+            Ok(Some(corrected_staker_length_fee).into())
+        }
+    }
+}
+
+impl<T: Config> QueuePausedQuery<T> for Pallet<T> {
+    fn is_paused(_origin: &T) -> bool {
+        Pallet::<T>::is_halted()
     }
 }
