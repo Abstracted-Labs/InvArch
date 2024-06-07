@@ -13,7 +13,7 @@
 use super::pallet::{self, *};
 use crate::{
     account_derivation::CoreAccountDerivation,
-    fee_handling::FeeAsset,
+    fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
     origin::{ensure_multisig, INV4Origin},
     voting::{Tally, Vote},
 };
@@ -27,8 +27,9 @@ use frame_support::{
     traits::{
         fungibles::{Inspect, Mutate},
         tokens::{Fortitude, Precision},
-        Currency, VoteTally,
+        Currency, ExistenceRequirement, VoteTally, WithdrawReasons,
     },
+    weights::WeightToFee,
     BoundedBTreeMap,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
@@ -168,6 +169,21 @@ where
                 .encode()
                 .try_into()
                 .map_err(|_| Error::<T>::MaxCallLengthExceeded)?;
+
+            let total_lenght = (bounded_call.len() as u64)
+                .saturating_add(metadata.clone().unwrap_or_default().len() as u64);
+
+            let storage_cost: BalanceOf<T> =
+                T::LengthToFee::weight_to_fee(&Weight::from_parts(total_lenght as u64, 0));
+
+            T::FeeCharger::handle_creation_fee(FeeAssetNegativeImbalance::Native(
+                <T as Config>::Currency::withdraw(
+                    &owner,
+                    storage_cost,
+                    WithdrawReasons::TRANSACTION_PAYMENT,
+                    ExistenceRequirement::KeepAlive,
+                )?,
+            ));
 
             // Insert proposal in storage, it's now in the voting stage
             Multisig::<T>::insert(

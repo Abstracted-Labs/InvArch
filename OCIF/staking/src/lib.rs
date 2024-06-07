@@ -565,7 +565,7 @@ pub mod pallet {
             let _total_stakers = _core_stake_info.number_of_stakers;
 
             let message = primitives::UnregisterMessage::<T> {
-                core_id: core_id.clone(),
+                core_id,
                 era: current_era,
                 stakers_to_unstake: _total_stakers,
             }
@@ -1329,7 +1329,7 @@ pub mod pallet {
             let total_remaning_stakers = stakers.saturating_sub(chunk_size as u32);
             if total_remaning_stakers != 0 {
                 let _call: Vec<u8> = primitives::UnregisterMessage::<T> {
-                    core_id: core_id.clone(),
+                    core_id,
                     stakers_to_unstake: total_remaning_stakers,
                     era: start_era,
                 }

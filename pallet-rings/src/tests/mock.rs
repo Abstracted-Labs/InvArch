@@ -10,6 +10,7 @@ use frame_support::{
         fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
         EnsureOriginWithArg, Everything, Nothing,
     },
+    weights::ConstantMultiplier,
 };
 use frame_system::EnsureRoot;
 use orml_asset_registry::AssetMetadata;
@@ -33,6 +34,8 @@ type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
 
 type AccountId = AccountId32;
+
+const MICROUNIT: Balance = 1_000_000;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
@@ -324,6 +327,7 @@ parameter_types! {
     pub const ExistentialDeposit: u128 = 100000000000;
     pub const MaxLocks: u32 = 1;
     pub const MaxReserves: u32 = 1;
+    pub const TransactionByteFee: Balance = 10 * MICROUNIT;
 }
 
 pub struct AssetAuthority;
@@ -455,6 +459,7 @@ impl pallet_inv4::Config for Test {
     type MaxCallSize = ConstU32<51200>;
 
     type ParaId = ConstU32<2125>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 parameter_types! {

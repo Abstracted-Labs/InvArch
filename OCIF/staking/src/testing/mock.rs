@@ -10,7 +10,7 @@ use frame_support::{
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
-        Weight,
+        ConstantMultiplier, Weight,
     },
     PalletId,
 };
@@ -39,6 +39,7 @@ pub(crate) const UNBONDING_PERIOD: EraIndex = 3;
 pub(crate) const MAX_ERA_STAKE_VALUES: u32 = 8;
 pub(crate) const BLOCKS_PER_ERA: BlockNumber = 3;
 pub(crate) const REGISTER_DEPOSIT: Balance = 10;
+const MICROUNIT: Balance = 1_000_000;
 
 construct_runtime!(
     pub struct Test {
@@ -245,6 +246,7 @@ impl pallet_inv4::Config for Test {
     type MaxCallSize = ConstU32<51200>;
 
     type ParaId = ConstU32<2125>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 impl pallet_ocif_staking::Config for Test {
@@ -304,6 +306,7 @@ parameter_types! {
     pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
     pub const MessageQueueMaxStale: u32 = 8;
     pub const MessageQueueHeapSize: u32 = 128 * 1048;
+    pub const TransactionByteFee: Balance = 10 * MICROUNIT;
 }
 
 impl pallet_message_queue::Config for Test {

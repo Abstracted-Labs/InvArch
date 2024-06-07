@@ -70,7 +70,9 @@ pub mod pallet {
             fungibles::{Balanced, Inspect},
             Currency, Get, GetCallMetadata, ReservableCurrency,
         },
-        transactional, Parameter,
+        transactional,
+        weights::WeightToFee,
+        Parameter,
     };
     use frame_system::{pallet_prelude::*, RawOrigin};
     use primitives::CoreInfo;
@@ -172,6 +174,9 @@ pub mod pallet {
 
         /// Weight info for dispatchable calls
         type WeightInfo: WeightInfo;
+
+        /// Weight to fee conversion provider, from pallet_transaction_payment
+        type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
     }
 
     /// The current storage version.
