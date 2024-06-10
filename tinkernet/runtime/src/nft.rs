@@ -34,5 +34,5 @@ impl pallet_uniques::Config for Runtime {
     type StringLimit = UniquesStringLimit;
     type KeyLimit = KeyLimit;
     type ValueLimit = ValueLimit;
-    type WeightInfo = ();
+    type WeightInfo = pallet_uniques::weights::SubstrateWeight<Runtime>;
 }

@@ -1,8 +1,10 @@
 use crate::{
-    Balance, Balances, BlockNumber, ExistentialDeposit, Runtime, RuntimeEvent, DAYS, UNIT,
+    Balance, Balances, BlockNumber, ExistentialDeposit, MessageQueue, Runtime, RuntimeEvent, DAYS,
+    UNIT,
 };
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{parameter_types, PalletId};
-
+use pallet_ocif_staking::primitives::CustomAggregateMessageOrigin;
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
     pub const RegisterDeposit: Balance = 500 * UNIT;
@@ -17,6 +19,7 @@ parameter_types! {
     pub const MaxNameLength: u32 = 20;
     pub const MaxDescriptionLength: u32 = 300;
     pub const MaxImageUrlLength: u32 = 100;
+    pub const UnregisterOrigin: CustomAggregateMessageOrigin<AggregateMessageOrigin> = CustomAggregateMessageOrigin::UnregisterMessageOrigin;
 }
 
 impl pallet_ocif_staking::Config for Runtime {
@@ -36,6 +39,6 @@ impl pallet_ocif_staking::Config for Runtime {
     type MaxNameLength = MaxNameLength;
     type MaxDescriptionLength = MaxDescriptionLength;
     type MaxImageUrlLength = MaxImageUrlLength;
-
+    type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
     type WeightInfo = pallet_ocif_staking::weights::SubstrateWeight<Runtime>;
 }
