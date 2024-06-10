@@ -33,9 +33,9 @@ sp-std = { workspace = true, default-features = false }
 pallet-inv4 = { path = "../../INV4/pallet-inv4", default-features = false }
 
 frame-benchmarking = { workspace = true, default-features = false, optional = true }
+cumulus-primitives-core = { workspace = true, default-features = false }
 
 [dev-dependencies]
-cumulus-primitives-core = { workspace = true, default-features = false }
 orml-traits = { workspace = true, default-features = false }
 orml-tokens = { workspace = true, default-features = false }
 xcm = { workspace = true, default-features = false }

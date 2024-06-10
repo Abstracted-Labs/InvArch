@@ -55,8 +55,8 @@ use frame_support::{
     ensure,
     pallet_prelude::*,
     traits::{
-        Currency, EnqueueMessage, ExistenceRequirement, Get, Imbalance, LockIdentifier,
-        LockableCurrency, QueuePausedQuery, ReservableCurrency, WithdrawReasons,
+        Currency, ExistenceRequirement, Get, HandleMessage, Imbalance, LockIdentifier,
+        LockableCurrency, ProcessMessage, QueuePausedQuery, ReservableCurrency, WithdrawReasons,
     },
     weights::Weight,
     BoundedSlice, PalletId,
@@ -213,7 +213,7 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
-        type StakingMessage: EnqueueMessage<UnregisterMessageOrigin>;
+        type StakingMessage: HandleMessage;
     }
 
     /// General information about the staker.
@@ -530,9 +530,6 @@ pub mod pallet {
                 <T as Config>::MaxStakersPerCore::get().div(100) * <T as Config>::WeightInfo::unstake()
         )]
         pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            // whats left to do is copy the storage to a temp storage for the unregistering
-            // set the stake info to zero.
-            // create the call to unregister parts, integrate pallet_messages.
             Self::ensure_not_halted()?;
 
             let core = ensure_multisig::<T, OriginFor<T>>(origin.clone())?;
@@ -571,10 +568,7 @@ pub mod pallet {
             }
             .encode();
 
-            T::StakingMessage::enqueue_message(
-                BoundedSlice::truncate_from(message.as_slice()),
-                UnregisterMessageOrigin {},
-            );
+            T::StakingMessage::handle_message(BoundedSlice::truncate_from(message.as_slice()));
 
             Self::deposit_event(Event::<T>::CoreUnregistrationQueueStarted { core: core_id });
 
@@ -1328,17 +1322,15 @@ pub mod pallet {
 
             let total_remaning_stakers = stakers.saturating_sub(chunk_size as u32);
             if total_remaning_stakers != 0 {
-                let _call: Vec<u8> = primitives::UnregisterMessage::<T> {
+                let message: Vec<u8> = primitives::UnregisterMessage::<T> {
                     core_id,
                     stakers_to_unstake: total_remaning_stakers,
                     era: start_era,
                 }
                 .encode();
 
-                T::StakingMessage::enqueue_message(
-                    BoundedSlice::truncate_from(_call.as_slice()),
-                    UnregisterMessageOrigin {},
-                );
+                T::StakingMessage::handle_message(BoundedSlice::truncate_from(message.as_slice()));
+
                 Self::deposit_event(Event::<T>::CoreUnregistrationChunksProcessed {
                     core: core_id,
                     accounts_processed_in_this_chunk: chunk_size.min(stakers.into()),
@@ -1358,3 +1350,6 @@ impl<T: Config> QueuePausedQuery<T> for Pallet<T> {
         Pallet::<T>::is_halted()
     }
 }
+
+pub type MessageOriginOf<T> =
+    <<T as pallet_message_queue::Config>::MessageProcessor as ProcessMessage>::Origin;

@@ -1,6 +1,7 @@
-use crate::{self as pallet_ocif_staking, ProcessUnregistrationMessages, UnregisterMessageOrigin};
+use crate::{self as pallet_ocif_staking, CustomAggregateMessageOrigin, CustomMessageProcessor};
 use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
+use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{
     construct_runtime, derive_impl,
     dispatch::DispatchClass,
@@ -142,6 +143,7 @@ parameter_types! {
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
     pub const RelayAssetId: u32 = 9999;
+    pub const UnregisterOrigin: CustomAggregateMessageOrigin<AggregateMessageOrigin> = CustomAggregateMessageOrigin::UnregisterMessageOrigin;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
@@ -267,7 +269,7 @@ impl pallet_ocif_staking::Config for Test {
     type RewardRatio = RewardRatio;
     type StakeThresholdForActiveCore = ConstU128<THRESHOLD>;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
-    type StakingMessage = MessageQueue;
+    type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
 }
 
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
@@ -315,10 +317,16 @@ impl pallet_message_queue::Config for Test {
     #[cfg(feature = "runtime-benchmarks")]
     type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<()>;
     #[cfg(not(feature = "runtime-benchmarks"))]
-    type MessageProcessor = ProcessUnregistrationMessages<UnregisterMessageOrigin, Self>;
+    type MessageProcessor = CustomMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+        AggregateMessageOrigin,
+        pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>,
+        RuntimeCall,
+        Test,
+    >;
     type Size = u32;
     type QueueChangeHandler = ();
-    type QueuePausedQuery = UnregisterMessageOrigin;
+    type QueuePausedQuery = ();
     type HeapSize = MessageQueueHeapSize;
     type MaxStale = MessageQueueMaxStale;
     type ServiceWeight = MessageQueueServiceWeight;
