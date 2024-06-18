@@ -278,8 +278,9 @@ impl pallet_message_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_message_queue::weights::SubstrateWeight<Self>;
     #[cfg(feature = "runtime-benchmarks")]
-    type MessageProcessor =
-        pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
+    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+    >;
     #[cfg(not(feature = "runtime-benchmarks"))]
     type MessageProcessor = CustomMessageProcessor<
         CustomAggregateMessageOrigin<AggregateMessageOrigin>,
