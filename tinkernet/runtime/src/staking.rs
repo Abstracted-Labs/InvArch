@@ -41,4 +41,6 @@ impl pallet_ocif_staking::Config for Runtime {
     type MaxImageUrlLength = MaxImageUrlLength;
     type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
     type WeightInfo = pallet_ocif_staking::weights::SubstrateWeight<Runtime>;
+    type WeightToFee = crate::WeightToFee;
+    type OnUnbalanced = crate::DealWithFees;
 }
