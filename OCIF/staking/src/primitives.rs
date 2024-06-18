@@ -462,7 +462,6 @@ where
                         Ok(true)
                     }
                     Err(_) => {
-                        println!("error");
                         meter.try_consume(max_weight).map_err(|_| {
                             frame_support::traits::ProcessMessageError::Overweight(max_weight)
                         })?;

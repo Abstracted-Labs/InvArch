@@ -175,7 +175,7 @@ pub mod pallet {
         /// Weight info for dispatchable calls
         type WeightInfo: WeightInfo;
 
-        /// Weight to fee conversion provider, from pallet_transaction_payment
+        /// Byte to fee conversion provider, from pallet_transaction_payment.
         type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
     }
 

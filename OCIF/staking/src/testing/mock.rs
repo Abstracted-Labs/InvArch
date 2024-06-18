@@ -270,6 +270,8 @@ impl pallet_ocif_staking::Config for Test {
     type StakeThresholdForActiveCore = ConstU128<THRESHOLD>;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
     type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
+    type WeightToFee = ConstantMultiplier<Balance, ZeroFee>;
+    type OnUnbalanced = ();
 }
 
 /// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used by
@@ -309,13 +311,16 @@ parameter_types! {
     pub const MessageQueueMaxStale: u32 = 8;
     pub const MessageQueueHeapSize: u32 = 128 * 1048;
     pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+    pub const ZeroFee: Balance = 0;
 }
 
 impl pallet_message_queue::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_message_queue::weights::SubstrateWeight<Self>;
     #[cfg(feature = "runtime-benchmarks")]
-    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<()>;
+    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+    >;
     #[cfg(not(feature = "runtime-benchmarks"))]
     type MessageProcessor = CustomMessageProcessor<
         CustomAggregateMessageOrigin<AggregateMessageOrigin>,

@@ -56,9 +56,10 @@ use frame_support::{
     pallet_prelude::*,
     traits::{
         Currency, ExistenceRequirement, Get, HandleMessage, Imbalance, LockIdentifier,
-        LockableCurrency, ProcessMessage, QueuePausedQuery, ReservableCurrency, WithdrawReasons,
+        LockableCurrency, OnUnbalanced, ProcessMessage, QueuePausedQuery, ReservableCurrency,
+        WithdrawReasons,
     },
-    weights::Weight,
+    weights::{Weight, WeightToFee},
     BoundedSlice, PalletId,
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
@@ -72,7 +73,6 @@ use sp_std::{
 };
 
 pub mod primitives;
-use core::ops::Div;
 use primitives::*;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -213,7 +213,14 @@ pub mod pallet {
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
+        /// Message queue interface.
         type StakingMessage: HandleMessage;
+
+        /// Weight to fee conversion provider, from pallet_transaction_payment.
+        type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
+
+        /// Fee charghing interface.
+        type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
 
     /// General information about the staker.
@@ -278,11 +285,22 @@ pub mod pallet {
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
 
-    /// Placeholder for the core being unregistered and the era where it started.
+    /// Placeholder for the core being unregistered and its stake info.
     #[pallet::storage]
     #[pallet::getter(fn core_unregistering_staker_info)]
     pub type UnregisteredCoreStakeInfo<T: Config> =
         StorageMap<_, Blake2_128Concat, T::CoreId, CoreStakeInfo<BalanceOf<T>>, OptionQuery>;
+
+    /// Placeholder for the core being unregistered and its stakers.
+    #[pallet::storage]
+    #[pallet::getter(fn core_unregistering_staker_list)]
+    pub type UnregisteredCoreStakers<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::CoreId,
+        BoundedVec<T::AccountId, T::MaxStakersPerCore>,
+        OptionQuery,
+    >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
@@ -413,10 +431,6 @@ pub mod pallet {
         NoHaltChange,
         /// Attempted to move stake to the same core.
         MoveStakeToSameCore,
-        /// No weight configured for unregistering.
-        NoWeightConfiguredForUnregistering,
-        /// Queue is full.
-        UnregisteringQueueFull,
     }
 
     #[pallet::hooks]
@@ -526,8 +540,7 @@ pub mod pallet {
         /// - `core_id`: Id of the core to be unregistered.
         #[pallet::call_index(1)]
         #[pallet::weight(
-            <T as Config>::WeightInfo::unregister_core() +
-                <T as Config>::MaxStakersPerCore::get().div(100) * <T as Config>::WeightInfo::unstake()
+            <T as Config>::WeightInfo::unregister_core()
         )]
         pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -543,28 +556,46 @@ pub mod pallet {
 
             let current_era = Self::current_era();
 
-            let mut _core_stake_info =
+            let all_stakers: BoundedVec<T::AccountId, T::MaxStakersPerCore> =
+                BoundedVec::truncate_from(
+                    GeneralStakerInfo::<T>::iter_key_prefix(core_id).collect::<Vec<T::AccountId>>(),
+                );
+
+            let all_fee = <T as Config>::WeightToFee::weight_to_fee(
+                &(all_stakers.len() as u32 * <T as Config>::WeightInfo::unstake()),
+            );
+
+            UnregisteredCoreStakers::<T>::insert(core_id, all_stakers);
+
+            let mut core_stake_info =
                 Self::core_stake_info(core_id, current_era).unwrap_or_default();
-            UnregisteredCoreStakeInfo::<T>::insert(core_id, _core_stake_info.clone());
+            UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
             GeneralEraInfo::<T>::mutate(current_era, |value| {
                 if let Some(x) = value {
-                    x.staked = x.staked.saturating_sub(_core_stake_info.total);
+                    x.staked = x.staked.saturating_sub(core_stake_info.total);
                 }
             });
-            _core_stake_info.total = Zero::zero();
-            CoreEraStake::<T>::insert(core_id, current_era, _core_stake_info.clone());
+            core_stake_info.total = Zero::zero();
+            CoreEraStake::<T>::insert(core_id, current_era, core_stake_info.clone());
 
-            let mut _corrected_staker_length_fee = Zero::zero();
+            let reserve_deposit = T::RegisterDeposit::get();
+            <T as Config>::Currency::unreserve(&core_account, reserve_deposit);
+
+            T::OnUnbalanced::on_unbalanced(<T as Config>::Currency::withdraw(
+                &core_account,
+                reserve_deposit.min(all_fee),
+                WithdrawReasons::TRANSACTION_PAYMENT,
+                ExistenceRequirement::KeepAlive,
+            )?);
 
             RegisteredCore::<T>::remove(core_id);
-            <T as pallet::Config>::Currency::unreserve(&core_account, T::RegisterDeposit::get());
 
-            let _total_stakers = _core_stake_info.number_of_stakers;
+            let total_stakers = core_stake_info.number_of_stakers;
 
             let message = primitives::UnregisterMessage::<T> {
                 core_id,
                 era: current_era,
-                stakers_to_unstake: _total_stakers,
+                stakers_to_unstake: total_stakers,
             }
             .encode();
 
@@ -574,10 +605,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
 
-            Ok(
-                Some(<T as Config>::WeightInfo::unregister_core() + _corrected_staker_length_fee)
-                    .into(),
-            )
+            Ok(Some(<T as Config>::WeightInfo::unregister_core()).into())
         }
 
         /// Used to change the metadata of a core.
@@ -830,20 +858,7 @@ pub mod pallet {
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
-            //  // Check if the ensure staking_info.total > Zero::zero(), is a good way to avoid this extra read.
-            // if let Some(unregister_era) = Self::is_core_unregistering(core_id) {
-            //     ensure!(era < unregister_era, Error::<T>::NoStakeAvailable);
-            // }
             let staking_info = Self::core_stake_info(core_id, era).unwrap_or_default();
-
-            // // Just in case the core is being unregistered and the staker was not unstaked yet.
-            // // Erroring here may require the front end to handle the case where the user is trying to claim rewards
-            // // before the core is unregistered.
-            // // I'll write another option for avoiding this error down here.
-            // ensure!(
-            //     staking_info.total > Zero::zero(),
-            //     Error::<T>::NoStakeAvailable
-            // );
 
             let mut staker_reward = Zero::zero();
 
@@ -1278,67 +1293,83 @@ pub mod pallet {
             start_era: Era,
             chunk_size: u64,
         ) -> DispatchResultWithPostInfo {
-            let staker_info_prefix = GeneralStakerInfo::<T>::iter_key_prefix(core_id);
+            let mut staker_info_prefix =
+                Self::core_unregistering_staker_list(core_id).unwrap_or_default();
 
             let mut corrected_staker_length_fee = Zero::zero();
 
-            for staker in staker_info_prefix.take(chunk_size as usize) {
-                let mut core_stake_info =
-                    Self::core_unregistering_staker_info(core_id).unwrap_or_default();
+            let mut core_stake_info =
+                Self::core_unregistering_staker_info(core_id).unwrap_or_default();
 
+            let mut unsteked_count: u64 = 0;
+            while let Some(staker) = staker_info_prefix.pop() {
                 let mut staker_info = Self::staker_info(core_id, &staker);
 
                 let latest_staked_value = staker_info.latest_staked_value();
 
-                let value_to_unstake = Self::internal_unstake(
+                if let Ok(value_to_unstake) = Self::internal_unstake(
                     &mut staker_info,
                     &mut core_stake_info,
                     latest_staked_value,
                     start_era,
-                )?;
+                ) {
+                    UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
+                    let mut ledger = Self::ledger(&staker);
+                    ledger.unbonding_info.add(UnlockingChunk {
+                        amount: value_to_unstake,
+                        unlock_era: start_era + T::UnbondingPeriod::get(),
+                    });
 
-                let mut ledger = Self::ledger(&staker);
-                ledger.unbonding_info.add(UnlockingChunk {
-                    amount: value_to_unstake,
-                    unlock_era: start_era + T::UnbondingPeriod::get(),
-                });
+                    ensure!(
+                        ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
+                        Error::<T>::TooManyUnlockingChunks
+                    );
 
-                ensure!(
-                    ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
-                    Error::<T>::TooManyUnlockingChunks
-                );
+                    Self::update_ledger(&staker, ledger);
 
-                Self::update_ledger(&staker, ledger);
+                    Self::update_staker_info(&staker, core_id, staker_info);
 
-                Self::update_staker_info(&staker, core_id, staker_info);
-
-                Self::deposit_event(Event::<T>::Unstaked {
-                    staker,
-                    core: core_id,
-                    amount: value_to_unstake,
-                });
-                corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
-            }
-
-            let total_remaning_stakers = stakers.saturating_sub(chunk_size as u32);
-            if total_remaning_stakers != 0 {
-                let message: Vec<u8> = primitives::UnregisterMessage::<T> {
-                    core_id,
-                    stakers_to_unstake: total_remaning_stakers,
-                    era: start_era,
+                    Self::deposit_event(Event::<T>::Unstaked {
+                        staker: staker.clone(),
+                        core: core_id,
+                        amount: value_to_unstake,
+                    });
+                    corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
+                } else {
+                    // if the staker has moved or already unstaked `internal_unstake` will do one read and return err.
+                    corrected_staker_length_fee += T::DbWeight::get().reads(1);
                 }
-                .encode();
 
-                T::StakingMessage::handle_message(BoundedSlice::truncate_from(message.as_slice()));
+                unsteked_count += 1;
 
-                Self::deposit_event(Event::<T>::CoreUnregistrationChunksProcessed {
-                    core: core_id,
-                    accounts_processed_in_this_chunk: chunk_size.min(stakers.into()),
-                    accounts_left: total_remaning_stakers as u64,
-                });
-            } else {
-                Self::deposit_event(Event::<T>::CoreUnregistrationQueueFinished { core: core_id });
+                if unsteked_count >= chunk_size {
+                    let total_remaning_stakers = stakers.saturating_sub(unsteked_count as u32);
+                    let message: Vec<u8> = primitives::UnregisterMessage::<T> {
+                        core_id,
+                        stakers_to_unstake: total_remaning_stakers,
+                        era: start_era,
+                    }
+                    .encode();
+
+                    T::StakingMessage::handle_message(BoundedSlice::truncate_from(
+                        message.as_slice(),
+                    ));
+
+                    Self::deposit_event(Event::<T>::CoreUnregistrationChunksProcessed {
+                        core: core_id,
+                        accounts_processed_in_this_chunk: unsteked_count,
+                        accounts_left: total_remaning_stakers as u64,
+                    });
+                    UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
+                    UnregisteredCoreStakers::<T>::insert(core_id, staker_info_prefix);
+
+                    return Ok(Some(corrected_staker_length_fee).into());
+                }
             }
+
+            Self::deposit_event(Event::<T>::CoreUnregistrationQueueFinished { core: core_id });
+            UnregisteredCoreStakers::<T>::remove(core_id);
+            UnregisteredCoreStakeInfo::<T>::remove(core_id);
 
             Ok(Some(corrected_staker_length_fee).into())
         }
