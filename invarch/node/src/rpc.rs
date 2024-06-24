@@ -5,7 +5,7 @@
 
 #![warn(missing_docs)]
 
-use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Index as Nonce};
+use invarch_runtime::{opaque::Block, AccountId, Balance, Hash, Nonce};
 
 use sc_client_api::AuxStore;
 pub use sc_rpc::{DenyUnsafe, SubscriptionTaskExecutor};

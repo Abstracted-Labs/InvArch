@@ -1,11 +1,15 @@
 use crate::{
-    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent, System,
-    Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, UNIT,
+    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent,
+    RuntimeFreezeReason, RuntimeHoldReason, System, Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT,
+    MILLIUNIT, UNIT,
 };
 use frame_support::{
     pallet_prelude::ConstU32,
     parameter_types,
-    traits::{Currency, Imbalance, OnUnbalanced, SortedMembers},
+    traits::{
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        Currency, Imbalance, OnUnbalanced, SortedMembers,
+    },
     weights::{
         ConstantMultiplier, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
     },
@@ -13,7 +17,10 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
-use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
+use sp_runtime::{
+    traits::{AccountIdConversion, IdentityLookup},
+    Perbill, Permill,
+};
 use sp_std::vec::Vec;
 
 parameter_types! {
@@ -36,7 +43,8 @@ impl pallet_balances::Config for Runtime {
     type MaxHolds = ConstU32<1>;
     type FreezeIdentifier = ();
     type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
+    type RuntimeFreezeReason = RuntimeFreezeReason;
+    type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -136,15 +144,23 @@ parameter_types! {
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
+    pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
+    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl pallet_treasury::Config for Runtime {
+    type AssetKind = ();
+    type BalanceConverter = UnityAssetBalanceConversion;
+    type Beneficiary = AccountId;
+    type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type ApproveOrigin = EnsureRoot<AccountId>;
     type RejectOrigin = EnsureRoot<AccountId>;
     type RuntimeEvent = RuntimeEvent;
     type OnSlash = ();
+    type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
+    type PayoutPeriod = PayoutSpendPeriod;
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
     type SpendPeriod = SpendPeriod;

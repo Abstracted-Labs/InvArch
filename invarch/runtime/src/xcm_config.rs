@@ -1,20 +1,27 @@
 use super::{
-    AccountId, AllPalletsWithSystem, Balances, ParachainInfo, ParachainSystem, PolkadotXcm,
-    Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Weight, WeightToFee, XcmpQueue,
+    AccountId, AllPalletsWithSystem, Balances, ConstU32, MessageQueue, ParachainInfo,
+    ParachainSystem, PolkadotXcm, Runtime, RuntimeBlockWeights, RuntimeCall, RuntimeEvent,
+    RuntimeOrigin, Weight, WeightToFee, XcmpQueue,
 };
+use cumulus_primitives_core::{AggregateMessageOrigin, ParaId};
 use frame_support::{
     match_types, parameter_types,
-    traits::{Everything, Nothing},
+    traits::{EnqueueWithOrigin, Everything, Nothing, TransformOrigin},
 };
 use frame_system::EnsureRoot;
+use pallet_ocif_staking::primitives::{
+    CustomAggregateMessageOrigin, CustomMessageProcessor, CustomNarrowOriginToSibling,
+    CustomParaIdToSibling,
+};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use polkadot_runtime_common::impls::ToAuthor;
+use polkadot_runtime_common::{impls::ToAuthor, xcm_sender::NoPriceForMessageDelivery};
+use sp_runtime::Perbill;
 use xcm::latest::prelude::*;
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-    FixedWeightBounds, IsConcrete, NativeAsset, ParentIsPreset, RelayChainAsNative,
+    AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds,
+    FungibleAdapter, IsConcrete, NativeAsset, ParentIsPreset, RelayChainAsNative,
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
     SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
@@ -26,6 +33,7 @@ parameter_types! {
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+    pub const RelayAggregate: CustomAggregateMessageOrigin<AggregateMessageOrigin> = CustomAggregateMessageOrigin::Aggregate(AggregateMessageOrigin::Parent);
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
@@ -41,7 +49,7 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
+pub type LocalAssetTransactor = FungibleAdapter<
     // Use this currency:
     Balances,
     // Use this currency when it is a fungible asset matching the given location or name:
@@ -126,6 +134,7 @@ impl xcm_executor::Config for XcmConfig {
     type UniversalAliases = Nothing;
     type CallDispatcher = RuntimeCall;
     type SafeCallFilter = ();
+    type Aliasers = ();
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -194,18 +203,56 @@ impl orml_xcm::Config for Runtime {
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
     type ChannelInfo = ParachainSystem;
     type VersionWrapper = ();
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
     type ControllerOrigin = EnsureRoot<AccountId>;
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-    type PriceForSiblingDelivery = ();
+    type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
     type WeightInfo = ();
+    type XcmpQueue = TransformOrigin<
+        MessageQueue,
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+        ParaId,
+        CustomParaIdToSibling,
+    >;
+    type MaxInboundSuspended = ConstU32<1000>;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type DmpSink = EnqueueWithOrigin<MessageQueue, RelayAggregate>;
+    type WeightInfo = cumulus_pallet_dmp_queue::weights::SubstrateWeight<Self>;
+}
+
+parameter_types! {
+    pub MessageQueueServiceWeight: Weight = Perbill::from_percent(35) * RuntimeBlockWeights::get().max_block;
+    pub const MessageQueueMaxStale: u32 = 8;
+    pub const MessageQueueHeapSize: u32 = 128 * 1048;
+}
+
+impl pallet_message_queue::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_message_queue::weights::SubstrateWeight<Self>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+    >;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type MessageProcessor = CustomMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+        AggregateMessageOrigin,
+        xcm_builder::ProcessXcmMessage<
+            AggregateMessageOrigin,
+            xcm_executor::XcmExecutor<XcmConfig>,
+            RuntimeCall,
+        >,
+        RuntimeCall,
+        Runtime,
+    >;
+    type Size = u32;
+    type QueueChangeHandler = CustomNarrowOriginToSibling<XcmpQueue, Runtime>;
+    type QueuePausedQuery = CustomNarrowOriginToSibling<XcmpQueue, Runtime>;
+    type HeapSize = MessageQueueHeapSize;
+    type MaxStale = MessageQueueMaxStale;
+    type ServiceWeight = MessageQueueServiceWeight;
 }
