@@ -23,6 +23,7 @@ derive_more = { workspace = true }
 log = { workspace = true }
 codec = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 hex-literal = { workspace = true }
 async-trait = { workspace = true }
 
@@ -92,7 +93,9 @@ cumulus-client-cli = { workspace = true }
 cumulus-client-collator = { workspace = true }
 cumulus-client-consensus-aura = { workspace = true }
 cumulus-client-consensus-common = { workspace = true }
+cumulus-client-consensus-proposer = { workspace = true }
 cumulus-client-network = { workspace = true }
+cumulus-client-parachain-inherent = { workspace = true }
 cumulus-client-service = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-parachain-inherent = { workspace = true }
