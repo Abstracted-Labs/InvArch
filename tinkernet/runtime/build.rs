@@ -16,12 +16,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "metadata-hash"), feature = "std"))]
 fn main() {
     substrate_wasm_builder::WasmBuilder::new()
         .with_current_project()
         .export_heap_base()
         .import_memory()
+        .build()
+}
+
+#[cfg(all(feature = "metadata-hash", feature = "std"))]
+fn main() {
+    substrate_wasm_builder::WasmBuilder::new()
+        .with_current_project()
+        .export_heap_base()
+        .import_memory()
+        .enable_metadata_hash("TNKR", 12)
         .build()
 }
 
