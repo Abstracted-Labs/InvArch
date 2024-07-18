@@ -76,6 +76,7 @@ orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates/
 # Substrate FRAME Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
+frame-metadata-hash-extension = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false}
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }

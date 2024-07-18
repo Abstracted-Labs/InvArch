@@ -157,6 +157,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+    frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -213,7 +214,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 23,
+    spec_version: 24,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
