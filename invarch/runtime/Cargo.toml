@@ -31,6 +31,7 @@ pallet-checked-inflation = { workspace = true }
 # Substrate
 frame-benchmarking = { workspace = true, optional = true }
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-benchmarking = { workspace = true, optional = true }
@@ -92,9 +93,17 @@ pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
 
 [features]
+
+metadata-hash = [
+    "substrate-wasm-builder/metadata-hash",
+]
+
 default = [
 	"std",
 ]
+
+on-chain-release-build = ["metadata-hash"]
+
 std = [
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
@@ -106,6 +115,7 @@ std = [
 	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
 	"frame-executive/std",
+    "frame-metadata-hash-extension/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
