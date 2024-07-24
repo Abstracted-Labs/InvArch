@@ -78,9 +78,14 @@ pallet-treasury = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-utility = { workspace = true }
+pallet-referenda = { workspace = true }
+pallet-conviction-voting = { workspace = true }
+pallet-whitelist = { workspace = true }
+pallet-collective = { workspace = true }
 
 # Substrate Primitive Dependencies
 sp-api = { workspace = true }
+sp-arithmetic = { workspace = true }
 sp-block-builder = { workspace = true }
 sp-consensus-aura = { workspace = true }
 sp-core = { workspace = true }
@@ -178,9 +183,14 @@ std = [
     "pallet-utility/std",
     "pallet-xcm/std",
     "pallet-collator-selection/std",
+    "pallet-referenda/std",
+    "pallet-conviction-voting/std",
+    "pallet-whitelist/std",
+    "pallet-collective/std",
     "parachain-info/std",
     "polkadot-parachain/std",
     "sp-api/std",
+    "sp-arithmetic/std",
     "sp-block-builder/std",
     "sp-consensus-aura/std",
     "sp-core/std",
@@ -230,6 +240,10 @@ runtime-benchmarks = [
     "pallet-rings/runtime-benchmarks",
     "pallet-ocif-staking/runtime-benchmarks",
     "pallet-checked-inflation/runtime-benchmarks",
+    "pallet-referenda/runtime-benchmarks",
+    "pallet-conviction-voting/runtime-benchmarks",
+    "pallet-whitelist/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
 ]
 
 try-runtime = [
@@ -273,4 +287,8 @@ try-runtime = [
     "pallet-checked-inflation/try-runtime",
     "pallet-rings/try-runtime",
     "pallet-asset-tx-payment/try-runtime",
+    "pallet-referenda/try-runtime",
+    "pallet-conviction-voting/try-runtime",
+    "pallet-whitelist/try-runtime",
+    "pallet-collective/try-runtime",
 ]

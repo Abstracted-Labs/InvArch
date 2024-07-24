@@ -1,7 +1,6 @@
-use crate::{AccountId, Balance, Runtime, RuntimeEvent};
+use crate::{Balance, RootOrGeneralManagement, Runtime, RuntimeEvent};
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::parameter_types;
-use frame_system::EnsureRoot;
 use pallet_rings::{ChainAssetsList, ChainList};
 use scale_info::TypeInfo;
 use xcm::prelude::*;
@@ -29,7 +28,7 @@ impl pallet_rings::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Chains = Chains;
     type MaxXCMCallLength = MaxXCMCallLength;
-    type MaintenanceOrigin = EnsureRoot<AccountId>;
+    type MaintenanceOrigin = RootOrGeneralManagement;
     type WeightInfo = pallet_rings::weights::SubstrateWeight<Runtime>;
 }
 
