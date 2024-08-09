@@ -4,16 +4,13 @@
 
 <div align="Center">
 
-<h2> An Omni-Chain Account Unification & Decentralized Management Network for DAOs </h2>
+<h2> DAO Infrastructure for the Polkadot Ecosystem </h2>
 
-Official Repository for the [InvArch Network](https://invarch.network/) - built using [Rust](https://github.com/rust-lang/rust) & the [Polkadot SDK](https://github.com/paritytech/polkadot-sdk)<br>
+Built using [Rust](https://github.com/rust-lang/rust) & the [Polkadot SDK](https://github.com/paritytech/polkadot-sdk).<br>
 <br>
 [![Substrate version](https://img.shields.io/badge/Substrate-v3.0.0-E6007A?logo=Parity%20Substrate)](https://github.com/paritytech/substrate/releases/tag/v3.0.0)
 [![Medium](https://img.shields.io/badge/Medium-InvArch-E6007A?logo=medium)](https://invarch.medium.com/)
 [![License](https://img.shields.io/github/license/InvArch/InvArch?color=E6007A)](https://github.com/InvArch/InvArch/blob/main/LICENSE)<br>
-[![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FInvArch)](https://twitter.com/InvArchNetwork)
-[![Discord](https://img.shields.io/badge/Discord-gray?logo=discord)](https://discord.gg/invarch)
-[![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/InvArch)<br>
 </div>
 
 <!-- TOC -->
@@ -22,47 +19,40 @@ Official Repository for the [InvArch Network](https://invarch.network/) - built 
 ---
 <div align="Center">
  
-<h3>Network Overview</h3>
+<h3>InvArch Network Overview</h3>
 
-InvArch is a multichain account abstraction hub optimized for decentralized operations & financial management.<br> 
-It provides users & organizations with a single non-custodial Web3 account that allows them to transact & exist<br>
-as first-class entities across every & any blockchain. InvArch is a public network, governed by a global community,<br>
-and accessible to everyone, allowing people to collaborate, share ownership, & function as multichain organizations!
+InvArch is a public network governed by a global community, accessible to everyone, allowing<br>
+people to collaborate, share ownership, & function as multichain organizations!<br>
 
 
-| Feature | Description |
+| Protocol | Description |
 | -- | ----- |
-| Multichain DAO Accounts | WIP |
-| NFT DAOs & NFT Members | WIP |
-| DID, KYC, KYB for DAOs | WIP |
-| Self-Executing Governance | WIP |
-| Custom Member Permissions | WIP |
-| Automated Treasury Flows | WIP |
-| Custom Operational Logic | WIP |
-| DAO Staking & Funding | WIP |
-| Tokenized IP Primitives | WIP |
-| IP Rights Management | WIP |
+| `dao_manager` | Deploy DAOs controlled via fungible tokens, NFTs, or KYC (WIP). Operators can define Custom DAO governance configurations, retroactively adjust DAO members, and dynamically determine voting power & DAO permissions. Members can submit self-executing proposals to a DAO for all or some members to vote on whether to approve or reject the action(s). DAO accounts can hold a diverse treasury of assets, send/receive & bridge/transfer these tokens to other accounts, and execute transactions using these assets on accessible protocols. | WIP |
+| `dao_staking` | Through a system funded by network inflation: 1) DAOs can register to the network to apply for network funds through a permissionless & community-driven process. 2) Network token holders can stake their tokens towards registered DAOs to signal which they would like to see be supported by the network. 3) Stakers receive the same rate of rewards regardless of which DAO(s) they stake towards; however, the amount of rewards DAOs receive is determined by their proportional share of support throughout the entire protocol & only after attaining a minimum amount of support. |
+| `xvm` | A hybrid smart contract platform featuring support for both EVM & WASM smart contracts. This protocol supports both the Ethereum API & Polkadot API, in addition to various Web3 wallets from across the industry such as [MetaMask](https://metamask.io/), [Phantom](https://phantom.app/), [Coinbase](https://www.coinbase.com/wallet), [Talisman](https://www.talisman.xyz/), [SubWallet](https://www.subwallet.app/), and [Nova Wallet](https://novawallet.io/) - and more! |
+| `governance` | Self-executing on-chain governance controlled by network token holders. |
 
 </div>
 
-## How to contribute
+## How to Contribute Code
 
-I'm really glad you're reading this, because we need volunteer developers to help this idea become a reality!
+Please send a [GitHub Pull Request to InvArch](https://github.com/InvArch/InvArch/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)) & ensure all your commits are atomic (one feature per commit). Always write a clear log message for your commits. One-line messages are fine for small changes, but bigger changes should look like this:<br>
 
-If you haven't already, come find us on the [#InvArch Discord](https://discord.gg/invarch). We want you working on things you're excited about!
-
-### Submitting changes
-
-Please send a [GitHub Pull Request to InvArch](https://github.com/InvArch/InvArch/pull/new/master) with a clear list of what you've done (read more about [pull requests](http://help.github.com/pull-requests/)). Please make sure all of your commits are atomic (one feature per commit).
-
-Always write a clear log message for your commits. One-line messages are fine for small changes, but bigger changes should look like this:
-
-    $ git commit -m "A brief summary of the commit
+    $ git commit -m "A summary of the commit."
     > 
-    > A paragraph describing what changed and its impact."
+    > "A paragraph describing what changed and its impact."
     
-Please make sure to update tests as appropriate.
+Also, please make sure to update tests as appropriate.
+
+### Non-Technical Contributions
+
+If you haven't already, join the community in InvArch [Discord](https://discord.gg/invarch) and inquire about how you can get involved! Please be aware that any members who send spam, advertisements of topics unrelated to InvArch, or solicitation requests in the server will be removed and banned.
 
 ### Additional Resources
-• [GPL License](https://github.com/InvArch/InvArch/blob/main/LICENSE) (Open-Source)<br>
-• [Substrate Node Template](https://github.com/substrate-developer-hub/substrate-node-template/blob/tutorials/solutions/build-a-dapp-v3%2B1/README.md)
+• [InvArch Developer Console](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Finvarch-rpc.dwellir.com#/explorer)<br>
+• [Polkadot Parachain Template](https://github.com/paritytech/polkadot-sdk/tree/master/templates/parachain)<br>
+
+### License
+
+• [GPL](https://github.com/InvArch/InvArch/blob/main/LICENSE)<br>
+
