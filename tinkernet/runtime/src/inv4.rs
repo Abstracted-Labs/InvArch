@@ -4,12 +4,13 @@ use crate::{
     constants::currency::UNIT,
     fee_handling::DealWithKSMFees,
     AccountId, Balance, Balances, CoreAssets, DealWithFees, ParachainInfo, Runtime, RuntimeCall,
-    RuntimeEvent, RuntimeOrigin, Tokens,
+    RuntimeEvent, RuntimeOrigin, Tokens, TransactionByteFee,
 };
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
     traits::{fungibles::Credit, Contains, Currency, OnUnbalanced},
+    weights::ConstantMultiplier,
 };
 use pallet_asset_tx_payment::ChargeAssetTxPayment;
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
@@ -50,6 +51,7 @@ impl pallet_inv4::Config for Runtime {
     type MaxCallSize = MaxCallSize;
 
     type ParaId = ParaId;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]

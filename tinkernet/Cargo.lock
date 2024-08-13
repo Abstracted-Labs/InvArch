@@ -795,7 +795,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "miniz_oxide",
- "object 0.36.1",
+ "object 0.36.2",
  "rustc-demangle",
 ]
 
@@ -1339,9 +1339,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.9"
+version = "4.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64acc1846d54c1fe936a78dc189c34e28d3f5afc348403f28ecf53660b9b8462"
+checksum = "8f6b81fb3c84f5563d509c59b5a48d935f689e993afa90fe39047f05adef9142"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1349,9 +1349,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.9"
+version = "4.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fb8393d67ba2e7bfaf28a23458e4e2b543cc73a99595511eb207fdb8aede942"
+checksum = "5ca6706fd5224857d9ac5eb9355f6683563cc0541c7cd9d014043b57cbec78ac"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1419,7 +1419,7 @@ dependencies = [
 [[package]]
 name = "common"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof#626c9598be949aa3dbdd72e8a40531f68b01d6c2"
+source = "git+https://github.com/w3f/ring-proof#665f5f51af5734c7b6d90b985dd6861d4c5b4752"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -4302,7 +4302,7 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4400,9 +4400,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "jobserver"
-version = "0.1.31"
+version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b099aaa34a9751c5bf0878add70444e1ed2dd73f347be99003d4577277de6e"
+checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
 dependencies = [
  "libc",
 ]
@@ -5248,9 +5248,9 @@ dependencies = [
 
 [[package]]
 name = "lz4"
-version = "1.25.0"
+version = "1.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6eab492fe7f8651add23237ea56dbf11b3c4ff762ab83d40a47f11433421f91"
+checksum = "958b4caa893816eea05507c20cfe47574a43d9a697138a7872990bba8a0ece68"
 dependencies = [
  "libc",
  "lz4-sys",
@@ -5258,9 +5258,9 @@ dependencies = [
 
 [[package]]
 name = "lz4-sys"
-version = "1.9.5"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9764018d143cc854c9f17f0b907de70f14393b1f502da6375dce70f00514eb3"
+checksum = "109de74d5d2353660401699a4174a4ff23fcc649caf553df71933c7fb45ad868"
 dependencies = [
  "cc",
  "libc",
@@ -5465,13 +5465,14 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.8.11"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
+checksum = "4569e456d394deccd22ce1c1913e6ea0e54519f577285001215d33557431afe4"
 dependencies = [
+ "hermit-abi 0.3.9",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5986,9 +5987,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.1"
+version = "0.36.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "081b846d1d56ddfc18fdf1a922e4f6e07a11768ea1b92dec44e42b72712ccfce"
+checksum = "3f203fa8daa7bb185f760ae12bd8e097f63d17041dcdcaf675ac54cdf863170e"
 dependencies = [
  "memchr",
 ]
@@ -6542,7 +6543,7 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6805,7 +6806,7 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6983,14 +6984,16 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "num-traits",
  "pallet-balances",
  "pallet-inv4",
+ "pallet-message-queue",
  "pallet-session",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7132,7 +7135,7 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?rev=cd32136741df27328818a76dd979bad55f837396#cd32136741df27328818a76dd979bad55f837396"
+source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9629,7 +9632,7 @@ dependencies = [
 [[package]]
 name = "ring"
 version = "0.1.0"
-source = "git+https://github.com/w3f/ring-proof#626c9598be949aa3dbdd72e8a40531f68b01d6c2"
+source = "git+https://github.com/w3f/ring-proof#665f5f51af5734c7b6d90b985dd6861d4c5b4752"
 dependencies = [
  "ark-ec",
  "ark-ff",
@@ -12096,7 +12099,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -12135,7 +12138,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -12156,7 +12159,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -12373,7 +12376,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -12405,7 +12408,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "Inflector",
  "expander 2.2.1",
@@ -12497,7 +12500,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk.git?branch=release-polk
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 
 [[package]]
 name = "sp-storage"
@@ -12515,7 +12518,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -12552,7 +12555,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -12652,7 +12655,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#d1979d4be9c44d06c62aeea44d30f5f201d67b5e"
+source = "git+https://github.com/paritytech/polkadot-sdk#60d21e9c4314d5144c9ebdd4fd851ee5f06b0f0d"
 dependencies = [
  "impl-trait-for-tuples",
  "log",
@@ -13268,7 +13271,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-node"
-version = "1.6.2"
+version = "1.7.2"
 dependencies = [
  "async-trait",
  "clap",
@@ -13345,7 +13348,7 @@ dependencies = [
 
 [[package]]
 name = "tinkernet-runtime"
-version = "1.6.2"
+version = "1.7.2"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -13404,6 +13407,7 @@ dependencies = [
  "pallet-uniques",
  "pallet-utility",
  "pallet-xcm",
+ "pallet-xcm-benchmarks",
  "parachains-common",
  "parity-scale-codec",
  "polkadot-core-primitives",
@@ -13460,28 +13464,27 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.38.1"
+version = "1.39.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2caba9f80616f438e09748d5acda951967e1ea58508ef53d9c6402485a46df"
+checksum = "d040ac2b29ab03b09d4129c2f5bbd012a3ac2f79d38ff506a4bf8dd34b0eac8a"
 dependencies = [
  "backtrace",
  "bytes",
  "libc",
  "mio",
- "num_cpus",
  "parking_lot 0.12.3",
  "pin-project-lite 0.2.14",
  "signal-hook-registry",
  "socket2 0.5.7",
  "tokio-macros",
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
 name = "tokio-macros"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f5ae998a069d4b5aba8ee9dad856af7d520c3699e6159b185c2acd48155d39a"
+checksum = "693d596312e88961bc67d7f1f97af8a70227d9f90c31bba5806eec004978d752"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -13597,7 +13600,7 @@ dependencies = [
  "serde",
  "serde_spanned",
  "toml_datetime",
- "winnow 0.6.14",
+ "winnow 0.6.15",
 ]
 
 [[package]]
@@ -14946,9 +14949,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.6.14"
+version = "0.6.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374ec40a2d767a3c1b4972d9475ecd557356637be906f2cb3f7fe17a6eb5e22f"
+checksum = "557404e450152cd6795bb558bca69e43c585055f4606e3bcae5894fc6dac9ba0"
 dependencies = [
  "memchr",
 ]
