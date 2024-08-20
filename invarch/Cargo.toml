@@ -44,8 +44,8 @@ pallet-tx-pause = { git = "https://github.com/paritytech/polkadot-sdk.git", bran
 
 
 # InvArch
-pallet-inv4 = { path = "../pallets/INV4/pallet-inv4", default-features = false }
-pallet-ocif-staking = { path = "../pallets/OCIF/staking", default-features = false }
+pallet-inv4 = { path = "../pallets/pallet-inv4", default-features = false }
+pallet-ocif-staking = { path = "../pallets/pallet-ocif-staking", default-features = false }
 pallet-checked-inflation = { path = "../pallets/pallet-checked-inflation", default-features = false }
 pallet-rings = { path = "../pallets/pallet-rings", default-features = false }
 
