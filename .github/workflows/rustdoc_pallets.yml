@@ -15,6 +15,9 @@ jobs:
     - name: Install deps
       run: sudo apt -y install protobuf-compiler
 
+    - name: Change directory to pallets
+      run: cd ./pallets
+
     - name: Install & display rust toolchain
       run: rustup show
 
