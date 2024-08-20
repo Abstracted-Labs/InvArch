@@ -44,10 +44,10 @@ pallet-tx-pause = { git = "https://github.com/paritytech/polkadot-sdk.git", bran
 
 
 # InvArch
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-weight_fixes", default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-weight_fixes", default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-weight_fixes", default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch = "francisco-weight_fixes", default-features = false }
+pallet-inv4 = { path = "../pallets/INV4/pallet-inv4", default-features = false }
+pallet-ocif-staking = { path = "../pallets/OCIF/staking", default-features = false }
+pallet-checked-inflation = { path = "../pallets/pallet-checked-inflation", default-features = false }
+pallet-rings = { path = "../pallets/pallet-rings", default-features = false }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }

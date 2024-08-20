@@ -43,11 +43,10 @@ derive_more = "0.99.2"
 
 
 ## InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
-
+pallet-inv4 = { path = "../pallets/INV4/pallet-inv4", default-features = false }
+pallet-ocif-staking = { path = "../pallets/OCIF/staking", default-features = false }
+pallet-checked-inflation = { path = "../pallets/pallet-checked-inflation", default-features = false }
+pallet-rings = { path = "../pallets/pallet-rings", default-features = false }
 new-modified-construct-runtime = { path = "../new-modified-construct-runtime", default-features = false }
 
 pallet-maintenance-mode = { git = "https://github.com/Moonsong-Labs/moonkit", default-features = false, features = [
