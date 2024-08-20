@@ -21,8 +21,11 @@ use orml_traits::{
 pub use orml_xcm_support::{
     DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
+use pallet_ocif_staking::primitives::{
+    CustomAggregateMessageOrigin, CustomMessageProcessor, CustomNarrowOriginToSibling,
+    CustomParaIdToSibling,
+};
 use pallet_xcm::XcmPassthrough;
-use parachains_common::message_queue::{NarrowOriginToSibling, ParaIdToSibling};
 use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::xcm_sender::NoPriceForMessageDelivery;
 use scale_info::TypeInfo;
@@ -61,9 +64,9 @@ parameter_types! {
     pub const RelayNetwork: NetworkId = NetworkId::Kusama;
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
     pub RelayChainOrigin: RuntimeOrigin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
     pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
     pub UniversalLocation: InteriorMultiLocation = X2(GlobalConsensus(RelayNetwork::get()), Parachain(ParachainInfo::parachain_id().into()));
+    pub const RelayAggregate: CustomAggregateMessageOrigin<AggregateMessageOrigin> = CustomAggregateMessageOrigin::Aggregate(AggregateMessageOrigin::Parent);
 }
 
 match_types! {
@@ -243,14 +246,19 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
     type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
     type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
-    type XcmpQueue = TransformOrigin<MessageQueue, AggregateMessageOrigin, ParaId, ParaIdToSibling>;
+    type XcmpQueue = TransformOrigin<
+        MessageQueue,
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+        ParaId,
+        CustomParaIdToSibling,
+    >;
     type MaxInboundSuspended = ConstU32<1000>;
 }
 
 // Deprecated
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type DmpSink = EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+    type DmpSink = EnqueueWithOrigin<MessageQueue, RelayAggregate>;
     type WeightInfo = cumulus_pallet_dmp_queue::weights::SubstrateWeight<Self>;
 }
 
@@ -270,17 +278,24 @@ impl pallet_message_queue::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_message_queue::weights::SubstrateWeight<Self>;
     #[cfg(feature = "runtime-benchmarks")]
-    type MessageProcessor =
-        pallet_message_queue::mock_helpers::NoopMessageProcessor<AggregateMessageOrigin>;
+    type MessageProcessor = pallet_message_queue::mock_helpers::NoopMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+    >;
     #[cfg(not(feature = "runtime-benchmarks"))]
-    type MessageProcessor = xcm_builder::ProcessXcmMessage<
+    type MessageProcessor = CustomMessageProcessor<
+        CustomAggregateMessageOrigin<AggregateMessageOrigin>,
         AggregateMessageOrigin,
-        xcm_executor::XcmExecutor<XcmConfig>,
+        xcm_builder::ProcessXcmMessage<
+            AggregateMessageOrigin,
+            xcm_executor::XcmExecutor<XcmConfig>,
+            RuntimeCall,
+        >,
         RuntimeCall,
+        Runtime,
     >;
     type Size = u32;
-    type QueueChangeHandler = NarrowOriginToSibling<XcmpQueue>;
-    type QueuePausedQuery = NarrowOriginToSibling<XcmpQueue>;
+    type QueueChangeHandler = CustomNarrowOriginToSibling<XcmpQueue, Runtime>;
+    type QueuePausedQuery = CustomNarrowOriginToSibling<XcmpQueue, Runtime>;
     type HeapSize = MessageQueueHeapSize;
     type MaxStale = MessageQueueMaxStale;
     type ServiceWeight = MessageQueueServiceWeight;
@@ -343,9 +358,6 @@ impl pallet_xcm::Config for Runtime {
     type AdminOrigin = EnsureRoot<AccountId>;
     type MaxRemoteLockConsumers = ConstU32<0>;
     type RemoteLockConsumerIdentifier = ();
-
-    #[cfg(feature = "runtime-benchmarks")]
-    type ReachableDest = ReachableDest;
 }
 
 /// The means for routing XCM messages which are not for local execution into the right message

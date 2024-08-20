@@ -1,6 +1,6 @@
 use crate::{
     balances::DealWithFees, common_types::CommonId, AccountId, Balance, Balances, CoreAssets,
-    ParachainInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, UNIT,
+    ParachainInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, TransactionByteFee, UNIT,
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -9,6 +9,7 @@ use frame_support::{
         fungibles::{Balanced, Credit, Inspect, Unbalanced},
         Contains, Currency, OnUnbalanced,
     },
+    weights::ConstantMultiplier,
 };
 use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use pallet_transaction_payment::ChargeTransactionPayment;
@@ -51,6 +52,7 @@ impl pallet_inv4::Config for Runtime {
     type MaxCallSize = MaxCallSize;
 
     type ParaId = ParaId;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 pub struct NoTokens;

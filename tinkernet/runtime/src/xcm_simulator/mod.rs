@@ -60,7 +60,10 @@ pub fn child_account_id(para: u32) -> relay_chain::AccountId {
     relay_chain::LocationToAccountId::convert_location(&MultiLocation::from(location)).unwrap()
 }
 
-pub fn child_account_account_id(para: u32, who: sp_runtime::AccountId32) -> relay_chain::AccountId {
+pub fn _child_account_account_id(
+    para: u32,
+    who: sp_runtime::AccountId32,
+) -> relay_chain::AccountId {
     let location = (
         Parachain(para),
         AccountId32 {
@@ -86,7 +89,7 @@ pub fn sibling_core_account_id(core: u32) -> parachain::AccountId {
     parachain::HashedDescription::try_convert(location.into()).unwrap()
 }
 
-pub fn tinkernet_ext(para_id: u32) -> sp_io::TestExternalities {
+pub fn _tinkernet_ext(_para_id: u32) -> sp_io::TestExternalities {
     use crate::{PolkadotXcm, Runtime, RuntimeOrigin, System};
 
     let mut t = frame_system::GenesisConfig::<Runtime>::default()
@@ -118,6 +121,7 @@ pub fn tinkernet_ext(para_id: u32) -> sp_io::TestExternalities {
 }
 
 pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
+    #[allow(unused_imports)]
     use parachain::{MsgQueue, PolkadotXcm, Runtime, RuntimeOrigin, System};
 
     let mut t = frame_system::GenesisConfig::<Runtime>::default()
@@ -140,6 +144,7 @@ pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
 }
 
 pub fn relay_ext() -> sp_io::TestExternalities {
+    #[allow(unused_imports)]
     use relay_chain::{Runtime, RuntimeOrigin, System};
 
     let mut t = frame_system::GenesisConfig::<Runtime>::default()
@@ -163,9 +168,10 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;
-pub type ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
+pub type _RelayChainPalletXcm = pallet_xcm::Pallet<relay_chain::Runtime>;
+pub type _ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
 
+#[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,7 +184,7 @@ mod tests {
     use xcm_simulator::TestExt;
 
     // Helper function for forming buy execution message
-    fn buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
+    fn _buy_execution<C>(fees: impl Into<MultiAsset>) -> Instruction<C> {
         BuyExecution {
             fees: fees.into(),
             weight_limit: Unlimited,

@@ -23,7 +23,7 @@ pub mod weights;
 use frame_support::{
     dispatch::GetDispatchInfo,
     pallet_prelude::*,
-    traits::{CallMetadata, Contains, GetCallMetadata, IsSubType, IsType},
+    traits::{CallMetadata, Contains, GenesisBuild, GetCallMetadata, IsSubType, IsType},
     DefaultNoBound,
 };
 use frame_system::pallet_prelude::*;

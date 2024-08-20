@@ -2,7 +2,7 @@ use codec::{Compact, Decode, Encode};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{fungibles::Credit, Currency, Everything, EverythingBut, Nothing},
-    weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
+    weights::{constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight},
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
@@ -27,7 +27,9 @@ use xcm_builder::{
 use xcm_executor::{traits::ConvertLocation, Config, XcmExecutor};
 use xcm_simulator::PhantomData;
 
-pub type SovereignAccountOf = (
+use crate::TransactionByteFee;
+
+pub type _SovereignAccountOf = (
     SiblingParachainConvertsVia<Sibling, AccountId>,
     AccountId32Aliases<RelayNetwork, AccountId>,
     ParentIsPreset<AccountId>,
@@ -80,7 +82,7 @@ impl pallet_balances::Config for Runtime {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type WeightInfo = ();
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type FreezeIdentifier = ();
@@ -410,12 +412,10 @@ impl pallet_xcm::Config for Runtime {
     type MaxRemoteLockConsumers = ConstU32<0>;
     type RemoteLockConsumerIdentifier = ();
     type WeightInfo = pallet_xcm::TestWeightInfo;
-    #[cfg(feature = "runtime-benchmarks")]
-    type ReachableDest = ReachableDest;
     type AdminOrigin = EnsureRoot<AccountId>;
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type _UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
@@ -425,28 +425,28 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Runtime> for FeeCharger {
     type Pre = ();
 
     fn pre_dispatch(
-        fee_asset: &pallet_inv4::fee_handling::FeeAsset,
-        who: &AccountId,
-        call: &RuntimeCall,
-        info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
-        len: usize,
+        _fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        _who: &AccountId,
+        _call: &RuntimeCall,
+        _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        _len: usize,
     ) -> Result<Self::Pre, frame_support::unsigned::TransactionValidityError> {
         Ok(())
     }
 
     fn post_dispatch(
-        fee_asset: &pallet_inv4::fee_handling::FeeAsset,
-        pre: Option<Self::Pre>,
-        info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
-        post_info: &sp_runtime::traits::PostDispatchInfoOf<RuntimeCall>,
-        len: usize,
-        result: &sp_runtime::DispatchResult,
+        _fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        _pre: Option<Self::Pre>,
+        _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
+        _post_info: &sp_runtime::traits::PostDispatchInfoOf<RuntimeCall>,
+        _len: usize,
+        _result: &sp_runtime::DispatchResult,
     ) -> Result<(), frame_support::unsigned::TransactionValidityError> {
         Ok(())
     }
 
     fn handle_creation_fee(
-        imbalance: pallet_inv4::fee_handling::FeeAssetNegativeImbalance<
+        _imbalance: pallet_inv4::fee_handling::FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
             Credit<AccountId, Tokens>,
         >,
@@ -480,6 +480,7 @@ impl pallet_inv4::Config for Runtime {
     type MaxCallSize = crate::inv4::MaxCallSize;
 
     type ParaId = PID;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 impl orml_tokens::Config for Runtime {

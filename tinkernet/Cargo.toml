@@ -8,7 +8,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.6.2"
+version = "1.7.2"
 edition = "2021"
 
 license = "GPL-3.0"
@@ -43,10 +43,10 @@ derive_more = "0.99.2"
 
 
 ## InvArch Pallets
-pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
-pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
-pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
-pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", rev = "cd32136741df27328818a76dd979bad55f837396", default-features = false }
+pallet-inv4 = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
+pallet-ocif-staking = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
+pallet-checked-inflation = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
+pallet-rings = { git = "https://github.com/InvArch/InvArch-Frames", branch="francisco-weight_fixes", default-features = false }
 
 new-modified-construct-runtime = { path = "../new-modified-construct-runtime", default-features = false }
 
@@ -118,6 +118,7 @@ sp-version = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = 
 
 # Polkadot Dependencies
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
+pallet-xcm-benchmarks = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 polkadot-parachain = { package = "polkadot-parachain-primitives", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 polkadot-runtime-common = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
