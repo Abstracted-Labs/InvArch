@@ -1,12 +1,12 @@
 [package]
 name = 'invarch-primitives'
-version = '0.1.0-dev'
-authors = ['InvArchitects <https://github.com/InvArch>']
 description = 'InvArch primitives for InvArchh Pallet Library'
-homepage = 'https://invarch.network'
-edition = '2021'
-license = 'GPLv3'
-repository = 'https://github.com/InvArch/InvArch-Pallet-Library/ipt'
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 
 [dependencies]

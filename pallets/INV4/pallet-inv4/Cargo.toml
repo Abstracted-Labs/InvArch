@@ -1,12 +1,13 @@
 [package]
-authors = ['InvArchitects <https://github.com/InvArch>']
-description = ''
-edition = '2021'
-homepage = 'https://invarch.network'
-license = 'GPLv3'
 name = 'pallet-inv4'
-repository = 'https://github.com/InvArch/InvArch-Frames'
-version = '0.1.0-dev'
+description = ''
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
 
 [dependencies]
 serde = { workspace = true, optional = true }

@@ -6077,7 +6077,7 @@ dependencies = [
 [[package]]
 name = "orml-asset-registry"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6099,7 +6099,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6133,7 +6133,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6170,7 +6170,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -6190,7 +6190,7 @@ dependencies = [
 [[package]]
 name = "orml-unknown-tokens"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6220,7 +6220,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -6235,7 +6235,7 @@ dependencies = [
 [[package]]
 name = "orml-vesting"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6250,7 +6250,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -6264,7 +6264,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "orml-traits 0.7.1",
@@ -6278,7 +6278,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.7.1"
-source = "git+https://github.com/InvArch/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
+source = "git+https://github.com/Abstracted-Labs/open-runtime-module-library.git?branch=polkadot-v1.6.0#74a0efb69072bd3e9263c2e56bb1adc11945c3da"
 dependencies = [
  "frame-support",
  "frame-system",

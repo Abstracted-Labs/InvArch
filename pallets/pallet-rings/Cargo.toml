@@ -1,12 +1,12 @@
 [package]
 name = 'pallet-rings'
-authors = ['InvArchitects <https://github.com/InvArch>']
 description = ''
-edition = '2021'
-homepage = 'https://invarch.network'
-license = 'GPLv3'
-repository = 'https://github.com/InvArch/InvArch-Frames/'
-version = '0.1.0-dev'
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
