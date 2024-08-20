@@ -12,7 +12,7 @@
 //! - `RewardInfo` - A struct that holds information about rewards, including the balance for stakers and the core.
 //! - `EraInfo` - A struct that holds information about a specific era, including rewards, staked balance, active stake, and locked balance.
 //! - `CoreStakeInfo` - A struct that holds information about a core's stake, including the total balance,
-//! number of stakers, and whether a reward has been claimed.
+//!    number of stakers, and whether a reward has been claimed.
 //! - `EraStake` - A struct that holds information about the stake for a specific era.
 //! - `StakerInfo` - A struct that holds information about a staker's stakes across different eras.
 //! - `UnlockingChunk` - A struct that holds information about an unlocking chunk of balance.

@@ -15,7 +15,7 @@
 //! - `send_call` - Allows a core to send a XCM call to a destination chain.
 //! - `transfer_assets` - Allows a core to transfer fungible assets to another account in the destination chain.
 //! - `bridge_assets` - Allows a core to bridge fungible assets to another chain having either a third party account or
-//! the core account as beneficiary in the destination chain.
+//!    the core account as beneficiary in the destination chain.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
