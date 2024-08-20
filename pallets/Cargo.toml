@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "INV4/pallet-inv4",
-    "OCIF/staking",
+    "pallet-inv4",
+    "pallet-ocif-staking",
     "pallet-checked-inflation",
     "pallet-rings",
 ]
@@ -17,6 +17,13 @@ version = '0.1.0-dev'
 
 
 [workspace.dependencies]
+
+pallet-inv4 = { path = "./pallet-inv4", default-features = false }
+pallet-ocif-staking = { path = "./pallet-ocif-staking", default-features = false }
+pallet-checked-inflation = { path = "./pallet-checked-inflation", default-features = false }
+pallet-rings = { path = "./pallet-rings", default-features = false }
+primitives = { path = "./primitives", package = "invarch-primitives", default-features = false }
+
 
 # crates.io dependencies
 codec = { package = "parity-scale-codec", version = "3.6.5", features = [
