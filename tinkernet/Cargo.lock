@@ -4302,7 +4302,6 @@ dependencies = [
 [[package]]
 name = "invarch-primitives"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -6543,7 +6542,6 @@ dependencies = [
 [[package]]
 name = "pallet-checked-inflation"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6806,7 +6804,6 @@ dependencies = [
 [[package]]
 name = "pallet-inv4"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -6984,7 +6981,6 @@ dependencies = [
 [[package]]
 name = "pallet-ocif-staking"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -7135,7 +7131,6 @@ dependencies = [
 [[package]]
 name = "pallet-rings"
 version = "0.1.0-dev"
-source = "git+https://github.com/InvArch/InvArch-Frames?branch=francisco-weight_fixes#c7bd7bb82384fcd4cd75d4030dfc0c637dd6f58a"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

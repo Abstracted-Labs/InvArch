@@ -1,0 +1,60 @@
+[package]
+name = 'pallet-checked-inflation'
+authors = ['InvArchitects <https://github.com/InvArch>']
+description = 'FRAME pallet to IP staking'
+edition = '2018'
+homepage = 'https://invarch.network'
+license = 'GPLv3'
+repository = 'https://github.com/InvArch/InvArch-Pallet-Library/'
+version = '0.1.0-dev'
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = {workspace = true, default-features = false}
+scale-info = {workspace = true, default-features = false}
+serde = {workspace = true, optional = true}
+
+frame-support = {workspace = true, default-features = false}
+frame-system = {workspace = true, default-features = false}
+num-traits = {workspace = true, default-features = false}
+pallet-session = {workspace = true, default-features = false}
+sp-arithmetic = {workspace = true, default-features = false}
+sp-core = {workspace = true, default-features = false}
+sp-io = {workspace = true, default-features = false}
+sp-runtime = {workspace = true, default-features = false}
+sp-staking = {workspace = true, default-features = false}
+sp-std = {workspace = true, default-features = false}
+
+frame-benchmarking = {workspace = true, default-features = false, optional = true}
+
+[dev-dependencies]
+pallet-balances = {workspace = true, default-features = false}
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"scale-info/std",
+	"num-traits/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-arithmetic/std",
+	"sp-io/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+	"frame-benchmarking?/std",
+	"pallet-session/std",
+	"sp-staking/std",
+ 	"pallet-balances/std",
+  
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]
