@@ -2317,3 +2317,62 @@ fn move_stake_max_number_of_stakers_exceeded_err() {
         );
     })
 }
+
+#[test]
+fn claim_stake_after_unregistering_core_mid_era_changes_is_ok() {
+    ExternalityBuilder::build().execute_with(|| {
+        initialize_first_block();
+
+        let core_id_b = C;
+
+        assert_register(core_id_b);
+
+        let mut stakers: Vec<AccountId> = Vec::new();
+
+        for temp_staker in 0..4 {
+            let staker = account(temp_staker + 100);
+            stakers.push(staker.clone());
+            Balances::resolve_creating(&staker, Balances::issue(1000));
+            short_stake(staker, &core_id_b, 20);
+        }
+
+        println!("finished stake preparation");
+
+        let era = OcifStaking::current_era();
+
+        let era_to_claim = era + 4;
+
+        let block_at_era_to_claim = System::block_number();
+
+        advance_to_era(era_to_claim);
+
+        run_to_block(block_at_era_to_claim + 2);
+
+        assert!(era_to_claim == OcifStaking::current_era());
+
+        assert_unregister(core_id_b);
+
+        System::reset_events();
+
+        for _ in 0..10 {
+            println!(
+                "***** running to block {:?} *****",
+                System::block_number() + 1
+            );
+            run_for_blocks(1);
+        }
+
+        for _ in era..era_to_claim {
+            for staker in stakers.iter() {
+                assert_claim_staker(staker.clone(), core_id_b);
+            }
+        }
+
+        println!("finished claiming");
+
+        assert_noop!(
+            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(stakers[0].clone()), core_id_b),
+            Error::<Test>::NoStakeAvailable
+        );
+    });
+}

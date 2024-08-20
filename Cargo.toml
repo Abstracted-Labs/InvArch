@@ -26,6 +26,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", d
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
+pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-session = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "release-polkadot-v1.6.0" }
@@ -42,6 +43,8 @@ xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/par
 
 
 # dev dependencies
+
+cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 
 orml-asset-registry = { git = "https://github.com/InvArch/open-runtime-module-library.git", default-features = false, branch = "polkadot-v1.6.0" }
 orml-tokens2 = { package = "orml-tokens", git = "https://github.com/arrudagates/open-runtime-module-library.git", default-features = false, rev = "bc6b41e8a9539971a2da5d62cf8f550cde985f00" }

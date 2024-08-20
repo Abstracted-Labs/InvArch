@@ -10,8 +10,8 @@ use frame_support::{
 };
 use frame_system::{Pallet as System, RawOrigin};
 use pallet_inv4::{
+    account_derivation::CoreAccountDerivation,
     origin::{INV4Origin, MultisigInternalOrigin},
-    util::derive_core_account,
 };
 use sp_runtime::traits::{Bounded, One};
 use sp_std::vec;
@@ -20,19 +20,19 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
-fn derive_account<T: pallet_inv4::Config>(
-    core_id: <T as pallet_inv4::Config>::CoreId,
-) -> T::AccountId {
-    derive_core_account::<T, <T as pallet_inv4::Config>::CoreId, T::AccountId>(core_id)
+fn derive_account<T>(core_id: <T as pallet_inv4::Config>::CoreId) -> T::AccountId
+where
+    T: pallet_inv4::Config,
+    T::AccountId: From<[u8; 32]>,
+{
+    <pallet_inv4::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(core_id)
 }
 
 fn advance_to_era<T: Config>(n: Era) {
     while OcifStaking::<T>::current_era() < n {
-        <OcifStaking<T> as OnFinalize<<T as frame_system::Config>::BlockNumber>>::on_finalize(
-            System::<T>::block_number(),
-        );
+        <OcifStaking<T> as OnFinalize<BlockNumberFor<T>>>::on_finalize(System::<T>::block_number());
         System::<T>::set_block_number(System::<T>::block_number() + One::one());
-        <OcifStaking<T> as OnInitialize<<T as frame_system::Config>::BlockNumber>>::on_initialize(
+        <OcifStaking<T> as OnInitialize<BlockNumberFor<T>>>::on_initialize(
             System::<T>::block_number(),
         );
     }
@@ -40,12 +40,10 @@ fn advance_to_era<T: Config>(n: Era) {
 
 fn mock_register<T: Config>() -> DispatchResultWithPostInfo
 where
-    Result<
-        INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     <T as Config>::Currency::make_free_balance_be(
         &derive_account::<T>(0u32.into()),
@@ -62,12 +60,10 @@ where
 
 fn mock_register_2<T: Config>() -> DispatchResultWithPostInfo
 where
-    Result<
-        INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     <T as Config>::Currency::make_free_balance_be(
         &derive_account::<T>(1u32.into()),
@@ -84,16 +80,14 @@ where
 
 fn mock_stake<T: Config>() -> DispatchResultWithPostInfo
 where
-    Result<
-        INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     <T as Config>::Currency::make_free_balance_be(
         &whitelisted_caller(),
-        BalanceOf::<T>::max_value(),
+        pallet::BalanceOf::<T>::max_value(),
     );
 
     OcifStaking::<T>::stake(
@@ -105,12 +99,10 @@ where
 
 fn mock_unstake<T: Config>() -> DispatchResultWithPostInfo
 where
-    Result<
-        INV4Origin<T, <T as pallet_inv4::Config>::CoreId, <T as frame_system::Config>::AccountId>,
-        <T as frame_system::Config>::RuntimeOrigin,
-    >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <T as frame_system::Config>::RuntimeOrigin:
-        From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        From<<T as frame_system::Config>::RuntimeOrigin>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 {
     OcifStaking::<T>::unstake(
         RawOrigin::Signed(whitelisted_caller()).into(),
@@ -123,14 +115,11 @@ benchmarks! {
     where_clause {
     where
         Result<
-                INV4Origin<
-                        T,
-                    <T as pallet_inv4::Config>::CoreId,
-                    <T as frame_system::Config>::AccountId,
-                    >,
+            INV4Origin<T>,
             <T as frame_system::Config>::RuntimeOrigin,
             >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T, <T as pallet::Config>::CoreId, <T as frame_system::Config>::AccountId>>,
+    <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
+    T::AccountId: From<[u8; 32]>,
 
 }
 
@@ -195,7 +184,7 @@ benchmarks! {
         let staker = whitelisted_caller();
         let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
 
-        <T as Config>::Currency::make_free_balance_be(&staker, BalanceOf::<T>::max_value());
+        <T as Config>::Currency::make_free_balance_be(&staker, pallet::BalanceOf::<T>::max_value());
     }: _(RawOrigin::Signed(staker.clone()), 0u32.into(), amount)
     verify {
         assert_last_event::<T>(Event::<T>::Staked {
@@ -246,7 +235,7 @@ benchmarks! {
         let staker: T::AccountId = whitelisted_caller();
         let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
 
-        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
+        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as pallet_inv4::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
         let era_info = OcifStaking::<T>::general_era_info::<Era>(0u32).unwrap();
 
         let (_, reward) = OcifStaking::<T>::core_stakers_split(&core_stake_info, &era_info);
@@ -269,7 +258,7 @@ benchmarks! {
         let staker: T::AccountId = whitelisted_caller();
         let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
 
-        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
+        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as pallet_inv4::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
         let era_info = OcifStaking::<T>::general_era_info::<Era>(0u32).unwrap();
 
         let (reward, _) = OcifStaking::<T>::core_stakers_split(&core_stake_info, &era_info);

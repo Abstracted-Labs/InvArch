@@ -46,13 +46,15 @@ std = [
 	"sp-std/std",
 	"frame-support/std",
 	"frame-system/std",
+	"frame-benchmarking?/std",
 	"pallet-session/std",
 	"sp-staking/std",
-  "pallet-balances/std",
+ 	"pallet-balances/std",
+  
 ]
-try-runtime = ["frame-support/try-runtime"]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 ]
+try-runtime = ["frame-support/try-runtime"]

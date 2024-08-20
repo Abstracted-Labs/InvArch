@@ -7,6 +7,7 @@ use frame_support::{
         fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
         EnsureOriginWithArg,
     },
+    weights::ConstantMultiplier,
 };
 use frame_system::EnsureRoot;
 use orml_asset_registry::AssetMetadata;
@@ -87,6 +88,7 @@ impl pallet_balances::Config for Test {
 }
 
 const UNIT: u128 = 1000000000000;
+const MICROUNIT: Balance = 1_000_000;
 
 pub struct CoreDustRemovalWhitelist;
 impl Contains<AccountId> for CoreDustRemovalWhitelist {
@@ -208,6 +210,8 @@ parameter_types! {
     pub const MaxReserves: u32 = 1;
     pub const MaxCallSize: u32 = 50 * 1024;
     pub const StringLimit: u32 = 2125;
+    pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+
 }
 
 pub struct AssetAuthority;
@@ -219,6 +223,18 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
         _asset_id: &Option<u32>,
     ) -> Result<Self::Success, RuntimeOrigin> {
         <EnsureRoot<_> as EnsureOrigin<RuntimeOrigin>>::try_origin(origin)
+    }
+
+    fn ensure_origin(
+        o: RuntimeOrigin,
+        a: &Option<u32>,
+    ) -> Result<Self::Success, sp_runtime::traits::BadOrigin> {
+        Self::try_origin(o, a).map_err(|_| sp_runtime::traits::BadOrigin)
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn try_successful_origin(_o: &Option<u32>) -> Result<RuntimeOrigin, ()> {
+        Err(())
     }
 }
 
@@ -340,6 +356,7 @@ impl pallet::Config for Test {
     type MaxCallSize = MaxCallSize;
 
     type ParaId = ConstU32<2125>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 pub struct ExtBuilder;

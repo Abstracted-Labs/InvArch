@@ -19,16 +19,22 @@
 //! - `UnbondingInfo` - A struct that holds information about unbonding chunks of balance.
 //! - `AccountLedger` - A struct that holds information about an account's locked balance and unbonding information.
 
-use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
-use frame_support::traits::Currency;
-use scale_info::TypeInfo;
+use codec::{Decode, Encode, FullCodec, HasCompact, MaxEncodedLen};
+use cumulus_primitives_core::{AggregateMessageOrigin, MultiLocation, ParaId};
+use frame_support::{
+    pallet_prelude::Weight,
+    traits::{Currency, ProcessMessage, QueueFootprint, QueuePausedQuery},
+};
+use pallet_message_queue::OnQueueChanged;
+use scale_info::{prelude::marker::PhantomData, TypeInfo};
 use sp_runtime::{
     traits::{AtLeast32BitUnsigned, Zero},
-    RuntimeDebug,
+    Perbill, RuntimeDebug,
 };
-use sp_std::{ops::Add, prelude::*};
+use sp_std::{fmt::Debug, ops::Add, prelude::*};
 
 pub use crate::pallet::*;
+use crate::weights::WeightInfo;
 
 /// The balance type of this pallet.
 pub type BalanceOf<T> =
@@ -182,6 +188,9 @@ impl<Balance: AtLeast32BitUnsigned + Copy + MaxEncodedLen> StakerInfo<Balance> {
         if let Some(era_stake) = self.stakes.first() {
             let era_stake = *era_stake;
 
+            // this checks if the last claim was from an older era or if the latest staking info is from
+            // a newer era compared to the last claim, allowing the user to increase their stake while not losing
+            // or messing with their stake from the previous eras.
             if self.stakes.len() == 1 || self.stakes[1].era > era_stake.era + 1 {
                 self.stakes[0] = EraStake {
                     staked: era_stake.staked,
@@ -312,4 +321,161 @@ impl<Balance: AtLeast32BitUnsigned + Default + Copy + MaxEncodedLen> AccountLedg
     pub(crate) fn is_empty(&self) -> bool {
         self.locked.is_zero() && self.unbonding_info.is_empty()
     }
+}
+
+#[derive(Encode, Decode, MaxEncodedLen, Clone, Eq, PartialEq, TypeInfo, Debug)]
+pub enum CustomAggregateMessageOrigin<XcmOrigin> {
+    Aggregate(XcmOrigin),
+    UnregisterMessageOrigin,
+}
+
+/// Custom Convert a sibling `ParaId` to an `AggregateMessageOrigin`.
+pub struct CustomParaIdToSibling;
+impl sp_runtime::traits::Convert<ParaId, CustomAggregateMessageOrigin<AggregateMessageOrigin>>
+    for CustomParaIdToSibling
+{
+    fn convert(para_id: ParaId) -> CustomAggregateMessageOrigin<AggregateMessageOrigin> {
+        CustomAggregateMessageOrigin::Aggregate(AggregateMessageOrigin::Sibling(para_id))
+    }
+}
+
+pub struct CustomNarrowOriginToSibling<Inner, T>(PhantomData<(Inner, T)>);
+impl<Inner: QueuePausedQuery<ParaId>, T: Config>
+    QueuePausedQuery<CustomAggregateMessageOrigin<AggregateMessageOrigin>>
+    for CustomNarrowOriginToSibling<Inner, T>
+{
+    fn is_paused(origin: &CustomAggregateMessageOrigin<AggregateMessageOrigin>) -> bool {
+        match origin {
+            CustomAggregateMessageOrigin::Aggregate(AggregateMessageOrigin::Sibling(id)) => {
+                Inner::is_paused(id)
+            }
+            CustomAggregateMessageOrigin::Aggregate(_) => false,
+            CustomAggregateMessageOrigin::UnregisterMessageOrigin => Pallet::<T>::is_halted(),
+        }
+    }
+}
+
+impl<Inner: OnQueueChanged<ParaId>, T: Config>
+    OnQueueChanged<CustomAggregateMessageOrigin<AggregateMessageOrigin>>
+    for CustomNarrowOriginToSibling<Inner, T>
+{
+    fn on_queue_changed(
+        origin: CustomAggregateMessageOrigin<AggregateMessageOrigin>,
+        fp: QueueFootprint,
+    ) {
+        match origin {
+            CustomAggregateMessageOrigin::Aggregate(AggregateMessageOrigin::Sibling(id)) => {
+                Inner::on_queue_changed(id, fp)
+            }
+            CustomAggregateMessageOrigin::Aggregate(_) => (),
+            CustomAggregateMessageOrigin::UnregisterMessageOrigin => (),
+        }
+    }
+}
+
+pub struct CustomMessageProcessor<Origin, XcmOrigin, XcmProcessor, C, T>(
+    PhantomData<(Origin, XcmOrigin, XcmProcessor, C, T)>,
+);
+
+impl<Origin, XcmOrigin, XcmProcessor, Call, T> ProcessMessage
+    for CustomMessageProcessor<Origin, XcmOrigin, XcmProcessor, Call, T>
+where
+    Origin: Into<CustomAggregateMessageOrigin<XcmOrigin>>
+        + FullCodec
+        + MaxEncodedLen
+        + Clone
+        + Eq
+        + PartialEq
+        + TypeInfo
+        + Debug,
+    XcmOrigin:
+        Into<MultiLocation> + FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + TypeInfo + Debug,
+    XcmProcessor: ProcessMessage<Origin = XcmOrigin>,
+    T: Config,
+{
+    type Origin = Origin;
+    fn process_message(
+        message: &[u8],
+        _origin: Self::Origin,
+        meter: &mut frame_support::weights::WeightMeter,
+        _id: &mut [u8; 32],
+    ) -> Result<bool, frame_support::traits::ProcessMessageError> {
+        match _origin.into() {
+            CustomAggregateMessageOrigin::Aggregate(o) => {
+                XcmProcessor::process_message(message, o, meter, _id)
+            }
+            CustomAggregateMessageOrigin::UnregisterMessageOrigin => {
+                let call: UnregisterMessage<T> = UnregisterMessage::<T>::decode(&mut &message[..])
+                    .map_err(|_| frame_support::traits::ProcessMessageError::Corrupt)?;
+
+                let unstake_weight = <T as Config>::WeightInfo::unstake();
+
+                let meter_limit = meter.limit();
+
+                let thirdy_of_limit = Perbill::from_percent(30) * meter_limit;
+
+                let meter_remaining = meter.remaining();
+
+                let min_desired = {
+                    // if a third of the proofsize is > 1/2 MB then we use a 1/2 MB for the proofsize weight.
+                    if thirdy_of_limit.proof_size() >= 524288 {
+                        Weight::from_parts(thirdy_of_limit.ref_time(), 524288)
+                    } else {
+                        thirdy_of_limit
+                    }
+                };
+
+                // only use less than 30% of all the weight the message queue can provide.
+                if !meter_remaining.all_gte(Perbill::from_percent(70) * meter_limit) {
+                    return Err(frame_support::traits::ProcessMessageError::Yield);
+                }
+
+                let max_calls = {
+                    match min_desired.checked_div_per_component(&unstake_weight) {
+                        Some(x) if x > 0 => x.min(100),
+                        _ => return Err(frame_support::traits::ProcessMessageError::Yield),
+                    }
+                };
+
+                let max_weight = max_calls * unstake_weight;
+
+                let chunk_result = crate::pallet::Pallet::<T>::process_core_unregistration_shard(
+                    call.stakers_to_unstake,
+                    call.core_id,
+                    call.era,
+                    max_calls,
+                );
+
+                match chunk_result {
+                    Ok(weight) => {
+                        if let Some(actual_weight) = weight.actual_weight {
+                            meter.try_consume(actual_weight).map_err(|_| {
+                                frame_support::traits::ProcessMessageError::Overweight(
+                                    actual_weight,
+                                )
+                            })?;
+                        } else {
+                            meter.try_consume(max_weight).map_err(|_| {
+                                frame_support::traits::ProcessMessageError::Overweight(max_weight)
+                            })?;
+                        }
+                        Ok(true)
+                    }
+                    Err(_) => {
+                        meter.try_consume(max_weight).map_err(|_| {
+                            frame_support::traits::ProcessMessageError::Overweight(max_weight)
+                        })?;
+                        Ok(false)
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+pub struct UnregisterMessage<T: Config> {
+    pub(crate) core_id: T::CoreId,
+    pub(crate) era: Era,
+    pub(crate) stakers_to_unstake: u32,
 }
