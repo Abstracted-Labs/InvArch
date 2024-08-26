@@ -7,7 +7,7 @@
 //! ## Overview
 //! *TODO!(Rename all code referenced of core to DAO).*  
 //! *core == DAO or multisig.*  
-//! 
+//!
 //! This pallet provides a XCM abstraction layer for DAO Management, allowing them to manage assets easily across multiple chains.
 //!
 //! The module [`traits`] contains traits that provide an abstraction on top of XCM [`MultiLocation`] and has to be correctly implemented in the runtime.
