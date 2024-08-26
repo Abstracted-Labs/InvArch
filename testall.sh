@@ -12,22 +12,38 @@ build_and_test() {
 
   cd ./$dir
 
-  echo "$dir: 1/2 Building..."
-  if RUSTFLAGS=-Awarnings cargo build --quiet > /dev/null; then
-    echo "$dir: 1/2 Build Ok"
+  echo "$dir: 1/3 Checking format..."
+  if RUSTFLAGS=-Awarnings cargo fmt --all -- --check > /dev/null 2>&1; then
+    echo "$dir: 1/3 Format Check Ok"
   else
-    echo "$dir: 1/2 Build Failed"
+    echo "$dir: 1/3 Format Check Failed"
+    echo "$dir: 1/3 Running cargo fmt to fix format..."
+    if cargo fmt --all > /dev/null 2>&1; then
+      echo "$dir: 1/3 Format Fixed"
+    else
+      echo "$dir: 1/3 Format Fix Failed"
+      eval "$result_var=\"$dir: Format Failed\""
+      cd ..
+      return
+    fi
+  fi
+
+  echo "$dir: 2/3 Building..."
+  if cargo build > /dev/null 2>&1; then
+    echo "$dir: 2/3 Build Ok"
+  else
+    echo "$dir: 2/3 Build Failed"
     eval "$result_var=\"$dir: Build Failed\""
     cd ..
     return
   fi
 
-  echo "$dir: 2/2 Testing..."
-  if RUSTFLAGS=-Awarnings cargo test --quiet > /dev/null; then
-    echo "$dir: 2/2 Test Ok"
+  echo "$dir: 3/3 Testing..."
+  if cargo test > /dev/null 2>&1; then
+    echo "$dir: 3/3 Test Ok"
     eval "$result_var=\"$dir: Ok\""
   else
-    echo "$dir: 2/2 Test Failed"
+    echo "$dir: 3/3 Test Failed"
     eval "$result_var=\"$dir: Test Failed\""
   fi
 
