@@ -12,10 +12,10 @@ fn on_initialize_when_core_staking_enabled_in_mid_of_an_era_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         System::set_block_number(2);
 
-        assert_eq!(0u32, OcifStaking::current_era());
+        assert_eq!(0u32, DaoStaking::current_era());
 
-        OcifStaking::on_initialize(System::block_number());
-        assert_eq!(1u32, OcifStaking::current_era());
+        DaoStaking::on_initialize(System::block_number());
+        assert_eq!(1u32, DaoStaking::current_era());
     })
 }
 
@@ -23,14 +23,14 @@ fn on_initialize_when_core_staking_enabled_in_mid_of_an_era_is_ok() {
 fn rewards_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         assert_eq!(RewardAccumulator::<Test>::get(), Default::default());
-        assert!(Balances::free_balance(&OcifStaking::account_id()).is_zero());
+        assert!(Balances::free_balance(&DaoStaking::account_id()).is_zero());
 
         let total_reward = 22344;
-        OcifStaking::rewards(Balances::issue(total_reward));
+        DaoStaking::rewards(Balances::issue(total_reward));
 
         assert_eq!(
             total_reward,
-            Balances::free_balance(&OcifStaking::account_id())
+            Balances::free_balance(&DaoStaking::account_id())
         );
         let reward_accumulator = RewardAccumulator::<Test>::get();
 
@@ -39,11 +39,11 @@ fn rewards_is_ok() {
         assert_eq!(reward_accumulator.stakers, stakers_reward);
         assert_eq!(reward_accumulator.core, core_reward);
 
-        OcifStaking::on_initialize(System::block_number());
+        DaoStaking::on_initialize(System::block_number());
         assert_eq!(RewardAccumulator::<Test>::get(), Default::default());
         assert_eq!(
             total_reward,
-            Balances::free_balance(&OcifStaking::account_id())
+            Balances::free_balance(&DaoStaking::account_id())
         );
     })
 }
@@ -51,16 +51,16 @@ fn rewards_is_ok() {
 #[test]
 fn on_initialize_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
-        assert!(OcifStaking::current_era().is_zero());
+        assert!(DaoStaking::current_era().is_zero());
 
         initialize_first_block();
-        let current_era = OcifStaking::current_era();
+        let current_era = DaoStaking::current_era();
         assert_eq!(1, current_era);
 
         let previous_era = current_era;
         advance_to_era(previous_era + 10);
 
-        let current_era = OcifStaking::current_era();
+        let current_era = DaoStaking::current_era();
         for era in 1..current_era {
             let reward_info = GeneralEraInfo::<Test>::get(era).unwrap().rewards;
             assert_eq!(ISSUE_PER_ERA, reward_info.stakers + reward_info.core);
@@ -77,15 +77,15 @@ fn new_era_length_is_always_blocks_per_era() {
         initialize_first_block();
         let blocks_per_era = mock::BLOCKS_PER_ERA;
 
-        advance_to_era(mock::OcifStaking::current_era() + 1);
+        advance_to_era(mock::DaoStaking::current_era() + 1);
 
-        let start_era = mock::OcifStaking::current_era();
+        let start_era = mock::DaoStaking::current_era();
         let starting_block_number = System::block_number();
 
-        advance_to_era(mock::OcifStaking::current_era() + 1);
+        advance_to_era(mock::DaoStaking::current_era() + 1);
         let ending_block_number = System::block_number();
 
-        assert_eq!(mock::OcifStaking::current_era(), start_era + 1);
+        assert_eq!(mock::DaoStaking::current_era(), start_era + 1);
         assert_eq!(ending_block_number - starting_block_number, blocks_per_era);
     })
 }
@@ -93,16 +93,16 @@ fn new_era_length_is_always_blocks_per_era() {
 #[test]
 fn new_era_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
-        advance_to_era(OcifStaking::current_era() + 10);
-        let starting_era = OcifStaking::current_era();
+        advance_to_era(DaoStaking::current_era() + 10);
+        let starting_era = DaoStaking::current_era();
 
-        assert_eq!(OcifStaking::reward_accumulator(), Default::default());
+        assert_eq!(DaoStaking::reward_accumulator(), Default::default());
 
         run_for_blocks(1);
-        let current_era = OcifStaking::current_era();
+        let current_era = DaoStaking::current_era();
         assert_eq!(starting_era, current_era);
 
-        let block_reward = OcifStaking::reward_accumulator();
+        let block_reward = DaoStaking::reward_accumulator();
         assert_eq!(ISSUE_PER_BLOCK, block_reward.stakers + block_reward.core);
 
         let staker = account(C);
@@ -110,15 +110,15 @@ fn new_era_is_ok() {
         assert_register(A);
         assert_stake(staker, &A, staked_amount);
 
-        advance_to_era(OcifStaking::current_era() + 1);
+        advance_to_era(DaoStaking::current_era() + 1);
 
-        let current_era = OcifStaking::current_era();
+        let current_era = DaoStaking::current_era();
         assert_eq!(starting_era + 1, current_era);
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::NewEra {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::NewEra {
             era: starting_era + 1,
         }));
 
-        let block_reward = OcifStaking::reward_accumulator();
+        let block_reward = DaoStaking::reward_accumulator();
         assert_eq!(block_reward, Default::default());
 
         let expected_era_reward = ISSUE_PER_ERA;
@@ -162,12 +162,12 @@ fn general_staker_info_is_ok() {
         let final_era = 12;
         advance_to_era(final_era);
 
-        let mut first_staker_info = OcifStaking::staker_info(&A, &staker_1.clone());
-        let mut second_staker_info = OcifStaking::staker_info(&A, &staker_2.clone());
-        let mut third_staker_info = OcifStaking::staker_info(&A, &staker_3.clone());
+        let mut first_staker_info = DaoStaking::staker_info(&A, &staker_1.clone());
+        let mut second_staker_info = DaoStaking::staker_info(&A, &staker_2.clone());
+        let mut third_staker_info = DaoStaking::staker_info(&A, &staker_3.clone());
 
         for era in starting_era..mid_era {
-            let core_info = OcifStaking::core_stake_info(&A, era).unwrap();
+            let core_info = DaoStaking::core_stake_info(&A, era).unwrap();
             assert_eq!(2, core_info.number_of_stakers);
 
             assert_eq!((era, amount), first_staker_info.claim());
@@ -177,14 +177,14 @@ fn general_staker_info_is_ok() {
         }
 
         for era in mid_era..=final_era {
-            let first_core_info = OcifStaking::core_stake_info(&A, era).unwrap();
+            let first_core_info = DaoStaking::core_stake_info(&A, era).unwrap();
             assert_eq!(2, first_core_info.number_of_stakers);
 
             assert_eq!((era, amount), first_staker_info.claim());
             assert_eq!((era, amount), third_staker_info.claim());
 
             assert_eq!(
-                OcifStaking::core_stake_info(&B, era)
+                DaoStaking::core_stake_info(&B, era)
                     .unwrap()
                     .number_of_stakers,
                 1
@@ -203,7 +203,7 @@ fn register_is_ok() {
 
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
         assert_register(A);
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreRegistered {
             core: A,
         }));
 
@@ -221,14 +221,16 @@ fn register_twice_with_same_account_fails() {
 
         assert_register(A);
 
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreRegistered {
             core: A,
         }));
 
         assert_noop!(
-            OcifStaking::register_core(
-                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(A))
-                    .into(),
+            DaoStaking::register_core(
+                pallet_dao_manager::Origin::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::new(A)
+                )
+                .into(),
                 Vec::default().try_into().unwrap(),
                 Vec::default().try_into().unwrap(),
                 Vec::default().try_into().unwrap()
@@ -247,12 +249,12 @@ fn change_metadata() {
 
         assert_register(core_id);
 
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreRegistered {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreRegistered {
             core: core_id,
         }));
 
         assert_eq!(
-            OcifStaking::core_info(core_id),
+            DaoStaking::core_info(core_id),
             Some(CoreInfo {
                 account: account(core_id),
                 metadata: CoreMetadata {
@@ -269,10 +271,10 @@ fn change_metadata() {
             image: b"https://test.core".to_vec().try_into().unwrap(),
         };
 
-        assert_ok!(OcifStaking::change_core_metadata(
-            pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
-                core_id
-            ))
+        assert_ok!(DaoStaking::change_core_metadata(
+            pallet_dao_manager::Origin::Multisig(
+                pallet_dao_manager::origin::MultisigInternalOrigin::new(core_id)
+            )
             .into(),
             b"Test CORE".to_vec().try_into().unwrap(),
             b"Description of the test CORE".to_vec().try_into().unwrap(),
@@ -280,7 +282,7 @@ fn change_metadata() {
         ));
 
         assert_eq!(
-            OcifStaking::core_info(core_id),
+            DaoStaking::core_info(core_id),
             Some(CoreInfo {
                 account: account(core_id),
                 metadata: new_metadata
@@ -300,9 +302,11 @@ fn unregister_after_register_is_ok() {
         assert!(<Test as Config>::Currency::reserved_balance(&account(A)).is_zero());
 
         assert_noop!(
-            OcifStaking::unregister_core(
-                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(A))
-                    .into()
+            DaoStaking::unregister_core(
+                pallet_dao_manager::Origin::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::new(A)
+                )
+                .into()
             ),
             Error::<Test>::NotRegistered
         );
@@ -323,11 +327,11 @@ fn unregister_stake_and_unstake_is_not_ok() {
         assert_unregister(A);
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker.clone()), A, 100),
+            DaoStaking::stake(RuntimeOrigin::signed(staker.clone()), A, 100),
             Error::<Test>::NotRegistered
         );
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(staker.clone()), A, 100),
+            DaoStaking::unstake(RuntimeOrigin::signed(staker.clone()), A, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -356,7 +360,7 @@ fn withdraw_from_unregistered_is_ok() {
 
         assert_unregister(core_id);
 
-        for era in 1..OcifStaking::current_era() {
+        for era in 1..DaoStaking::current_era() {
             assert_claim_staker(staker_1.clone(), core_id);
             assert_claim_staker(staker_2.clone(), core_id);
 
@@ -364,18 +368,18 @@ fn withdraw_from_unregistered_is_ok() {
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_1.clone()), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_1.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_2.clone()), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_2.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
         assert_noop!(
-            OcifStaking::core_claim_rewards(
+            DaoStaking::core_claim_rewards(
                 RuntimeOrigin::signed(account(core_id)),
                 core_id,
-                OcifStaking::current_era()
+                DaoStaking::current_era()
             ),
             Error::<Test>::IncorrectEra
         );
@@ -396,8 +400,8 @@ fn bond_and_stake_different_eras_is_ok() {
         let core_id = A;
         assert_register(core_id);
 
-        let current_era = OcifStaking::current_era();
-        assert!(OcifStaking::core_stake_info(&core_id, current_era).is_none());
+        let current_era = DaoStaking::current_era();
+        assert!(DaoStaking::core_stake_info(&core_id, current_era).is_none());
 
         assert_stake(staker_id.clone(), &core_id, 100);
 
@@ -485,7 +489,7 @@ fn bond_and_stake_on_unregistered_core_fails() {
 
         let core_id = A;
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_id), core_id, stake_value),
+            DaoStaking::stake(RuntimeOrigin::signed(staker_id), core_id, stake_value),
             Error::<Test>::NotRegistered
         );
     })
@@ -501,7 +505,7 @@ fn bond_and_stake_insufficient_value() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::stake(
+            DaoStaking::stake(
                 RuntimeOrigin::signed(staker_id.clone()),
                 core_id,
                 MINIMUM_STAKING_AMOUNT - 1
@@ -513,7 +517,7 @@ fn bond_and_stake_insufficient_value() {
         assert_stake(staker_id.clone(), &core_id, staker_free_balance);
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_id.clone()), core_id, 1),
+            DaoStaking::stake(RuntimeOrigin::signed(staker_id.clone()), core_id, 1),
             Error::<Test>::StakingNothing
         );
     })
@@ -532,7 +536,7 @@ fn bond_and_stake_too_many_stakers_per_core() {
         }
 
         assert_noop!(
-            OcifStaking::stake(
+            DaoStaking::stake(
                 RuntimeOrigin::signed(account((1 + MAX_NUMBER_OF_STAKERS).into())),
                 core_id,
                 100
@@ -551,14 +555,14 @@ fn bond_and_stake_too_many_era_stakes() {
         let core_id = A;
         assert_register(core_id);
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
             assert_stake(staker_id.clone(), &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_id.into()), core_id, 100),
+            DaoStaking::stake(RuntimeOrigin::signed(staker_id.into()), core_id, 100),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -572,7 +576,7 @@ fn unbond_and_unstake_multiple_time_is_ok() {
         let staker_id = account(B);
         let core_id = A;
         let original_staked_value = 300 + EXISTENTIAL_DEPOSIT;
-        let old_era = OcifStaking::current_era();
+        let old_era = DaoStaking::current_era();
 
         assert_register(core_id);
         assert_stake(staker_id.clone(), &core_id, original_staked_value);
@@ -618,8 +622,8 @@ fn unbond_and_unstake_in_different_eras() {
         assert_stake(first_staker_id.clone(), &core_id, staked_value);
         assert_stake(second_staker_id.clone(), &core_id, staked_value);
 
-        advance_to_era(OcifStaking::current_era() + 10);
-        let current_era = OcifStaking::current_era();
+        advance_to_era(DaoStaking::current_era() + 10);
+        let current_era = DaoStaking::current_era();
         assert_unstake(first_staker_id.clone(), &core_id, 100);
 
         advance_to_era(current_era + 10);
@@ -654,7 +658,7 @@ fn unbond_and_unstake_with_zero_value_is_not_ok() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 0),
+            DaoStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 0),
             Error::<Test>::UnstakingNothing
         );
     })
@@ -667,7 +671,7 @@ fn unbond_and_unstake_on_not_registered_core_is_not_ok() {
 
         let core_id = A;
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 100),
+            DaoStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 100),
             Error::<Test>::NotRegistered
         );
     })
@@ -688,19 +692,19 @@ fn unbond_and_unstake_too_many_unlocking_chunks_is_not_ok() {
         assert_stake(staker.clone(), &core_id, stake_amount);
 
         for _ in 0..MAX_UNLOCKING {
-            advance_to_era(OcifStaking::current_era() + 1);
+            advance_to_era(DaoStaking::current_era() + 1);
             assert_unstake(staker.clone(), &core_id, unstake_amount);
         }
 
         assert_eq!(
             MAX_UNLOCKING,
-            OcifStaking::ledger(&staker).unbonding_info.len()
+            DaoStaking::ledger(&staker).unbonding_info.len()
         );
         assert_unstake(staker.clone(), &core_id, unstake_amount);
 
-        advance_to_era(OcifStaking::current_era() + 1);
+        advance_to_era(DaoStaking::current_era() + 1);
         assert_noop!(
-            OcifStaking::unstake(
+            DaoStaking::unstake(
                 RuntimeOrigin::signed(staker.clone()),
                 core_id.clone(),
                 unstake_amount
@@ -719,7 +723,7 @@ fn unbond_and_unstake_on_not_staked_core_is_not_ok() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 10),
+            DaoStaking::unstake(RuntimeOrigin::signed(account(B)), core_id, 10),
             Error::<Test>::NoStakeAvailable,
         );
     })
@@ -734,14 +738,14 @@ fn unbond_and_unstake_too_many_era_stakes() {
         let core_id = A;
         assert_register(core_id);
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         for offset in 1..MAX_ERA_STAKE_VALUES {
             assert_stake(staker_id.clone(), &core_id, 100);
             advance_to_era(start_era + offset);
         }
 
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(staker_id), core_id, 10),
+            DaoStaking::unstake(RuntimeOrigin::signed(staker_id), core_id, 10),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -760,7 +764,7 @@ fn withdraw_unbonded_is_ok() {
 
         let first_unbond_value = 75;
         let second_unbond_value = 39;
-        let initial_era = OcifStaking::current_era();
+        let initial_era = DaoStaking::current_era();
 
         assert_unstake(staker_id.clone(), &core_id, first_unbond_value);
 
@@ -769,31 +773,31 @@ fn withdraw_unbonded_is_ok() {
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
+            DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
             Error::<Test>::NothingToWithdraw
         );
 
-        advance_to_era(OcifStaking::current_era() + 1);
-        assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+        advance_to_era(DaoStaking::current_era() + 1);
+        assert_ok!(DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(
             staker_id.clone()
         ),));
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Withdrawn {
             staker: staker_id.clone(),
             amount: first_unbond_value,
         }));
 
-        advance_to_era(OcifStaking::current_era() + 1);
-        assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+        advance_to_era(DaoStaking::current_era() + 1);
+        assert_ok!(DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(
             staker_id.clone()
         ),));
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Withdrawn {
             staker: staker_id.clone(),
             amount: second_unbond_value,
         }));
 
         advance_to_era(initial_era + UNBONDING_PERIOD - 1);
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
+            DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_id.clone())),
             Error::<Test>::NothingToWithdraw
         );
     })
@@ -817,7 +821,7 @@ fn withdraw_unbonded_full_vector_is_ok() {
                 &core_id,
                 init_unbonding_amount * x as u128,
             );
-            advance_to_era(OcifStaking::current_era() + 1);
+            advance_to_era(DaoStaking::current_era() + 1);
         }
 
         assert_withdraw_unbonded(staker_id.clone());
@@ -830,7 +834,7 @@ fn withdraw_unbonded_full_vector_is_ok() {
             .unbonding_info
             .is_empty()
         {
-            advance_to_era(OcifStaking::current_era() + 1);
+            advance_to_era(DaoStaking::current_era() + 1);
             assert_withdraw_unbonded(staker_id.clone());
         }
     })
@@ -842,7 +846,7 @@ fn withdraw_unbonded_no_value_is_not_ok() {
         initialize_first_block();
 
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(account(B))),
+            DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(account(B))),
             Error::<Test>::NothingToWithdraw,
         );
     })
@@ -859,13 +863,13 @@ fn claim_not_staked_core() {
         assert_register(core_id);
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
-        advance_to_era(OcifStaking::current_era() + 1);
+        advance_to_era(DaoStaking::current_era() + 1);
         assert_noop!(
-            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 1),
+            DaoStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 1),
             Error::<Test>::NoStakeAvailable
         );
     })
@@ -882,18 +886,18 @@ fn claim_not_registered_core() {
         assert_register(core_id);
         assert_stake(staker.clone(), &core_id, 100);
 
-        advance_to_era(OcifStaking::current_era() + 1);
+        advance_to_era(DaoStaking::current_era() + 1);
         assert_unregister(core_id);
 
         assert_claim_staker(staker.clone(), core_id);
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker.clone()), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker.clone()), core_id),
             Error::<Test>::NoStakeAvailable
         );
 
         assert_claim_core(core_id, 1);
         assert_noop!(
-            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 2),
+            DaoStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 2),
             Error::<Test>::IncorrectEra
         );
     })
@@ -907,25 +911,25 @@ fn claim_invalid_era() {
         let staker = account(B);
         let core_id = A;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
         assert_stake(staker.clone(), &core_id, 100);
         advance_to_era(start_era + 5);
 
-        for era in start_era..OcifStaking::current_era() {
+        for era in start_era..DaoStaking::current_era() {
             assert_claim_staker(staker.clone(), core_id);
             assert_claim_core(core_id, era);
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
-            OcifStaking::core_claim_rewards(
+            DaoStaking::core_claim_rewards(
                 RuntimeOrigin::signed(account(core_id)),
                 core_id,
-                OcifStaking::current_era()
+                DaoStaking::current_era()
             ),
             Error::<Test>::IncorrectEra
         );
@@ -940,14 +944,14 @@ fn claim_core_same_era_twice() {
         let staker = account(B);
         let core_id = A;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
         assert_stake(staker, &core_id, 100);
         advance_to_era(start_era + 1);
 
         assert_claim_core(core_id, start_era);
         assert_noop!(
-            OcifStaking::core_claim_rewards(
+            DaoStaking::core_claim_rewards(
                 RuntimeOrigin::signed(account(core_id)),
                 core_id,
                 start_era
@@ -967,7 +971,7 @@ fn claim_is_ok() {
         let first_core_id = A;
         let second_core_id = B;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
 
         assert_register(first_core_id);
         assert_register(second_core_id);
@@ -983,10 +987,10 @@ fn claim_is_ok() {
         for x in 0..eras_advanced.into() {
             assert_stake(first_staker.clone(), &first_core_id, 20 + x * 3);
             assert_stake(second_staker.clone(), &first_core_id, 5 + x * 5);
-            advance_to_era(OcifStaking::current_era() + 1);
+            advance_to_era(DaoStaking::current_era() + 1);
         }
 
-        let current_era = OcifStaking::current_era();
+        let current_era = DaoStaking::current_era();
         for era in start_era..current_era {
             assert_claim_staker(first_staker.clone(), first_core_id);
             assert_claim_core(first_core_id, era);
@@ -994,14 +998,14 @@ fn claim_is_ok() {
         }
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(
+            DaoStaking::staker_claim_rewards(
                 RuntimeOrigin::signed(first_staker),
                 first_core_id.clone()
             ),
             Error::<Test>::IncorrectEra
         );
         assert_noop!(
-            OcifStaking::core_claim_rewards(
+            DaoStaking::core_claim_rewards(
                 RuntimeOrigin::signed(account(first_core_id)),
                 first_core_id,
                 current_era
@@ -1016,14 +1020,14 @@ fn claim_check_amount() {
     ExternalityBuilder::build().execute_with(|| {
         assert_eq!(System::block_number(), 1 as BlockNumber);
 
-        OcifStaking::on_initialize(System::block_number());
+        DaoStaking::on_initialize(System::block_number());
 
         let first_staker = account(C);
         let second_staker = account(D);
         let first_core_id = A;
         let second_core_id = B;
 
-        assert_eq!(OcifStaking::current_era(), 1);
+        assert_eq!(DaoStaking::current_era(), 1);
 
         // Make sure current block is 1.
         assert_eq!(System::block_number(), 1);
@@ -1046,7 +1050,7 @@ fn claim_check_amount() {
         advance_to_era_no_rewards(2);
 
         // Make sure current era is 2.
-        assert_eq!(OcifStaking::current_era(), 2);
+        assert_eq!(DaoStaking::current_era(), 2);
 
         // 130 for stakers, 130 for Core.
         issue_rewards(260);
@@ -1055,7 +1059,7 @@ fn claim_check_amount() {
         advance_to_era_no_rewards(3);
 
         assert_eq!(
-            OcifStaking::core_stake_info(first_core_id, 1),
+            DaoStaking::core_stake_info(first_core_id, 1),
             Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
@@ -1065,7 +1069,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::core_stake_info(second_core_id, 1),
+            DaoStaking::core_stake_info(second_core_id, 1),
             Some(CoreStakeInfo {
                 total: 30,
                 number_of_stakers: 1,
@@ -1075,7 +1079,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::general_era_info(1),
+            DaoStaking::general_era_info(1),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 130,
@@ -1088,7 +1092,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::core_stake_info(first_core_id, 2),
+            DaoStaking::core_stake_info(first_core_id, 2),
             Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
@@ -1098,7 +1102,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::core_stake_info(second_core_id, 2),
+            DaoStaking::core_stake_info(second_core_id, 2),
             Some(CoreStakeInfo {
                 total: 30,
                 number_of_stakers: 1,
@@ -1108,7 +1112,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::general_era_info(2),
+            DaoStaking::general_era_info(2),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 130,
@@ -1121,14 +1125,14 @@ fn claim_check_amount() {
         );
 
         // Let's try claiming rewards for era 1 for the first core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 1,
@@ -1136,14 +1140,14 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for era 1 for the second core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             1
         ));
 
         // ...there should be nothing.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 1,
@@ -1151,14 +1155,14 @@ fn claim_check_amount() {
         }));
 
         // Now let's try claiming rewards for era 2 for the first core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             2
         ));
 
         // ...there should be 130 since it's 50% of the issue 260 and the second core shouldn't be active yet.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 2,
@@ -1166,14 +1170,14 @@ fn claim_check_amount() {
         }));
 
         // Now let's try claiming rewards for era 2 for the second core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             2
         ));
 
         // ...there should be 0 since the current stake is 30, which is below the active threshold.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 2,
@@ -1186,7 +1190,7 @@ fn claim_check_amount() {
         advance_to_era_no_rewards(4);
 
         // Make sure current era is 4.
-        assert_eq!(OcifStaking::current_era(), 4);
+        assert_eq!(DaoStaking::current_era(), 4);
 
         // 150 for stakers, 150 for Core.
         issue_rewards(300);
@@ -1195,7 +1199,7 @@ fn claim_check_amount() {
         advance_to_era_no_rewards(5);
 
         assert_eq!(
-            OcifStaking::core_stake_info(first_core_id, 4),
+            DaoStaking::core_stake_info(first_core_id, 4),
             Some(CoreStakeInfo {
                 total: 100,
                 number_of_stakers: 1,
@@ -1205,7 +1209,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::core_stake_info(second_core_id, 4),
+            DaoStaking::core_stake_info(second_core_id, 4),
             Some(CoreStakeInfo {
                 total: 50,
                 number_of_stakers: 2,
@@ -1215,7 +1219,7 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::general_era_info(4),
+            DaoStaking::general_era_info(4),
             Some(EraInfo {
                 rewards: RewardInfo {
                     stakers: 150,
@@ -1228,14 +1232,14 @@ fn claim_check_amount() {
         );
 
         // Let's try claiming rewards for era 4 for the first core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(first_core_id)),
             first_core_id,
             4
         ));
 
         // ...there should be 100 out of the 150, because the second core should be active now.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: first_core_id,
             destination_account: account(first_core_id),
             era: 4,
@@ -1243,14 +1247,14 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for era 4 for the second core...
-        assert_ok!(OcifStaking::core_claim_rewards(
+        assert_ok!(DaoStaking::core_claim_rewards(
             RuntimeOrigin::signed(account(second_core_id)),
             second_core_id,
             4
         ));
 
         // ...there should be 50 out of the 150, because the second core should be active now.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
             core: second_core_id,
             destination_account: account(second_core_id),
             era: 4,
@@ -1260,7 +1264,7 @@ fn claim_check_amount() {
         // Now let's check the same stuff for the stakers instead of the core.
 
         assert_eq!(
-            OcifStaking::staker_info(first_core_id, first_staker.clone()),
+            DaoStaking::staker_info(first_core_id, first_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake {
                     staked: 100,
@@ -1270,34 +1274,34 @@ fn claim_check_amount() {
         );
 
         assert_eq!(
-            OcifStaking::staker_info(second_core_id, first_staker.clone()),
+            DaoStaking::staker_info(second_core_id, first_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake { staked: 20, era: 3 }]
             }
         );
 
         assert_eq!(
-            OcifStaking::staker_info(second_core_id, second_staker.clone()),
+            DaoStaking::staker_info(second_core_id, second_staker.clone()),
             StakerInfo {
                 stakes: vec![EraStake { staked: 30, era: 1 }]
             }
         );
 
         assert_eq!(
-            OcifStaking::staker_info(first_core_id, second_staker.clone()),
+            DaoStaking::staker_info(first_core_id, second_staker.clone()),
             StakerInfo { stakes: vec![] }
         );
 
         // Era 1:
 
         // Let's try claiming rewards for the first staker in the first core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 1.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker.clone(),
             core: first_core_id,
             era: 1,
@@ -1305,13 +1309,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the second staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 1.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: second_staker.clone(),
             core: second_core_id,
             era: 1,
@@ -1321,13 +1325,13 @@ fn claim_check_amount() {
         // Era 2:
 
         // Let's try claiming rewards for the first staker in the first core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 130, because the second staker had 30 staked in era 2.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker.clone(),
             core: first_core_id,
             era: 2,
@@ -1335,13 +1339,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the second staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 130, because the first staker had 100 staked in era 2.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: second_staker.clone(),
             core: second_core_id,
             era: 2,
@@ -1351,13 +1355,13 @@ fn claim_check_amount() {
         // Era 3:
 
         // Let's try claiming rewards for the first staker in the first core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker.clone(),
             core: first_core_id,
             era: 3,
@@ -1365,13 +1369,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the first staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker.clone(),
             core: second_core_id,
             era: 3,
@@ -1379,13 +1383,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the second staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be nothing, because no rewards were issue in era 3.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: second_staker.clone(),
             core: second_core_id,
             era: 3,
@@ -1395,13 +1399,13 @@ fn claim_check_amount() {
         // Era 4:
 
         // Let's try claiming rewards for the first staker in the first core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             first_core_id,
         ));
 
         // ...there should be 100 out of the 150, because the second staker had 30 staked in era 4 and first staker had 20 in the second core.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker.clone(),
             core: first_core_id,
             era: 4,
@@ -1409,13 +1413,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the first staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(first_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 20 out of the 150, because the second staker had 30 staked in era 4 and first staker had 100 in the first core.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: first_staker,
             core: second_core_id,
             era: 4,
@@ -1423,13 +1427,13 @@ fn claim_check_amount() {
         }));
 
         // Let's try claiming rewards for the second staker in the second core...
-        assert_ok!(OcifStaking::staker_claim_rewards(
+        assert_ok!(DaoStaking::staker_claim_rewards(
             RuntimeOrigin::signed(second_staker.clone()),
             second_core_id,
         ));
 
         // ...there should be 30 out of the 150, because the first staker had 120 staked in era 4.
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
             staker: second_staker,
             core: second_core_id,
             era: 4,
@@ -1446,39 +1450,39 @@ fn claim_after_unregister_is_ok() {
         let staker = account(B);
         let core_id = A;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
         assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(start_era + 5);
         assert_unstake(staker.clone(), &core_id, stake_value);
-        let full_unstake_era = OcifStaking::current_era();
+        let full_unstake_era = DaoStaking::current_era();
         let number_of_staking_eras = full_unstake_era - start_era;
 
-        advance_to_era(OcifStaking::current_era() + 3);
+        advance_to_era(DaoStaking::current_era() + 3);
         let stake_value = 75;
-        let restake_era = OcifStaking::current_era();
+        let restake_era = DaoStaking::current_era();
         assert_stake(staker.clone(), &core_id, stake_value);
 
-        advance_to_era(OcifStaking::current_era() + 3);
+        advance_to_era(DaoStaking::current_era() + 3);
         assert_unregister(core_id);
-        let unregister_era = OcifStaking::current_era();
+        let unregister_era = DaoStaking::current_era();
         let number_of_staking_eras = number_of_staking_eras + unregister_era - restake_era;
-        advance_to_era(OcifStaking::current_era() + 2);
+        advance_to_era(DaoStaking::current_era() + 2);
 
         for _ in 0..number_of_staking_eras {
             assert_claim_staker(staker.clone(), core_id);
         }
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id.clone()),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker), core_id.clone()),
             Error::<Test>::NoStakeAvailable
         );
 
         for era in start_era..unregister_era {
             if era >= full_unstake_era && era < restake_era {
                 assert_noop!(
-                    OcifStaking::core_claim_rewards(
+                    DaoStaking::core_claim_rewards(
                         RuntimeOrigin::signed(account(A)),
                         core_id.clone(),
                         era
@@ -1500,7 +1504,7 @@ fn claim_only_payout_is_ok() {
         let staker = account(B);
         let core_id = A;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
         assert_stake(staker.clone(), &core_id, stake_value);
@@ -1518,7 +1522,7 @@ fn claim_with_zero_staked_is_ok() {
 
         let staker = account(B);
         let core_id = A;
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
 
         let stake_value = 100;
@@ -1539,23 +1543,23 @@ fn claim_core_with_zero_stake_periods_is_ok() {
         let staker = account(B);
         let core_id = A;
 
-        let start_era = OcifStaking::current_era();
+        let start_era = DaoStaking::current_era();
         assert_register(core_id);
         let stake_value = 100;
         assert_stake(staker.clone(), &core_id, stake_value);
 
         advance_to_era(start_era + 5);
-        let first_full_unstake_era = OcifStaking::current_era();
+        let first_full_unstake_era = DaoStaking::current_era();
         assert_unstake(staker.clone(), &core_id, stake_value);
 
-        advance_to_era(OcifStaking::current_era() + 7);
-        let restake_era = OcifStaking::current_era();
+        advance_to_era(DaoStaking::current_era() + 7);
+        let restake_era = DaoStaking::current_era();
         assert_stake(staker.clone(), &core_id, stake_value);
 
-        advance_to_era(OcifStaking::current_era() + 4);
-        let second_full_unstake_era = OcifStaking::current_era();
+        advance_to_era(DaoStaking::current_era() + 4);
+        let second_full_unstake_era = DaoStaking::current_era();
         assert_unstake(staker.clone(), &core_id, stake_value);
-        advance_to_era(OcifStaking::current_era() + 10);
+        advance_to_era(DaoStaking::current_era() + 10);
 
         for era in start_era..first_full_unstake_era {
             assert_claim_core(core_id, era);
@@ -1563,7 +1567,7 @@ fn claim_core_with_zero_stake_periods_is_ok() {
 
         for era in first_full_unstake_era..restake_era {
             assert_noop!(
-                OcifStaking::core_claim_rewards(
+                DaoStaking::core_claim_rewards(
                     RuntimeOrigin::signed(account(core_id)),
                     core_id.clone(),
                     era
@@ -1577,7 +1581,7 @@ fn claim_core_with_zero_stake_periods_is_ok() {
         }
 
         assert_noop!(
-            OcifStaking::core_claim_rewards(
+            DaoStaking::core_claim_rewards(
                 RuntimeOrigin::signed(account(core_id)),
                 core_id.clone(),
                 second_full_unstake_era
@@ -1585,7 +1589,7 @@ fn claim_core_with_zero_stake_periods_is_ok() {
             Error::<Test>::NoStakeAvailable
         );
 
-        let last_claim_era = OcifStaking::current_era();
+        let last_claim_era = DaoStaking::current_era();
         assert_stake(staker, &core_id, stake_value);
         advance_to_era(last_claim_era + 1);
         assert_claim_core(core_id, last_claim_era);
@@ -1624,7 +1628,7 @@ fn core_stakers_split_util() {
     };
 
     let (core_reward, stakers_reward) =
-        OcifStaking::core_stakers_split(&staking_points_active, &era_info);
+        DaoStaking::core_stakers_split(&staking_points_active, &era_info);
 
     let core_stake_ratio = Perbill::from_rational(staked_on_core, total_staked);
     let calculated_stakers_reward = core_stake_ratio * stakers_rewards;
@@ -1637,7 +1641,7 @@ fn core_stakers_split_util() {
     );
 
     let (core_reward, stakers_reward) =
-        OcifStaking::core_stakers_split(&staking_points_inactive, &era_info);
+        DaoStaking::core_stakers_split(&staking_points_inactive, &era_info);
 
     let core_stake_ratio = Perbill::from_rational(staked_on_core, total_staked);
     let calculated_stakers_reward = core_stake_ratio * stakers_rewards;
@@ -1650,9 +1654,9 @@ fn core_stakers_split_util() {
 #[test]
 pub fn tvl_util_test() {
     ExternalityBuilder::build().execute_with(|| {
-        assert!(OcifStaking::tvl().is_zero());
+        assert!(DaoStaking::tvl().is_zero());
         initialize_first_block();
-        assert!(OcifStaking::tvl().is_zero());
+        assert!(DaoStaking::tvl().is_zero());
 
         let core_id = A;
         assert_register(core_id);
@@ -1661,11 +1665,11 @@ pub fn tvl_util_test() {
         let stake_value = 100;
         for x in 1..=iterations {
             assert_stake(account(core_id), &core_id, stake_value);
-            assert_eq!(OcifStaking::tvl(), stake_value * x);
+            assert_eq!(DaoStaking::tvl(), stake_value * x);
         }
 
         advance_to_era(5);
-        assert_eq!(OcifStaking::tvl(), stake_value * iterations);
+        assert_eq!(DaoStaking::tvl(), stake_value * iterations);
     })
 }
 
@@ -1932,22 +1936,19 @@ fn new_era_is_handled_with_halt_enabled() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
+        assert_ok!(DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
         run_for_blocks(BLOCKS_PER_ERA * 3);
 
-        assert!(System::block_number() > OcifStaking::next_era_starting_block());
-        assert_eq!(OcifStaking::current_era(), 1);
+        assert!(System::block_number() > DaoStaking::next_era_starting_block());
+        assert_eq!(DaoStaking::current_era(), 1);
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(
-            RuntimeOrigin::root(),
-            false
-        ));
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
+        assert_ok!(DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), false));
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -1955,8 +1956,8 @@ fn new_era_is_handled_with_halt_enabled() {
 
         assert_eq!(System::block_number(), (4 * BLOCKS_PER_ERA) + 2); // 2 from initialization, advanced 4 eras worth of blocks
 
-        assert_eq!(OcifStaking::current_era(), 2);
-        assert_eq!(OcifStaking::next_era_starting_block(), (5 * BLOCKS_PER_ERA));
+        assert_eq!(DaoStaking::current_era(), 2);
+        assert_eq!(DaoStaking::next_era_starting_block(), (5 * BLOCKS_PER_ERA));
     })
 }
 
@@ -1965,12 +1966,12 @@ fn pallet_halt_is_ok() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(OcifStaking::ensure_not_halted());
+        assert_ok!(DaoStaking::ensure_not_halted());
         assert!(!Halted::<Test>::exists());
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
+        assert_ok!(DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert!(Halted::<Test>::exists());
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::HaltChanged {
             is_halted: true,
         }));
 
@@ -1978,10 +1979,10 @@ fn pallet_halt_is_ok() {
         let core_id = A;
 
         assert_noop!(
-            OcifStaking::register_core(
-                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
-                    core_id
-                ))
+            DaoStaking::register_core(
+                pallet_dao_manager::Origin::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::new(core_id)
+                )
                 .into(),
                 Vec::default().try_into().unwrap(),
                 Vec::default().try_into().unwrap(),
@@ -1991,20 +1992,20 @@ fn pallet_halt_is_ok() {
         );
 
         assert_noop!(
-            OcifStaking::unregister_core(
-                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
-                    core_id
-                ))
+            DaoStaking::unregister_core(
+                pallet_dao_manager::Origin::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::new(core_id)
+                )
                 .into()
             ),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::change_core_metadata(
-                pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(
-                    core_id
-                ))
+            DaoStaking::change_core_metadata(
+                pallet_dao_manager::Origin::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::new(core_id)
+                )
                 .into(),
                 Vec::default().try_into().unwrap(),
                 Vec::default().try_into().unwrap(),
@@ -2014,37 +2015,34 @@ fn pallet_halt_is_ok() {
         );
 
         assert_noop!(
-            OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_account.clone())),
+            DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(staker_account.clone())),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
+            DaoStaking::stake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::unstake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
+            DaoStaking::unstake(RuntimeOrigin::signed(staker_account.clone()), core_id, 100),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 5),
+            DaoStaking::core_claim_rewards(RuntimeOrigin::signed(account(core_id)), core_id, 5),
             Error::<Test>::Halted
         );
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_account), core_id),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(staker_account), core_id),
             Error::<Test>::Halted
         );
 
-        assert_eq!(OcifStaking::on_initialize(3), Weight::zero());
+        assert_eq!(DaoStaking::on_initialize(3), Weight::zero());
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(
-            RuntimeOrigin::root(),
-            false
-        ));
-        System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::HaltChanged {
+        assert_ok!(DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), false));
+        System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::HaltChanged {
             is_halted: false,
         }));
 
@@ -2057,15 +2055,15 @@ fn halted_no_change() {
     ExternalityBuilder::build().execute_with(|| {
         initialize_first_block();
 
-        assert_ok!(OcifStaking::ensure_not_halted());
+        assert_ok!(DaoStaking::ensure_not_halted());
         assert_noop!(
-            OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), false),
+            DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), false),
             Error::<Test>::NoHaltChange
         );
 
-        assert_ok!(OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
+        assert_ok!(DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true));
         assert_noop!(
-            OcifStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true),
+            DaoStaking::halt_unhalt_pallet(RuntimeOrigin::root(), true),
             Error::<Test>::NoHaltChange
         );
     })
@@ -2110,7 +2108,7 @@ fn move_stake_to_same_contract_err() {
         assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker),
                 core_id_a,
                 stake_value,
@@ -2136,7 +2134,7 @@ fn move_stake_to_unregistered_core_err() {
         assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker.clone()),
                 core_id_b,
                 stake_value,
@@ -2146,7 +2144,7 @@ fn move_stake_to_unregistered_core_err() {
         );
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker.clone()),
                 core_id_a,
                 stake_value,
@@ -2156,7 +2154,7 @@ fn move_stake_to_unregistered_core_err() {
         );
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker),
                 core_id_b,
                 stake_value,
@@ -2181,7 +2179,7 @@ fn move_stake_not_staking_err() {
         let stake_value = 100;
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker),
                 core_id_a,
                 stake_value,
@@ -2207,7 +2205,7 @@ fn move_stake_with_no_amount_err() {
         assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker),
                 core_id_a,
                 Zero::zero(),
@@ -2233,7 +2231,7 @@ fn move_stake_with_insufficient_amount_err() {
         assert_stake(staker.clone(), &core_id_a, stake_value);
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker),
                 core_id_a,
                 MINIMUM_STAKING_AMOUNT - 1,
@@ -2258,15 +2256,15 @@ fn move_stake_core_has_too_many_era_stake_err() {
 
         for _ in 1..MAX_ERA_STAKE_VALUES {
             assert_stake(staker.clone(), &core_id_a, MINIMUM_STAKING_AMOUNT);
-            advance_to_era(OcifStaking::current_era() + 1);
+            advance_to_era(DaoStaking::current_era() + 1);
         }
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker.clone()), core_id_a, 15),
+            DaoStaking::stake(RuntimeOrigin::signed(staker.clone()), core_id_a, 15),
             Error::<Test>::TooManyEraStakeValues
         );
 
         assert_noop!(
-            OcifStaking::move_stake(
+            DaoStaking::move_stake(
                 RuntimeOrigin::signed(staker.clone()),
                 core_id_a,
                 15,
@@ -2277,7 +2275,7 @@ fn move_stake_core_has_too_many_era_stake_err() {
 
         assert_stake(staker.clone(), &core_id_b, 15);
         assert_noop!(
-            OcifStaking::move_stake(RuntimeOrigin::signed(staker), core_id_b, 15, core_id_a),
+            DaoStaking::move_stake(RuntimeOrigin::signed(staker), core_id_b, 15, core_id_a),
             Error::<Test>::TooManyEraStakeValues
         );
     })
@@ -2307,12 +2305,12 @@ fn move_stake_max_number_of_stakers_exceeded_err() {
         }
 
         assert_noop!(
-            OcifStaking::stake(RuntimeOrigin::signed(staker_a.clone()), core_id_b, 19),
+            DaoStaking::stake(RuntimeOrigin::signed(staker_a.clone()), core_id_b, 19),
             Error::<Test>::MaxStakersReached
         );
 
         assert_noop!(
-            OcifStaking::move_stake(RuntimeOrigin::signed(staker_a), core_id_a, 19, core_id_b,),
+            DaoStaking::move_stake(RuntimeOrigin::signed(staker_a), core_id_a, 19, core_id_b,),
             Error::<Test>::MaxStakersReached
         );
     })
@@ -2338,7 +2336,7 @@ fn claim_stake_after_unregistering_core_mid_era_changes_is_ok() {
 
         println!("finished stake preparation");
 
-        let era = OcifStaking::current_era();
+        let era = DaoStaking::current_era();
 
         let era_to_claim = era + 4;
 
@@ -2348,7 +2346,7 @@ fn claim_stake_after_unregistering_core_mid_era_changes_is_ok() {
 
         run_to_block(block_at_era_to_claim + 2);
 
-        assert!(era_to_claim == OcifStaking::current_era());
+        assert!(era_to_claim == DaoStaking::current_era());
 
         assert_unregister(core_id_b);
 
@@ -2371,7 +2369,7 @@ fn claim_stake_after_unregistering_core_mid_era_changes_is_ok() {
         println!("finished claiming");
 
         assert_noop!(
-            OcifStaking::staker_claim_rewards(RuntimeOrigin::signed(stakers[0].clone()), core_id_b),
+            DaoStaking::staker_claim_rewards(RuntimeOrigin::signed(stakers[0].clone()), core_id_b),
             Error::<Test>::NoStakeAvailable
         );
     });

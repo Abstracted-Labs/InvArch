@@ -1,12 +1,14 @@
-//! Core creation and internal management.
+//! DAO creation and internal management.
 //!
 //! ## Overview
+//! *TODO!( rename all code referenced of core to dao).*
+//! *core == DAO or multisig.*
 //!
-//! This module handles the mechanics of creating multisigs (referred to as "cores") and their lifecycle management. Key functions include:
+//! This module handles the mechanics of creating multisigs or DAO's (referred to as "cores") and their lifecycle management. Key functions include:
 //!
-//!  - `inner_create_core`: Sets up a new core, deriving its AccountId, distributing voting tokens, and handling creation fees.
-//!  - `inner_set_parameters`: Updates the core's operational rules.
-//! - `is_asset_frozen`: Utility function for checking if a core's voting asset is frozen (can't be transferred by the owner).
+//! - `inner_create_core`: Sets up a new dao, deriving its AccountId, distributing voting tokens, and handling creation fees.
+//! - `inner_set_parameters`: Updates the DAO's operational rules.
+//! - `is_asset_frozen`: Utility function for checking if a DAO's voting asset is frozen (can't be transferred by the owner).
 
 use super::pallet::*;
 use crate::{

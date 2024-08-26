@@ -13,7 +13,7 @@ use frame_support::{
     weights::ConstantMultiplier,
 };
 use pallet_asset_tx_payment::ChargeAssetTxPayment;
-use pallet_inv4::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
+use pallet_dao_manager::fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler};
 use scale_info::TypeInfo;
 use sp_core::ConstU32;
 use sp_runtime::traits::{One, SignedExtension, Zero};
@@ -30,7 +30,7 @@ parameter_types! {
     pub ParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
-impl pallet_inv4::Config for Runtime {
+impl pallet_dao_manager::Config for Runtime {
     type MaxMetadata = MaxMetadata;
     type CoreId = CommonId;
     type RuntimeEvent = RuntimeEvent;
@@ -42,7 +42,7 @@ impl pallet_inv4::Config for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type WeightInfo = pallet_inv4::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Runtime>;
 
     type Tokens = Tokens;
     type RelayAssetId = RelayAssetId;
@@ -121,7 +121,7 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
 }
 
 orml_traits2::parameter_type_with_key! {
-    pub CoreExistentialDeposits: |_currency_id: <Runtime as pallet_inv4::Config>::CoreId| -> Balance {
+    pub CoreExistentialDeposits: |_currency_id: <Runtime as pallet_dao_manager::Config>::CoreId| -> Balance {
         Balance::one()
     };
 }
@@ -135,16 +135,19 @@ impl Contains<AccountId> for CoreDustRemovalWhitelist {
 
 pub struct DisallowIfFrozen;
 impl
-    orml_traits2::currency::OnTransfer<AccountId, <Runtime as pallet_inv4::Config>::CoreId, Balance>
-    for DisallowIfFrozen
+    orml_traits2::currency::OnTransfer<
+        AccountId,
+        <Runtime as pallet_dao_manager::Config>::CoreId,
+        Balance,
+    > for DisallowIfFrozen
 {
     fn on_transfer(
-        currency_id: <Runtime as pallet_inv4::Config>::CoreId,
+        currency_id: <Runtime as pallet_dao_manager::Config>::CoreId,
         _from: &AccountId,
         _to: &AccountId,
         _amount: Balance,
     ) -> sp_runtime::DispatchResult {
-        if let Some(true) = crate::INV4::is_asset_frozen(currency_id) {
+        if let Some(true) = crate::DaoManager::is_asset_frozen(currency_id) {
             Err(sp_runtime::DispatchError::Token(
                 sp_runtime::TokenError::Frozen,
             ))
@@ -155,20 +158,20 @@ impl
 }
 
 pub struct HandleNewMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_dao_manager::Config>::CoreId)>
     for HandleNewMembers
 {
-    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
-        crate::INV4::add_member(core_id, member)
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_dao_manager::Config>::CoreId)) {
+        crate::DaoManager::add_member(core_id, member)
     }
 }
 
 pub struct HandleRemovedMembers;
-impl orml_traits2::Happened<(AccountId, <Runtime as pallet_inv4::Config>::CoreId)>
+impl orml_traits2::Happened<(AccountId, <Runtime as pallet_dao_manager::Config>::CoreId)>
     for HandleRemovedMembers
 {
-    fn happened((member, core_id): &(AccountId, <Runtime as pallet_inv4::Config>::CoreId)) {
-        crate::INV4::remove_member(core_id, member)
+    fn happened((member, core_id): &(AccountId, <Runtime as pallet_dao_manager::Config>::CoreId)) {
+        crate::DaoManager::remove_member(core_id, member)
     }
 }
 
@@ -176,7 +179,7 @@ pub struct INV4TokenHooks;
 impl
     orml_traits2::currency::MutationHooks<
         AccountId,
-        <Runtime as pallet_inv4::Config>::CoreId,
+        <Runtime as pallet_dao_manager::Config>::CoreId,
         Balance,
     > for INV4TokenHooks
 {
@@ -194,7 +197,7 @@ impl orml_tokens2::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
-    type CurrencyId = <Runtime as pallet_inv4::Config>::CoreId;
+    type CurrencyId = <Runtime as pallet_dao_manager::Config>::CoreId;
     type WeightInfo = ();
     type ExistentialDeposits = CoreExistentialDeposits;
     type MaxLocks = ConstU32<0u32>;

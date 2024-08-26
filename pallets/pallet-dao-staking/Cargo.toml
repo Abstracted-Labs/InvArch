@@ -1,6 +1,6 @@
 [package]
-name = 'pallet-ocif-staking'
-description = 'FRAME pallet for OCIF staking'
+name = 'pallet-dao-staking'
+description = 'FRAME pallet for DAO staking'
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -30,7 +30,7 @@ sp-runtime = { workspace = true }
 sp-staking = { workspace = true }
 sp-std = { workspace = true }
 
-pallet-inv4 = { workspace = true }
+pallet-dao-manager = { workspace = true }
 
 frame-benchmarking = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true }
@@ -61,7 +61,7 @@ std = [
     "pallet-message-queue/std",
     "pallet-session/std",
     "pallet-timestamp/std",
-    "pallet-inv4/std",
+    "pallet-dao-manager/std",
     "sp-staking/std",
     "orml-traits/std",
     "orml-tokens/std",
@@ -70,7 +70,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "pallet-inv4/runtime-benchmarks",
+    "pallet-dao-manager/runtime-benchmarks",
     "pallet-message-queue/runtime-benchmarks",
 
 ]

@@ -43,8 +43,8 @@ derive_more = "0.99.2"
 
 
 ## InvArch Pallets
-pallet-inv4 = { path = "../pallets/pallet-inv4", default-features = false }
-pallet-ocif-staking = { path = "../pallets/pallet-ocif-staking", default-features = false }
+pallet-dao-manager = { path = "../pallets/pallet-dao-manager", default-features = false }
+pallet-dao-staking = { path = "../pallets/pallet-dao-staking", default-features = false }
 pallet-checked-inflation = { path = "../pallets/pallet-checked-inflation", default-features = false }
 pallet-rings = { path = "../pallets/pallet-rings", default-features = false }
 new-modified-construct-runtime = { path = "../new-modified-construct-runtime", default-features = false }

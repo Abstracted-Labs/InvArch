@@ -36,23 +36,24 @@ Currently, InvArch features a multichain multisignature solution & DAO staking p
 
 # Pallet Library
 
- ## [INV4](./INV4/pallet-inv4/)
- - The INV4 pallet is designed to manage advanced virtual multisigs, internally referred to as cores.
-    - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_inv4/index.html)
+ ## [DAO Manager](./pallet-dao-manager/)
+ - The DAO Manager pallet is designed to manage advanced virtual multisigs (DAOs), internally referred to as cores.
+    - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_dao_manager/index.html)
  - Articles:
-    - [`The Saturn SDK.`](https://invarch.medium.com/the-saturn-sdk-c46b4e40f46e)
-    - [`The INV4 Protocol: The Core of the Creator Economy.`](https://invarch.medium.com/the-inv4-protocol-the-core-of-the-creator-economy-1af59fdbc943)
-    - [`🪐 Saturn: The Future of Multi-Party Ownership.`](https://invarch.medium.com/saturn-the-future-of-multi-party-ownership-ac7190f86a7b)
+    - [`The SDK. (Old)`](https://invarch.medium.com/the-saturn-sdk-c46b4e40f46e)
+    - [`The DAO Manager Protocol: The Core of the Creator Economy. (Old)`](https://invarch.medium.com/the-inv4-protocol-the-core-of-the-creator-economy-1af59fdbc943)
+    - [`The Future of Multi-Party Ownership. (Old)`](https://invarch.medium.com/saturn-the-future-of-multi-party-ownership-ac7190f86a7b)
   
- ## [OCIF](./OCIF/staking/)
- - The OCIF Staking Pallet is a pallet designed to facilitate staking towards INV-Cores within a blockchain network.
-    - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_ocif_staking/index.html)
+ ## [DAO Staking](./pallet-dao-staking)
+ - Previously known as OCIF Staking.
+ - The DAO Staking Staking Pallet is a pallet designed to facilitate staking towards DAOs within a blockchain network.
+    - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_dao_staking/index.html)
  - Articles:
-    - [`The OCIF Protocol: Permissionless Funding for DAOs & Creators.`](https://invarch.medium.com/the-ocif-protocol-permissionless-funding-for-daos-creators-505aa18098f1)
+    - [`The DAO Staking Protocol: Permissionless Funding for DAOs & Creators.`](https://invarch.medium.com/the-ocif-protocol-permissionless-funding-for-daos-creators-505aa18098f1)
  - DAO Staking is live on [InvArch](https://portal.invarch.network/staking) and [Tinkernet](https://www.tinker.network/staking).
 
  ## [Rings](./pallet-rings)
- - The Rings pallet provides a cross-consensus message (XCM) abstraction layer for INV4 Cores.
+ - The Rings pallet provides a cross-consensus message (XCM) abstraction layer for DAO Manager.
     - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_rings/index.html)
 
  ## [Checked Inflation](./pallet-checked-inflation)

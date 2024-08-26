@@ -1,6 +1,6 @@
 use crate::{
-    balances::NegativeImbalance, Balance, Balances, BlockNumber, OcifStaking, Runtime,
-    RuntimeEvent, DAYS,
+    balances::NegativeImbalance, Balance, Balances, BlockNumber, DaoStaking, Runtime, RuntimeEvent,
+    DAYS,
 };
 use frame_support::{parameter_types, traits::OnUnbalanced};
 use sp_runtime::Perbill;
@@ -19,7 +19,7 @@ parameter_types! {
 pub struct DealWithInflation;
 impl OnUnbalanced<NegativeImbalance> for DealWithInflation {
     fn on_unbalanced(amount: NegativeImbalance) {
-        OcifStaking::rewards(amount);
+        DaoStaking::rewards(amount);
     }
 }
 

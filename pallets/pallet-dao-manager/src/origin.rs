@@ -1,8 +1,10 @@
 //! Custom Multisig Origin (`INV4Origin`).
 //!
 //! ## Overview
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
 //!
-//! This module introduces a custom origin [`INV4Origin`], enabling self-management for cores and
+//! This module introduces a custom origin [`INV4Origin`], enabling self-management for DAOs and
 //! includes the [`ensure_multisig`] function to guarantee calls genuinely come from the multisig account.
 //! This is an efficient approach considering that converting from CoreId to AccountId is a one-way operation,
 //! so the origin brings the CoreId to dispatchable calls.

@@ -25,7 +25,7 @@ use sp_std::{
     collections::btree_map::BTreeMap, convert::TryInto, iter::Sum, ops::Div, prelude::*, vec,
 };
 
-use crate::Pallet as INV4;
+use crate::Pallet as dao_manager;
 
 const SEED: u32 = 0;
 
@@ -42,7 +42,7 @@ where
     T: Config,
     T::AccountId: From<[u8; 32]>,
 {
-    INV4::<T>::derive_core_account(core_id)
+    dao_manager::<T>::derive_core_account(core_id)
 }
 
 fn mock_core<T: Config>() -> DispatchResultWithPostInfo
@@ -58,7 +58,7 @@ where
         T::CoreCreationFee::get() + T::CoreCreationFee::get(),
     );
 
-    INV4::<T>::create_core(
+    dao_manager::<T>::create_core(
         SystemOrigin::Signed(whitelisted_caller()).into(),
         vec![].try_into().unwrap(),
         perbill_one(),
@@ -76,7 +76,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    INV4::<T>::token_mint(
+    dao_manager::<T>::token_mint(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
         BalanceOf::<T>::max_value().div(4u32.into()),
         account("target", 0, SEED),
@@ -92,7 +92,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    INV4::<T>::token_mint(
+    dao_manager::<T>::token_mint(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
         BalanceOf::<T>::max_value().div(4u32.into()),
         account("target1", 1, SEED + 1),
@@ -108,7 +108,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    INV4::<T>::operate_multisig(
+    dao_manager::<T>::operate_multisig(
         SystemOrigin::Signed(whitelisted_caller()).into(),
         0u32.into(),
         None,
@@ -130,7 +130,7 @@ where
         frame_system::Call::<T>::remark { remark: vec![0] }.into();
     let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call.clone());
 
-    INV4::<T>::vote_multisig(
+    dao_manager::<T>::vote_multisig(
         SystemOrigin::Signed(account("target", 0, SEED)).into(),
         0u32.into(),
         call_hash,

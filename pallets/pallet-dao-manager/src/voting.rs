@@ -1,6 +1,8 @@
 //! Voting Mechanism.
 //!
 //! ## Overview
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
 //!
 //! This module provides a weighted voting [`Tally`] implementation used for managing the multisig's proposals.
 //! Members each have a balance in voting tokens and this balance differentiate their voting power

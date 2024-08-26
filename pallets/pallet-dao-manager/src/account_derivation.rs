@@ -1,6 +1,8 @@
-//! Core Account Derivation.
+//! Dao Account Derivation.
 //!
 //! ## Overview
+//! *TODO!( rename all code referenced of core to dao).*
+//! *core == DAO or multisig.*
 //!
 //! This module defines a method for generating account addresses, and how it's implemented within this
 //! pallet. We use a custom derivation scheme to ensure that when a multisig is created, its AccountId

@@ -25,7 +25,7 @@ impl Contains<RuntimeCall> for KSMEnabledPallets {
         matches!(
             t,
             // We want users and Cores to be able to operate multisigs using KSM.
-            RuntimeCall::INV4(_)
+            RuntimeCall::DaoManager(_)
                 // We want Cores to be able to operate XCMultisigs using KSM.
                 | RuntimeCall::Rings(_)
                 // These next 3 are needed to manage the KSM itself using KSM as the fee token.

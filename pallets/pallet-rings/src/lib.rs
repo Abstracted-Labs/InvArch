@@ -5,17 +5,20 @@
 //! - [`Pallet`]
 //!
 //! ## Overview
-//! This pallet provides a XCM abstraction layer for INV4 Cores, allowing them to manage assets easily across multiple chains.
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
+//! 
+//! This pallet provides a XCM abstraction layer for DAO Management, allowing them to manage assets easily across multiple chains.
 //!
 //! The module [`traits`] contains traits that provide an abstraction on top of XCM [`MultiLocation`] and has to be correctly implemented in the runtime.
 //!
 //! ## Dispatchable Functions
 //!
 //! - `set_maintenance_status` - Sets the maintenance status of a chain, requires the origin to be authorized as a `MaintenanceOrigin`.
-//! - `send_call` - Allows a core to send a XCM call to a destination chain.
-//! - `transfer_assets` - Allows a core to transfer fungible assets to another account in the destination chain.
-//! - `bridge_assets` - Allows a core to bridge fungible assets to another chain having either a third party account or
-//!    the core account as beneficiary in the destination chain.
+//! - `send_call` - Allows a DAO to send a XCM call to a destination chain.
+//! - `transfer_assets` - Allows a DAO to transfer fungible assets to another account in the destination chain.
+//! - `bridge_assets` - Allows a DAO to bridge fungible assets to another chain having either a third party account or
+//!    the DAO account as beneficiary in the destination chain.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -40,7 +43,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::OriginFor;
-    use pallet_inv4::origin::{ensure_multisig, INV4Origin};
+    use pallet_dao_manager::origin::{ensure_multisig, INV4Origin};
     use sp_std::{vec, vec::Vec};
     use xcm::{
         v3::{prelude::*, MultiAsset, Weight, WildMultiAsset},
@@ -51,7 +54,9 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_inv4::Config + pallet_xcm::Config {
+    pub trait Config:
+        frame_system::Config + pallet_dao_manager::Config + pallet_xcm::Config
+    {
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
@@ -98,7 +103,7 @@ pub mod pallet {
     pub enum Event<T: Config> {
         /// A XCM call was sent.
         CallSent {
-            sender: <T as pallet_inv4::Config>::CoreId,
+            sender: <T as pallet_dao_manager::Config>::CoreId,
             destination: <T as pallet::Config>::Chains,
             call: Vec<u8>,
         },
@@ -108,7 +113,7 @@ pub mod pallet {
             chain: <<<T as pallet::Config>::Chains as ChainList>::ChainAssets as ChainAssetsList>::Chains,
             asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
-            from: <T as pallet_inv4::Config>::CoreId,
+            from: <T as pallet_dao_manager::Config>::CoreId,
             to: <T as frame_system::Config>::AccountId,
         },
 
@@ -116,7 +121,7 @@ pub mod pallet {
         AssetsBridged {
             origin_chain_asset: <<T as pallet::Config>::Chains as ChainList>::ChainAssets,
             amount: u128,
-            from: <T as pallet_inv4::Config>::CoreId,
+            from: <T as pallet_dao_manager::Config>::CoreId,
             to: Option<<T as frame_system::Config>::AccountId>,
         },
 
@@ -133,7 +138,7 @@ pub mod pallet {
         Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
             From<<T as frame_system::Config>::RuntimeOrigin>,
 
-        <T as pallet_inv4::Config>::CoreId: Into<u32>,
+        <T as pallet_dao_manager::Config>::CoreId: Into<u32>,
 
         [u8; 32]: From<<T as frame_system::Config>::AccountId>,
         <T as frame_system::Config>::AccountId: From<[u8; 32]>,
@@ -204,7 +209,7 @@ pub mod pallet {
             let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
-                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
+                    Junction::Parachain(<T as pallet_dao_manager::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
@@ -303,7 +308,7 @@ pub mod pallet {
             let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
-                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
+                    Junction::Parachain(<T as pallet_dao_manager::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };
@@ -427,7 +432,7 @@ pub mod pallet {
             let mut core_multilocation: MultiLocation = MultiLocation {
                 parents: 1,
                 interior: Junctions::X2(
-                    Junction::Parachain(<T as pallet_inv4::Config>::ParaId::get()),
+                    Junction::Parachain(<T as pallet_dao_manager::Config>::ParaId::get()),
                     descend_interior,
                 ),
             };

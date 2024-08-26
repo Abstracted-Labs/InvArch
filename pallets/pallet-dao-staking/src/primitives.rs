@@ -1,17 +1,19 @@
 //! Provides supporting types and traits for the staking pallet.
 //!
 //! ## Overview
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
 //!
 //! Primitives provides the foundational types and traits for a staking pallet.  
 //!
 //! ## Types overview:
 //!
 //! - `BalanceOf` - A type alias for the balance of a currency in the system.
-//! - `CoreMetadata` - A struct that holds metadata for a core entity in the system.
-//! - `CoreInfo` - A struct that holds information about a core entity, including its account ID and metadata.
-//! - `RewardInfo` - A struct that holds information about rewards, including the balance for stakers and the core.
+//! - `CoreMetadata` - A struct that holds metadata for a DAO entity in the system.
+//! - `CoreInfo` - A struct that holds information about a DAO entity, including its account ID and metadata.
+//! - `RewardInfo` - A struct that holds information about rewards, including the balance for stakers and the DAO.
 //! - `EraInfo` - A struct that holds information about a specific era, including rewards, staked balance, active stake, and locked balance.
-//! - `CoreStakeInfo` - A struct that holds information about a core's stake, including the total balance,
+//! - `CoreStakeInfo` - A struct that holds information about a DAO's stake, including the total balance,
 //!    number of stakers, and whether a reward has been claimed.
 //! - `EraStake` - A struct that holds information about the stake for a specific era.
 //! - `StakerInfo` - A struct that holds information about a staker's stakes across different eras.

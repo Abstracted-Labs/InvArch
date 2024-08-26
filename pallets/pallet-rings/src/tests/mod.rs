@@ -4,7 +4,7 @@ use crate::{traits::*, Error};
 use frame_support::{assert_err, assert_ok, error::BadOrigin};
 use frame_system::RawOrigin;
 use mock::*;
-use pallet_inv4::{origin::MultisigInternalOrigin, Origin};
+use pallet_dao_manager::{origin::MultisigInternalOrigin, Origin};
 use sp_std::vec;
 use xcm::latest::{BodyId, BodyPart, Junction, Junctions, MultiLocation, Weight};
 

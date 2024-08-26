@@ -175,7 +175,7 @@ pub type _ParachainPalletXcm = pallet_xcm::Pallet<parachain::Runtime>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parachain::INV4;
+    use parachain::DaoManager;
 
     use codec::Encode;
     use frame_support::{assert_ok, weights::Weight};
@@ -197,7 +197,7 @@ mod tests {
 
         Tinkernet::execute_with(|| {
             assert_eq!(
-                <parachain::INV4 as pallet_inv4::CoreAccountDerivation<
+                <parachain::DaoManager as pallet_dao_manager::CoreAccountDerivation<
                     parachain::Runtime,
                 >>::derive_core_account(0),
                 sibling_core_account_id(0)
@@ -210,13 +210,15 @@ mod tests {
         MockNet::reset();
 
         Tinkernet::execute_with(|| {
-            log::trace!(target: "xcm::CoreAccount", "CoreAccount: account: {:?}", <parachain::INV4 as pallet_inv4::CoreAccountDerivation<
+            log::trace!(target: "xcm::CoreAccount", "CoreAccount: account: {:?}", <parachain::DaoManager as pallet_dao_manager::CoreAccountDerivation<
                     parachain::Runtime,
                 >>::derive_core_account(0));
 
             assert_ok!(parachain::Rings::transfer_assets(
-                pallet_inv4::Origin::<parachain::Runtime>::Multisig(
-                    pallet_inv4::origin::MultisigInternalOrigin::<parachain::Runtime>::new(0)
+                pallet_dao_manager::Origin::<parachain::Runtime>::Multisig(
+                    pallet_dao_manager::origin::MultisigInternalOrigin::<parachain::Runtime>::new(
+                        0
+                    )
                 )
                 .into(),
                 ChainList::get_main_asset(&crate::rings::Chains::AssetHub),

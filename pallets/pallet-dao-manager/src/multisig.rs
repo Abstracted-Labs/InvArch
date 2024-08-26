@@ -1,6 +1,8 @@
 //! Multisig Operations.
 //!
 //! ## Overview
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
 //!
 //! Handles the core actions within an already established multisig.
 //!

@@ -1,4 +1,4 @@
-use crate::{self as pallet_ocif_staking, CustomAggregateMessageOrigin, CustomMessageProcessor};
+use crate::{self as pallet_dao_staking, CustomAggregateMessageOrigin, CustomMessageProcessor};
 use codec::{Decode, Encode};
 use core::convert::{TryFrom, TryInto};
 use cumulus_primitives_core::AggregateMessageOrigin;
@@ -15,7 +15,7 @@ use frame_support::{
     },
     PalletId,
 };
-use pallet_inv4::CoreAccountDerivation;
+use pallet_dao_manager::CoreAccountDerivation;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::TestExternalities;
@@ -47,9 +47,9 @@ construct_runtime!(
         System: frame_system,
         Balances: pallet_balances,
         Timestamp: pallet_timestamp,
-        OcifStaking: pallet_ocif_staking,
+        DaoStaking: pallet_dao_staking,
         CoreAssets: orml_tokens,
-        INV4: pallet_inv4,
+        DaoManager: pallet_dao_manager,
         MessageQueue: pallet_message_queue,
     }
 );
@@ -149,7 +149,7 @@ parameter_types! {
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo, Debug)]
 pub struct FeeCharger;
 
-impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
+impl pallet_dao_manager::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
     type Pre = (
         // tip
         Balance,
@@ -162,7 +162,7 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
     );
 
     fn pre_dispatch(
-        fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        fee_asset: &pallet_dao_manager::fee_handling::FeeAsset,
         who: &AccountId,
         _call: &RuntimeCall,
         _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
@@ -173,14 +173,14 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
             who.clone(),
             (),
             match fee_asset {
-                pallet_inv4::fee_handling::FeeAsset::Native => None,
-                pallet_inv4::fee_handling::FeeAsset::Relay => Some(1u32),
+                pallet_dao_manager::fee_handling::FeeAsset::Native => None,
+                pallet_dao_manager::fee_handling::FeeAsset::Relay => Some(1u32),
             },
         ))
     }
 
     fn post_dispatch(
-        _fee_asset: &pallet_inv4::fee_handling::FeeAsset,
+        _fee_asset: &pallet_dao_manager::fee_handling::FeeAsset,
         _pre: Option<Self::Pre>,
         _info: &sp_runtime::traits::DispatchInfoOf<RuntimeCall>,
         _post_info: &sp_runtime::traits::PostDispatchInfoOf<RuntimeCall>,
@@ -191,7 +191,7 @@ impl pallet_inv4::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
     }
 
     fn handle_creation_fee(
-        _imbalance: pallet_inv4::fee_handling::FeeAssetNegativeImbalance<
+        _imbalance: pallet_dao_manager::fee_handling::FeeAssetNegativeImbalance<
             <Balances as Currency<AccountId>>::NegativeImbalance,
             Credit<AccountId, CoreAssets>,
         >,
@@ -228,7 +228,7 @@ impl orml_tokens::Config for Test {
     type CurrencyHooks = ();
 }
 
-impl pallet_inv4::Config for Test {
+impl pallet_dao_manager::Config for Test {
     type MaxMetadata = MaxMetadata;
     type CoreId = u32;
     type RuntimeEvent = RuntimeEvent;
@@ -240,7 +240,7 @@ impl pallet_inv4::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type CoreCreationFee = CoreCreationFee;
     type FeeCharger = FeeCharger;
-    type WeightInfo = pallet_inv4::weights::SubstrateWeight<Test>;
+    type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Test>;
 
     type Tokens = CoreAssets;
     type RelayAssetId = RelayAssetId;
@@ -251,7 +251,7 @@ impl pallet_inv4::Config for Test {
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
-impl pallet_ocif_staking::Config for Test {
+impl pallet_dao_staking::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type BlocksPerEra = BlockPerEra;
@@ -339,7 +339,7 @@ impl pallet_message_queue::Config for Test {
 pub struct ExternalityBuilder;
 
 pub fn account(core: CoreId) -> AccountId {
-    INV4::derive_core_account(core)
+    DaoManager::derive_core_account(core)
 }
 
 pub const A: CoreId = 0;
@@ -394,27 +394,27 @@ pub const ISSUE_PER_ERA: Balance = ISSUE_PER_BLOCK * BLOCKS_PER_ERA as u128;
 
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
-        OcifStaking::on_finalize(System::block_number());
+        DaoStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
 
-        OcifStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
+        DaoStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
 
-        OcifStaking::on_initialize(System::block_number());
+        DaoStaking::on_initialize(System::block_number());
         MessageQueue::on_initialize(System::block_number());
     }
 }
 
 pub fn run_to_block_no_rewards(n: u64) {
     while System::block_number() < n {
-        OcifStaking::on_finalize(System::block_number());
+        DaoStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
-        OcifStaking::on_initialize(System::block_number());
+        DaoStaking::on_initialize(System::block_number());
         MessageQueue::on_initialize(System::block_number());
     }
 }
 
 pub fn issue_rewards(amount: Balance) {
-    OcifStaking::rewards(Balances::issue(amount));
+    DaoStaking::rewards(Balances::issue(amount));
 }
 
 pub fn run_for_blocks(n: u64) {
@@ -426,13 +426,13 @@ pub fn run_for_blocks_no_rewards(n: u64) {
 }
 
 pub fn advance_to_era(n: EraIndex) {
-    while OcifStaking::current_era() < n {
+    while DaoStaking::current_era() < n {
         run_for_blocks(1);
     }
 }
 
 pub fn advance_to_era_no_rewards(n: EraIndex) {
-    while OcifStaking::current_era() < n {
+    while DaoStaking::current_era() < n {
         run_for_blocks_no_rewards(1);
     }
 }
@@ -440,7 +440,7 @@ pub fn advance_to_era_no_rewards(n: EraIndex) {
 pub fn initialize_first_block() {
     assert_eq!(System::block_number(), 1 as BlockNumber);
 
-    OcifStaking::on_initialize(System::block_number());
+    DaoStaking::on_initialize(System::block_number());
     MessageQueue::on_initialize(System::block_number());
     run_to_block(2);
 }

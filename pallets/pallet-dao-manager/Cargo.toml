@@ -1,5 +1,5 @@
 [package]
-name = 'pallet-inv4'
+name = 'pallet-dao-manager'
 description = ''
 authors.workspace = true
 edition.workspace = true

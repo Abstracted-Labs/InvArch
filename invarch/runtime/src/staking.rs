@@ -4,7 +4,7 @@ use crate::{
 };
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{parameter_types, PalletId};
-use pallet_ocif_staking::primitives::CustomAggregateMessageOrigin;
+use pallet_dao_staking::primitives::CustomAggregateMessageOrigin;
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
     pub const RegisterDeposit: Balance = 5000 * UNIT;
@@ -23,7 +23,7 @@ parameter_types! {
     pub const UnregisterOrigin: CustomAggregateMessageOrigin<AggregateMessageOrigin> = CustomAggregateMessageOrigin::UnregisterMessageOrigin;
 }
 
-impl pallet_ocif_staking::Config for Runtime {
+impl pallet_dao_staking::Config for Runtime {
     type Currency = Balances;
     type BlocksPerEra = BlocksPerEra;
     type RegisterDeposit = RegisterDeposit;
@@ -40,7 +40,7 @@ impl pallet_ocif_staking::Config for Runtime {
     type MaxNameLength = MaxNameLength;
     type MaxDescriptionLength = MaxDescriptionLength;
     type MaxImageUrlLength = MaxImageUrlLength;
-    type WeightInfo = pallet_ocif_staking::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = pallet_dao_staking::weights::SubstrateWeight<Runtime>;
     type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
     type WeightToFee = crate::WeightToFee;
     type OnUnbalanced = crate::DealWithFees;

@@ -37,7 +37,7 @@ frame_support::construct_runtime!(
         Tokens: orml_tokens,
         AssetRegistry: orml_asset_registry,
         CoreAssets: orml_tokens2,
-        INV4: pallet,
+        DaoManager: pallet,
     }
 );
 
@@ -111,7 +111,7 @@ impl
         _to: &AccountId,
         _amount: Balance,
     ) -> sp_std::result::Result<(), orml_traits::parameters::sp_runtime::DispatchError> {
-        if let Some(true) = INV4::is_asset_frozen(currency_id) {
+        if let Some(true) = DaoManager::is_asset_frozen(currency_id) {
             Err(sp_runtime::DispatchError::Token(
                 sp_runtime::TokenError::Frozen,
             ))
@@ -129,7 +129,7 @@ impl
     )> for HandleNewMembers
 {
     fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
-        INV4::add_member(core_id, member)
+        DaoManager::add_member(core_id, member)
     }
 }
 
@@ -141,7 +141,7 @@ impl
     )> for HandleRemovedMembers
 {
     fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
-        INV4::remove_member(core_id, member)
+        DaoManager::remove_member(core_id, member)
     }
 }
 
@@ -380,7 +380,7 @@ impl ExtBuilder {
                 (ALICE, INITIAL_BALANCE),
                 (BOB, INITIAL_BALANCE),
                 (CHARLIE, INITIAL_BALANCE),
-                (INV4::derive_core_account(0u32), INITIAL_BALANCE),
+                (DaoManager::derive_core_account(0u32), INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)

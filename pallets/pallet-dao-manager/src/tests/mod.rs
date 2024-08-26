@@ -29,11 +29,11 @@ fn create_core_works() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
 
-        assert_eq!(INV4::next_core_id(), 0u32);
+        assert_eq!(DaoManager::next_core_id(), 0u32);
 
-        assert_eq!(INV4::core_storage(0u32), None);
+        assert_eq!(DaoManager::core_storage(0u32), None);
 
-        assert_ok!(INV4::create_core(
+        assert_ok!(DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -41,12 +41,12 @@ fn create_core_works() {
             FeeAsset::Native
         ));
 
-        assert_eq!(INV4::next_core_id(), 1u32);
+        assert_eq!(DaoManager::next_core_id(), 1u32);
 
         assert_eq!(
-            INV4::core_storage(0u32),
+            DaoManager::core_storage(0u32),
             Some(CoreInfo {
-                account: INV4::derive_core_account(0u32),
+                account: DaoManager::derive_core_account(0u32),
                 metadata: vec![].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(1),
                 required_approval: Perbill::from_percent(1),
@@ -61,11 +61,11 @@ fn create_core_works() {
 
         // Another attempt
 
-        assert_eq!(INV4::next_core_id(), 1u32);
+        assert_eq!(DaoManager::next_core_id(), 1u32);
 
-        assert_eq!(INV4::core_storage(1u32), None);
+        assert_eq!(DaoManager::core_storage(1u32), None);
 
-        assert_ok!(INV4::create_core(
+        assert_ok!(DaoManager::create_core(
             RawOrigin::Signed(BOB).into(),
             vec![1, 2, 3].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -73,12 +73,12 @@ fn create_core_works() {
             FeeAsset::Relay
         ));
 
-        assert_eq!(INV4::next_core_id(), 2u32);
+        assert_eq!(DaoManager::next_core_id(), 2u32);
 
         assert_eq!(
-            INV4::core_storage(1u32),
+            DaoManager::core_storage(1u32),
             Some(CoreInfo {
-                account: INV4::derive_core_account(1u32),
+                account: DaoManager::derive_core_account(1u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -100,12 +100,12 @@ fn create_core_fails() {
 
         assert_eq!(Balances::free_balance(DAVE), 0u128);
 
-        assert_eq!(INV4::next_core_id(), 0u32);
+        assert_eq!(DaoManager::next_core_id(), 0u32);
 
-        assert_eq!(INV4::core_storage(0u32), None);
+        assert_eq!(DaoManager::core_storage(0u32), None);
 
         assert_err!(
-            INV4::create_core(
+            DaoManager::create_core(
                 RawOrigin::Signed(DAVE).into(),
                 vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
@@ -115,15 +115,15 @@ fn create_core_fails() {
             pallet_balances::Error::<Test>::InsufficientBalance
         );
 
-        assert_eq!(INV4::next_core_id(), 0u32);
-        assert_eq!(INV4::core_storage(0u32), None);
+        assert_eq!(DaoManager::next_core_id(), 0u32);
+        assert_eq!(DaoManager::core_storage(0u32), None);
 
         // With Relay token.
 
         assert_eq!(Tokens::accounts(DAVE, RELAY_ASSET_ID).free, 0u128);
 
         assert_err!(
-            INV4::create_core(
+            DaoManager::create_core(
                 RawOrigin::Signed(DAVE).into(),
                 vec![].try_into().unwrap(),
                 Perbill::from_percent(1),
@@ -133,15 +133,15 @@ fn create_core_fails() {
             TokenError::FundsUnavailable
         );
 
-        assert_eq!(INV4::next_core_id(), 0u32);
-        assert_eq!(INV4::core_storage(0u32), None);
+        assert_eq!(DaoManager::next_core_id(), 0u32);
+        assert_eq!(DaoManager::core_storage(0u32), None);
     });
 }
 
 #[test]
 fn set_parameters_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -150,7 +150,7 @@ fn set_parameters_works() {
         )
         .unwrap();
 
-        assert_ok!(INV4::set_parameters(
+        assert_ok!(DaoManager::set_parameters(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             Some(vec![1, 2, 3].try_into().unwrap()),
             Some(Perbill::from_percent(100)),
@@ -159,9 +159,9 @@ fn set_parameters_works() {
         ));
 
         assert_eq!(
-            INV4::core_storage(0u32),
+            DaoManager::core_storage(0u32),
             Some(CoreInfo {
-                account: INV4::derive_core_account(0u32),
+                account: DaoManager::derive_core_account(0u32),
                 metadata: vec![1, 2, 3].try_into().unwrap(),
                 minimum_support: Perbill::from_percent(100),
                 required_approval: Perbill::from_percent(100),
@@ -174,7 +174,7 @@ fn set_parameters_works() {
 #[test]
 fn set_parameters_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -186,7 +186,7 @@ fn set_parameters_fails() {
         // Wrong origin.
 
         assert_err!(
-            INV4::set_parameters(
+            DaoManager::set_parameters(
                 RawOrigin::Signed(ALICE).into(),
                 Some(vec![1, 2, 3].try_into().unwrap()),
                 Some(Perbill::from_percent(100)),
@@ -199,7 +199,7 @@ fn set_parameters_fails() {
         // Core doesn't exist (can't actually happen as core id is taken from origin).
 
         assert_err!(
-            INV4::set_parameters(
+            DaoManager::set_parameters(
                 Origin::Multisig(MultisigInternalOrigin::new(1u32)).into(),
                 Some(vec![1, 2, 3].try_into().unwrap()),
                 Some(Perbill::from_percent(100)),
@@ -214,7 +214,7 @@ fn set_parameters_fails() {
 #[test]
 fn token_mint_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -227,26 +227,26 @@ fn token_mint_works() {
             CoreAssets::accounts(ALICE, 0u32).free,
             CoreSeedBalance::get()
         );
-        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, ALICE), Some(()));
 
         assert_eq!(CoreAssets::accounts(BOB, 0u32).free, 0u128);
-        assert_eq!(INV4::core_members(0u32, BOB), None);
+        assert_eq!(DaoManager::core_members(0u32, BOB), None);
 
-        assert_ok!(INV4::token_mint(
+        assert_ok!(DaoManager::token_mint(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             CoreSeedBalance::get(),
             BOB
         ));
 
         assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
-        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, BOB), Some(()));
     });
 }
 
 #[test]
 fn token_mint_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -257,13 +257,13 @@ fn token_mint_fails() {
 
         // Wrong origin.
         assert_err!(
-            INV4::token_mint(RawOrigin::Signed(ALICE).into(), CoreSeedBalance::get(), BOB),
+            DaoManager::token_mint(RawOrigin::Signed(ALICE).into(), CoreSeedBalance::get(), BOB),
             BadOrigin
         );
 
         // Overflow
         assert_err!(
-            INV4::token_mint(
+            DaoManager::token_mint(
                 Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
                 u128::MAX,
                 ALICE
@@ -276,7 +276,7 @@ fn token_mint_fails() {
 #[test]
 fn token_burn_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -289,9 +289,9 @@ fn token_burn_works() {
             CoreAssets::accounts(ALICE, 0u32).free,
             CoreSeedBalance::get()
         );
-        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, ALICE), Some(()));
 
-        INV4::token_mint(
+        DaoManager::token_mint(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             CoreSeedBalance::get(),
             BOB,
@@ -299,11 +299,11 @@ fn token_burn_works() {
         .unwrap();
 
         assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
-        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, BOB), Some(()));
 
         // Actual burn test
 
-        assert_ok!(INV4::token_burn(
+        assert_ok!(DaoManager::token_burn(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             CoreSeedBalance::get() / 2,
             ALICE
@@ -313,23 +313,23 @@ fn token_burn_works() {
             CoreAssets::accounts(ALICE, 0u32).free,
             CoreSeedBalance::get() / 2
         );
-        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, ALICE), Some(()));
 
-        assert_ok!(INV4::token_burn(
+        assert_ok!(DaoManager::token_burn(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             CoreSeedBalance::get(),
             BOB
         ));
 
         assert_eq!(CoreAssets::accounts(BOB, 0u32).free, 0u128);
-        assert_eq!(INV4::core_members(0u32, BOB), None);
+        assert_eq!(DaoManager::core_members(0u32, BOB), None);
     });
 }
 
 #[test]
 fn token_burn_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(1),
@@ -342,9 +342,9 @@ fn token_burn_fails() {
             CoreAssets::accounts(ALICE, 0u32).free,
             CoreSeedBalance::get()
         );
-        assert_eq!(INV4::core_members(0u32, ALICE), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, ALICE), Some(()));
 
-        INV4::token_mint(
+        DaoManager::token_mint(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             CoreSeedBalance::get(),
             BOB,
@@ -352,13 +352,13 @@ fn token_burn_fails() {
         .unwrap();
 
         assert_eq!(CoreAssets::accounts(BOB, 0u32).free, CoreSeedBalance::get());
-        assert_eq!(INV4::core_members(0u32, BOB), Some(()));
+        assert_eq!(DaoManager::core_members(0u32, BOB), Some(()));
 
         // Actual burn test
 
         // Wrong origin.
         assert_err!(
-            INV4::token_burn(
+            DaoManager::token_burn(
                 RawOrigin::Signed(ALICE).into(),
                 CoreSeedBalance::get(),
                 ALICE
@@ -368,7 +368,7 @@ fn token_burn_fails() {
 
         // Underflow
         assert_err!(
-            INV4::token_burn(
+            DaoManager::token_burn(
                 Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
                 CoreSeedBalance::get() * 3,
                 ALICE
@@ -378,7 +378,7 @@ fn token_burn_fails() {
 
         // Not enough to burn
         assert_err!(
-            INV4::token_burn(
+            DaoManager::token_burn(
                 Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
                 CoreSeedBalance::get() + 1,
                 ALICE
@@ -391,7 +391,7 @@ fn token_burn_fails() {
 #[test]
 fn operate_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -410,7 +410,7 @@ fn operate_multisig_works() {
 
         // Test with single voter.
 
-        assert_ok!(INV4::operate_multisig(
+        assert_ok!(DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -439,7 +439,7 @@ fn operate_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: ALICE,
                 call: call.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -451,14 +451,14 @@ fn operate_multisig_works() {
         // Test with 2 voters, call should be stored for voting.
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
             None,
         );
 
-        assert_ok!(INV4::operate_multisig(
+        assert_ok!(DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -469,7 +469,7 @@ fn operate_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteStarted {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: ALICE,
                 votes_added: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call),
@@ -478,7 +478,7 @@ fn operate_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
@@ -504,7 +504,7 @@ fn operate_multisig_works() {
 #[test]
 fn operate_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -522,7 +522,7 @@ fn operate_multisig_fails() {
         .into();
 
         // Using this call now to add a second member to the multisig.
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -533,7 +533,7 @@ fn operate_multisig_fails() {
 
         // Not a member of the multisig
         assert_err!(
-            INV4::operate_multisig(
+            DaoManager::operate_multisig(
                 RawOrigin::Signed(CHARLIE).into(),
                 0u32,
                 Some(vec![1, 2, 3].try_into().unwrap()),
@@ -545,7 +545,7 @@ fn operate_multisig_fails() {
 
         // Max call length exceeded.
         assert_err!(
-            INV4::operate_multisig(
+            DaoManager::operate_multisig(
                 RawOrigin::Signed(ALICE).into(),
                 0u32,
                 None,
@@ -561,7 +561,7 @@ fn operate_multisig_fails() {
         );
 
         // Multisig call already exists in storage.
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -570,7 +570,7 @@ fn operate_multisig_fails() {
         )
         .unwrap();
         assert_err!(
-            INV4::operate_multisig(
+            DaoManager::operate_multisig(
                 RawOrigin::Signed(ALICE).into(),
                 0u32,
                 None,
@@ -585,7 +585,7 @@ fn operate_multisig_fails() {
 #[test]
 fn cancel_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -602,7 +602,7 @@ fn cancel_multisig_works() {
         }
         .into();
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -613,7 +613,7 @@ fn cancel_multisig_works() {
 
         System::set_block_number(2);
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -623,7 +623,7 @@ fn cancel_multisig_works() {
         .unwrap();
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
@@ -644,13 +644,13 @@ fn cancel_multisig_works() {
             })
         );
 
-        assert_ok!(INV4::cancel_multisig_proposal(
+        assert_ok!(DaoManager::cancel_multisig_proposal(
             Origin::Multisig(MultisigInternalOrigin::new(0u32)).into(),
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
         ));
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
@@ -662,7 +662,7 @@ fn cancel_multisig_works() {
 #[test]
 fn cancel_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -679,7 +679,7 @@ fn cancel_multisig_fails() {
         }
         .into();
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -690,7 +690,7 @@ fn cancel_multisig_fails() {
 
         System::set_block_number(2);
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             Some(vec![1, 2, 3].try_into().unwrap()),
@@ -701,7 +701,7 @@ fn cancel_multisig_fails() {
 
         // Wrong origin.
         assert_err!(
-            INV4::cancel_multisig_proposal(
+            DaoManager::cancel_multisig_proposal(
                 RawOrigin::Signed(ALICE).into(),
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
@@ -709,7 +709,7 @@ fn cancel_multisig_fails() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call)
             ),
@@ -735,7 +735,7 @@ fn cancel_multisig_fails() {
 #[test]
 fn vote_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -760,7 +760,7 @@ fn vote_multisig_works() {
 
         // Adding BOB.
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -773,7 +773,7 @@ fn vote_multisig_works() {
 
         // Adding CHARLIE
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -783,7 +783,7 @@ fn vote_multisig_works() {
         .unwrap();
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -806,7 +806,7 @@ fn vote_multisig_works() {
 
         // BOB votes nay.
 
-        assert_ok!(INV4::vote_multisig(
+        assert_ok!(DaoManager::vote_multisig(
             RawOrigin::Signed(BOB).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -816,7 +816,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -834,7 +834,7 @@ fn vote_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -857,7 +857,7 @@ fn vote_multisig_works() {
 
         // BOB changes vote to aye, executing the call.
 
-        assert_ok!(INV4::vote_multisig(
+        assert_ok!(DaoManager::vote_multisig(
             RawOrigin::Signed(BOB).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -867,7 +867,7 @@ fn vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigExecuted {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: BOB,
                 call: call2.clone(),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -877,7 +877,7 @@ fn vote_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -889,7 +889,7 @@ fn vote_multisig_works() {
 #[test]
 fn vote_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -914,7 +914,7 @@ fn vote_multisig_fails() {
 
         // Adding BOB.
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -927,7 +927,7 @@ fn vote_multisig_fails() {
 
         // Adding CHARLIE
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -937,7 +937,7 @@ fn vote_multisig_fails() {
         .unwrap();
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -960,7 +960,7 @@ fn vote_multisig_fails() {
 
         // Not a member of the multisig.
         assert_err!(
-            INV4::vote_multisig(
+            DaoManager::vote_multisig(
                 RawOrigin::Signed(DAVE).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -971,7 +971,7 @@ fn vote_multisig_fails() {
 
         // Call not found.
         assert_err!(
-            INV4::vote_multisig(
+            DaoManager::vote_multisig(
                 RawOrigin::Signed(BOB).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call1),
@@ -985,7 +985,7 @@ fn vote_multisig_fails() {
 #[test]
 fn withdraw_vote_multisig_works() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -1010,7 +1010,7 @@ fn withdraw_vote_multisig_works() {
 
         // Adding BOB.
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1023,7 +1023,7 @@ fn withdraw_vote_multisig_works() {
 
         // Adding CHARLIE
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1034,7 +1034,7 @@ fn withdraw_vote_multisig_works() {
 
         // BOB votes nay.
 
-        assert_ok!(INV4::vote_multisig(
+        assert_ok!(DaoManager::vote_multisig(
             RawOrigin::Signed(BOB).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1044,7 +1044,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteAdded {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: BOB,
                 votes_added: Vote::Nay(CoreSeedBalance::get()),
                 current_votes: Tally::from_parts(
@@ -1062,7 +1062,7 @@ fn withdraw_vote_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -1085,7 +1085,7 @@ fn withdraw_vote_multisig_works() {
 
         // BOB withdraws his vote.
 
-        assert_ok!(INV4::withdraw_vote_multisig(
+        assert_ok!(DaoManager::withdraw_vote_multisig(
             RawOrigin::Signed(BOB).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1094,7 +1094,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: BOB,
                 votes_removed: Vote::Nay(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1103,7 +1103,7 @@ fn withdraw_vote_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -1126,7 +1126,7 @@ fn withdraw_vote_multisig_works() {
 
         // ALICE also withdraws her vote.
 
-        assert_ok!(INV4::withdraw_vote_multisig(
+        assert_ok!(DaoManager::withdraw_vote_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1135,7 +1135,7 @@ fn withdraw_vote_multisig_works() {
         System::assert_has_event(
             Event::MultisigVoteWithdrawn {
                 core_id: 0u32,
-                executor_account: INV4::derive_core_account(0u32),
+                executor_account: DaoManager::derive_core_account(0u32),
                 voter: ALICE,
                 votes_removed: Vote::Aye(CoreSeedBalance::get()),
                 call_hash: <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1144,7 +1144,7 @@ fn withdraw_vote_multisig_works() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -1162,7 +1162,7 @@ fn withdraw_vote_multisig_works() {
 #[test]
 fn withdraw_vote_multisig_fails() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -1187,7 +1187,7 @@ fn withdraw_vote_multisig_fails() {
 
         // Adding BOB.
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1200,7 +1200,7 @@ fn withdraw_vote_multisig_fails() {
 
         // Adding CHARLIE
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1211,7 +1211,7 @@ fn withdraw_vote_multisig_fails() {
 
         // BOB votes nay.
 
-        assert_ok!(INV4::vote_multisig(
+        assert_ok!(DaoManager::vote_multisig(
             RawOrigin::Signed(BOB).into(),
             0u32,
             <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1220,7 +1220,7 @@ fn withdraw_vote_multisig_fails() {
 
         // Multisig call not found.
         assert_err!(
-            INV4::withdraw_vote_multisig(
+            DaoManager::withdraw_vote_multisig(
                 RawOrigin::Signed(BOB).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call1),
@@ -1230,7 +1230,7 @@ fn withdraw_vote_multisig_fails() {
 
         // Not a voter in this proposal.
         assert_err!(
-            INV4::withdraw_vote_multisig(
+            DaoManager::withdraw_vote_multisig(
                 RawOrigin::Signed(CHARLIE).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2),
@@ -1239,7 +1239,7 @@ fn withdraw_vote_multisig_fails() {
         );
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&call2)
             ),
@@ -1280,7 +1280,7 @@ fn core_address_matches() {
 #[test]
 fn vote_multisig_stack_overflow() {
     ExtBuilder::default().build().execute_with(|| {
-        INV4::create_core(
+        DaoManager::create_core(
             RawOrigin::Signed(ALICE).into(),
             vec![].try_into().unwrap(),
             Perbill::from_percent(100),
@@ -1315,7 +1315,7 @@ fn vote_multisig_stack_overflow() {
             .into();
         }
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1326,7 +1326,7 @@ fn vote_multisig_stack_overflow() {
 
         System::set_block_number(2);
 
-        INV4::operate_multisig(
+        DaoManager::operate_multisig(
             RawOrigin::Signed(ALICE).into(),
             0u32,
             None,
@@ -1336,7 +1336,7 @@ fn vote_multisig_stack_overflow() {
         .unwrap();
 
         assert_eq!(
-            INV4::multisig(
+            DaoManager::multisig(
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&nested_call)
             ),
@@ -1359,7 +1359,7 @@ fn vote_multisig_stack_overflow() {
         );
 
         assert_err!(
-            INV4::vote_multisig(
+            DaoManager::vote_multisig(
                 RawOrigin::Signed(BOB).into(),
                 0u32,
                 <<Test as frame_system::Config>::Hashing as Hash>::hash_of(&nested_call),

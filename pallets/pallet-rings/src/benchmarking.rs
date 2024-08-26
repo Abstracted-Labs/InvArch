@@ -4,7 +4,7 @@ use super::*;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{pallet_prelude::Weight, traits::Get, BoundedVec};
 use frame_system::RawOrigin as SystemOrigin;
-use pallet_inv4::origin::{INV4Origin, MultisigInternalOrigin};
+use pallet_dao_manager::origin::{INV4Origin, MultisigInternalOrigin};
 use sp_std::{ops::Div, prelude::*, vec};
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
@@ -20,7 +20,7 @@ benchmarks! {
             >: From<<T as frame_system::Config>::RuntimeOrigin>,
     <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
 
-    <T as pallet_inv4::Config>::CoreId: Into<u32>,
+    <T as pallet_dao_manager::Config>::CoreId: Into<u32>,
 
     [u8; 32]: From<<T as frame_system::Config>::AccountId>,
 

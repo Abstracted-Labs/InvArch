@@ -1,7 +1,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Pallet as OcifStaking;
+use crate::Pallet as DaoStaking;
 use core::ops::Add;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{
@@ -9,7 +9,7 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::{Pallet as System, RawOrigin};
-use pallet_inv4::{
+use pallet_dao_manager::{
     account_derivation::CoreAccountDerivation,
     origin::{INV4Origin, MultisigInternalOrigin},
 };
@@ -20,19 +20,19 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
-fn derive_account<T>(core_id: <T as pallet_inv4::Config>::CoreId) -> T::AccountId
+fn derive_account<T>(core_id: <T as pallet_dao_manager::Config>::CoreId) -> T::AccountId
 where
-    T: pallet_inv4::Config,
+    T: pallet_dao_manager::Config,
     T::AccountId: From<[u8; 32]>,
 {
-    <pallet_inv4::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(core_id)
+    <pallet_dao_manager::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(core_id)
 }
 
 fn advance_to_era<T: Config>(n: Era) {
-    while OcifStaking::<T>::current_era() < n {
-        <OcifStaking<T> as OnFinalize<BlockNumberFor<T>>>::on_finalize(System::<T>::block_number());
+    while DaoStaking::<T>::current_era() < n {
+        <DaoStaking<T> as OnFinalize<BlockNumberFor<T>>>::on_finalize(System::<T>::block_number());
         System::<T>::set_block_number(System::<T>::block_number() + One::one());
-        <OcifStaking<T> as OnInitialize<BlockNumberFor<T>>>::on_initialize(
+        <DaoStaking<T> as OnInitialize<BlockNumberFor<T>>>::on_initialize(
             System::<T>::block_number(),
         );
     }
@@ -50,7 +50,7 @@ where
         T::RegisterDeposit::get() + T::RegisterDeposit::get(),
     );
 
-    OcifStaking::<T>::register_core(
+    DaoStaking::<T>::register_core(
         INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())).into(),
         vec![].try_into().unwrap(),
         vec![].try_into().unwrap(),
@@ -70,7 +70,7 @@ where
         T::RegisterDeposit::get() + T::RegisterDeposit::get(),
     );
 
-    OcifStaking::<T>::register_core(
+    DaoStaking::<T>::register_core(
         INV4Origin::Multisig(MultisigInternalOrigin::new(1u32.into())).into(),
         vec![].try_into().unwrap(),
         vec![].try_into().unwrap(),
@@ -90,7 +90,7 @@ where
         pallet::BalanceOf::<T>::max_value(),
     );
 
-    OcifStaking::<T>::stake(
+    DaoStaking::<T>::stake(
         RawOrigin::Signed(whitelisted_caller()).into(),
         0u32.into(),
         T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get(),
@@ -104,7 +104,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<INV4Origin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    OcifStaking::<T>::unstake(
+    DaoStaking::<T>::unstake(
         RawOrigin::Signed(whitelisted_caller()).into(),
         0u32.into(),
         T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get(),
@@ -235,10 +235,10 @@ benchmarks! {
         let staker: T::AccountId = whitelisted_caller();
         let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
 
-        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as pallet_inv4::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
-        let era_info = OcifStaking::<T>::general_era_info::<Era>(0u32).unwrap();
+        let core_stake_info = DaoStaking::<T>::core_stake_info::<<T as pallet_dao_manager::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
+        let era_info = DaoStaking::<T>::general_era_info::<Era>(0u32).unwrap();
 
-        let (_, reward) = OcifStaking::<T>::core_stakers_split(&core_stake_info, &era_info);
+        let (_, reward) = DaoStaking::<T>::core_stakers_split(&core_stake_info, &era_info);
 
     }: _(RawOrigin::Signed(staker.clone()), 0u32.into())
         verify {
@@ -258,10 +258,10 @@ benchmarks! {
         let staker: T::AccountId = whitelisted_caller();
         let amount = T::StakeThresholdForActiveCore::get() + T::StakeThresholdForActiveCore::get();
 
-        let core_stake_info = OcifStaking::<T>::core_stake_info::<<T as pallet_inv4::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
-        let era_info = OcifStaking::<T>::general_era_info::<Era>(0u32).unwrap();
+        let core_stake_info = DaoStaking::<T>::core_stake_info::<<T as pallet_dao_manager::Config>::CoreId, Era>(0u32.into(), 0u32).unwrap();
+        let era_info = DaoStaking::<T>::general_era_info::<Era>(0u32).unwrap();
 
-        let (reward, _) = OcifStaking::<T>::core_stakers_split(&core_stake_info, &era_info);
+        let (reward, _) = DaoStaking::<T>::core_stakers_split(&core_stake_info, &era_info);
 
     }: _(INV4Origin::Multisig(MultisigInternalOrigin::new(0u32.into())), 0u32.into(), 0u32.into())
         verify {

@@ -30,7 +30,7 @@ sp-runtime = {workspace = true}
 sp-staking = {workspace = true}
 sp-std = {workspace = true}
 
-pallet-inv4 = { workspace = true }
+pallet-dao-manager = { workspace = true }
 
 pallet-xcm = { workspace = true }
 xcm = { workspace = true }
@@ -65,7 +65,7 @@ std = [
 	"pallet-session/std",
 	"pallet-timestamp/std",
 	"sp-staking/std",
-  "pallet-inv4/std",
+  "pallet-dao-manager/std",
   "pallet-xcm/std",
   "xcm/std",
   "orml-traits2/std",
@@ -80,7 +80,7 @@ runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-inv4/runtime-benchmarks",
+	"pallet-dao-manager/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 ]

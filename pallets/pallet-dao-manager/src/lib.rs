@@ -1,25 +1,28 @@
-//! # Pallet INV4
+//! # Pallet dao_manager
 //!
 //! - [`Config`]
 //! - [`Call`]
 //! - [`Pallet`]
 //!
 //! ## Overview
-//! This pallet handles advanced virtual multisigs (internally called cores).
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
+//!
+//! This pallet handles advanced virtual multisigs (DAOs).
 //!
 //! Lower level implementation details of this pallet's calls are contained in separate modules, each of them
 //! containing their own docs.
 //!
 //! ### Pallet Functions
 //!
-//! - `create_core` - Create a new core
-//! - `token_mint` - Mint the core's voting token to a target (called by a core origin)
-//! - `token_burn` - Burn the core's voting token from a target (called by a core origin)
+//! - `create_core` - Create a new dao
+//! - `token_mint` - Mint the DAO's voting token to a target (called by a DAO origin)
+//! - `token_burn` - Burn the DAO's voting token from a target (called by a DAO origin)
 //! - `operate_multisig` - Create a new multisig proposal, auto-executing if caller passes execution threshold requirements
 //! - `vote_multisig` - Vote on an existing multisig proposal, auto-executing if caller puts vote tally past execution threshold requirements
 //! - `withdraw_vote_multisig` - Remove caller's vote from an existing multisig proposal
-//! - `cancel_multisig_proposal` - Cancel an existing multisig proposal (called by a core origin)
-//! - `set_parameters` - Change core parameters incl. voting thresholds and token freeze state (called by a core origin)
+//! - `cancel_multisig_proposal` - Cancel an existing multisig proposal (called by a DAO origin)
+//! - `set_parameters` - Change DAO parameters incl. voting thresholds and token freeze state (called by a DAO origin)
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
@@ -37,9 +40,9 @@ mod tests;
 //pub mod migrations;
 
 pub mod account_derivation;
+pub mod dao_manager_core;
 mod dispatch;
 pub mod fee_handling;
-pub mod inv4_core;
 mod lookup;
 pub mod multisig;
 pub mod origin;
@@ -83,7 +86,7 @@ pub mod pallet {
     };
     use sp_std::{boxed::Box, convert::TryInto, vec::Vec};
 
-    pub use super::{inv4_core, multisig};
+    pub use super::{dao_manager_core, multisig};
 
     use crate::origin::INV4Origin;
 
@@ -91,7 +94,7 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     pub type CoreInfoOf<T> =
-        CoreInfo<<T as frame_system::Config>::AccountId, inv4_core::CoreMetadataOf<T>>;
+        CoreInfo<<T as frame_system::Config>::AccountId, dao_manager_core::CoreMetadataOf<T>>;
 
     pub type CallOf<T> = <T as Config>::RuntimeCall;
 
@@ -307,7 +310,7 @@ pub mod pallet {
         },
     }
 
-    /// Errors for INV4 pallet
+    /// Errors for dao_manager pallet
     #[pallet::error]
     pub enum Error<T> {
         /// No available Core ID

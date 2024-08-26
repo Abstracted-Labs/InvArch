@@ -1,6 +1,6 @@
 use crate::{testing::mock::*, Config, Event, *};
 use frame_support::assert_ok;
-use pallet_inv4::CoreAccountDerivation;
+use pallet_dao_manager::CoreAccountDerivation;
 
 pub mod mock;
 pub mod test;
@@ -16,25 +16,27 @@ pub(crate) struct MemorySnapshot {
 impl MemorySnapshot {
     pub(crate) fn all(era: EraIndex, core: &CoreId, account: AccountId) -> Self {
         Self {
-            era_info: OcifStaking::general_era_info(era).unwrap(),
+            era_info: DaoStaking::general_era_info(era).unwrap(),
             staker_info: GeneralStakerInfo::<Test>::get(core, &account),
-            core_stake_info: OcifStaking::core_stake_info(core, era).unwrap_or_default(),
-            ledger: OcifStaking::ledger(&account),
+            core_stake_info: DaoStaking::core_stake_info(core, era).unwrap_or_default(),
+            ledger: DaoStaking::ledger(&account),
             free_balance: <Test as Config>::Currency::free_balance(&account),
         }
     }
 }
 
 pub(crate) fn assert_register(core: mock::CoreId) {
-    let account = INV4::derive_core_account(core);
+    let account = DaoManager::derive_core_account(core);
 
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account);
 
     assert!(!RegisteredCore::<Test>::contains_key(core));
 
-    assert_ok!(OcifStaking::register_core(
-        pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(core))
-            .into(),
+    assert_ok!(DaoStaking::register_core(
+        pallet_dao_manager::Origin::Multisig(
+            pallet_dao_manager::origin::MultisigInternalOrigin::new(core)
+        )
+        .into(),
         vec![].try_into().unwrap(),
         vec![].try_into().unwrap(),
         vec![].try_into().unwrap()
@@ -51,12 +53,12 @@ pub(crate) fn assert_register(core: mock::CoreId) {
 }
 
 pub(crate) fn short_stake(staker: AccountId, core_id: &CoreId, value: Balance) {
-    assert_ok!(OcifStaking::stake(
+    assert_ok!(DaoStaking::stake(
         RuntimeOrigin::signed(staker.clone()),
         core_id.clone(),
         value
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Staked {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Staked {
         staker,
         core: core_id.clone(),
         amount: value,
@@ -64,7 +66,7 @@ pub(crate) fn short_stake(staker: AccountId, core_id: &CoreId, value: Balance) {
 }
 
 pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
-    let current_era = OcifStaking::current_era();
+    let current_era = DaoStaking::current_era();
     let init_state = MemorySnapshot::all(current_era, &core, staker.clone());
 
     let available_for_staking = init_state.free_balance
@@ -72,12 +74,12 @@ pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
         - <Test as Config>::ExistentialDeposit::get();
     let staking_value = available_for_staking.min(value);
 
-    assert_ok!(OcifStaking::stake(
+    assert_ok!(DaoStaking::stake(
         RuntimeOrigin::signed(staker.clone()),
         core.clone(),
         value
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Staked {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Staked {
         staker: staker.clone(),
         core: core.clone(),
         amount: staking_value,
@@ -119,7 +121,7 @@ pub(crate) fn assert_stake(staker: AccountId, core: &CoreId, value: Balance) {
 }
 
 pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
-    let current_era = OcifStaking::current_era();
+    let current_era = DaoStaking::current_era();
     let init_state = MemorySnapshot::all(current_era, &core, staker.clone());
 
     let remaining_staked = init_state
@@ -133,12 +135,12 @@ pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
     };
     let remaining_staked = init_state.staker_info.latest_staked_value() - expected_unbond_amount;
 
-    assert_ok!(OcifStaking::unstake(
+    assert_ok!(DaoStaking::unstake(
         RuntimeOrigin::signed(staker.clone()),
         core.clone(),
         value
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Unstaked {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Unstaked {
         staker: staker.clone(),
         core: core.clone(),
         amount: expected_unbond_amount,
@@ -201,7 +203,7 @@ pub(crate) fn assert_unstake(staker: AccountId, core: &CoreId, value: Balance) {
 }
 
 pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
-    let current_era = OcifStaking::current_era();
+    let current_era = DaoStaking::current_era();
 
     let init_era_info = GeneralEraInfo::<Test>::get(current_era).unwrap();
     let init_ledger = Ledger::<Test>::get(&staker);
@@ -209,10 +211,10 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
     let (valid_info, remaining_info) = init_ledger.unbonding_info.partition(current_era);
     let expected_unbond_amount = valid_info.sum();
 
-    assert_ok!(OcifStaking::withdraw_unstaked(RuntimeOrigin::signed(
+    assert_ok!(DaoStaking::withdraw_unstaked(RuntimeOrigin::signed(
         staker.clone()
     ),));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::Withdrawn {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::Withdrawn {
         staker: staker.clone(),
         amount: expected_unbond_amount,
     }));
@@ -238,11 +240,13 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
 pub(crate) fn assert_unregister(core: CoreId) {
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(core));
 
-    assert_ok!(OcifStaking::unregister_core(
-        pallet_inv4::Origin::Multisig(pallet_inv4::origin::MultisigInternalOrigin::new(core))
-            .into()
+    assert_ok!(DaoStaking::unregister_core(
+        pallet_dao_manager::Origin::Multisig(
+            pallet_dao_manager::origin::MultisigInternalOrigin::new(core)
+        )
+        .into()
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreUnregistered {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreUnregistered {
         core,
     }));
 
@@ -263,15 +267,15 @@ pub(crate) fn assert_unregister(core: CoreId) {
 }
 
 pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
-    let (claim_era, _) = OcifStaking::staker_info(core, &claimer).claim();
-    let current_era = OcifStaking::current_era();
+    let (claim_era, _) = DaoStaking::staker_info(core, &claimer).claim();
+    let current_era = DaoStaking::current_era();
 
     System::reset_events();
 
     let init_state_claim_era = MemorySnapshot::all(claim_era, &core, claimer.clone());
     let init_state_current_era = MemorySnapshot::all(current_era, &core, claimer.clone());
 
-    let (_, stakers_joint_reward) = OcifStaking::core_stakers_split(
+    let (_, stakers_joint_reward) = DaoStaking::core_stakers_split(
         &init_state_claim_era.core_stake_info,
         &init_state_claim_era.era_info,
     );
@@ -283,7 +287,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
             * stakers_joint_reward;
     let issuance_before_claim = <Test as Config>::Currency::total_issuance();
 
-    assert_ok!(OcifStaking::staker_claim_rewards(
+    assert_ok!(DaoStaking::staker_claim_rewards(
         RuntimeOrigin::signed(claimer.clone()),
         core
     ));
@@ -296,7 +300,7 @@ pub(crate) fn assert_claim_staker(claimer: AccountId, core: CoreId) {
         calculated_reward,
     );
 
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakerClaimed {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakerClaimed {
         staker: claimer.clone(),
         core,
         era: claim_era,
@@ -330,14 +334,14 @@ pub(crate) fn assert_claim_core(core: CoreId, claim_era: EraIndex) {
     assert!(!init_state.core_stake_info.reward_claimed);
 
     let (calculated_reward, _) =
-        OcifStaking::core_stakers_split(&init_state.core_stake_info, &init_state.era_info);
+        DaoStaking::core_stakers_split(&init_state.core_stake_info, &init_state.era_info);
 
-    assert_ok!(OcifStaking::core_claim_rewards(
+    assert_ok!(DaoStaking::core_claim_rewards(
         RuntimeOrigin::signed(account(core)),
         core,
         claim_era,
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::CoreClaimed {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::CoreClaimed {
         core,
         destination_account: account(core),
         era: claim_era,
@@ -385,7 +389,7 @@ pub(crate) fn assert_move_stake(
     to_core: &CoreId,
     amount: Balance,
 ) {
-    let current_era = OcifStaking::current_era();
+    let current_era = DaoStaking::current_era();
     let from_init_state = MemorySnapshot::all(current_era, &from_core, staker.clone());
     let to_init_state = MemorySnapshot::all(current_era, &to_core, staker.clone());
 
@@ -396,13 +400,13 @@ pub(crate) fn assert_move_stake(
         init_staked_value
     };
 
-    assert_ok!(OcifStaking::move_stake(
+    assert_ok!(DaoStaking::move_stake(
         RuntimeOrigin::signed(staker.clone()),
         from_core.clone(),
         amount,
         to_core.clone()
     ));
-    System::assert_last_event(mock::RuntimeEvent::OcifStaking(Event::StakeMoved {
+    System::assert_last_event(mock::RuntimeEvent::DaoStaking(Event::StakeMoved {
         staker: staker.clone(),
         from_core: from_core.clone(),
         amount: expected_transfer_amount,

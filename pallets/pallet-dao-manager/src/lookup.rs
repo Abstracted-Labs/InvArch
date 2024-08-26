@@ -1,12 +1,15 @@
 //! Custom account lookup implementation.
 //!
 //! ## Overview
+//! *TODO!(Rename all code referenced of core to DAO).*  
+//! *core == DAO or multisig.*  
 //!
-//! This module implements the [`StaticLookup`] trait allowing for convenient lookup of a core's
+//!
+//! This module implements the [`StaticLookup`] trait allowing for convenient lookup of a DAO's
 //! AccountId from its CoreId.
 //! This implementation abstracts on top of two lower level functions:
-//! - `lookup_core`: Used for accessing the storage and retrieving a core's AccountId.
-//! - `lookup_address`: Used for converting from a `MultiAddress::Index` that contains a CoreId to this core's AccountId.
+//! - `lookup_core`: Used for accessing the storage and retrieving a DAO's AccountId.
+//! - `lookup_address`: Used for converting from a `MultiAddress::Index` that contains a CoreId to this DAO's AccountId.
 
 use crate::{Config, CoreByAccount, CoreStorage, Pallet};
 use core::marker::PhantomData;

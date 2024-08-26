@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "pallet-inv4",
-    "pallet-ocif-staking",
+    "pallet-dao-manager",
+    "pallet-dao-staking",
     "pallet-checked-inflation",
     "pallet-rings",
 ]
@@ -18,8 +18,8 @@ version = '0.1.0-dev'
 
 [workspace.dependencies]
 
-pallet-inv4 = { path = "./pallet-inv4", default-features = false }
-pallet-ocif-staking = { path = "./pallet-ocif-staking", default-features = false }
+pallet-dao-manager = { path = "./pallet-dao-manager", default-features = false }
+pallet-dao-staking = { path = "./pallet-dao-staking", default-features = false }
 pallet-checked-inflation = { path = "./pallet-checked-inflation", default-features = false }
 pallet-rings = { path = "./pallet-rings", default-features = false }
 primitives = { path = "./primitives", package = "invarch-primitives", default-features = false }
