@@ -29,7 +29,7 @@ build_and_test() {
   fi
 
   echo "$dir: 2/3 Building..."
-  if cargo build > /dev/null 2>&1; then
+  if RUSTFLAGS=-Awarnings cargo build --quiet > /dev/null; then
     echo "$dir: 2/3 Build Ok"
   else
     echo "$dir: 2/3 Build Failed"
@@ -39,7 +39,7 @@ build_and_test() {
   fi
 
   echo "$dir: 3/3 Testing..."
-  if cargo test > /dev/null 2>&1; then
+  if RUSTFLAGS=-Awarnings cargo test --quiet > /dev/null; then
     echo "$dir: 3/3 Test Ok"
     eval "$result_var=\"$dir: Ok\""
   else
