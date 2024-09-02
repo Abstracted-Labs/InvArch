@@ -1,8 +1,6 @@
 # DAO Manager Pallet
 
 ## Introduction
-*TODO!(Rename all code referenced of core to DAO).*  
-*core == DAO or multisig.*  
 
 The DAO Manager pallet is designed to manage advanced virtual multisigs, internally referred to as DAOs. It provides the functionality to create DAOs, mint and burn the DAO's voting tokens, and manage multisig proposals. This pallet is a comprehensive solution for decentralized decision-making processes, allowing for flexible and secure management of multisig operations.
 
@@ -18,7 +16,7 @@ The DAO Manager pallet is designed to manage advanced virtual multisigs, interna
 
 ### DAO Management
 
-- `create_core`: Initialize a new DAO with specific parameters and distribute initial voting tokens to the creator.
+- `create_dao`: Initialize a new DAO with specific parameters and distribute initial voting tokens to the creator.
 - `set_parameters`: Modify DAO parameters, including voting thresholds, metadata, and token freeze state.
 
 ### Token Operations
@@ -35,8 +33,8 @@ The DAO Manager pallet is designed to manage advanced virtual multisigs, interna
 
 ### Utility Functions
 
-- `CoreAccountDerivation`: Derive consistent DAO AccountIds across parachains for seamless interaction.
-- `INV4Lookup`: Custom account lookup implementation for converting DaoIds to AccountIds.
+- `DaoAccountDerivation`: Derive consistent DAO AccountIds across parachains for seamless interaction.
+- `DaoLookup`: Custom account lookup implementation for converting DaoIds to AccountIds.
 - `FeeAsset`: Define the asset used by the multisig for paying transaction fees.
 - `MultisigFeeHandler`: Manage fee payments for multisig operations, supporting both native and non-native assets.
 

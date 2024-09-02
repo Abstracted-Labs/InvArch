@@ -1,19 +1,17 @@
 //! Provides supporting types and traits for the staking pallet.
 //!
 //! ## Overview
-//! *TODO!(Rename all code referenced of core to DAO).*  
-//! *core == DAO or multisig.*  
 //!
 //! Primitives provides the foundational types and traits for a staking pallet.  
 //!
 //! ## Types overview:
 //!
 //! - `BalanceOf` - A type alias for the balance of a currency in the system.
-//! - `CoreMetadata` - A struct that holds metadata for a DAO entity in the system.
-//! - `CoreInfo` - A struct that holds information about a DAO entity, including its account ID and metadata.
+//! - `DaoMetadata` - A struct that holds metadata for a DAO entity in the system.
+//! - `DaoInfo` - A struct that holds information about a DAO entity, including its account ID and metadata.
 //! - `RewardInfo` - A struct that holds information about rewards, including the balance for stakers and the DAO.
 //! - `EraInfo` - A struct that holds information about a specific era, including rewards, staked balance, active stake, and locked balance.
-//! - `CoreStakeInfo` - A struct that holds information about a DAO's stake, including the total balance,
+//! - `DaoStakeInfo` - A struct that holds information about a DAO's stake, including the total balance,
 //!    number of stakers, and whether a reward has been claimed.
 //! - `EraStake` - A struct that holds information about the stake for a specific era.
 //! - `StakerInfo` - A struct that holds information about a staker's stakes across different eras.
@@ -44,28 +42,28 @@ pub type BalanceOf<T> =
 
 const MAX_ASSUMED_VEC_LEN: u32 = 10;
 
-/// Metadata for a core entity in the system.
+/// Metadata for a dao entity in the system.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct CoreMetadata<Name, Description, Image> {
+pub struct DaoMetadata<Name, Description, Image> {
     pub name: Name,
     pub description: Description,
     pub image: Image,
 }
 
-/// Information about a core entity, including its account ID and metadata.
+/// Information about a dao entity, including its account ID and metadata.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct CoreInfo<AccountId, Metadata> {
+pub struct DaoInfo<AccountId, Metadata> {
     pub account: AccountId,
     pub metadata: Metadata,
 }
 
-/// Information about rewards, including the balance for stakers and the core.
+/// Information about rewards, including the balance for stakers and the dao.
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct RewardInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
     pub(crate) stakers: Balance,
     #[codec(compact)]
-    pub(crate) core: Balance,
+    pub(crate) dao: Balance,
 }
 
 /// Information about a specific era, including rewards, staked balance, active stake, and locked balance.
@@ -80,9 +78,9 @@ pub struct EraInfo<Balance: HasCompact + MaxEncodedLen> {
     pub(crate) locked: Balance,
 }
 
-/// Information about a core's stake, including the total balance, number of stakers, and whether a reward has been claimed.
+/// Information about a dao's stake, including the total balance, number of stakers, and whether a reward has been claimed.
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-pub struct CoreStakeInfo<Balance: HasCompact + MaxEncodedLen> {
+pub struct DaoStakeInfo<Balance: HasCompact + MaxEncodedLen> {
     #[codec(compact)]
     pub(crate) total: Balance,
     #[codec(compact)]
@@ -441,9 +439,9 @@ where
 
                 let max_weight = max_calls * unstake_weight;
 
-                let chunk_result = crate::pallet::Pallet::<T>::process_core_unregistration_shard(
+                let chunk_result = crate::pallet::Pallet::<T>::process_dao_unregistration_shard(
                     call.stakers_to_unstake,
-                    call.core_id,
+                    call.dao_id,
                     call.era,
                     max_calls,
                 );
@@ -477,7 +475,7 @@ where
 
 #[derive(Clone, PartialEq, Eq, Encode, Decode, Default, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 pub struct UnregisterMessage<T: Config> {
-    pub(crate) core_id: T::CoreId,
+    pub(crate) dao_id: T::DaoId,
     pub(crate) era: Era,
     pub(crate) stakers_to_unstake: u32,
 }

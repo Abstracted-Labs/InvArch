@@ -8,14 +8,14 @@ use pallet_dao_staking::primitives::CustomAggregateMessageOrigin;
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = DAYS;
     pub const RegisterDeposit: Balance = 500 * UNIT;
-    pub const MaxStakersPerCore: u32 = 10000;
+    pub const MaxStakersPerDao: u32 = 10000;
     pub const MinimumStakingAmount: Balance = 10 * UNIT;
     pub const MaxEraStakeValues: u32 = 5;
     pub const MaxUnlockingChunks: u32 = 5;
     pub const UnbondingPeriod: u32 = 7;
     pub const OcifStakingPot: PalletId = PalletId(*b"tkr/ocif");
     pub const RewardRatio: (u32, u32) = (60, 40);
-    pub const StakeThresholdForActiveCore: Balance = 25000 * UNIT;
+    pub const StakeThresholdForActiveDao: Balance = 25000 * UNIT;
     pub const MaxNameLength: u32 = 20;
     pub const MaxDescriptionLength: u32 = 300;
     pub const MaxImageUrlLength: u32 = 100;
@@ -27,7 +27,7 @@ impl pallet_dao_staking::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type RegisterDeposit = RegisterDeposit;
     type RuntimeEvent = RuntimeEvent;
-    type MaxStakersPerCore = MaxStakersPerCore;
+    type MaxStakersPerDao = MaxStakersPerDao;
     type ExistentialDeposit = ExistentialDeposit;
     type PotId = OcifStakingPot;
     type MaxUnlocking = MaxUnlockingChunks;
@@ -35,7 +35,7 @@ impl pallet_dao_staking::Config for Runtime {
     type MinimumStakingAmount = MinimumStakingAmount;
     type MaxEraStakeValues = MaxEraStakeValues;
     type RewardRatio = RewardRatio;
-    type StakeThresholdForActiveCore = StakeThresholdForActiveCore;
+    type StakeThresholdForActiveDao = StakeThresholdForActiveDao;
     type MaxNameLength = MaxNameLength;
     type MaxDescriptionLength = MaxDescriptionLength;
     type MaxImageUrlLength = MaxImageUrlLength;

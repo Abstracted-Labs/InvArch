@@ -1,15 +1,13 @@
 //! Voting Mechanism.
 //!
 //! ## Overview
-//! *TODO!(Rename all code referenced of core to DAO).*  
-//! *core == DAO or multisig.*  
 //!
 //! This module provides a weighted voting [`Tally`] implementation used for managing the multisig's proposals.
 //! Members each have a balance in voting tokens and this balance differentiate their voting power
 //! as every vote utilizes the entire `power` of the said member.
 //! This empowers decision-making where certain members possess greater influence.
 
-use crate::{origin::INV4Origin, BalanceOf, Config, CoreStorage, Error, Multisig, Pallet};
+use crate::{origin::DaoOrigin, BalanceOf, Config, CoreStorage, Error, Multisig, Pallet};
 use codec::{Decode, Encode, HasCompact, MaxEncodedLen};
 use core::marker::PhantomData;
 use frame_support::{
@@ -26,9 +24,9 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 
 pub type Votes<T> = BalanceOf<T>;
-pub type Core<T> = <T as Config>::CoreId;
+pub type Dao<T> = <T as Config>::DaoId;
 
-/// Aggregated votes for an ongoing poll by members of a core.
+/// Aggregated votes for an ongoing poll by members of a dao.
 #[derive(
     CloneNoBound,
     PartialEqNoBound,
@@ -96,8 +94,8 @@ impl<T: Config> Tally<T> {
     }
 }
 
-impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
-    fn new(_: Core<T>) -> Self {
+impl<T: Config> VoteTally<Votes<T>, Dao<T>> for Tally<T> {
+    fn new(_: Dao<T>) -> Self {
         Self {
             ayes: Zero::zero(),
             nays: Zero::zero(),
@@ -106,15 +104,15 @@ impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
         }
     }
 
-    fn ayes(&self, _: Core<T>) -> Votes<T> {
+    fn ayes(&self, _: Dao<T>) -> Votes<T> {
         self.ayes
     }
 
-    fn support(&self, class: Core<T>) -> Perbill {
+    fn support(&self, class: Dao<T>) -> Perbill {
         Perbill::from_rational(self.ayes, T::AssetsProvider::total_issuance(class))
     }
 
-    fn approval(&self, _: Core<T>) -> Perbill {
+    fn approval(&self, _: Dao<T>) -> Perbill {
         Perbill::from_rational(
             self.ayes,
             <Votes<T> as One>::one().max(self.ayes + self.nays),
@@ -122,22 +120,22 @@ impl<T: Config> VoteTally<Votes<T>, Core<T>> for Tally<T> {
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn unanimity(_: Core<T>) -> Self {
+    fn unanimity(_: Dao<T>) -> Self {
         todo!()
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn rejection(_: Core<T>) -> Self {
+    fn rejection(_: Dao<T>) -> Self {
         todo!()
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn from_requirements(_: Perbill, _: Perbill, _: Core<T>) -> Self {
+    fn from_requirements(_: Perbill, _: Perbill, _: Dao<T>) -> Self {
         todo!()
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    fn setup(_: Core<T>, _: Perbill) {
+    fn setup(_: Dao<T>, _: Perbill) {
         todo!()
     }
 }
@@ -174,7 +172,7 @@ impl<T: Config> CustomPolling<Tally<T>> for Pallet<T> {
     type Index = T::Hash;
     type Votes = Votes<T>;
     type Moment = BlockNumberFor<T>;
-    type Class = T::CoreId;
+    type Class = T::DaoId;
 
     fn classes() -> Vec<Self::Class> {
         CoreStorage::<T>::iter_keys().collect()
@@ -183,7 +181,7 @@ impl<T: Config> CustomPolling<Tally<T>> for Pallet<T> {
     fn access_poll<R>(
         class: Self::Class,
         index: Self::Index,
-        f: impl FnOnce(PollStatus<&mut Tally<T>, BlockNumberFor<T>, T::CoreId>) -> R,
+        f: impl FnOnce(PollStatus<&mut Tally<T>, BlockNumberFor<T>, T::DaoId>) -> R,
     ) -> R {
         match Multisig::<T>::get(class, index) {
             Some(mut m) => {
@@ -199,7 +197,7 @@ impl<T: Config> CustomPolling<Tally<T>> for Pallet<T> {
         class: Self::Class,
         index: Self::Index,
         f: impl FnOnce(
-            PollStatus<&mut Tally<T>, BlockNumberFor<T>, T::CoreId>,
+            PollStatus<&mut Tally<T>, BlockNumberFor<T>, T::DaoId>,
         ) -> Result<R, DispatchError>,
     ) -> Result<R, DispatchError> {
         match Multisig::<T>::get(class, index) {
@@ -212,7 +210,7 @@ impl<T: Config> CustomPolling<Tally<T>> for Pallet<T> {
         }
     }
 
-    fn as_ongoing(class: Self::Class, index: Self::Index) -> Option<(Tally<T>, T::CoreId)> {
+    fn as_ongoing(class: Self::Class, index: Self::Index) -> Option<(Tally<T>, T::DaoId)> {
         Multisig::<T>::get(class, index).map(|m| (m.tally, class))
     }
 }
@@ -231,11 +229,11 @@ pub type VoteRecord<T> = Vote<Votes<T>>;
 
 impl<T: Config> Pallet<T>
 where
-    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+    Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
 {
-    /// Returns the minimum support and required approval thresholds of a core.
-    pub fn minimum_support_and_required_approval(core_id: T::CoreId) -> Option<(Perbill, Perbill)> {
-        CoreStorage::<T>::get(core_id).map(|core| (core.minimum_support, core.required_approval))
+    /// Returns the minimum support and required approval thresholds of a dao.
+    pub fn minimum_support_and_required_approval(dao_id: T::DaoId) -> Option<(Perbill, Perbill)> {
+        CoreStorage::<T>::get(dao_id).map(|dao| (dao.minimum_support, dao.required_approval))
     }
 }

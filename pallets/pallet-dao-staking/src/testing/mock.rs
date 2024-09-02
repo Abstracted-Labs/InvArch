@@ -15,7 +15,7 @@ use frame_support::{
     },
     PalletId,
 };
-use pallet_dao_manager::CoreAccountDerivation;
+use pallet_dao_manager::DaoAccountDerivation;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_io::TestExternalities;
@@ -47,9 +47,9 @@ construct_runtime!(
         System: frame_system,
         Balances: pallet_balances,
         Timestamp: pallet_timestamp,
-        DaoStaking: pallet_dao_staking,
+        OcifStaking: pallet_dao_staking,
         CoreAssets: orml_tokens,
-        DaoManager: pallet_dao_manager,
+        INV4: pallet_dao_manager,
         MessageQueue: pallet_message_queue,
     }
 );
@@ -120,7 +120,7 @@ impl pallet_timestamp::Config for Test {
 parameter_types! {
     pub const RegisterDeposit: Balance = REGISTER_DEPOSIT;
     pub const BlockPerEra: BlockNumber = BLOCKS_PER_ERA;
-    pub const MaxStakersPerCore: u32 = MAX_NUMBER_OF_STAKERS;
+    pub const MaxStakersPerDao: u32 = MAX_NUMBER_OF_STAKERS;
     pub const MinimumStakingAmount: Balance = MINIMUM_STAKING_AMOUNT;
     pub const PotId: PalletId = PalletId(*b"ocif-pot");
     pub const MaxUnlocking: u32 = MAX_UNLOCKING;
@@ -129,15 +129,15 @@ parameter_types! {
     pub const RewardRatio: (u32, u32) = (50, 50);
 }
 
-pub type CoreId = u32;
+pub type DaoId = u32;
 
 pub const THRESHOLD: u128 = 50;
 
 parameter_types! {
     pub const MaxMetadata: u32 = 100;
     pub const MaxCallers: u32 = 100;
-    pub const CoreSeedBalance: u32 = 1000000;
-    pub const CoreCreationFee: u128 = 1000000000000;
+    pub const DaoSeedBalance: u32 = 1000000;
+    pub const DaoCreationFee: u128 = 1000000000000;
     pub const GenesisHash: <Test as frame_system::Config>::Hash = H256([
         212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
@@ -230,21 +230,21 @@ impl orml_tokens::Config for Test {
 
 impl pallet_dao_manager::Config for Test {
     type MaxMetadata = MaxMetadata;
-    type CoreId = u32;
+    type DaoId = u32;
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type CoreSeedBalance = CoreSeedBalance;
+    type DaoSeedBalance = DaoSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    type CoreCreationFee = CoreCreationFee;
+    type DaoCreationFee = DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Test>;
 
     type Tokens = CoreAssets;
     type RelayAssetId = RelayAssetId;
-    type RelayCoreCreationFee = CoreCreationFee;
+    type RelayDaoCreationFee = DaoCreationFee;
     type MaxCallSize = ConstU32<51200>;
 
     type ParaId = ConstU32<2125>;
@@ -256,7 +256,7 @@ impl pallet_dao_staking::Config for Test {
     type Currency = Balances;
     type BlocksPerEra = BlockPerEra;
     type RegisterDeposit = RegisterDeposit;
-    type MaxStakersPerCore = MaxStakersPerCore;
+    type MaxStakersPerDao = MaxStakersPerDao;
     type MinimumStakingAmount = MinimumStakingAmount;
     type PotId = PotId;
     type ExistentialDeposit = ExistentialDeposit;
@@ -267,7 +267,7 @@ impl pallet_dao_staking::Config for Test {
     type MaxNameLength = ConstU32<20>;
     type MaxImageUrlLength = ConstU32<60>;
     type RewardRatio = RewardRatio;
-    type StakeThresholdForActiveCore = ConstU128<THRESHOLD>;
+    type StakeThresholdForActiveDao = ConstU128<THRESHOLD>;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
     type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
     type WeightToFee = ConstantMultiplier<Balance, ZeroFee>;
@@ -338,24 +338,24 @@ impl pallet_message_queue::Config for Test {
 }
 pub struct ExternalityBuilder;
 
-pub fn account(core: CoreId) -> AccountId {
-    DaoManager::derive_core_account(core)
+pub fn account(dao: DaoId) -> AccountId {
+    INV4::derive_dao_account(dao)
 }
 
-pub const A: CoreId = 0;
-pub const B: CoreId = 1;
-pub const C: CoreId = 2;
-pub const D: CoreId = 3;
-pub const E: CoreId = 4;
-pub const F: CoreId = 5;
-pub const G: CoreId = 6;
-pub const H: CoreId = 7;
-pub const I: CoreId = 8;
-pub const J: CoreId = 9;
-pub const K: CoreId = 10;
-pub const L: CoreId = 11;
-pub const M: CoreId = 12;
-pub const N: CoreId = 13;
+pub const A: DaoId = 0;
+pub const B: DaoId = 1;
+pub const C: DaoId = 2;
+pub const D: DaoId = 3;
+pub const E: DaoId = 4;
+pub const F: DaoId = 5;
+pub const G: DaoId = 6;
+pub const H: DaoId = 7;
+pub const I: DaoId = 8;
+pub const J: DaoId = 9;
+pub const K: DaoId = 10;
+pub const L: DaoId = 11;
+pub const M: DaoId = 12;
+pub const N: DaoId = 13;
 
 impl ExternalityBuilder {
     pub fn build() -> TestExternalities {
@@ -394,27 +394,27 @@ pub const ISSUE_PER_ERA: Balance = ISSUE_PER_BLOCK * BLOCKS_PER_ERA as u128;
 
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
-        DaoStaking::on_finalize(System::block_number());
+        OcifStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
 
-        DaoStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
+        OcifStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
 
-        DaoStaking::on_initialize(System::block_number());
+        OcifStaking::on_initialize(System::block_number());
         MessageQueue::on_initialize(System::block_number());
     }
 }
 
 pub fn run_to_block_no_rewards(n: u64) {
     while System::block_number() < n {
-        DaoStaking::on_finalize(System::block_number());
+        OcifStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
-        DaoStaking::on_initialize(System::block_number());
+        OcifStaking::on_initialize(System::block_number());
         MessageQueue::on_initialize(System::block_number());
     }
 }
 
 pub fn issue_rewards(amount: Balance) {
-    DaoStaking::rewards(Balances::issue(amount));
+    OcifStaking::rewards(Balances::issue(amount));
 }
 
 pub fn run_for_blocks(n: u64) {
@@ -426,13 +426,13 @@ pub fn run_for_blocks_no_rewards(n: u64) {
 }
 
 pub fn advance_to_era(n: EraIndex) {
-    while DaoStaking::current_era() < n {
+    while OcifStaking::current_era() < n {
         run_for_blocks(1);
     }
 }
 
 pub fn advance_to_era_no_rewards(n: EraIndex) {
-    while DaoStaking::current_era() < n {
+    while OcifStaking::current_era() < n {
         run_for_blocks_no_rewards(1);
     }
 }
@@ -440,7 +440,7 @@ pub fn advance_to_era_no_rewards(n: EraIndex) {
 pub fn initialize_first_block() {
     assert_eq!(System::block_number(), 1 as BlockNumber);
 
-    DaoStaking::on_initialize(System::block_number());
+    OcifStaking::on_initialize(System::block_number());
     MessageQueue::on_initialize(System::block_number());
     run_to_block(2);
 }
@@ -448,7 +448,7 @@ pub fn initialize_first_block() {
 pub fn split_reward_amount(amount: Balance) -> (Balance, Balance) {
     let percent = Perbill::from_percent(RewardRatio::get().0);
 
-    let amount_for_core = percent * amount;
+    let amount_for_dao = percent * amount;
 
-    (amount_for_core, amount - amount_for_core)
+    (amount_for_dao, amount - amount_for_dao)
 }

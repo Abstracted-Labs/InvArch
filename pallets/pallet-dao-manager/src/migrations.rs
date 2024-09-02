@@ -75,14 +75,14 @@ pub mod v2 {
             Blake2_128Concat,
             <T as frame_system::Config>::AccountId,
             Twox64Concat,
-            <T as crate::Config>::CoreId,
+            <T as crate::Config>::DaoId,
             AccountData<u128>,
             ValueQuery,
         >;
 
-    pub fn fill_core_owners<T: Config + orml_tokens2::Config>() {
+    pub fn fill_dao_owners<T: Config + orml_tokens2::Config>() {
         Accounts::<T>::iter_keys()
-            .for_each(|(member, core_id)| CoreMembers::<T>::insert(core_id, member, ()));
+            .for_each(|(member, dao_id)| CoreMembers::<T>::insert(dao_id, member, ()));
     }
 
     pub struct MigrateToV2<T>(sp_std::marker::PhantomData<T>);
@@ -101,7 +101,7 @@ pub mod v2 {
             let current = Pallet::<T>::current_storage_version();
 
             if current == 2 {
-                fill_core_owners::<T>();
+                fill_dao_owners::<T>();
 
                 current.put::<Pallet<T>>();
 

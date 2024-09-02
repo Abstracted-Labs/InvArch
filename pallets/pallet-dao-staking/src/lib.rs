@@ -2,8 +2,6 @@
 //! A pallet for allowing DAOs to be staked towards.
 //!
 //! ## Overview
-//! *TODO!(Rename all code referenced of core to DAO).*  
-//! *core == DAO or multisig.*  
 //!
 //! This pallet provides functionality to allow 2 sets of entities to participate in distribution of tokens
 //! available in a predefined pot account.
@@ -27,24 +25,24 @@
 //!
 //! * `BlocksPerEra` - Defines how many blocks constitute an era.
 //! * `RegisterDeposit` - Defines the deposit amount for a DAO to register in the system.
-//! * `MaxStakersPerCore` - Defines the maximum amount of Stakers allowed staking simultaneously towards the same DAO.
+//! * `MaxStakersPerDao` - Defines the maximum amount of Stakers allowed staking simultaneously towards the same DAO.
 //! * `MinimumStakingAmount` - Defines the minimum amount a Staker has to stake to participate.
 //! * `UnbondingPeriod` - Defines the period, in eras, that it takes to unbond a stake.
 //! * `RewardRatio` - Defines the ratio of balance from the pot to distribute to DAOs and Stakers, respectively.
-//! * `StakeThresholdForActiveCore` - Defines the threshold of stake a DAO needs to surpass to become active.
+//! * `StakeThresholdForActiveDao` - Defines the threshold of stake a DAO needs to surpass to become active.
 //!
 //! **Example Runtime implementation can be found in [src/testing/mock.rs](./src/testing/mock.rs)**
 //!
 //! ## Dispatchable Functions
 //!
-//! * `register_core` - Registers a DAO in the system.
-//! * `unregister_core` - Unregisters a DAO from the system, starting the unbonding period for the Stakers.
-//! * `change_core_metadata` - Changes the metadata tied to a DAO.
+//! * `register_dao` - Registers a DAO in the system.
+//! * `unregister_dao` - Unregisters a DAO from the system, starting the unbonding period for the Stakers.
+//! * `change_dao_metadata` - Changes the metadata tied to a DAO.
 //! * `stake` - Stakes tokens towards a DAO.
 //! * `unstake` - Unstakes tokens from a DAO and starts the unbonding period for those tokens.
 //! * `withdraw_unstaked` - Withdraws tokens that have already been through the unbonding period.
 //! * `staker_claim_rewards` - Claims rewards available for a Staker.
-//! * `core_claim_rewards` - Claims rewards available for a DAO.
+//! * `dao_claim_rewards` - Claims rewards available for a DAO.
 //! * `halt_unhalt_pallet` - Allows Root to trigger a halt of the system, eras will stop counting and rewards won't be distributed.
 //!
 //! [`Call`]: ./enum.Call.html
@@ -93,8 +91,8 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use pallet_dao_manager::{
-        origin::{ensure_multisig, INV4Origin},
-        CoreAccountDerivation,
+        origin::{ensure_multisig, DaoOrigin},
+        DaoAccountDerivation,
     };
 
     use pallet_message_queue::{self};
@@ -113,15 +111,15 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    /// The core metadata type of this pallet.
-    pub type CoreMetadataOf<T> = CoreMetadata<
+    /// The dao metadata type of this pallet.
+    pub type DaoMetadataOf<T> = DaoMetadata<
         BoundedVec<u8, <T as Config>::MaxNameLength>,
         BoundedVec<u8, <T as Config>::MaxDescriptionLength>,
         BoundedVec<u8, <T as Config>::MaxImageUrlLength>,
     >;
 
-    /// The core information type, containing a core's AccountId and CoreMetadataOf.
-    pub type CoreInfoOf<T> = CoreInfo<<T as frame_system::Config>::AccountId, CoreMetadataOf<T>>;
+    /// The dao information type, containing a dao's AccountId and DaoMetadataOf.
+    pub type DaoInfoOf<T> = DaoInfo<<T as frame_system::Config>::AccountId, DaoMetadataOf<T>>;
 
     /// Alias type for the era identifier type.
     pub type Era = u32;
@@ -137,7 +135,7 @@ pub mod pallet {
         type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>
             + ReservableCurrency<Self::AccountId>;
 
-        // type CoreId: Parameter
+        // type DaoId: Parameter
         //     + Member
         //     + AtLeast32BitUnsigned
         //     + Default
@@ -145,21 +143,21 @@ pub mod pallet {
         //     + Display
         //     + MaxEncodedLen
         //     + Clone
-        //     + From<<Self as pallet_dao_manager::Config>::CoreId>;
+        //     + From<<Self as pallet_dao_manager::Config>::DaoId>;
 
         /// Number of blocks per era.
         #[pallet::constant]
         type BlocksPerEra: Get<BlockNumberFor<Self>>;
 
-        /// Deposit amount that will be reserved as part of new core registration.
+        /// Deposit amount that will be reserved as part of new dao registration.
         #[pallet::constant]
         type RegisterDeposit: Get<BalanceOf<Self>>;
 
-        /// Maximum number of unique stakers per core.
+        /// Maximum number of unique stakers per dao.
         #[pallet::constant]
-        type MaxStakersPerCore: Get<u32>;
+        type MaxStakersPerDao: Get<u32>;
 
-        /// Minimum amount user must have staked on a core.
+        /// Minimum amount user must have staked on a dao.
         /// User can stake less if they already have the minimum staking amount staked.
         #[pallet::constant]
         type MinimumStakingAmount: Get<BalanceOf<Self>>;
@@ -172,7 +170,7 @@ pub mod pallet {
         #[pallet::constant]
         type ExistentialDeposit: Get<BalanceOf<Self>>;
 
-        /// Max number of unlocking chunks per account Id <-> core Id pairing.
+        /// Max number of unlocking chunks per account Id <-> dao Id pairing.
         /// If value is zero, unlocking becomes impossible.
         #[pallet::constant]
         type MaxUnlocking: Get<u32>;
@@ -182,7 +180,7 @@ pub mod pallet {
         #[pallet::constant]
         type UnbondingPeriod: Get<u32>;
 
-        /// Max number of unique `EraStake` values that can exist for a `(staker, core)` pairing.
+        /// Max number of unique `EraStake` values that can exist for a `(staker, dao)` pairing.
         ///
         /// When stakers claims rewards, they will either keep the number of `EraStake` values the same or they will reduce them by one.
         /// Stakers cannot add an additional `EraStake` value by calling `bond&stake` or `unbond&unstake` if they've reached the max number of values.
@@ -192,23 +190,23 @@ pub mod pallet {
         #[pallet::constant]
         type MaxEraStakeValues: Get<u32>;
 
-        /// Reward ratio of the pot to be distributed between the core and stakers, respectively.
+        /// Reward ratio of the pot to be distributed between the dao and stakers, respectively.
         #[pallet::constant]
         type RewardRatio: Get<(u32, u32)>;
 
-        /// Threshold of staked tokens necessary for a core to become active.
+        /// Threshold of staked tokens necessary for a dao to become active.
         #[pallet::constant]
-        type StakeThresholdForActiveCore: Get<BalanceOf<Self>>;
+        type StakeThresholdForActiveDao: Get<BalanceOf<Self>>;
 
-        /// Maximum length of a core's name.
+        /// Maximum length of a dao's name.
         #[pallet::constant]
         type MaxNameLength: Get<u32>;
 
-        /// Maximum length of a core's description.
+        /// Maximum length of a dao's description.
         #[pallet::constant]
         type MaxDescriptionLength: Get<u32>;
 
-        /// Maximum length of a core's image URL.
+        /// Maximum length of a dao's image URL.
         #[pallet::constant]
         type MaxImageUrlLength: Get<u32>;
 
@@ -246,36 +244,36 @@ pub mod pallet {
     #[pallet::getter(fn next_era_starting_block)]
     pub type NextEraStartingBlock<T: Config> = StorageValue<_, BlockNumberFor<T>, ValueQuery>;
 
-    /// Simple map where CoreId points to the respective core information.
+    /// Simple map where DaoId points to the respective dao information.
     #[pallet::storage]
-    #[pallet::getter(fn core_info)]
+    #[pallet::getter(fn dao_info)]
     pub(crate) type RegisteredCore<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::CoreId, CoreInfoOf<T>>;
+        StorageMap<_, Blake2_128Concat, T::DaoId, DaoInfoOf<T>>;
 
     /// General information about an era.
     #[pallet::storage]
     #[pallet::getter(fn general_era_info)]
     pub type GeneralEraInfo<T: Config> = StorageMap<_, Twox64Concat, Era, EraInfo<BalanceOf<T>>>;
 
-    /// Staking information about a core in a particular era.
+    /// Staking information about a dao in a particular era.
     #[pallet::storage]
-    #[pallet::getter(fn core_stake_info)]
+    #[pallet::getter(fn dao_stake_info)]
     pub type CoreEraStake<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::CoreId,
+        T::DaoId,
         Twox64Concat,
         Era,
-        CoreStakeInfo<BalanceOf<T>>,
+        DaoStakeInfo<BalanceOf<T>>,
     >;
 
-    /// Info about staker's stakes on a particular core.
+    /// Info about staker's stakes on a particular dao.
     #[pallet::storage]
     #[pallet::getter(fn staker_info)]
     pub type GeneralStakerInfo<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
-        T::CoreId,
+        T::DaoId,
         Blake2_128Concat,
         T::AccountId,
         StakerInfo<BalanceOf<T>>,
@@ -287,37 +285,37 @@ pub mod pallet {
     #[pallet::getter(fn is_halted)]
     pub type Halted<T: Config> = StorageValue<_, bool, ValueQuery>;
 
-    /// Placeholder for the core being unregistered and its stake info.
+    /// Placeholder for the dao being unregistered and its stake info.
     #[pallet::storage]
-    #[pallet::getter(fn core_unregistering_staker_info)]
+    #[pallet::getter(fn dao_unregistering_staker_info)]
     pub type UnregisteredCoreStakeInfo<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::CoreId, CoreStakeInfo<BalanceOf<T>>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::DaoId, DaoStakeInfo<BalanceOf<T>>, OptionQuery>;
 
-    /// Placeholder for the core being unregistered and its stakers.
+    /// Placeholder for the dao being unregistered and its stakers.
     #[pallet::storage]
-    #[pallet::getter(fn core_unregistering_staker_list)]
+    #[pallet::getter(fn dao_unregistering_staker_list)]
     pub type UnregisteredCoreStakers<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
-        T::CoreId,
-        BoundedVec<T::AccountId, T::MaxStakersPerCore>,
+        T::DaoId,
+        BoundedVec<T::AccountId, T::MaxStakersPerDao>,
         OptionQuery,
     >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Account has staked funds to a core.
+        /// Account has staked funds to a dao.
         Staked {
             staker: T::AccountId,
-            core: T::CoreId,
+            dao: T::DaoId,
             amount: BalanceOf<T>,
         },
 
-        /// Account has unstaked funds from a core.
+        /// Account has unstaked funds from a dao.
         Unstaked {
             staker: T::AccountId,
-            core: T::CoreId,
+            dao: T::DaoId,
             amount: BalanceOf<T>,
         },
 
@@ -327,11 +325,11 @@ pub mod pallet {
             amount: BalanceOf<T>,
         },
 
-        /// New core registered for staking.
-        CoreRegistered { core: T::CoreId },
+        /// New dao registered for staking.
+        DaoRegistered { dao: T::DaoId },
 
-        /// Core unregistered.
-        CoreUnregistered { core: T::CoreId },
+        /// DAO unregistered.
+        DaoUnregistered { dao: T::DaoId },
 
         /// Beginning of a new era.
         NewEra { era: u32 },
@@ -339,14 +337,14 @@ pub mod pallet {
         /// Staker claimed rewards.
         StakerClaimed {
             staker: T::AccountId,
-            core: T::CoreId,
+            dao: T::DaoId,
             era: u32,
             amount: BalanceOf<T>,
         },
 
-        /// Rewards claimed for core.
-        CoreClaimed {
-            core: T::CoreId,
+        /// Rewards claimed for dao.
+        DaoClaimed {
+            dao: T::DaoId,
             destination_account: T::AccountId,
             era: u32,
             amount: BalanceOf<T>,
@@ -355,30 +353,30 @@ pub mod pallet {
         /// Halt status changed.
         HaltChanged { is_halted: bool },
 
-        /// Core metadata changed.
+        /// DAO metadata changed.
         MetadataChanged {
-            core: T::CoreId,
-            old_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
-            new_metadata: CoreMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
+            dao: T::DaoId,
+            old_metadata: DaoMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
+            new_metadata: DaoMetadata<Vec<u8>, Vec<u8>, Vec<u8>>,
         },
 
-        /// Staker moved an amount of stake to another core.
+        /// Staker moved an amount of stake to another dao.
         StakeMoved {
             staker: T::AccountId,
-            from_core: T::CoreId,
-            to_core: T::CoreId,
+            from_dao: T::DaoId,
+            to_dao: T::DaoId,
             amount: BalanceOf<T>,
         },
-        /// Core is being unregistered.
-        CoreUnregistrationQueueStarted { core: T::CoreId },
-        /// Core ungregistration chunk was processed.
-        CoreUnregistrationChunksProcessed {
-            core: T::CoreId,
+        /// DAO is being unregistered.
+        DaoUnregistrationQueueStarted { dao: T::DaoId },
+        /// DAO ungregistration chunk was processed.
+        DaoUnregistrationChunksProcessed {
+            dao: T::DaoId,
             accounts_processed_in_this_chunk: u64,
             accounts_left: u64,
         },
-        /// Sharded execution of the core unregistration process finished.
-        CoreUnregistrationQueueFinished { core: T::CoreId },
+        /// Sharded execution of the dao unregistration process finished.
+        DaoUnregistrationQueueFinished { dao: T::DaoId },
     }
 
     #[pallet::error]
@@ -389,20 +387,18 @@ pub mod pallet {
         InsufficientBalance,
         /// Maximum number of stakers reached.
         MaxStakersReached,
-        /// Core not found.
-        CoreNotFound,
+        /// DAO not found.
+        DaoNotFound,
         /// No stake available for withdrawal.
         NoStakeAvailable,
-        /// Core is not unregistered.
-        NotUnregisteredCore,
         /// Unclaimed rewards available.
         UnclaimedRewardsAvailable,
         /// Unstaking nothing.
         UnstakingNothing,
         /// Nothing available for withdrawal.
         NothingToWithdraw,
-        /// Core already registered.
-        CoreAlreadyRegistered,
+        /// DAO already registered.
+        DaoAlreadyRegistered,
         /// Unknown rewards for era.
         UnknownEraReward,
         /// Unexpected stake info for era.
@@ -425,14 +421,14 @@ pub mod pallet {
         MaxDescriptionExceeded,
         /// Image URL exceeds maximum length.
         MaxImageExceeded,
-        /// Core not registered.
+        /// DAO not registered.
         NotRegistered,
         /// Halted.
         Halted,
         /// No halt change.
         NoHaltChange,
-        /// Attempted to move stake to the same core.
-        MoveStakeToSameCore,
+        /// Attempted to move stake to the same dao.
+        MoveStakeToSameDao,
     }
 
     #[pallet::hooks]
@@ -470,28 +466,28 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
-        Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+        Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
             From<<T as frame_system::Config>::RuntimeOrigin>,
         T::AccountId: From<[u8; 32]>,
     {
-        /// Used to register core for staking.
+        /// Used to register dao for staking.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be the dao origin.
         ///
-        /// As part of this call, `RegisterDeposit` will be reserved from the core account.
+        /// As part of this call, `RegisterDeposit` will be reserved from the dao account.
         ///
-        /// - `name`: Name of the core.
-        /// - `description`: Description of the core.
-        /// - `image`: Image URL of the core.
+        /// - `name`: Name of the dao.
+        /// - `description`: Description of the dao.
+        /// - `image`: Image URL of the dao.
         #[pallet::call_index(0)]
         #[pallet::weight(
-            <T as Config>::WeightInfo::register_core(
+            <T as Config>::WeightInfo::register_dao(
                 name.len() as u32,
                 description.len() as u32,
                 image.len() as u32
             )
         )]
-        pub fn register_core(
+        pub fn register_dao(
             origin: OriginFor<T>,
             name: BoundedVec<u8, T::MaxNameLength>,
             description: BoundedVec<u8, T::MaxDescriptionLength>,
@@ -499,32 +495,32 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let core = ensure_multisig::<T, OriginFor<T>>(origin)?;
-            let core_account = core.to_account_id();
-            let core_id = core.id;
+            let dao = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let dao_account = dao.to_account_id();
+            let dao_id = dao.id;
 
             ensure!(
-                !RegisteredCore::<T>::contains_key(core_id),
-                Error::<T>::CoreAlreadyRegistered,
+                !RegisteredCore::<T>::contains_key(dao_id),
+                Error::<T>::DaoAlreadyRegistered,
             );
 
-            let metadata: CoreMetadataOf<T> = CoreMetadata {
+            let metadata: DaoMetadataOf<T> = DaoMetadata {
                 name,
                 description,
                 image,
             };
 
-            <T as pallet::Config>::Currency::reserve(&core_account, T::RegisterDeposit::get())?;
+            <T as pallet::Config>::Currency::reserve(&dao_account, T::RegisterDeposit::get())?;
 
             RegisteredCore::<T>::insert(
-                core_id,
-                CoreInfo {
-                    account: core_account,
+                dao_id,
+                DaoInfo {
+                    account: dao_account,
                     metadata,
                 },
             );
 
-            Self::deposit_event(Event::<T>::CoreRegistered { core: core_id });
+            Self::deposit_event(Event::<T>::DaoRegistered { dao: dao_id });
 
             Ok(PostDispatchInfo {
                 actual_weight: None,
@@ -532,70 +528,69 @@ pub mod pallet {
             })
         }
 
-        /// Unregister existing core for staking, making it ineligible for rewards from current era onwards and
+        /// Unregister existing dao for staking, making it ineligible for rewards from current era onwards and
         /// starts the unbonding period for the stakers.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be the dao origin.
         ///
-        /// Deposit is returned to the core account.
+        /// Deposit is returned to the dao account.
         ///
-        /// - `core_id`: Id of the core to be unregistered.
+        /// - `dao_id`: Id of the dao to be unregistered.
         #[pallet::call_index(1)]
         #[pallet::weight(
-            <T as Config>::WeightInfo::unregister_core()
+            <T as Config>::WeightInfo::unregister_dao()
         )]
-        pub fn unregister_core(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn unregister_dao(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let core = ensure_multisig::<T, OriginFor<T>>(origin.clone())?;
-            let core_account = core.to_account_id();
-            let core_id = core.id;
+            let dao = ensure_multisig::<T, OriginFor<T>>(origin.clone())?;
+            let dao_account = dao.to_account_id();
+            let dao_id = dao.id;
 
             ensure!(
-                RegisteredCore::<T>::get(core_id).is_some(),
+                RegisteredCore::<T>::get(dao_id).is_some(),
                 Error::<T>::NotRegistered
             );
 
             let current_era = Self::current_era();
 
-            let all_stakers: BoundedVec<T::AccountId, T::MaxStakersPerCore> =
+            let all_stakers: BoundedVec<T::AccountId, T::MaxStakersPerDao> =
                 BoundedVec::truncate_from(
-                    GeneralStakerInfo::<T>::iter_key_prefix(core_id).collect::<Vec<T::AccountId>>(),
+                    GeneralStakerInfo::<T>::iter_key_prefix(dao_id).collect::<Vec<T::AccountId>>(),
                 );
 
             let all_fee = <T as Config>::WeightToFee::weight_to_fee(
                 &(all_stakers.len() as u32 * <T as Config>::WeightInfo::unstake()),
             );
 
-            UnregisteredCoreStakers::<T>::insert(core_id, all_stakers);
+            UnregisteredCoreStakers::<T>::insert(dao_id, all_stakers);
 
-            let mut core_stake_info =
-                Self::core_stake_info(core_id, current_era).unwrap_or_default();
-            UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
+            let mut dao_stake_info = Self::dao_stake_info(dao_id, current_era).unwrap_or_default();
+            UnregisteredCoreStakeInfo::<T>::insert(dao_id, dao_stake_info.clone());
             GeneralEraInfo::<T>::mutate(current_era, |value| {
                 if let Some(x) = value {
-                    x.staked = x.staked.saturating_sub(core_stake_info.total);
+                    x.staked = x.staked.saturating_sub(dao_stake_info.total);
                 }
             });
-            core_stake_info.total = Zero::zero();
-            CoreEraStake::<T>::insert(core_id, current_era, core_stake_info.clone());
+            dao_stake_info.total = Zero::zero();
+            CoreEraStake::<T>::insert(dao_id, current_era, dao_stake_info.clone());
 
             let reserve_deposit = T::RegisterDeposit::get();
-            <T as Config>::Currency::unreserve(&core_account, reserve_deposit);
+            <T as Config>::Currency::unreserve(&dao_account, reserve_deposit);
 
             T::OnUnbalanced::on_unbalanced(<T as Config>::Currency::withdraw(
-                &core_account,
+                &dao_account,
                 reserve_deposit.min(all_fee),
                 WithdrawReasons::TRANSACTION_PAYMENT,
                 ExistenceRequirement::KeepAlive,
             )?);
 
-            RegisteredCore::<T>::remove(core_id);
+            RegisteredCore::<T>::remove(dao_id);
 
-            let total_stakers = core_stake_info.number_of_stakers;
+            let total_stakers = dao_stake_info.number_of_stakers;
 
             let message = primitives::UnregisterMessage::<T> {
-                core_id,
+                dao_id,
                 era: current_era,
                 stakers_to_unstake: total_stakers,
             }
@@ -603,29 +598,29 @@ pub mod pallet {
 
             T::StakingMessage::handle_message(BoundedSlice::truncate_from(message.as_slice()));
 
-            Self::deposit_event(Event::<T>::CoreUnregistrationQueueStarted { core: core_id });
+            Self::deposit_event(Event::<T>::DaoUnregistrationQueueStarted { dao: dao_id });
 
-            Self::deposit_event(Event::<T>::CoreUnregistered { core: core_id });
+            Self::deposit_event(Event::<T>::DaoUnregistered { dao: dao_id });
 
-            Ok(Some(<T as Config>::WeightInfo::unregister_core()).into())
+            Ok(Some(<T as Config>::WeightInfo::unregister_dao()).into())
         }
 
-        /// Used to change the metadata of a core.
+        /// Used to change the metadata of a dao.
         ///
-        /// The origin has to be the core origin.
+        /// The origin has to be the dao origin.
         ///
-        /// - `name`: Name of the core.
-        /// - `description`: Description of the core.
-        /// - `image`: Image URL of the core.
+        /// - `name`: Name of the dao.
+        /// - `description`: Description of the dao.
+        /// - `image`: Image URL of the dao.
         #[pallet::call_index(2)]
         #[pallet::weight(
-            <T as Config>::WeightInfo::change_core_metadata(
+            <T as Config>::WeightInfo::change_dao_metadata(
                 name.len() as u32,
                 description.len() as u32,
                 image.len() as u32
             )
         )]
-        pub fn change_core_metadata(
+        pub fn change_dao_metadata(
             origin: OriginFor<T>,
             name: BoundedVec<u8, T::MaxNameLength>,
             description: BoundedVec<u8, T::MaxDescriptionLength>,
@@ -633,32 +628,32 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
-            let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-            let core_id = core_origin.id;
+            let dao_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+            let dao_id = dao_origin.id;
 
-            RegisteredCore::<T>::try_mutate(core_id, |core| {
-                let mut new_core = core.take().ok_or(Error::<T>::NotRegistered)?;
+            RegisteredCore::<T>::try_mutate(dao_id, |dao| {
+                let mut new_dao = dao.take().ok_or(Error::<T>::NotRegistered)?;
 
-                let new_metadata: CoreMetadataOf<T> = CoreMetadata {
+                let new_metadata: DaoMetadataOf<T> = DaoMetadata {
                     name: name.clone(),
                     description: description.clone(),
                     image: image.clone(),
                 };
 
-                let old_metadata = new_core.metadata;
+                let old_metadata = new_dao.metadata;
 
-                new_core.metadata = new_metadata;
+                new_dao.metadata = new_metadata;
 
-                *core = Some(new_core);
+                *dao = Some(new_dao);
 
                 Self::deposit_event(Event::<T>::MetadataChanged {
-                    core: core_id,
-                    old_metadata: CoreMetadata {
+                    dao: dao_id,
+                    old_metadata: DaoMetadata {
                         name: old_metadata.name.into_inner(),
                         description: old_metadata.description.into_inner(),
                         image: old_metadata.image.into_inner(),
                     },
-                    new_metadata: CoreMetadata {
+                    new_metadata: DaoMetadata {
                         name: name.to_vec(),
                         description: description.to_vec(),
                         image: image.to_vec(),
@@ -676,23 +671,20 @@ pub mod pallet {
         ///
         /// The dispatch origin for this call must be _Signed_ by the staker's account.
         ///
-        /// - `core_id`: Id of the core to stake towards.
+        /// - `dao_id`: Id of the dao to stake towards.
         /// - `value`: Amount to stake.
         #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::stake())]
         pub fn stake(
             origin: OriginFor<T>,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
             let staker = ensure_signed(origin)?;
 
-            ensure!(
-                Self::core_info(core_id).is_some(),
-                Error::<T>::NotRegistered
-            );
+            ensure!(Self::dao_info(dao_id).is_some(), Error::<T>::NotRegistered);
 
             let mut ledger = Self::ledger(&staker);
             let available_balance = Self::available_staking_balance(&staker, &ledger);
@@ -701,8 +693,8 @@ pub mod pallet {
             ensure!(value_to_stake > Zero::zero(), Error::<T>::StakingNothing);
 
             let current_era = Self::current_era();
-            let mut staking_info = Self::core_stake_info(core_id, current_era).unwrap_or_default();
-            let mut staker_info = Self::staker_info(core_id, &staker);
+            let mut staking_info = Self::dao_stake_info(dao_id, current_era).unwrap_or_default();
+            let mut staker_info = Self::staker_info(dao_id, &staker);
 
             Self::internal_stake(
                 &mut staker_info,
@@ -721,18 +713,18 @@ pub mod pallet {
             });
 
             Self::update_ledger(&staker, ledger);
-            Self::update_staker_info(&staker, core_id, staker_info);
-            CoreEraStake::<T>::insert(core_id, current_era, staking_info);
+            Self::update_staker_info(&staker, dao_id, staker_info);
+            CoreEraStake::<T>::insert(dao_id, current_era, staking_info);
 
             Self::deposit_event(Event::<T>::Staked {
                 staker,
-                core: core_id,
+                dao: dao_id,
                 amount: value_to_stake,
             });
             Ok(().into())
         }
 
-        /// Start unbonding process and unstake balance from the core.
+        /// Start unbonding process and unstake balance from the dao.
         ///
         /// The unstaked amount will no longer be eligible for rewards but still won't be unlocked.
         /// User needs to wait for the unbonding period to finish before being able to withdraw
@@ -741,12 +733,12 @@ pub mod pallet {
         /// In case remaining staked balance is below minimum staking amount,
         /// entire stake will be unstaked.
         ///
-        /// - `core_id`: Id of the core to unstake from.
+        /// - `dao_id`: Id of the dao to unstake from.
         #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::unstake())]
         pub fn unstake(
             origin: OriginFor<T>,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -754,18 +746,14 @@ pub mod pallet {
             let staker = ensure_signed(origin)?;
 
             ensure!(value > Zero::zero(), Error::<T>::UnstakingNothing);
-            ensure!(
-                Self::core_info(core_id).is_some(),
-                Error::<T>::NotRegistered
-            );
+            ensure!(Self::dao_info(dao_id).is_some(), Error::<T>::NotRegistered);
 
             let current_era = Self::current_era();
-            let mut staker_info = Self::staker_info(core_id, &staker);
-            let mut core_stake_info =
-                Self::core_stake_info(core_id, current_era).unwrap_or_default();
+            let mut staker_info = Self::staker_info(dao_id, &staker);
+            let mut dao_stake_info = Self::dao_stake_info(dao_id, current_era).unwrap_or_default();
 
             let value_to_unstake =
-                Self::internal_unstake(&mut staker_info, &mut core_stake_info, value, current_era)?;
+                Self::internal_unstake(&mut staker_info, &mut dao_stake_info, value, current_era)?;
 
             let mut ledger = Self::ledger(&staker);
             ledger.unbonding_info.add(UnlockingChunk {
@@ -785,12 +773,12 @@ pub mod pallet {
                     x.staked = x.staked.saturating_sub(value_to_unstake);
                 }
             });
-            Self::update_staker_info(&staker, core_id, staker_info);
-            CoreEraStake::<T>::insert(core_id, current_era, core_stake_info);
+            Self::update_staker_info(&staker, dao_id, staker_info);
+            CoreEraStake::<T>::insert(dao_id, current_era, dao_stake_info);
 
             Self::deposit_event(Event::<T>::Unstaked {
                 staker,
-                core: core_id,
+                dao: dao_id,
                 amount: value_to_unstake,
             });
 
@@ -842,25 +830,25 @@ pub mod pallet {
         ///
         /// The dispatch origin for this call must be _Signed_ by the staker's account.
         ///
-        /// - `core_id`: Id of the core to claim rewards from.
+        /// - `dao_id`: Id of the dao to claim rewards from.
         #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::staker_claim_rewards())]
         pub fn staker_claim_rewards(
             origin: OriginFor<T>,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
             let staker = ensure_signed(origin)?;
 
-            let mut staker_info = Self::staker_info(core_id, &staker);
+            let mut staker_info = Self::staker_info(dao_id, &staker);
             let (era, staked) = staker_info.claim();
             ensure!(staked > Zero::zero(), Error::<T>::NoStakeAvailable);
 
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
-            let staking_info = Self::core_stake_info(core_id, era).unwrap_or_default();
+            let staking_info = Self::dao_stake_info(dao_id, era).unwrap_or_default();
 
             let mut staker_reward = Zero::zero();
 
@@ -869,7 +857,7 @@ pub mod pallet {
                     Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
 
                 let (_, stakers_joint_reward) =
-                    Self::core_stakers_split(&staking_info, &reward_and_stake);
+                    Self::dao_stakers_split(&staking_info, &reward_and_stake);
                 staker_reward =
                     Perbill::from_rational(staked, staking_info.total) * stakers_joint_reward;
 
@@ -881,12 +869,12 @@ pub mod pallet {
                 )?;
 
                 <T as pallet::Config>::Currency::resolve_creating(&staker, reward_imbalance);
-                Self::update_staker_info(&staker, core_id, staker_info);
+                Self::update_staker_info(&staker, dao_id, staker_info);
             }
 
             Self::deposit_event(Event::<T>::StakerClaimed {
                 staker,
-                core: core_id,
+                dao: dao_id,
                 era,
                 amount: staker_reward,
             });
@@ -894,17 +882,17 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Claim core reward for the specified era.
+        /// Claim dao reward for the specified era.
         ///
         /// In case reward cannot be claimed or was already claimed, an error is raised.
         ///
-        /// - `core_id`: Id of the core to claim rewards from.
+        /// - `dao_id`: Id of the dao to claim rewards from.
         /// - `era`: Era for which rewards are to be claimed.
         #[pallet::call_index(7)]
-        #[pallet::weight(<T as Config>::WeightInfo::core_claim_rewards())]
-        pub fn core_claim_rewards(
+        #[pallet::weight(<T as Config>::WeightInfo::dao_claim_rewards())]
+        pub fn dao_claim_rewards(
             origin: OriginFor<T>,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
             #[pallet::compact] era: Era,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
@@ -914,20 +902,20 @@ pub mod pallet {
             let current_era = Self::current_era();
             ensure!(era < current_era, Error::<T>::IncorrectEra);
 
-            let mut core_stake_info = Self::core_stake_info(core_id, era).unwrap_or_default();
+            let mut dao_stake_info = Self::dao_stake_info(dao_id, era).unwrap_or_default();
             ensure!(
-                !core_stake_info.reward_claimed,
+                !dao_stake_info.reward_claimed,
                 Error::<T>::RewardAlreadyClaimed,
             );
             ensure!(
-                core_stake_info.total > Zero::zero(),
+                dao_stake_info.total > Zero::zero(),
                 Error::<T>::NoStakeAvailable,
             );
 
             let reward_and_stake =
                 Self::general_era_info(era).ok_or(Error::<T>::UnknownEraReward)?;
 
-            let (reward, _) = Self::core_stakers_split(&core_stake_info, &reward_and_stake);
+            let (reward, _) = Self::dao_stakers_split(&dao_stake_info, &reward_and_stake);
 
             let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
                 &Self::account_id(),
@@ -936,21 +924,21 @@ pub mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            let core_account =
-                <pallet_dao_manager::Pallet<T> as CoreAccountDerivation<T>>::derive_core_account(
-                    core_id,
+            let dao_account =
+                <pallet_dao_manager::Pallet<T> as DaoAccountDerivation<T>>::derive_dao_account(
+                    dao_id,
                 );
 
-            <T as pallet::Config>::Currency::resolve_creating(&core_account, reward_imbalance);
-            Self::deposit_event(Event::<T>::CoreClaimed {
-                core: core_id,
-                destination_account: core_account,
+            <T as pallet::Config>::Currency::resolve_creating(&dao_account, reward_imbalance);
+            Self::deposit_event(Event::<T>::DaoClaimed {
+                dao: dao_id,
+                destination_account: dao_account,
                 era,
                 amount: reward,
             });
 
-            core_stake_info.reward_claimed = true;
-            CoreEraStake::<T>::insert(core_id, era, core_stake_info);
+            dao_stake_info.reward_claimed = true;
+            CoreEraStake::<T>::insert(dao_id, era, dao_stake_info);
 
             Ok(().into())
         }
@@ -976,63 +964,59 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Move stake from one core to another.
+        /// Move stake from one dao to another.
         ///
         /// The dispatch origin for this call must be _Signed_ by the staker's account.
         ///
-        /// - `from_core`: Id of the core to move stake from.
+        /// - `from_dao`: Id of the dao to move stake from.
         /// - `amount`: Amount to move.
-        /// - `to_core`: Id of the core to move stake to.
+        /// - `to_dao`: Id of the dao to move stake to.
         #[pallet::call_index(9)]
         #[pallet::weight(<T as Config>::WeightInfo::move_stake())]
         pub fn move_stake(
             origin: OriginFor<T>,
-            from_core: T::CoreId,
+            from_dao: T::DaoId,
             #[pallet::compact] amount: BalanceOf<T>,
-            to_core: T::CoreId,
+            to_dao: T::DaoId,
         ) -> DispatchResultWithPostInfo {
             Self::ensure_not_halted()?;
 
             let staker = ensure_signed(origin)?;
 
-            ensure!(from_core != to_core, Error::<T>::MoveStakeToSameCore);
-            ensure!(
-                Self::core_info(to_core).is_some(),
-                Error::<T>::NotRegistered
-            );
+            ensure!(from_dao != to_dao, Error::<T>::MoveStakeToSameDao);
+            ensure!(Self::dao_info(to_dao).is_some(), Error::<T>::NotRegistered);
 
             let current_era = Self::current_era();
-            let mut from_staker_info = Self::staker_info(from_core, &staker);
-            let mut from_core_info =
-                Self::core_stake_info(from_core, current_era).unwrap_or_default();
+            let mut from_staker_info = Self::staker_info(from_dao, &staker);
+            let mut from_dao_info = Self::dao_stake_info(from_dao, current_era).unwrap_or_default();
 
             let unstaked_amount = Self::internal_unstake(
                 &mut from_staker_info,
-                &mut from_core_info,
+                &mut from_dao_info,
                 amount,
                 current_era,
             )?;
 
-            let mut to_staker_info = Self::staker_info(to_core, &staker);
-            let mut to_core_info = Self::core_stake_info(to_core, current_era).unwrap_or_default();
+            let mut to_staker_info = Self::staker_info(to_dao, &staker);
+            let mut to_dao_info = Self::dao_stake_info(to_dao, current_era).unwrap_or_default();
 
             Self::internal_stake(
                 &mut to_staker_info,
-                &mut to_core_info,
+                &mut to_dao_info,
                 unstaked_amount,
                 current_era,
             )?;
 
-            CoreEraStake::<T>::insert(from_core, current_era, from_core_info);
-            Self::update_staker_info(&staker, from_core, from_staker_info);
+            CoreEraStake::<T>::insert(from_dao, current_era, from_dao_info);
+            Self::update_staker_info(&staker, from_dao, from_staker_info);
 
-            CoreEraStake::<T>::insert(to_core, current_era, to_core_info);
-            Self::update_staker_info(&staker, to_core, to_staker_info);
+            CoreEraStake::<T>::insert(to_dao, current_era, to_dao_info);
+            Self::update_staker_info(&staker, to_dao, to_staker_info);
 
             Self::deposit_event(Event::<T>::StakeMoved {
                 staker,
-                from_core,
-                to_core,
+                from_dao,
+                to_dao,
                 amount: unstaked_amount,
             });
 
@@ -1042,16 +1026,16 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// Internal function responsible for validating a stake and updating in-place
-        /// both the staker's and core staking info.
+        /// both the staker's and dao staking info.
         fn internal_stake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
-            staking_info: &mut CoreStakeInfo<BalanceOf<T>>,
+            staking_info: &mut DaoStakeInfo<BalanceOf<T>>,
             amount: BalanceOf<T>,
             current_era: Era,
         ) -> Result<(), Error<T>> {
             ensure!(
                 !staker_info.latest_staked_value().is_zero()
-                    || staking_info.number_of_stakers < T::MaxStakersPerCore::get(),
+                    || staking_info.number_of_stakers < T::MaxStakersPerDao::get(),
                 Error::<T>::MaxStakersReached
             );
             if staker_info.latest_staked_value().is_zero() {
@@ -1078,10 +1062,10 @@ pub mod pallet {
         }
 
         /// Internal function responsible for validating an unstake and updating in-place
-        /// both the staker's and core staking info.
+        /// both the staker's and dao staking info.
         fn internal_unstake(
             staker_info: &mut StakerInfo<BalanceOf<T>>,
-            core_stake_info: &mut CoreStakeInfo<BalanceOf<T>>,
+            dao_stake_info: &mut DaoStakeInfo<BalanceOf<T>>,
             amount: BalanceOf<T>,
             current_era: Era,
         ) -> Result<BalanceOf<T>, Error<T>> {
@@ -1090,16 +1074,16 @@ pub mod pallet {
 
             let remaining = staked_value.saturating_sub(amount);
             let value_to_unstake = if remaining < T::MinimumStakingAmount::get() {
-                core_stake_info.number_of_stakers =
-                    core_stake_info.number_of_stakers.saturating_sub(1);
+                dao_stake_info.number_of_stakers =
+                    dao_stake_info.number_of_stakers.saturating_sub(1);
                 staked_value
             } else {
                 amount
             };
 
-            let new_total = core_stake_info.total.saturating_sub(value_to_unstake);
+            let new_total = dao_stake_info.total.saturating_sub(value_to_unstake);
 
-            core_stake_info.total = new_total;
+            dao_stake_info.total = new_total;
 
             ensure!(
                 value_to_unstake > Zero::zero(),
@@ -1166,36 +1150,36 @@ pub mod pallet {
             GeneralEraInfo::<T>::insert(era, era_info);
         }
 
-        /// Adds `stakers` and `cores` rewards to the reward pool.
+        /// Adds `stakers` and `DAOs` rewards to the reward pool.
         ///
         /// - `inflation`: Total inflation for the era.
         pub fn rewards(inflation: NegativeImbalanceOf<T>) {
-            let (core_part, stakers_part) = <T as Config>::RewardRatio::get();
+            let (dao_part, stakers_part) = <T as Config>::RewardRatio::get();
 
-            let (core, stakers) = inflation.ration(core_part, stakers_part);
+            let (dao, stakers) = inflation.ration(dao_part, stakers_part);
 
             RewardAccumulator::<T>::mutate(|accumulated_reward| {
-                accumulated_reward.core = accumulated_reward.core.saturating_add(core.peek());
+                accumulated_reward.dao = accumulated_reward.dao.saturating_add(dao.peek());
                 accumulated_reward.stakers =
                     accumulated_reward.stakers.saturating_add(stakers.peek());
             });
 
             <T as pallet::Config>::Currency::resolve_creating(
                 &Self::account_id(),
-                stakers.merge(core),
+                stakers.merge(dao),
             );
         }
 
-        /// Updates staker info for a core.
+        /// Updates staker info for a dao.
         fn update_staker_info(
             staker: &T::AccountId,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
             staker_info: StakerInfo<BalanceOf<T>>,
         ) {
             if staker_info.is_empty() {
-                GeneralStakerInfo::<T>::remove(core_id, staker)
+                GeneralStakerInfo::<T>::remove(dao_id, staker)
             } else {
-                GeneralStakerInfo::<T>::insert(core_id, staker, staker_info)
+                GeneralStakerInfo::<T>::insert(dao_id, staker, staker_info)
             }
         }
 
@@ -1222,27 +1206,27 @@ pub mod pallet {
             }
         }
 
-        /// Calculate reward split between core and stakers.
+        /// Calculate reward split between dao and stakers.
         ///
-        /// Returns (core reward, joint stakers reward)
-        pub(crate) fn core_stakers_split(
-            core_info: &CoreStakeInfo<BalanceOf<T>>,
+        /// Returns (DAO reward, joint stakers reward)
+        pub(crate) fn dao_stakers_split(
+            dao_info: &DaoStakeInfo<BalanceOf<T>>,
             era_info: &EraInfo<BalanceOf<T>>,
         ) -> (BalanceOf<T>, BalanceOf<T>) {
-            let core_stake_portion = if core_info.active {
-                Perbill::from_rational(core_info.total, era_info.active_stake)
+            let dao_stake_portion = if dao_info.active {
+                Perbill::from_rational(dao_info.total, era_info.active_stake)
             } else {
                 Perbill::zero()
             };
-            let stakers_stake_portion = Perbill::from_rational(core_info.total, era_info.staked);
+            let stakers_stake_portion = Perbill::from_rational(dao_info.total, era_info.staked);
 
-            let core_reward_part = core_stake_portion * era_info.rewards.core;
+            let dao_reward_part = dao_stake_portion * era_info.rewards.dao;
             let stakers_joint_reward = stakers_stake_portion * era_info.rewards.stakers;
 
-            (core_reward_part, stakers_joint_reward)
+            (dao_reward_part, stakers_joint_reward)
         }
 
-        /// Used to copy all `CoreStakeInfo` from the ending era over to the next era.
+        /// Used to copy all `DaoStakeInfo` from the ending era over to the next era.
         fn rotate_staking_info(current_era: Era) -> (Weight, BalanceOf<T>) {
             let next_era = current_era + 1;
 
@@ -1250,11 +1234,11 @@ pub mod pallet {
 
             let mut new_active_stake: BalanceOf<T> = Zero::zero();
 
-            for core_id in RegisteredCore::<T>::iter_keys() {
+            for dao_id in RegisteredCore::<T>::iter_keys() {
                 consumed_weight = consumed_weight.saturating_add(T::DbWeight::get().reads(1));
 
-                if let Some(mut staking_info) = Self::core_stake_info(core_id, current_era) {
-                    if staking_info.total >= <T as Config>::StakeThresholdForActiveCore::get() {
+                if let Some(mut staking_info) = Self::dao_stake_info(dao_id, current_era) {
+                    if staking_info.total >= <T as Config>::StakeThresholdForActiveDao::get() {
                         staking_info.active = true;
                         new_active_stake += staking_info.total;
                     } else {
@@ -1262,7 +1246,7 @@ pub mod pallet {
                     }
 
                     staking_info.reward_claimed = false;
-                    CoreEraStake::<T>::insert(core_id, next_era, staking_info);
+                    CoreEraStake::<T>::insert(dao_id, next_era, staking_info);
 
                     consumed_weight =
                         consumed_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -1288,36 +1272,36 @@ pub mod pallet {
             }
         }
 
-        /// Sharded execution of the core unregistration process.
+        /// Sharded execution of the dao unregistration process.
         ///
         /// This function is called by the [`ProcessMessage`] trait implemented in [`primitives::ProcessUnregistrationMessages`]
-        pub(crate) fn process_core_unregistration_shard(
+        pub(crate) fn process_dao_unregistration_shard(
             stakers: u32,
-            core_id: T::CoreId,
+            dao_id: T::DaoId,
             start_era: Era,
             chunk_size: u64,
         ) -> DispatchResultWithPostInfo {
             let mut staker_info_prefix =
-                Self::core_unregistering_staker_list(core_id).unwrap_or_default();
+                Self::dao_unregistering_staker_list(dao_id).unwrap_or_default();
 
             let mut corrected_staker_length_fee = Zero::zero();
 
-            let mut core_stake_info =
-                Self::core_unregistering_staker_info(core_id).unwrap_or_default();
+            let mut dao_stake_info =
+                Self::dao_unregistering_staker_info(dao_id).unwrap_or_default();
 
             let mut unsteked_count: u64 = 0;
             while let Some(staker) = staker_info_prefix.pop() {
-                let mut staker_info = Self::staker_info(core_id, &staker);
+                let mut staker_info = Self::staker_info(dao_id, &staker);
 
                 let latest_staked_value = staker_info.latest_staked_value();
 
                 if let Ok(value_to_unstake) = Self::internal_unstake(
                     &mut staker_info,
-                    &mut core_stake_info,
+                    &mut dao_stake_info,
                     latest_staked_value,
                     start_era,
                 ) {
-                    UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
+                    UnregisteredCoreStakeInfo::<T>::insert(dao_id, dao_stake_info.clone());
                     let mut ledger = Self::ledger(&staker);
                     ledger.unbonding_info.add(UnlockingChunk {
                         amount: value_to_unstake,
@@ -1331,11 +1315,11 @@ pub mod pallet {
 
                     Self::update_ledger(&staker, ledger);
 
-                    Self::update_staker_info(&staker, core_id, staker_info);
+                    Self::update_staker_info(&staker, dao_id, staker_info);
 
                     Self::deposit_event(Event::<T>::Unstaked {
                         staker: staker.clone(),
-                        core: core_id,
+                        dao: dao_id,
                         amount: value_to_unstake,
                     });
                     corrected_staker_length_fee += <T as Config>::WeightInfo::unstake();
@@ -1349,7 +1333,7 @@ pub mod pallet {
                 if unsteked_count >= chunk_size {
                     let total_remaning_stakers = stakers.saturating_sub(unsteked_count as u32);
                     let message: Vec<u8> = primitives::UnregisterMessage::<T> {
-                        core_id,
+                        dao_id,
                         stakers_to_unstake: total_remaning_stakers,
                         era: start_era,
                     }
@@ -1359,21 +1343,21 @@ pub mod pallet {
                         message.as_slice(),
                     ));
 
-                    Self::deposit_event(Event::<T>::CoreUnregistrationChunksProcessed {
-                        core: core_id,
+                    Self::deposit_event(Event::<T>::DaoUnregistrationChunksProcessed {
+                        dao: dao_id,
                         accounts_processed_in_this_chunk: unsteked_count,
                         accounts_left: total_remaning_stakers as u64,
                     });
-                    UnregisteredCoreStakeInfo::<T>::insert(core_id, core_stake_info.clone());
-                    UnregisteredCoreStakers::<T>::insert(core_id, staker_info_prefix);
+                    UnregisteredCoreStakeInfo::<T>::insert(dao_id, dao_stake_info.clone());
+                    UnregisteredCoreStakers::<T>::insert(dao_id, staker_info_prefix);
 
                     return Ok(Some(corrected_staker_length_fee).into());
                 }
             }
 
-            Self::deposit_event(Event::<T>::CoreUnregistrationQueueFinished { core: core_id });
-            UnregisteredCoreStakers::<T>::remove(core_id);
-            UnregisteredCoreStakeInfo::<T>::remove(core_id);
+            Self::deposit_event(Event::<T>::DaoUnregistrationQueueFinished { dao: dao_id });
+            UnregisteredCoreStakers::<T>::remove(dao_id);
+            UnregisteredCoreStakeInfo::<T>::remove(dao_id);
 
             Ok(Some(corrected_staker_length_fee).into())
         }

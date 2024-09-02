@@ -53,7 +53,7 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
-use pallet_dao_manager::{origin::INV4Origin, INV4Lookup};
+use pallet_dao_manager::{origin::DaoOrigin, DaoLookup};
 use pallet_identity::legacy::IdentityInfo;
 use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
@@ -184,7 +184,7 @@ pub type Executive = frame_executive::Executive<
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
-/// to even the core data structures.
+/// to even the dao data structures.
 pub mod opaque {
     use super::*;
     use sp_runtime::{
@@ -310,7 +310,7 @@ impl Contains<RuntimeCall> for MaintenanceFilter {
     fn contains(c: &RuntimeCall) -> bool {
         !matches!(c, |RuntimeCall::XTokens(_)| RuntimeCall::PolkadotXcm(_)
             | RuntimeCall::OrmlXcm(_)
-            | RuntimeCall::DaoStaking(pallet_dao_staking::Call::stake { .. }))
+            | RuntimeCall::OcifStaking(pallet_dao_staking::Call::stake { .. }))
     }
 }
 
@@ -382,7 +382,7 @@ impl frame_system::Config for Runtime {
     /// The aggregated dispatch type that is available for extrinsics.
     type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = INV4Lookup<Runtime>;
+    type Lookup = DaoLookup<Runtime>;
     /// The index type for storing how many extrinsics an account has signed.
     type Nonce = Nonce;
     /// The type for hashing blocks and tries.
@@ -834,7 +834,7 @@ impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeO
     fn from(val: RuntimeOrigin) -> Self {
         match val.caller {
             OriginCaller::system(l) => Ok(l),
-            OriginCaller::DaoManager(INV4Origin::Multisig(l)) => {
+            OriginCaller::INV4(DaoOrigin::Multisig(l)) => {
                 Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
             }
             _ => Err(val),
@@ -884,9 +884,9 @@ construct_runtime_modified!(
 
         // InvArch stuff
         CheckedInflation: pallet_checked_inflation = 50,
-        DaoStaking: pallet_dao_staking = 51,
+        OcifStaking: pallet_dao_staking = 51,
 
-        DaoManager: pallet_dao_manager = 71,
+        INV4: pallet_dao_manager = 71,
         CoreAssets: orml_tokens2 = 72,
         Rings: pallet_rings = 73,
 
@@ -912,7 +912,7 @@ mod benches {
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
         [pallet_dao_manager, dao_manager]
-        [pallet_dao_staking, DaoStaking]
+        [pallet_dao_staking, OcifStaking]
         [pallet_checked_inflation, CheckedInflation]
     );
 }

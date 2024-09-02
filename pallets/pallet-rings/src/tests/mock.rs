@@ -228,13 +228,13 @@ impl pallet_xcm::Config for Test {
 const UNIT: u128 = 1000000000000;
 
 orml_traits2::parameter_type_with_key! {
-    pub CoreExistentialDeposits: |_currency_id: <Test as pallet_dao_manager::Config>::CoreId| -> Balance {
+    pub DaoExistentialDeposits: |_currency_id: <Test as pallet_dao_manager::Config>::DaoId| -> Balance {
         1u128
     };
 }
 
-pub struct CoreDustRemovalWhitelist;
-impl Contains<AccountId> for CoreDustRemovalWhitelist {
+pub struct DaoDustRemovalWhitelist;
+impl Contains<AccountId> for DaoDustRemovalWhitelist {
     fn contains(_: &AccountId) -> bool {
         true
     }
@@ -244,12 +244,12 @@ pub struct DisallowIfFrozen;
 impl
     orml_traits2::currency::OnTransfer<
         AccountId,
-        <Test as pallet_dao_manager::Config>::CoreId,
+        <Test as pallet_dao_manager::Config>::DaoId,
         Balance,
     > for DisallowIfFrozen
 {
     fn on_transfer(
-        currency_id: <Test as pallet_dao_manager::Config>::CoreId,
+        currency_id: <Test as pallet_dao_manager::Config>::DaoId,
         _from: &AccountId,
         _to: &AccountId,
         _amount: Balance,
@@ -265,20 +265,20 @@ impl
 }
 
 pub struct HandleNewMembers;
-impl orml_traits2::Happened<(AccountId, <Test as pallet_dao_manager::Config>::CoreId)>
+impl orml_traits2::Happened<(AccountId, <Test as pallet_dao_manager::Config>::DaoId)>
     for HandleNewMembers
 {
-    fn happened((member, core_id): &(AccountId, <Test as pallet_dao_manager::Config>::CoreId)) {
-        dao_manager::add_member(core_id, member)
+    fn happened((member, dao_id): &(AccountId, <Test as pallet_dao_manager::Config>::DaoId)) {
+        dao_manager::add_member(dao_id, member)
     }
 }
 
 pub struct HandleRemovedMembers;
-impl orml_traits2::Happened<(AccountId, <Test as pallet_dao_manager::Config>::CoreId)>
+impl orml_traits2::Happened<(AccountId, <Test as pallet_dao_manager::Config>::DaoId)>
     for HandleRemovedMembers
 {
-    fn happened((member, core_id): &(AccountId, <Test as pallet_dao_manager::Config>::CoreId)) {
-        dao_manager::remove_member(core_id, member)
+    fn happened((member, dao_id): &(AccountId, <Test as pallet_dao_manager::Config>::DaoId)) {
+        dao_manager::remove_member(dao_id, member)
     }
 }
 
@@ -286,7 +286,7 @@ pub struct INV4TokenHooks;
 impl
     orml_traits2::currency::MutationHooks<
         AccountId,
-        <Test as pallet_dao_manager::Config>::CoreId,
+        <Test as pallet_dao_manager::Config>::DaoId,
         Balance,
     > for INV4TokenHooks
 {
@@ -304,12 +304,12 @@ impl orml_tokens2::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
-    type CurrencyId = <Test as pallet_dao_manager::Config>::CoreId;
+    type CurrencyId = <Test as pallet_dao_manager::Config>::DaoId;
     type WeightInfo = ();
-    type ExistentialDeposits = CoreExistentialDeposits;
+    type ExistentialDeposits = DaoExistentialDeposits;
     type MaxLocks = ConstU32<0u32>;
     type MaxReserves = ConstU32<0u32>;
-    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
+    type DustRemovalWhitelist = DaoDustRemovalWhitelist;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = INV4TokenHooks;
 }
@@ -317,10 +317,10 @@ impl orml_tokens2::Config for Test {
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
-    pub const CoreSeedBalance: Balance = 1000000u128;
-    pub const CoreCreationFee: Balance = UNIT;
+    pub const DaoSeedBalance: Balance = 1000000u128;
+    pub const DaoCreationFee: Balance = UNIT;
     pub const StringLimit: u32 = 2125;
-    pub const RelayCoreCreationFee: Balance = UNIT;
+    pub const RelayDaoCreationFee: Balance = UNIT;
 }
 
 pub type AssetId = u32;
@@ -448,21 +448,21 @@ impl MultisigFeeHandler<Test> for FeeCharger {
 
 impl pallet_dao_manager::Config for Test {
     type MaxMetadata = MaxMetadata;
-    type CoreId = u32;
+    type DaoId = u32;
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type CoreSeedBalance = CoreSeedBalance;
+    type DaoSeedBalance = DaoSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    type CoreCreationFee = CoreCreationFee;
+    type DaoCreationFee = DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
     type RelayAssetId = RelayAssetId;
-    type RelayCoreCreationFee = RelayCoreCreationFee;
+    type RelayDaoCreationFee = RelayDaoCreationFee;
     type MaxCallSize = ConstU32<51200>;
 
     type ParaId = ConstU32<2125>;

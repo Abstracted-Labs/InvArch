@@ -1,8 +1,6 @@
 # Rings Pallet
 
 ## Overview
-*TODO!(Rename all code referenced of core to DAO).*  
-*core == DAO or multisig.*  
 
 The Rings pallet provides a cross-consensus message (XCM) abstraction layer for DAO Management, enabling them to manage assets effortlessly across multiple chains. It abstracts XCM complexities, facilitating easier handling of cross-chain transactions.
 

@@ -8,7 +8,7 @@
 
 use crate::{
     fee_handling::{FeeAsset, MultisigFeeHandler},
-    origin::{INV4Origin, MultisigInternalOrigin},
+    origin::{DaoOrigin, MultisigInternalOrigin},
     Config, Error,
 };
 use frame_support::{dispatch::GetDispatchInfo, pallet_prelude::*};
@@ -17,7 +17,7 @@ use sp_runtime::traits::Dispatchable;
 
 /// Dispatch a call executing pre/post dispatch for proper fee handling.
 pub fn dispatch_call<T: Config>(
-    core_id: <T as Config>::CoreId,
+    dao_id: <T as Config>::DaoId,
     fee_asset: &FeeAsset,
     call: <T as Config>::RuntimeCall,
 ) -> DispatchResultWithPostInfo
@@ -25,9 +25,9 @@ where
     T::AccountId: From<[u8; 32]>,
 {
     // Create new custom origin as the multisig.
-    let internal_origin = MultisigInternalOrigin::new(core_id);
+    let internal_origin = MultisigInternalOrigin::new(dao_id);
     let multisig_account = internal_origin.to_account_id();
-    let origin = INV4Origin::Multisig(internal_origin).into();
+    let origin = DaoOrigin::Multisig(internal_origin).into();
 
     let info = call.get_dispatch_info();
     let len = call.encode().len();

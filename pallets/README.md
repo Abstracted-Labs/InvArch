@@ -37,7 +37,7 @@ Currently, InvArch features a multichain multisignature solution & DAO staking p
 # Pallet Library
 
  ## [DAO Manager](./pallet-dao-manager/)
- - The DAO Manager pallet is designed to manage advanced virtual multisigs (DAOs), internally referred to as cores.
+ - The DAO Manager pallet is designed to manage advanced virtual multisigs (DAOs), OLD: internally referred to as cores.
     - [`Docs.rs`](https://abstracted-labs.github.io/InvArch/pallet_dao_manager/index.html)
  - Articles:
     - [`The SDK. (Old)`](https://invarch.medium.com/the-saturn-sdk-c46b4e40f46e)

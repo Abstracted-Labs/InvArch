@@ -1,8 +1,6 @@
 # DAO Staking Pallet
 
 ## Overview
-*TODO!(Rename all code referenced of core to DAO).*  
-*core == DAO or multisig.*  
 
 The DAO Staking Pallet is a pallet designed to facilitate staking towards DAOs within a blockchain network. This pallet introduces a staking mechanism that allows two distinct sets of entities, namely DAOs and Stakers, to participate in the distribution of tokens from a predefined pot. The allocation of rewards is determined based on the amount staked by each entity and the total stake towards each DAO.
 
@@ -18,22 +16,22 @@ Stakers are individual accounts that engage in locking tokens in favor of a DAO.
 
 - `BlocksPerEra`: Defines the duration of an era in terms of block numbers.
 - `RegisterDeposit`: Specifies the deposit amount required for DAO registration.
-- `MaxStakersPerCore`: Limits the maximum number of Stakers that can simultaneously stake towards a single DAO.
+- `MaxStakersPerDao`: Limits the maximum number of Stakers that can simultaneously stake towards a single DAO.
 - `MinimumStakingAmount`: Sets the minimum amount required for a Staker to participate in staking.
 - `UnbondingPeriod`: Determines the period, in eras, required for unbonding staked tokens.
 - `RewardRatio`: Establishes the distribution ratio of rewards between DAOs and Stakers.
-- `StakeThresholdForActiveCore`: Sets the stake threshold required for a DAO to become `active`.
+- `StakeThresholdForActiveDao`: Sets the stake threshold required for a DAO to become `active`.
 
 ## Dispatchable Functions
 
-- `register_core`: Allows DAOs to register themselves in the system.
-- `unregister_core`: Enables DAOs to unregister from the system, initiating the unbonding period for Stakers.
-- `change_core_metadata`: Changes the metadata associated to a DAO.
+- `register_dao`: Allows DAOs to register themselves in the system.
+- `unregister_dao`: Enables DAOs to unregister from the system, initiating the unbonding period for Stakers.
+- `change_dao_metadata`: Changes the metadata associated to a DAO.
 - `stake`: Allows Stakers to lock tokens in favor of a DAO.
 - `unstake`: Unstakes tokens previously staked to a DAO, starting the unbonding period.
 - `withdraw_unstaked`: Allows Stakers to withdraw tokens that have completed the unbonding period.
 - `staker_claim_rewards`: Allows Stakers to claim available rewards.
-- `core_claim_rewards`: Allows rewards to be claimed for DAOs.
+- `dao_claim_rewards`: Allows rewards to be claimed for DAOs.
 - `halt_unhalt_pallet`: Allows Root to trigger a halt of the system, eras will stop counting and rewards won't be distributed.
 
 ## Events

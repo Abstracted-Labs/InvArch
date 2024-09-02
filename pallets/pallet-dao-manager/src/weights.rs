@@ -32,7 +32,7 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for `pallet_dao_manager`.
 pub trait WeightInfo {
-	fn create_core(m: u32, ) -> Weight;
+	fn create_dao(m: u32, ) -> Weight;
 	fn set_parameters(m: u32, ) -> Weight;
 	fn token_mint() -> Weight;
 	fn token_burn() -> Weight;
@@ -62,7 +62,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Storage: `INV4::CoreMembers` (r:0 w:1)
 	/// Proof: `INV4::CoreMembers` (`max_values`: None, `max_size`: Some(68), added: 2543, mode: `MaxEncodedLen`)
 	/// The range of component `m` is `[0, 10000]`.
-	fn create_core(m: u32, ) -> Weight {
+	fn create_dao(m: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `304`
 		//  Estimated: `6196`
@@ -209,7 +209,7 @@ impl WeightInfo for () {
 	/// Storage: `INV4::CoreMembers` (r:0 w:1)
 	/// Proof: `INV4::CoreMembers` (`max_values`: None, `max_size`: Some(68), added: 2543, mode: `MaxEncodedLen`)
 	/// The range of component `m` is `[0, 10000]`.
-	fn create_core(m: u32, ) -> Weight {
+	fn create_dao(m: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `304`
 		//  Estimated: `6196`

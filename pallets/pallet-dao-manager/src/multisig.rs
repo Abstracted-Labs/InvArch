@@ -1,10 +1,8 @@
 //! Multisig Operations.
 //!
 //! ## Overview
-//! *TODO!(Rename all code referenced of core to DAO).*  
-//! *core == DAO or multisig.*  
 //!
-//! Handles the core actions within an already established multisig.
+//! Handles the dao actions within an already established multisig.
 //!
 //! ### Core functionalities:
 //! - Minting/Burning voting tokens to existing and new members.
@@ -14,9 +12,9 @@
 
 use super::pallet::{self, *};
 use crate::{
-    account_derivation::CoreAccountDerivation,
+    account_derivation::DaoAccountDerivation,
     fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
-    origin::{ensure_multisig, INV4Origin},
+    origin::{ensure_multisig, DaoOrigin},
     voting::{Tally, Vote},
 };
 use codec::DecodeLimit;
@@ -65,7 +63,7 @@ pub type MultisigOperationOf<T> = MultisigOperation<
 
 impl<T: Config> Pallet<T>
 where
-    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+    Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::AccountId: From<[u8; 32]>,
@@ -76,15 +74,15 @@ where
         amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
-        // Grab the core id from the origin
-        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-        let core_id = core_origin.id;
+        // Grab the dao id from the origin
+        let dao_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let dao_id = dao_origin.id;
 
-        // Mint the core's voting token to the target.
-        T::AssetsProvider::mint_into(core_id, &target, amount)?;
+        // Mint the dao's voting token to the target.
+        T::AssetsProvider::mint_into(dao_id, &target, amount)?;
 
         Self::deposit_event(Event::Minted {
-            core_id,
+            dao_id,
             target,
             amount,
         });
@@ -98,21 +96,15 @@ where
         amount: BalanceOf<T>,
         target: T::AccountId,
     ) -> DispatchResult {
-        // Grab the core id from the origin
-        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-        let core_id = core_origin.id;
+        // Grab the dao id from the origin
+        let dao_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let dao_id = dao_origin.id;
 
-        // Burn the core's voting token from the target.
-        T::AssetsProvider::burn_from(
-            core_id,
-            &target,
-            amount,
-            Precision::Exact,
-            Fortitude::Polite,
-        )?;
+        // Burn the dao's voting token from the target.
+        T::AssetsProvider::burn_from(dao_id, &target, amount, Precision::Exact, Fortitude::Polite)?;
 
         Self::deposit_event(Event::Burned {
-            core_id,
+            dao_id,
             target,
             amount,
         });
@@ -123,7 +115,7 @@ where
     /// Inner function for the operate_multisig call.
     pub(crate) fn inner_operate_multisig(
         caller: OriginFor<T>,
-        core_id: T::CoreId,
+        dao_id: T::DaoId,
         metadata: Option<BoundedVec<u8, T::MaxMetadata>>,
         fee_asset: FeeAsset,
         call: Box<<T as Config>::RuntimeCall>,
@@ -131,23 +123,23 @@ where
         let owner = ensure_signed(caller)?;
 
         // Get the voting token balance of the caller
-        let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
+        let owner_balance: BalanceOf<T> = T::AssetsProvider::balance(dao_id, &owner);
 
         ensure!(!owner_balance.is_zero(), Error::<T>::NoPermission);
 
-        // Get the minimum support value of the target core
-        let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(core_id)
-            .ok_or(Error::<T>::CoreNotFound)?;
+        // Get the minimum support value of the target DAO
+        let (minimum_support, _) = Pallet::<T>::minimum_support_and_required_approval(dao_id)
+            .ok_or(Error::<T>::DaoNotFound)?;
 
-        // Get the total issuance of the core's voting token
-        let total_issuance: BalanceOf<T> = T::AssetsProvider::total_issuance(core_id);
+        // Get the total issuance of the dao's voting token
+        let total_issuance: BalanceOf<T> = T::AssetsProvider::total_issuance(dao_id);
 
         // Compute the call hash
         let call_hash = <<T as frame_system::Config>::Hashing as Hash>::hash_of(&call);
 
         // Make sure this exact multisig call doesn't already exist
         ensure!(
-            Multisig::<T>::get(core_id, call_hash).is_none(),
+            Multisig::<T>::get(dao_id, call_hash).is_none(),
             Error::<T>::MultisigCallAlreadyExists
         );
 
@@ -155,11 +147,11 @@ where
         // There is no need to check against required_approval as it's assumed the caller is voting aye
         if Perbill::from_rational(owner_balance, total_issuance) >= minimum_support {
             let dispatch_result =
-                crate::dispatch::dispatch_call::<T>(core_id, &fee_asset, *call.clone());
+                crate::dispatch::dispatch_call::<T>(dao_id, &fee_asset, *call.clone());
 
             Self::deposit_event(Event::MultisigExecuted {
-                core_id,
-                executor_account: Self::derive_core_account(core_id),
+                dao_id,
+                executor_account: Self::derive_dao_account(dao_id),
                 voter: owner,
                 call_hash,
                 call: *call,
@@ -189,7 +181,7 @@ where
 
             // Insert proposal in storage, it's now in the voting stage
             Multisig::<T>::insert(
-                core_id,
+                dao_id,
                 call_hash,
                 MultisigOperation {
                     tally: Tally::from_parts(
@@ -209,8 +201,8 @@ where
             );
 
             Self::deposit_event(Event::MultisigVoteStarted {
-                core_id,
-                executor_account: Self::derive_core_account(core_id),
+                dao_id,
+                executor_account: Self::derive_dao_account(dao_id),
                 voter: owner,
                 votes_added: Vote::Aye(owner_balance),
                 call_hash,
@@ -223,15 +215,15 @@ where
     /// Inner function for the vote_multisig call.
     pub(crate) fn inner_vote_multisig(
         caller: OriginFor<T>,
-        core_id: T::CoreId,
+        dao_id: T::DaoId,
         call_hash: T::Hash,
         aye: bool,
     ) -> DispatchResultWithPostInfo {
-        Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
+        Multisig::<T>::try_mutate_exists(dao_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
             // Get the voting token balance of the caller
-            let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(core_id, &owner);
+            let voter_balance: BalanceOf<T> = T::AssetsProvider::balance(dao_id, &owner);
 
             // If caller doesn't own the token, they have no voting power.
             ensure!(!voter_balance.is_zero(), Error::<T>::NoPermission);
@@ -239,10 +231,10 @@ where
             // Get the multisig call data from the storage
             let mut old_data = data.take().ok_or(Error::<T>::MultisigCallNotFound)?;
 
-            // Get the minimum support and required approval values of the target core
+            // Get the minimum support and required approval values of the target DAO
             let (minimum_support, required_approval) =
-                Pallet::<T>::minimum_support_and_required_approval(core_id)
-                    .ok_or(Error::<T>::CoreNotFound)?;
+                Pallet::<T>::minimum_support_and_required_approval(dao_id)
+                    .ok_or(Error::<T>::DaoNotFound)?;
 
             let new_vote_record = if aye {
                 Vote::Aye(voter_balance)
@@ -255,8 +247,8 @@ where
                 .tally
                 .process_vote(owner.clone(), Some(new_vote_record))?;
 
-            let support = old_data.tally.support(core_id);
-            let approval = old_data.tally.approval(core_id);
+            let support = old_data.tally.support(dao_id);
+            let approval = old_data.tally.approval(dao_id);
 
             // Check if the multisig proposal passes the thresholds with the added vote
             if (support >= minimum_support) && (approval >= required_approval) {
@@ -272,14 +264,14 @@ where
 
                 // Dispatch the call and get the result
                 let dispatch_result = crate::dispatch::dispatch_call::<T>(
-                    core_id,
+                    dao_id,
                     &old_data.fee_asset,
                     decoded_call.clone(),
                 );
 
                 Self::deposit_event(Event::MultisigExecuted {
-                    core_id,
-                    executor_account: Self::derive_core_account(core_id),
+                    dao_id,
+                    executor_account: Self::derive_dao_account(dao_id),
                     voter: owner,
                     call_hash,
                     call: decoded_call,
@@ -290,8 +282,8 @@ where
                 *data = Some(old_data.clone());
 
                 Self::deposit_event(Event::MultisigVoteAdded {
-                    core_id,
-                    executor_account: Self::derive_core_account(core_id),
+                    dao_id,
+                    executor_account: Self::derive_dao_account(dao_id),
                     voter: owner,
                     votes_added: new_vote_record,
                     current_votes: old_data.tally,
@@ -306,10 +298,10 @@ where
     /// Inner function for the withdraw_token_multisig call.
     pub(crate) fn inner_withdraw_vote_multisig(
         caller: OriginFor<T>,
-        core_id: T::CoreId,
+        dao_id: T::DaoId,
         call_hash: T::Hash,
     ) -> DispatchResultWithPostInfo {
-        Multisig::<T>::try_mutate_exists(core_id, call_hash, |data| {
+        Multisig::<T>::try_mutate_exists(dao_id, call_hash, |data| {
             let owner = ensure_signed(caller.clone())?;
 
             // Get the voting token balance of the caller
@@ -322,8 +314,8 @@ where
             *data = Some(old_data.clone());
 
             Self::deposit_event(Event::MultisigVoteWithdrawn {
-                core_id,
-                executor_account: Self::derive_core_account(core_id),
+                dao_id,
+                executor_account: Self::derive_dao_account(dao_id),
                 voter: owner,
                 votes_removed: old_vote,
                 call_hash,
@@ -339,22 +331,22 @@ where
         call_hash: T::Hash,
     ) -> DispatchResultWithPostInfo {
         // Ensure that this is being called by the multisig origin rather than by a normal caller
-        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-        let core_id = core_origin.id;
+        let dao_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let dao_id = dao_origin.id;
 
         // Remove the proposal from storage
-        Multisig::<T>::remove(core_id, call_hash);
+        Multisig::<T>::remove(dao_id, call_hash);
 
-        Self::deposit_event(Event::<T>::MultisigCanceled { core_id, call_hash });
+        Self::deposit_event(Event::<T>::MultisigCanceled { dao_id, call_hash });
 
         Ok(().into())
     }
 
-    pub fn add_member(core_id: &T::CoreId, member: &T::AccountId) {
-        CoreMembers::<T>::insert(core_id, member, ())
+    pub fn add_member(dao_id: &T::DaoId, member: &T::AccountId) {
+        CoreMembers::<T>::insert(dao_id, member, ())
     }
 
-    pub fn remove_member(core_id: &T::CoreId, member: &T::AccountId) {
-        CoreMembers::<T>::remove(core_id, member)
+    pub fn remove_member(dao_id: &T::DaoId, member: &T::AccountId) {
+        CoreMembers::<T>::remove(dao_id, member)
     }
 }

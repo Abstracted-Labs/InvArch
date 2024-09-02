@@ -461,21 +461,21 @@ parameter_types! {
 
 impl pallet_dao_manager::Config for Runtime {
     type MaxMetadata = crate::dao_manager::MaxMetadata;
-    type CoreId = crate::common_types::CommonId;
+    type DaoId = crate::common_types::CommonId;
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = crate::dao_manager::MaxCallers;
-    type CoreSeedBalance = crate::dao_manager::CoreSeedBalance;
+    type DaoSeedBalance = crate::dao_manager::DaoSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    type CoreCreationFee = crate::dao_manager::CoreCreationFee;
+    type DaoCreationFee = crate::dao_manager::DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Runtime>;
 
     type Tokens = Tokens;
     type RelayAssetId = RelayAssetId;
-    type RelayCoreCreationFee = crate::dao_manager::KSMCoreCreationFee;
+    type RelayDaoCreationFee = crate::dao_manager::KSMCoreCreationFee;
 
     type MaxCallSize = crate::dao_manager::MaxCallSize;
 
@@ -501,12 +501,12 @@ impl orml_tokens2::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
-    type CurrencyId = <Runtime as pallet_dao_manager::Config>::CoreId;
+    type CurrencyId = <Runtime as pallet_dao_manager::Config>::DaoId;
     type WeightInfo = ();
-    type ExistentialDeposits = crate::dao_manager::CoreExistentialDeposits;
+    type ExistentialDeposits = crate::dao_manager::DaoExistentialDeposits;
     type MaxLocks = ConstU32<0u32>;
     type MaxReserves = ConstU32<0u32>;
-    type DustRemovalWhitelist = crate::dao_manager::CoreDustRemovalWhitelist;
+    type DustRemovalWhitelist = crate::dao_manager::DaoDustRemovalWhitelist;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = ();
 }
@@ -526,7 +526,7 @@ construct_runtime!(
         Balances: pallet_balances,
         MsgQueue: mock_msg_queue,
         PolkadotXcm: pallet_xcm,
-        DaoManager: pallet_dao_manager,
+        INV4: pallet_dao_manager,
         Tokens: orml_tokens,
         CoreAssets: orml_tokens2,
         Rings: pallet_rings,

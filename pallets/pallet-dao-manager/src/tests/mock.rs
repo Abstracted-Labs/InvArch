@@ -37,7 +37,7 @@ frame_support::construct_runtime!(
         Tokens: orml_tokens,
         AssetRegistry: orml_asset_registry,
         CoreAssets: orml_tokens2,
-        DaoManager: pallet,
+        INV4: pallet,
     }
 );
 
@@ -90,8 +90,8 @@ impl pallet_balances::Config for Test {
 const UNIT: u128 = 1000000000000;
 const MICROUNIT: Balance = 1_000_000;
 
-pub struct CoreDustRemovalWhitelist;
-impl Contains<AccountId> for CoreDustRemovalWhitelist {
+pub struct DaoDustRemovalWhitelist;
+impl Contains<AccountId> for DaoDustRemovalWhitelist {
     fn contains(_: &AccountId) -> bool {
         true
     }
@@ -101,17 +101,17 @@ pub struct DisallowIfFrozen;
 impl
     orml_traits2::currency::OnTransfer<
         <Test as frame_system::Config>::AccountId,
-        <Test as pallet::Config>::CoreId,
+        <Test as pallet::Config>::DaoId,
         Balance,
     > for DisallowIfFrozen
 {
     fn on_transfer(
-        currency_id: <Test as pallet::Config>::CoreId,
+        currency_id: <Test as pallet::Config>::DaoId,
         _from: &AccountId,
         _to: &AccountId,
         _amount: Balance,
     ) -> sp_std::result::Result<(), orml_traits::parameters::sp_runtime::DispatchError> {
-        if let Some(true) = DaoManager::is_asset_frozen(currency_id) {
+        if let Some(true) = INV4::is_asset_frozen(currency_id) {
             Err(sp_runtime::DispatchError::Token(
                 sp_runtime::TokenError::Frozen,
             ))
@@ -125,11 +125,11 @@ pub struct HandleNewMembers;
 impl
     orml_traits2::Happened<(
         <Test as frame_system::Config>::AccountId,
-        <Test as pallet::Config>::CoreId,
+        <Test as pallet::Config>::DaoId,
     )> for HandleNewMembers
 {
-    fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
-        DaoManager::add_member(core_id, member)
+    fn happened((member, dao_id): &(AccountId, <Test as pallet::Config>::DaoId)) {
+        INV4::add_member(dao_id, member)
     }
 }
 
@@ -137,11 +137,11 @@ pub struct HandleRemovedMembers;
 impl
     orml_traits2::Happened<(
         <Test as frame_system::Config>::AccountId,
-        <Test as pallet::Config>::CoreId,
+        <Test as pallet::Config>::DaoId,
     )> for HandleRemovedMembers
 {
-    fn happened((member, core_id): &(AccountId, <Test as pallet::Config>::CoreId)) {
-        DaoManager::remove_member(core_id, member)
+    fn happened((member, dao_id): &(AccountId, <Test as pallet::Config>::DaoId)) {
+        INV4::remove_member(dao_id, member)
     }
 }
 
@@ -149,7 +149,7 @@ pub struct INV4TokenHooks;
 impl
     orml_traits2::currency::MutationHooks<
         <Test as frame_system::Config>::AccountId,
-        <Test as pallet::Config>::CoreId,
+        <Test as pallet::Config>::DaoId,
         Balance,
     > for INV4TokenHooks
 {
@@ -164,7 +164,7 @@ impl
 }
 
 orml_traits2::parameter_type_with_key! {
-    pub CoreExistentialDeposits: |_currency_id: <Test as pallet::Config>::CoreId| -> Balance {
+    pub DaoExistentialDeposits: |_currency_id: <Test as pallet::Config>::DaoId| -> Balance {
         CExistentialDeposit::get()
     };
 }
@@ -173,12 +173,12 @@ impl orml_tokens2::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Balance = Balance;
     type Amount = i128;
-    type CurrencyId = <Test as pallet::Config>::CoreId;
+    type CurrencyId = <Test as pallet::Config>::DaoId;
     type WeightInfo = ();
-    type ExistentialDeposits = CoreExistentialDeposits;
+    type ExistentialDeposits = DaoExistentialDeposits;
     type MaxLocks = ConstU32<0u32>;
     type MaxReserves = ConstU32<0u32>;
-    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
+    type DustRemovalWhitelist = DaoDustRemovalWhitelist;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = INV4TokenHooks;
 }
@@ -186,14 +186,14 @@ impl orml_tokens2::Config for Test {
 parameter_types! {
     pub const MaxMetadata: u32 = 10000;
     pub const MaxCallers: u32 = 10000;
-    pub const CoreSeedBalance: Balance = 1000000u128;
-    pub const CoreCreationFee: Balance = UNIT;
+    pub const DaoSeedBalance: Balance = 1000000u128;
+    pub const DaoCreationFee: Balance = UNIT;
     pub const GenesisHash: <Test as frame_system::Config>::Hash = H256([
         212, 46, 150, 6, 169, 149, 223, 228, 51, 220, 121, 85, 220, 42, 112, 244, 149, 243, 80,
         243, 115, 218, 162, 0, 9, 138, 232, 68, 55, 129, 106, 210,
     ]);
 
-    pub const RelayCoreCreationFee: Balance = UNIT;
+    pub const RelayDaoCreationFee: Balance = UNIT;
 }
 
 pub type AssetId = u32;
@@ -276,7 +276,7 @@ impl orml_tokens::Config for Test {
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
-    type DustRemovalWhitelist = CoreDustRemovalWhitelist;
+    type DustRemovalWhitelist = DaoDustRemovalWhitelist;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type CurrencyHooks = ();
@@ -337,21 +337,21 @@ impl MultisigFeeHandler<Test> for FeeCharger {
 
 impl pallet::Config for Test {
     type MaxMetadata = MaxMetadata;
-    type CoreId = u32;
+    type DaoId = u32;
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type RuntimeCall = RuntimeCall;
     type MaxCallers = MaxCallers;
-    type CoreSeedBalance = CoreSeedBalance;
+    type DaoSeedBalance = DaoSeedBalance;
     type AssetsProvider = CoreAssets;
     type RuntimeOrigin = RuntimeOrigin;
-    type CoreCreationFee = CoreCreationFee;
+    type DaoCreationFee = DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = crate::weights::SubstrateWeight<Test>;
 
     type Tokens = Tokens;
     type RelayAssetId = RelayAssetId;
-    type RelayCoreCreationFee = RelayCoreCreationFee;
+    type RelayDaoCreationFee = RelayDaoCreationFee;
 
     type MaxCallSize = MaxCallSize;
 
@@ -380,7 +380,7 @@ impl ExtBuilder {
                 (ALICE, INITIAL_BALANCE),
                 (BOB, INITIAL_BALANCE),
                 (CHARLIE, INITIAL_BALANCE),
-                (DaoManager::derive_core_account(0u32), INITIAL_BALANCE),
+                (INV4::derive_dao_account(0u32), INITIAL_BALANCE),
             ],
         }
         .assimilate_storage(&mut t)

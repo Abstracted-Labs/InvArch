@@ -67,7 +67,7 @@ pub trait MultisigFeeHandler<T: Config> {
         result: &DispatchResult,
     ) -> Result<(), TransactionValidityError>;
 
-    /// Charges the fee for creating the core (multisig).
+    /// Charges the fee for creating the dao (multisig).
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
             <T::Currency as Currency<T::AccountId>>::NegativeImbalance,

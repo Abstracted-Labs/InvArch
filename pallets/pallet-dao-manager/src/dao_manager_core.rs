@@ -1,20 +1,18 @@
 //! DAO creation and internal management.
 //!
 //! ## Overview
-//! *TODO!( rename all code referenced of core to dao).*
-//! *core == DAO or multisig.*
 //!
-//! This module handles the mechanics of creating multisigs or DAO's (referred to as "cores") and their lifecycle management. Key functions include:
+//! This module handles the mechanics of creating multisigs or DAO's (OLD: referred to as "cores") and their lifecycle management. Key functions include:
 //!
-//! - `inner_create_core`: Sets up a new dao, deriving its AccountId, distributing voting tokens, and handling creation fees.
+//! - `inner_create_dao`: Sets up a new dao, deriving its AccountId, distributing voting tokens, and handling creation fees.
 //! - `inner_set_parameters`: Updates the DAO's operational rules.
 //! - `is_asset_frozen`: Utility function for checking if a DAO's voting asset is frozen (can't be transferred by the owner).
 
 use super::pallet::*;
 use crate::{
-    account_derivation::CoreAccountDerivation,
+    account_derivation::DaoAccountDerivation,
     fee_handling::{FeeAsset, FeeAssetNegativeImbalance, MultisigFeeHandler},
-    origin::{ensure_multisig, INV4Origin},
+    origin::{ensure_multisig, DaoOrigin},
 };
 use frame_support::{
     pallet_prelude::*,
@@ -25,22 +23,22 @@ use frame_support::{
     },
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
-use primitives::CoreInfo;
+use primitives::DaoInfo;
 use sp_arithmetic::traits::{CheckedAdd, One};
 use sp_runtime::Perbill;
 
-pub type CoreIndexOf<T> = <T as Config>::CoreId;
+pub type DaoIndexOf<T> = <T as Config>::DaoId;
 
-pub type CoreMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
+pub type DaoMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxMetadata>;
 
 impl<T: Config> Pallet<T>
 where
-    Result<INV4Origin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+    Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
     <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
-    /// Inner function for the create_core call.
-    pub(crate) fn inner_create_core(
+    /// Inner function for the create_dao call.
+    pub(crate) fn inner_create_dao(
         origin: OriginFor<T>,
         metadata: BoundedVec<u8, T::MaxMetadata>,
         minimum_support: Perbill,
@@ -50,23 +48,23 @@ where
         NextCoreId::<T>::try_mutate(|next_id| -> DispatchResult {
             let creator = ensure_signed(origin)?;
 
-            // Increment core id counter
+            // Increment dao id counter
             let current_id = *next_id;
             *next_id = next_id
                 .checked_add(&One::one())
-                .ok_or(Error::<T>::NoAvailableCoreId)?;
+                .ok_or(Error::<T>::NoAvailableDaoId)?;
 
-            // Derive the account of this core based on the core id
-            let core_account = Self::derive_core_account(current_id);
+            // Derive the account of this dao based on the dao id
+            let dao_account = Self::derive_dao_account(current_id);
 
             // Mint base amount of voting token to the caller
-            let seed_balance = <T as Config>::CoreSeedBalance::get();
+            let seed_balance = <T as Config>::DaoSeedBalance::get();
             T::AssetsProvider::mint_into(current_id, &creator, seed_balance)?;
 
-            // Build the structure of the new core
+            // Build the structure of the new DAK
             // Tokens are set to frozen by default
-            let info = CoreInfo {
-                account: core_account.clone(),
+            let info = DaoInfo {
+                account: dao_account.clone(),
                 metadata: metadata.clone(),
                 minimum_support,
                 required_approval,
@@ -78,7 +76,7 @@ where
                 FeeAsset::Native => {
                     FeeAssetNegativeImbalance::Native(<T as Config>::Currency::withdraw(
                         &creator,
-                        T::CoreCreationFee::get(),
+                        T::DaoCreationFee::get(),
                         WithdrawReasons::TRANSACTION_PAYMENT,
                         ExistenceRequirement::KeepAlive,
                     )?)
@@ -88,7 +86,7 @@ where
                     FeeAssetNegativeImbalance::Relay(<T as Config>::Tokens::withdraw(
                         T::RelayAssetId::get(),
                         &creator,
-                        T::RelayCoreCreationFee::get(),
+                        T::RelayDaoCreationFee::get(),
                         Precision::Exact,
                         Preservation::Protect,
                         Fortitude::Force,
@@ -96,14 +94,14 @@ where
                 }
             });
 
-            // Update core storages
+            // Update dao storages
             CoreStorage::<T>::insert(current_id, info);
-            CoreByAccount::<T>::insert(core_account.clone(), current_id);
+            CoreByAccount::<T>::insert(dao_account.clone(), current_id);
 
-            Self::deposit_event(Event::CoreCreated {
-                core_account,
+            Self::deposit_event(Event::DaoCreated {
+                dao_account,
                 metadata: metadata.to_vec(),
-                core_id: current_id,
+                dao_id: current_id,
                 minimum_support,
                 required_approval,
             });
@@ -120,11 +118,11 @@ where
         required_approval: Option<Perbill>,
         frozen_tokens: Option<bool>,
     ) -> DispatchResult {
-        let core_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
-        let core_id = core_origin.id;
+        let dao_origin = ensure_multisig::<T, OriginFor<T>>(origin)?;
+        let dao_id = dao_origin.id;
 
-        CoreStorage::<T>::try_mutate(core_id, |core| {
-            let mut c = core.take().ok_or(Error::<T>::CoreNotFound)?;
+        CoreStorage::<T>::try_mutate(dao_id, |dao| {
+            let mut c = dao.take().ok_or(Error::<T>::DaoNotFound)?;
 
             if let Some(ms) = minimum_support {
                 c.minimum_support = ms;
@@ -142,10 +140,10 @@ where
                 c.frozen_tokens = f;
             }
 
-            *core = Some(c);
+            *dao = Some(c);
 
             Self::deposit_event(Event::ParametersSet {
-                core_id,
+                dao_id,
                 metadata: metadata.map(|m| m.to_vec()),
                 minimum_support,
                 required_approval,
@@ -157,7 +155,7 @@ where
     }
 
     /// Checks if the voting asset is frozen.
-    pub fn is_asset_frozen(core_id: T::CoreId) -> Option<bool> {
-        CoreStorage::<T>::get(core_id).map(|c| c.frozen_tokens)
+    pub fn is_asset_frozen(dao_id: T::DaoId) -> Option<bool> {
+        CoreStorage::<T>::get(dao_id).map(|c| c.frozen_tokens)
     }
 }
