@@ -911,7 +911,7 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
-        [pallet_dao_manager, dao_manager]
+        [pallet_dao_manager, INV4]
         [pallet_dao_staking, OcifStaking]
         [pallet_checked_inflation, CheckedInflation]
     );
