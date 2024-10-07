@@ -19,10 +19,8 @@
 //! Learn more about Substrate chain specifications at
 //! https://docs.substrate.io/v3/runtime/chain-specs/
 
-use invarch_runtime::{
-    AccountId, AuraId, RuntimeGenesisConfig, SessionKeys, Signature, EXISTENTIAL_DEPOSIT,
-    WASM_BINARY,
-};
+use invarch_runtime as runtime;
+use runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, WASM_BINARY};
 
 use cumulus_primitives_core::ParaId;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -32,13 +30,13 @@ use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
 
 /// Helper function to generate a crypto pair from seed
-pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
         .expect("static values are valid; qed")
         .public()
@@ -46,13 +44,15 @@ pub fn get_public_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pa
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
-#[serde(deny_unknown_fields)]
 pub struct Extensions {
     /// The relay chain of the Parachain.
+    #[serde(alias = "relayChain", alias = "RelayChain")]
     pub relay_chain: String,
     /// The id of the Parachain.
+    #[serde(alias = "paraId", alias = "ParaId")]
     pub para_id: u32,
 }
+
 impl Extensions {
     /// Try to get the extension from the given `ChainSpec`.
     pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
@@ -66,24 +66,22 @@ type AccountPublic = <Signature as Verify>::Signer;
 ///
 /// This function's return type must always match the session keys of the chain in tuple format.
 pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-    get_public_from_seed::<AuraId>(seed)
+    get_from_seed::<AuraId>(seed)
 }
-
-// TODO: Update to AccountId32::new([..])
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-    AccountPublic::from(get_public_from_seed::<TPublic>(seed)).into_account()
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn template_session_keys(keys: AuraId) -> SessionKeys {
-    SessionKeys { aura: keys }
+pub fn template_session_keys(keys: AuraId) -> runtime::SessionKeys {
+    runtime::SessionKeys { aura: keys }
 }
 
 pub fn invarch_live() -> ChainSpec {
@@ -104,17 +102,18 @@ pub fn development_config() -> ChainSpec {
     properties.insert("ss58Format".into(), 117u32.into());
 
     ChainSpec::builder(
-        WASM_BINARY.expect("WASM binary was not built, please build it!"),
+        runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
-            relay_chain: "rococo-local".into(), // TODO: You MUST set this to the correct network!
+            relay_chain: "rococo-local".into(),
+            // You MUST set this to the correct network!
             para_id: 1000,
         },
     )
     .with_name("InvArch Dev Net")
     .with_id("invarch-dev")
     .with_chain_type(ChainType::Development)
-    .with_properties(properties)
     .with_genesis_config_patch(testnet_genesis(
+        // initial collators.
         vec![
             (
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -198,11 +197,12 @@ pub fn local_testnet_config() -> ChainSpec {
     // Give your base currency a unit name and decimal places
     let mut properties = sc_chain_spec::Properties::new();
     properties.insert("tokenSymbol".into(), "UNIT".into());
-    properties.insert("tokenDecimals".into(), 12u32.into());
-    properties.insert("ss58Format".into(), 42u32.into());
+    properties.insert("tokenDecimals".into(), 12.into());
+    properties.insert("ss58Format".into(), 42.into());
 
+    #[allow(deprecated)]
     ChainSpec::builder(
-        WASM_BINARY.expect("WASM binary was not built, please build it!"),
+        runtime::WASM_BINARY.expect("WASM binary was not built, please build it!"),
         Extensions {
             relay_chain: "polkadot-local".into(), // TODO: You MUST set this to the correct network!
             para_id: 1000,
@@ -211,8 +211,8 @@ pub fn local_testnet_config() -> ChainSpec {
     .with_name("InvArch Local Testnet")
     .with_id("invarch-local-testnet")
     .with_chain_type(ChainType::Local)
-    .with_properties(properties)
     .with_genesis_config_patch(testnet_genesis(
+        // initial collators.
         vec![
             (
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -240,6 +240,8 @@ pub fn local_testnet_config() -> ChainSpec {
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         1000.into(),
     ))
+    .with_protocol_id("template-local")
+    .with_properties(properties)
     .build()
 }
 

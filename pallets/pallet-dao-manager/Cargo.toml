@@ -11,7 +11,7 @@ version.workspace = true
 
 [dependencies]
 serde = { workspace = true, optional = true }
-codec = { package = "parity-scale-codec", version = "3.6.5", default-features = false, features = [
+codec = { package = "parity-scale-codec", version = "3.6.12", default-features = false, features = [
     "derive",
     "max-encoded-len",
 ] }
@@ -68,10 +68,15 @@ std = [
     "orml-tokens2/std",
     "orml-traits/std",
     "orml-traits2/std",
+    "primitives/std",
+    "sp-api/std",
+    "sp-core/std",
+    "sp-arithmetic/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
 ]
-try-runtime = ["frame-support/try-runtime"]
+try-runtime = ["frame-support/try-runtime", "sp-runtime/try-runtime"]
