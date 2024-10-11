@@ -44,7 +44,7 @@ pub mod pallet {
     use pallet_dao_manager::origin::{ensure_multisig, DaoOrigin};
     use sp_std::{vec, vec::Vec};
     use xcm::{
-        v3::{prelude::*, MultiAsset, Weight, WildMultiAsset},
+        v4::{prelude::*, MultiAsset, Weight, WildMultiAsset},
         DoubleEncoded,
     };
 

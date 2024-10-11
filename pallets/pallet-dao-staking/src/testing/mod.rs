@@ -238,6 +238,7 @@ pub(crate) fn assert_withdraw_unbonded(staker: AccountId) {
 }
 
 pub(crate) fn assert_unregister(dao: DaoId) {
+    // use frame_support::traits::EnqueueMessage;
     let init_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(dao));
 
     assert_ok!(OcifStaking::unregister_dao(
@@ -250,13 +251,13 @@ pub(crate) fn assert_unregister(dao: DaoId) {
         dao,
     }));
 
+    run_for_blocks(1);
     // println!("storage info{:#?}", MessageQueue::storage_info());
     // println!("get queue info{:#?}", MessageQueue::debug_info());
     // println!(
     //     "footprint: {:#?}",
-    //     MessageQueue::footprint(UnregisterMessageOrigin)
+    //     MessageQueue::footprint(crate::CustomAggregateMessageOrigin::UnregisterMessageOrigin)
     // );
-    run_for_blocks(1);
     // println!("get queue info{:#?}", MessageQueue::debug_info());
 
     let final_reserved_balance = <Test as Config>::Currency::reserved_balance(&account(dao));
