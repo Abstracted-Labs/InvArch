@@ -569,7 +569,7 @@ pub async fn start_solo_node_impl(
                     slot_duration,
                 );
                     let mocked_parachain = MockValidationDataInherentDataProvider {
-                        current_para_block: current_para_block,
+                        current_para_block,
                         current_para_block_head,
                         para_id,
                         relay_offset: 1000,
@@ -735,7 +735,7 @@ pub fn new_partial_solo(
                     );
 
                         let mocked_parachain = MockValidationDataInherentDataProvider {
-                            current_para_block: current_para_block,
+                            current_para_block,
                             current_para_block_head,
                             para_id,
                             relay_offset: 1000,
