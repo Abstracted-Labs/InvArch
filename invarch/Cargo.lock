@@ -4903,6 +4903,7 @@ dependencies = [
  "orml-traits 1.0.1",
  "orml-vesting",
  "orml-xcm",
+ "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",

@@ -76,6 +76,7 @@ orml-traits2 = { workspace = true }
 orml-tokens = { workspace = true }
 orml-tokens2 = { workspace = true }
 orml-xtokens = { workspace = true }
+orml-xcm-support = { workspace = true }
 
 # Polkadot
 pallet-xcm = { workspace = true }
@@ -188,6 +189,9 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"pallet-checked-inflation/runtime-benchmarks",
+	"pallet-dao-manager/runtime-benchmarks",
+	"pallet-dao-staking/runtime-benchmarks",
 ]
 
 try-runtime = [
