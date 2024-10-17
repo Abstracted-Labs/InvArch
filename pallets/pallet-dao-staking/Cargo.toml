@@ -32,46 +32,45 @@ sp-std = { workspace = true }
 
 pallet-dao-manager = { workspace = true }
 
-frame-benchmarking = { workspace = true, optional = true }
 cumulus-primitives-core = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
-orml-traits = { workspace = true }
 orml-tokens = { workspace = true }
+orml-traits = { workspace = true }
 xcm = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-    "serde",
     "codec/std",
-    "scale-info/std",
-    "num-traits/std",
     "cumulus-primitives-core/std",
-    "sp-core/std",
-    "sp-runtime/std",
-    "sp-arithmetic/std",
-    "sp-io/std",
-    "sp-std/std",
+    "frame-benchmarking?/std",
     "frame-support/std",
     "frame-system/std",
-    "frame-benchmarking?/std",
-    "xcm/std",
+    "num-traits/std",
+    "orml-tokens/std",
+    "orml-traits/std",
     "pallet-balances/std",
+    "pallet-dao-manager/std",
     "pallet-message-queue/std",
     "pallet-session/std",
     "pallet-timestamp/std",
-    "pallet-dao-manager/std",
+    "scale-info/std",
+    "serde",
+    "sp-arithmetic/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
     "sp-staking/std",
-    "orml-traits/std",
-    "orml-tokens/std",
+    "sp-std/std",
+    "xcm/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-dao-manager/runtime-benchmarks",
     "pallet-message-queue/runtime-benchmarks",
-
+    "sp-runtime/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]
