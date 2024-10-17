@@ -160,11 +160,11 @@ impl FixedConversionRateProvider for MyFixedConversionRateProvider {
     fn get_fee_per_second(location: &Location) -> Option<u128> {
         CurrencyIdConvert::convert(location.clone()).and_then(|id| {
             if id == VARCH_ASSET_ID {
-                // for VARCH we use the UsingComponents Trader.
+                // for VARCH we use the `UsingComponents` `Trader` impl.
                 None
             } else {
                 crate::AssetRegistry::metadata(id)
-                    .and_then(|metadata| Some(metadata.additional.fee_per_second))
+                    .map(|metadata| metadata.additional.fee_per_second)
             }
         })
     }
