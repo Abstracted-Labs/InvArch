@@ -11,19 +11,19 @@ use frame_support::{
     derive_impl,
     dispatch::DispatchClass,
     parameter_types,
-    traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
+    traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth, Nothing},
     weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
     PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot,
+    EnsureRoot, EnsureSigned,
 };
 use pallet_identity::legacy::IdentityInfo;
 use polkadot_runtime_common::BlockHashCount;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, ConstU128, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
@@ -483,6 +483,51 @@ impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeO
     }
 }
 
+impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
+
+parameter_types! {
+    pub const DepositPerItem: Balance = deposit(1, 0);
+    pub const DepositPerByte: Balance = deposit(0, 1);
+    // Fallback value if storage deposit limit not set by the user
+    pub const DefaultDepositLimit: Balance = deposit(16, 16 * 1024);
+    pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+    pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
+    pub const UnsafeUnstableInterface: bool = false;
+}
+
+impl pallet_contracts::Config for Runtime {
+    type Time = Timestamp;
+    type Randomness = RandomnessCollectiveFlip;
+    type Currency = Balances;
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type CallFilter = Nothing;
+    type WeightPrice = pallet_transaction_payment::Pallet<Self>;
+    type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
+    type ChainExtension = ();
+    type Schedule = Schedule;
+    type CallStack = [pallet_contracts::Frame<Self>; 5];
+    type DepositPerByte = DepositPerByte;
+    type DefaultDepositLimit = ConstU128<{ u128::MAX }>;
+    type DepositPerItem = DepositPerItem;
+    type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+    type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
+    type MaxStorageKeyLen = ConstU32<128>;
+    type UnsafeUnstableInterface = UnsafeUnstableInterface;
+    type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type Migrations = ();
+    type MaxDelegateDependencies = ConstU32<32>;
+    type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+    type Debug = ();
+    type Environment = ();
+    type Xcm = ();
+    type MaxTransientStorageSize = ConstU32<{ 1024 * 1024 }>;
+    type UploadOrigin = EnsureSigned<<Self as frame_system::Config>::AccountId>;
+    type InstantiateOrigin = EnsureSigned<<Self as frame_system::Config>::AccountId>;
+    type ApiVersion = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime_modified!(
     pub enum Runtime
@@ -495,6 +540,7 @@ construct_runtime_modified!(
         Sudo: pallet_sudo = 4,
         Utility: pallet_utility = 5,
         TxPause: pallet_tx_pause = 6,
+        RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip = 7,
 
         // Monetary stuff.
         Balances: pallet_balances = 10,
@@ -524,6 +570,7 @@ construct_runtime_modified!(
 
         // Extra
         Identity: pallet_identity = 40,
+        Contracts: pallet_contracts = 41,
 
         CheckedInflation: pallet_checked_inflation= 50,
         OcifStaking: pallet_dao_staking = 51,
@@ -533,6 +580,11 @@ construct_runtime_modified!(
 
     }
 );
+
+type EventRecord = frame_system::EventRecord<
+    <Runtime as frame_system::Config>::RuntimeEvent,
+    <Runtime as frame_system::Config>::Hash,
+>;
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]
@@ -701,6 +753,73 @@ impl_runtime_apis! {
             TransactionPayment::length_to_fee(length)
         }
     }
+
+    impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash, EventRecord>
+    for Runtime
+{
+    fn call(
+        origin: AccountId,
+        dest: AccountId,
+        value: Balance,
+        gas_limit: Option<Weight>,
+        storage_deposit_limit: Option<Balance>,
+        input_data: Vec<u8>,
+    ) -> pallet_contracts::ContractExecResult<Balance, EventRecord> {
+            let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+        Contracts::bare_call(
+            origin,
+            dest,
+            value,
+            gas_limit,
+            storage_deposit_limit,
+            input_data,
+            pallet_contracts::DebugInfo::UnsafeDebug,
+            pallet_contracts::CollectEvents::UnsafeCollect,
+            pallet_contracts::Determinism::Enforced,
+        )
+    }
+
+    fn instantiate(
+        origin: AccountId,
+        value: Balance,
+        gas_limit: Option<Weight>,
+        storage_deposit_limit: Option<Balance>,
+        code: pallet_contracts::Code<Hash>,
+        data: Vec<u8>,
+        salt: Vec<u8>,
+    ) -> pallet_contracts::ContractInstantiateResult<AccountId, Balance, EventRecord>
+    {
+            let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
+        Contracts::bare_instantiate(
+            origin,
+            value,
+            gas_limit,
+            storage_deposit_limit,
+            code,
+            data,
+            salt,
+            pallet_contracts::DebugInfo::UnsafeDebug,
+            pallet_contracts::CollectEvents::UnsafeCollect,
+        )
+    }
+
+    fn upload_code(
+        origin: AccountId,
+        code: Vec<u8>,
+        storage_deposit_limit: Option<Balance>,
+        determinism: pallet_contracts::Determinism,
+    ) -> pallet_contracts::CodeUploadResult<Hash, Balance>
+    {
+        Contracts::bare_upload_code(origin, code, storage_deposit_limit, determinism)
+    }
+
+    fn get_storage(
+        address: AccountId,
+        key: Vec<u8>,
+    ) -> pallet_contracts::GetStorageResult {
+        Contracts::get_storage(address, key)
+    }
+}
 
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
         fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {

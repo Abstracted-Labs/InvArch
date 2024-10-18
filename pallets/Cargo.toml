@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
+    "pallet-checked-inflation",
     "pallet-dao-manager",
     "pallet-dao-staking",
-    "pallet-checked-inflation",
-    # "pallet-rings",
     "primitives",
+    # "pallet-rings",
 ]
 
 [workspace.package]
@@ -16,14 +16,12 @@ license = "GPL-3.0"
 repository = "https://github.com/Abstracted-Labs/InvArch/"
 version = '0.1.0-dev'
 
-
 [workspace.dependencies]
 
+pallet-checked-inflation = { path = "./pallet-checked-inflation", default-features = false }
 pallet-dao-manager = { path = "./pallet-dao-manager", default-features = false }
 pallet-dao-staking = { path = "./pallet-dao-staking", default-features = false }
-pallet-checked-inflation = { path = "./pallet-checked-inflation", default-features = false }
 primitives = { path = "./primitives", package = "invarch-primitives", default-features = false }
-
 
 # crates.io dependencies
 codec = { package = "parity-scale-codec", version = "3.6.12", features = [
@@ -38,6 +36,7 @@ serde = { version = "1.0.189", features = ["derive"] }
 smallvec = { version = "1.6.1" }
 
 # polkadot-sdk dependencies
+cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
@@ -57,18 +56,9 @@ xcm = { package = "staging-xcm", git = "https://github.com/paritytech/polkadot-s
 xcm-builder = { package = "staging-xcm-builder", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "stable2407" }
 xcm-executor = { package = "staging-xcm-executor", git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, branch = "stable2407" }
 
-
-# dev dependencies
-
-cumulus-primitives-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
-
+# orml dev dependencies
 orml-asset-registry = { git = "https://github.com/Abstracted-Labs/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
-orml-tokens2 = { package = "orml-tokens", git = "https://github.com/Anny0nn/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
-orml-traits2 = { package = "orml-traits", git = "https://github.com/Anny0nn/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
-
 orml-tokens = { package = "orml-tokens", git = "https://github.com/Abstracted-Labs/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
+orml-tokens2 = { package = "orml-tokens", git = "https://github.com/Anny0nn/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
 orml-traits = { package = "orml-traits", git = "https://github.com/Abstracted-Labs/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
-
-# orml-asset-registry = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-# orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
-# orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, rev = "7ecebeab7e3dbc2226ed58d32ee159271a8176ae" }
+orml-traits2 = { package = "orml-traits", git = "https://github.com/Anny0nn/open-runtime-module-library.git", default-features = false, branch = "stable2407" }
