@@ -40,7 +40,9 @@ frame-try-runtime = { workspace = true, optional = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-contracts = { workspace = true }
 pallet-identity = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-message-queue = { workspace = true }
 pallet-session = { workspace = true }
 pallet-sudo = { workspace = true }
@@ -135,9 +137,11 @@ std = [
 	"pallet-balances/std",
 	"pallet-checked-inflation/std",
 	"pallet-collator-selection/std",
+	"pallet-contracts/std",
 	"pallet-dao-manager/std",
 	"pallet-dao-staking/std",
 	"pallet-identity/std",
+	"pallet-insecure-randomness-collective-flip/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
