@@ -8,7 +8,7 @@
 use crate::Config;
 use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
-    traits::{fungibles::Credit, Currency},
+    traits::{fungible::Credit, fungibles::Credit as Credits},
     unsigned::TransactionValidityError,
 };
 use scale_info::TypeInfo;
@@ -70,8 +70,8 @@ pub trait MultisigFeeHandler<T: Config> {
     /// Charges the fee for creating the dao (multisig).
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
-            <T::Currency as Currency<T::AccountId>>::NegativeImbalance,
-            Credit<T::AccountId, T::Tokens>,
+            Credit<T::AccountId, T::Currency>,
+            Credits<T::AccountId, T::Tokens>,
         >,
     );
 }

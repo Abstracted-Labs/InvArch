@@ -1,13 +1,15 @@
 use crate::{
     balances::DealWithFees, common_types::CommonId, AccountId, Balance, Balances, CoreAssets,
-    ParachainInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, TransactionByteFee, UNIT,
+    ParachainInfo, Runtime, RuntimeCall, RuntimeEvent, RuntimeHoldReason, RuntimeOrigin,
+    TransactionByteFee, UNIT,
 };
 use codec::{Decode, Encode};
 use frame_support::{
     parameter_types,
     traits::{
-        fungibles::{Balanced, Credit, Inspect, Unbalanced},
-        Contains, Currency, OnUnbalanced,
+        fungible::Credit,
+        fungibles::{Balanced, Credit as Credits, Inspect, Unbalanced},
+        Contains, OnUnbalanced,
     },
     weights::ConstantMultiplier,
 };
@@ -44,13 +46,11 @@ impl pallet_dao_manager::Config for Runtime {
     type DaoCreationFee = DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Runtime>;
-
+    type RuntimeHoldReason = RuntimeHoldReason;
     type Tokens = NoTokens;
     type RelayAssetId = NoId;
     type RelayDaoCreationFee = RelayDaoCreationFee;
-
     type MaxCallSize = MaxCallSize;
-
     type ParaId = ParaId;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
@@ -183,8 +183,8 @@ impl MultisigFeeHandler<Runtime> for FeeCharger {
 
     fn handle_creation_fee(
         imbalance: FeeAssetNegativeImbalance<
-            <Balances as Currency<AccountId>>::NegativeImbalance,
-            Credit<AccountId, NoTokens>,
+            Credit<AccountId, Balances>,
+            Credits<AccountId, NoTokens>,
         >,
     ) {
         match imbalance {

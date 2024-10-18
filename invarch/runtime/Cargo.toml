@@ -16,6 +16,7 @@ substrate-wasm-builder = { workspace = true }
 
 [dependencies]
 codec = { workspace = true }
+docify = { workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true }
@@ -66,10 +67,16 @@ sp-version = { workspace = true }
 pallet-tx-pause = { workspace = true }
 
 # ORML
+orml-asset-registry = { workspace = true }
+orml-currencies = { workspace = true }
 orml-xcm = { workspace = true }
 orml-vesting = { workspace = true }
 orml-traits = { workspace = true }
+orml-traits2 = { workspace = true }
 orml-tokens = { workspace = true }
+orml-tokens2 = { workspace = true }
+orml-xtokens = { workspace = true }
+orml-xcm-support = { workspace = true }
 
 # Polkadot
 pallet-xcm = { workspace = true }
@@ -86,6 +93,7 @@ cumulus-pallet-parachain-system = { workspace = true }
 cumulus-pallet-session-benchmarking = { workspace = true }
 cumulus-pallet-xcm = { workspace = true }
 cumulus-pallet-xcmp-queue = { workspace = true }
+cumulus-primitives-aura = { workspace = true }
 cumulus-primitives-core = { workspace = true }
 cumulus-primitives-timestamp = { workspace = true }
 cumulus-primitives-utility = { workspace = true }
@@ -107,6 +115,7 @@ on-chain-release-build = ["metadata-hash"]
 std = [
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
+	"cumulus-primitives-aura/std",
 	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
@@ -120,7 +129,6 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"log/std",
-	"orml-tokens/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
@@ -149,8 +157,13 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	"orml-asset-registry/std",
+	"orml-currencies/std",
   	"orml-vesting/std",
+	"orml-tokens/std",
+	"orml-tokens2/std",
   	"orml-xcm/std",
+	"orml-xtokens/std",
   	"pallet-identity/std",
   	"pallet-treasury/std",
   	"pallet-tx-pause/std",
@@ -176,6 +189,9 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"pallet-checked-inflation/runtime-benchmarks",
+	"pallet-dao-manager/runtime-benchmarks",
+	"pallet-dao-staking/runtime-benchmarks",
 ]
 
 try-runtime = [

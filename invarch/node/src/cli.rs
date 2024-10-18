@@ -1,4 +1,3 @@
-use crate::chain_spec;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -6,18 +5,6 @@ use std::path::PathBuf;
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
-    /// Key management cli utilities
-    #[clap(subcommand)]
-    Key(sc_cli::KeySubcommand),
-
-    /// Export the genesis state of the parachain.
-    #[command(alias = "export-genesis-state")]
-    ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
-
-    /// Export the genesis wasm of the parachain.
-    #[clap(name = "export-genesis-wasm")]
-    ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
-
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),
 
@@ -33,15 +20,24 @@ pub enum Subcommand {
     /// Import blocks.
     ImportBlocks(sc_cli::ImportBlocksCmd),
 
-    /// Remove the whole chain.
-    PurgeChain(cumulus_client_cli::PurgeChainCmd),
-
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
 
+    /// Remove the whole chain.
+    PurgeChain(cumulus_client_cli::PurgeChainCmd),
+
+    /// Export the genesis head data of the parachain.
+    ///
+    /// Head data is the encoded block header.
+    #[command(alias = "export-genesis-state")]
+    ExportGenesisHead(cumulus_client_cli::ExportGenesisHeadCommand),
+
+    /// Export the genesis wasm of the parachain.
+    ExportGenesisWasm(cumulus_client_cli::ExportGenesisWasmCommand),
+
     /// Sub-commands concerned with benchmarking.
     /// The pallet benchmarking moved to the `pallet` sub-command.
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
     /// Try some testing command against a specified runtime state.
@@ -60,10 +56,10 @@ pub enum Subcommand {
     subcommand_negates_reqs = true
 )]
 pub struct Cli {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub subcommand: Option<Subcommand>,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     pub run: cumulus_client_cli::RunCmd,
 
     /// Disable automatic hardware benchmarks.
@@ -73,11 +69,11 @@ pub struct Cli {
     ///
     /// The results are then printed out in the logs, and also sent as part of
     /// telemetry, if telemetry is enabled.
-    #[clap(long)]
+    #[arg(long)]
     pub no_hardware_benchmarks: bool,
 
     /// Relay chain arguments
-    #[clap(raw = true)]
+    #[arg(raw = true)]
     pub relay_chain_args: Vec<String>,
 }
 
@@ -99,13 +95,13 @@ impl RelayChainCli {
         para_config: &sc_service::Configuration,
         relay_chain_args: impl Iterator<Item = &'a String>,
     ) -> Self {
-        let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
+        let extension = crate::chain_spec::Extensions::try_get(&*para_config.chain_spec);
         let chain_id = extension.map(|e| e.relay_chain.clone());
         let base_path = para_config.base_path.path().join("polkadot");
         Self {
             base_path: Some(base_path),
             chain_id,
-            base: polkadot_cli::RunCmd::parse_from(relay_chain_args),
+            base: clap::Parser::parse_from(relay_chain_args),
         }
     }
 }

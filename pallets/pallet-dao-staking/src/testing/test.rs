@@ -3,7 +3,7 @@ use crate::{
     testing::*,
     *,
 };
-use frame_support::{assert_noop, assert_ok, traits::Currency};
+use frame_support::{assert_noop, assert_ok};
 use mock::Balances;
 use sp_runtime::{traits::Zero, Perbill};
 
@@ -2306,7 +2306,7 @@ fn move_stake_max_number_of_stakers_exceeded_err() {
 
         for temp_staker in (4u32)..(MAX_NUMBER_OF_STAKERS as u32 + 3u32) {
             let staker = account(temp_staker);
-            Balances::resolve_creating(&staker, Balances::issue(100));
+            assert!(Balances::resolve(&staker, Balances::issue(100)).is_ok());
             assert_stake(staker, &dao_id_b, 13);
         }
 
@@ -2336,7 +2336,7 @@ fn claim_stake_after_unregistering_dao_mid_era_changes_is_ok() {
         for temp_staker in 0..4 {
             let staker = account(temp_staker + 100);
             stakers.push(staker.clone());
-            Balances::resolve_creating(&staker, Balances::issue(1000));
+            assert!(Balances::resolve(&staker, Balances::issue(1000)).is_ok());
             short_stake(staker, &dao_id_b, 20);
         }
 

@@ -4,8 +4,8 @@ use core::convert::TryFrom;
 use frame_support::{
     derive_impl, parameter_types,
     traits::{
-        fungibles::Credit, ConstU128, ConstU32, ConstU64, Contains, Currency, EnsureOrigin,
-        EnsureOriginWithArg,
+        fungible::Credit, fungibles::Credit as Credits, ConstU128, ConstU32, ConstU64, Contains,
+        Currency, EnsureOrigin, EnsureOriginWithArg,
     },
     weights::ConstantMultiplier,
 };
@@ -35,7 +35,7 @@ frame_support::construct_runtime!(
         System: frame_system,
         Balances: pallet_balances,
         Tokens: orml_tokens,
-        AssetRegistry: orml_asset_registry,
+        AssetRegistry: orml_asset_registry::module,
         CoreAssets: orml_tokens2,
         INV4: pallet,
     }
@@ -72,6 +72,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type RuntimeTask = ();
     type MaxConsumers = ConstU32<16>;
 }
 
@@ -84,7 +85,12 @@ impl pallet_balances::Config for Test {
     type AccountStore = System;
     type MaxReserves = ConstU32<50>;
     type ReserveIdentifier = [u8; 8];
-    type MaxFreezes = ConstU32<1>;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeFreezeReason = ();
+    type MaxFreezes = ConstU32<50>;
+    type WeightInfo = ();
+    type DustRemoval = ();
+    type FreezeIdentifier = [u8; 8];
 }
 
 const UNIT: u128 = 1000000000000;
@@ -238,7 +244,7 @@ impl EnsureOriginWithArg<RuntimeOrigin, Option<u32>> for AssetAuthority {
     }
 }
 
-impl orml_asset_registry::Config for Test {
+impl orml_asset_registry::module::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type AuthorityOrigin = AssetAuthority;
     type AssetId = AssetId;
@@ -249,12 +255,12 @@ impl orml_asset_registry::Config for Test {
     type StringLimit = StringLimit;
 }
 
-pub struct DustRemovalWhitelist;
-impl Contains<AccountId> for DustRemovalWhitelist {
-    fn contains(_: &AccountId) -> bool {
-        true
-    }
-}
+// pub struct DustRemovalWhitelist;
+// impl Contains<AccountId> for DustRemovalWhitelist {
+//     fn contains(_: &AccountId) -> bool {
+//         true
+//     }
+// }
 
 pub type Amount = i128;
 
@@ -328,8 +334,8 @@ impl MultisigFeeHandler<Test> for FeeCharger {
 
     fn handle_creation_fee(
         _imbalance: FeeAssetNegativeImbalance<
-            <Balances as Currency<AccountId>>::NegativeImbalance,
-            Credit<AccountId, Tokens>,
+            Credit<AccountId, Balances>,
+            Credits<AccountId, Tokens>,
         >,
     ) {
     }
@@ -357,6 +363,7 @@ impl pallet::Config for Test {
 
     type ParaId = ConstU32<2125>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
+    type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 pub struct ExtBuilder;
@@ -386,7 +393,7 @@ impl ExtBuilder {
         .assimilate_storage(&mut t)
         .unwrap();
 
-        orml_asset_registry::GenesisConfig::<Test> {
+        orml_asset_registry::module::GenesisConfig::<Test> {
             assets: vec![
                 (
                     0u32,

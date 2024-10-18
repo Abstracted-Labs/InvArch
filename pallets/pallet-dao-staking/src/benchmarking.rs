@@ -5,7 +5,8 @@ use crate::Pallet as OcifStaking;
 use core::ops::Add;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{
-    traits::{Get, OnFinalize, OnInitialize},
+    assert_ok,
+    traits::{fungible::Mutate, Get, OnFinalize, OnInitialize},
     BoundedVec,
 };
 use frame_system::{Pallet as System, RawOrigin};
@@ -13,7 +14,7 @@ use pallet_dao_manager::{
     account_derivation::DaoAccountDerivation,
     origin::{DaoOrigin, MultisigInternalOrigin},
 };
-use sp_runtime::traits::{Bounded, One};
+use sp_runtime::traits::One;
 use sp_std::vec;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
@@ -45,7 +46,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    <T as Config>::Currency::make_free_balance_be(
+    <<T as pallet::Config>::Currency as Mutate<T::AccountId>>::set_balance(
         &derive_account::<T>(0u32.into()),
         T::RegisterDeposit::get() + T::RegisterDeposit::get(),
     );
@@ -65,7 +66,7 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    <T as Config>::Currency::make_free_balance_be(
+    <<T as pallet::Config>::Currency as Mutate<T::AccountId>>::set_balance(
         &derive_account::<T>(1u32.into()),
         T::RegisterDeposit::get() + T::RegisterDeposit::get(),
     );
@@ -85,9 +86,11 @@ where
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
-    <T as Config>::Currency::make_free_balance_be(
+    <<T as pallet::Config>::Currency as Mutate<T::AccountId>>::set_balance(
         &whitelisted_caller(),
-        pallet::BalanceOf::<T>::max_value(),
+        T::StakeThresholdForActiveDao::get()
+            + T::StakeThresholdForActiveDao::get()
+            + T::StakeThresholdForActiveDao::get(),
     );
 
     OcifStaking::<T>::stake(
@@ -132,7 +135,7 @@ benchmarks! {
         let description: BoundedVec<u8, T::MaxDescriptionLength> = vec![u8::MAX; d as usize].try_into().unwrap();
         let image: BoundedVec<u8, T::MaxImageUrlLength> = vec![u8::MAX; i as usize].try_into().unwrap();
 
-        <T as Config>::Currency::make_free_balance_be(&derive_account::<T>(0u32.into()), T::RegisterDeposit::get() + T::RegisterDeposit::get());
+        <<T as pallet::Config>::Currency as Mutate<T::AccountId>>::set_balance(&derive_account::<T>(0u32.into()), T::RegisterDeposit::get() + T::RegisterDeposit::get());
     }: _(DaoOrigin::Multisig(MultisigInternalOrigin::new(0u32.into())), name, description, image)
     verify {
         assert_last_event::<T>(Event::<T>::DaoRegistered {
@@ -184,7 +187,9 @@ benchmarks! {
         let staker = whitelisted_caller();
         let amount = T::StakeThresholdForActiveDao::get() + T::StakeThresholdForActiveDao::get();
 
-        <T as Config>::Currency::make_free_balance_be(&staker, pallet::BalanceOf::<T>::max_value());
+        <<T as pallet::Config>::Currency as Mutate<T::AccountId>>::set_balance(&staker, T::StakeThresholdForActiveDao::get()
+        + T::StakeThresholdForActiveDao::get()
+        + T::StakeThresholdForActiveDao::get());
     }: _(RawOrigin::Signed(staker.clone()), 0u32.into(), amount)
     verify {
         assert_last_event::<T>(Event::<T>::Staked {

@@ -7,7 +7,8 @@ use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
     traits::{
-        fungibles::Credit, ConstU128, ConstU32, Contains, Currency, OnFinalize, OnInitialize,
+        fungible::Credit, fungibles::Credit as Credits, ConstU128, ConstU32, Contains, Currency,
+        OnFinalize, OnInitialize,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_REF_TIME_PER_SECOND},
@@ -103,7 +104,9 @@ impl pallet_balances::Config for Test {
     type AccountStore = System;
     type WeightInfo = ();
     type FreezeIdentifier = [u8; 8];
-    type MaxFreezes = ();
+    type MaxFreezes = ConstU32<50>;
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
@@ -192,8 +195,8 @@ impl pallet_dao_manager::fee_handling::MultisigFeeHandler<Test> for FeeCharger {
 
     fn handle_creation_fee(
         _imbalance: pallet_dao_manager::fee_handling::FeeAssetNegativeImbalance<
-            <Balances as Currency<AccountId>>::NegativeImbalance,
-            Credit<AccountId, CoreAssets>,
+            Credit<AccountId, Balances>,
+            Credits<AccountId, CoreAssets>,
         >,
     ) {
     }
@@ -241,7 +244,7 @@ impl pallet_dao_manager::Config for Test {
     type DaoCreationFee = DaoCreationFee;
     type FeeCharger = FeeCharger;
     type WeightInfo = pallet_dao_manager::weights::SubstrateWeight<Test>;
-
+    type RuntimeHoldReason = RuntimeHoldReason;
     type Tokens = CoreAssets;
     type RelayAssetId = RelayAssetId;
     type RelayDaoCreationFee = DaoCreationFee;
@@ -253,7 +256,9 @@ impl pallet_dao_manager::Config for Test {
 
 impl pallet_dao_staking::Config for Test {
     type RuntimeEvent = RuntimeEvent;
+    type OldCurrency = Balances;
     type Currency = Balances;
+    type RuntimeHoldReason = RuntimeHoldReason;
     type BlocksPerEra = BlockPerEra;
     type RegisterDeposit = RegisterDeposit;
     type MaxStakersPerDao = MaxStakersPerDao;
@@ -335,6 +340,7 @@ impl pallet_message_queue::Config for Test {
     type HeapSize = MessageQueueHeapSize;
     type MaxStale = MessageQueueMaxStale;
     type ServiceWeight = MessageQueueServiceWeight;
+    type IdleMaxServiceWeight = ();
 }
 pub struct ExternalityBuilder;
 
@@ -397,7 +403,9 @@ pub fn run_to_block(n: u64) {
         OcifStaking::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
 
-        OcifStaking::rewards(Balances::issue(ISSUE_PER_BLOCK));
+        OcifStaking::rewards(<Balances as frame_support::traits::fungible::Balanced<
+            <Test as frame_system::Config>::AccountId,
+        >>::issue(ISSUE_PER_BLOCK));
 
         OcifStaking::on_initialize(System::block_number());
         MessageQueue::on_initialize(System::block_number());
@@ -414,7 +422,9 @@ pub fn run_to_block_no_rewards(n: u64) {
 }
 
 pub fn issue_rewards(amount: Balance) {
-    OcifStaking::rewards(Balances::issue(amount));
+    OcifStaking::rewards(<Balances as frame_support::traits::fungible::Balanced<
+        <Test as frame_system::Config>::AccountId,
+    >>::issue(amount));
 }
 
 pub fn run_for_blocks(n: u64) {

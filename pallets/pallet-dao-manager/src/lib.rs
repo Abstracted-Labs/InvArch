@@ -67,9 +67,9 @@ pub mod pallet {
         dispatch::{GetDispatchInfo, Pays, PostDispatchInfo},
         pallet_prelude::*,
         traits::{
-            fungibles,
-            fungibles::{Balanced, Inspect},
-            Currency, Get, GetCallMetadata, ReservableCurrency,
+            fungible::{Balanced, Inspect, InspectHold, Mutate, MutateHold},
+            fungibles::{self, Balanced as Balanceds, Inspect as Inspects},
+            Get, GetCallMetadata,
         },
         transactional,
         weights::WeightToFee,
@@ -89,7 +89,7 @@ pub mod pallet {
     use crate::origin::DaoOrigin;
 
     pub type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
     pub type DaoInfoOf<T> =
         DaoInfo<<T as frame_system::Config>::AccountId, dao_manager_core::DaoMetadataOf<T>>;
@@ -112,7 +112,13 @@ pub mod pallet {
             + Into<u32>;
 
         /// Currency type
-        type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type Currency: Balanced<Self::AccountId>
+            + Mutate<Self::AccountId>
+            + MutateHold<Self::AccountId, Reason = <Self as pallet::Config>::RuntimeHoldReason>
+            + InspectHold<Self::AccountId>;
+
+        /// Overarching hold reason.
+        type RuntimeHoldReason: From<HoldReason>;
 
         /// The overarching call type
         type RuntimeCall: Parameter
@@ -149,19 +155,19 @@ pub mod pallet {
         /// Fee for creating a dao in the relay token
         #[pallet::constant]
         type RelayDaoCreationFee: Get<
-            <<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::Balance,
+            <<Self as Config>::Tokens as Inspects<<Self as frame_system::Config>::AccountId>>::Balance,
         >;
 
         /// Relay token asset id in the runtime
         #[pallet::constant]
-        type RelayAssetId: Get<<<Self as Config>::Tokens as Inspect<<Self as frame_system::Config>::AccountId>>::AssetId>;
+        type RelayAssetId: Get<<<Self as Config>::Tokens as Inspects<<Self as frame_system::Config>::AccountId>>::AssetId>;
 
         /// Provider of assets functionality for the voting tokens
         type AssetsProvider: fungibles::Inspect<Self::AccountId, Balance = BalanceOf<Self>, AssetId = Self::DaoId>
             + fungibles::Mutate<Self::AccountId, AssetId = Self::DaoId>;
 
         /// Provider of balance tokens in the runtime
-        type Tokens: Balanced<Self::AccountId> + Inspect<Self::AccountId>;
+        type Tokens: Balanceds<Self::AccountId> + Inspects<Self::AccountId>;
 
         /// Implementation of the fee handler for both dao creation fee and multisig call fees
         type FeeCharger: MultisigFeeHandler<Self>;
@@ -339,16 +345,20 @@ pub mod pallet {
         MaxCallLengthExceeded,
     }
 
+    /// A reason for the pallet contracts placing a hold on funds.
+    #[pallet::composite_enum]
+    pub enum HoldReason {
+        DaoManager,
+    }
+
     /// Dispatch functions
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
-        Result<
-            DaoOrigin<T>,
-            <T as frame_system::Config>::RuntimeOrigin,
-        >: From<<T as frame_system::Config>::RuntimeOrigin>,
-        <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
-    <T as frame_system::Config>::AccountId: From<[u8; 32]>,
+        Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
+            From<<T as frame_system::Config>::RuntimeOrigin>,
+        <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+        <T as frame_system::Config>::AccountId: From<[u8; 32]>,
     {
         /// Create a new DAO
         /// - `metadata`: Arbitrary byte vec to be attached to the dao info
@@ -484,7 +494,13 @@ pub mod pallet {
             required_approval: Option<Perbill>,
             frozen_tokens: Option<bool>,
         ) -> DispatchResult {
-            Pallet::<T>::inner_set_parameters(origin, metadata, minimum_support, required_approval, frozen_tokens)
+            Pallet::<T>::inner_set_parameters(
+                origin,
+                metadata,
+                minimum_support,
+                required_approval,
+                frozen_tokens,
+            )
         }
     }
 }

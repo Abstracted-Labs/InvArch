@@ -3,7 +3,7 @@ use crate::inflation::InflationMethod;
 use core::convert::TryFrom;
 use frame_support::{
     derive_impl, parameter_types,
-    traits::{ConstU128, ConstU32, ConstU64, Currency, Hooks, OnUnbalanced},
+    traits::{fungible, ConstU128, ConstU32, ConstU64, Hooks, OnUnbalanced},
 };
 use pallet_balances::AccountData;
 use sp_core::H256;
@@ -13,7 +13,8 @@ type Block = frame_system::mocking::MockBlock<Test>;
 type Balance = u128;
 
 type AccountId = u32;
-type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+pub type NegativeImbalance =
+    frame_support::traits::fungible::Credit<<Test as frame_system::Config>::AccountId, Balances>;
 
 pub const EXISTENTIAL_DEPOSIT: Balance = 1_000_000_000;
 
@@ -64,7 +65,8 @@ parameter_types! {
 pub struct DealWithInflation;
 impl OnUnbalanced<NegativeImbalance> for DealWithInflation {
     fn on_unbalanced(amount: NegativeImbalance) {
-        Balances::resolve_creating(&INFLATION_RECEIVER, amount)
+        <Balances as fungible::Balanced<AccountId>>::resolve(&INFLATION_RECEIVER, amount)
+            .expect("should work");
     }
 }
 

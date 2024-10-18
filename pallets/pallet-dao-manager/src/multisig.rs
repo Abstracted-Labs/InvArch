@@ -25,9 +25,10 @@ use core::{
 use frame_support::{
     pallet_prelude::*,
     traits::{
-        fungibles::{Inspect, Mutate},
-        tokens::{Fortitude, Precision},
-        Currency, ExistenceRequirement, VoteTally, WithdrawReasons,
+        fungible::{Balanced, Inspect},
+        fungibles::{Inspect as Inspects, Mutate as Mutates},
+        tokens::{Fortitude, Precision, Preservation},
+        VoteTally,
     },
     weights::WeightToFee,
     BoundedBTreeMap,
@@ -65,7 +66,7 @@ impl<T: Config> Pallet<T>
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::AccountId: From<[u8; 32]>,
 {
     /// Inner function for the token_mint call.
@@ -101,7 +102,14 @@ where
         let dao_id = dao_origin.id;
 
         // Burn the dao's voting token from the target.
-        T::AssetsProvider::burn_from(dao_id, &target, amount, Precision::Exact, Fortitude::Polite)?;
+        T::AssetsProvider::burn_from(
+            dao_id,
+            &target,
+            amount,
+            Preservation::Expendable,
+            Precision::Exact,
+            Fortitude::Polite,
+        )?;
 
         Self::deposit_event(Event::Burned {
             dao_id,
@@ -171,11 +179,12 @@ where
                 T::LengthToFee::weight_to_fee(&Weight::from_parts(total_lenght as u64, 0));
 
             T::FeeCharger::handle_creation_fee(FeeAssetNegativeImbalance::Native(
-                <T as Config>::Currency::withdraw(
+                <<T as Config>::Currency as Balanced<T::AccountId>>::withdraw(
                     &owner,
                     storage_cost,
-                    WithdrawReasons::TRANSACTION_PAYMENT,
-                    ExistenceRequirement::KeepAlive,
+                    Precision::Exact,
+                    Preservation::Preserve,
+                    Fortitude::Polite,
                 )?,
             ));
 

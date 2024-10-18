@@ -15,26 +15,26 @@ targets = ["x86_64-unknown-linux-gnu"]
 proc-macro = true
 
 [dependencies]
-derive-syn-parse = "0.1.5"
+derive-syn-parse = "0.2.0"
 Inflector = "0.11.4"
 cfg-expr = "0.15.5"
-itertools = "0.10.3"
-proc-macro2 = "1.0.56"
-quote = "1.0.28"
-syn = { version = "2.0.48", features = ["full"] }
+itertools = "0.11.0"
+proc-macro2 = "1.0.64"
+quote = "1.0.33"
+syn = { version = "2.0.53", features = ["full", "parsing", "visit-mut"] }
 frame-support-procedural-tools = { path = "./tools" }
-macro_magic = { version = "0.5.0", features = ["proc_support"] }
+macro_magic = { version = "0.5.1", features = ["proc_support"] }
 proc-macro-warning = { version = "1.0.0", default-features = false }
 expander = "2.0.0"
-sp-core-hashing = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0" }
+sp-crypto-hashing = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407" }
 
 [dev-dependencies]
-regex = "1"
+regex = "1.10.2"
 
 
 [features]
 default = ["std"]
-std = []
+std = ["sp-crypto-hashing/std"]
 no-metadata-docs = []
 # Generate impl-trait for tuples with the given number of tuples. Will be needed as the number of
 # pallets in a runtime grows. Does increase the compile time!

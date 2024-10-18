@@ -43,11 +43,11 @@ derive_more = "0.99.2"
 
 
 ## InvArch Pallets
-pallet-dao-manager = { path = "../pallets/pallet-dao-manager", default-features = false }
-pallet-dao-staking = { path = "../pallets/pallet-dao-staking", default-features = false }
-pallet-checked-inflation = { path = "../pallets/pallet-checked-inflation", default-features = false }
-pallet-rings = { path = "../pallets/pallet-rings", default-features = false }
-new-modified-construct-runtime = { path = "../new-modified-construct-runtime", default-features = false }
+pallet-dao-manager = { git = "https://github.com/Abstracted-Labs/InvArch.git", branch = "francisco-refactor_nomenclature_and_links", default-features = false }
+pallet-dao-staking = { git = "https://github.com/Abstracted-Labs/InvArch.git", branch = "francisco-refactor_nomenclature_and_links", default-features = false }
+pallet-checked-inflation = { git = "https://github.com/Abstracted-Labs/InvArch.git", branch = "francisco-refactor_nomenclature_and_links", default-features = false }
+pallet-rings = { git = "https://github.com/Abstracted-Labs/InvArch.git", branch = "francisco-refactor_nomenclature_and_links", default-features = false }
+new-modified-construct-runtime = { git = "https://github.com/Abstracted-Labs/InvArch.git", branch = "francisco-refactor_nomenclature_and_links", default-features = false }
 
 pallet-maintenance-mode = { git = "https://github.com/Moonsong-Labs/moonkit", default-features = false, features = [
     "xcm-support",
@@ -102,6 +102,7 @@ pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk.git", branc
 
 # Substrate Primitive Dependencies
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
+sp-application-crypto ={ git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-consensus-aura = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.6.0", default-features = false }

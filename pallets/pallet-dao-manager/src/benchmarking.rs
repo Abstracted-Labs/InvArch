@@ -13,7 +13,10 @@ use frame_benchmarking::{account, benchmarks, whitelisted_caller};
 use frame_support::{
     dispatch::PostDispatchInfo,
     pallet_prelude::DispatchResultWithPostInfo,
-    traits::{Currency, Get},
+    traits::{
+        fungible::{Inspect, Mutate},
+        Get,
+    },
     BoundedBTreeMap, BoundedVec,
 };
 use frame_system::RawOrigin as SystemOrigin;
@@ -49,11 +52,10 @@ fn mock_dao<T: Config>() -> DispatchResultWithPostInfo
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
-        Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     T::AccountId: From<[u8; 32]>,
 {
-    T::Currency::make_free_balance_be(
+    <<T as pallet::Config>::Currency as Mutate<<T as frame_system::Config>::AccountId>>::set_balance(
         &whitelisted_caller(),
         T::DaoCreationFee::get() + T::DaoCreationFee::get(),
     );
@@ -71,8 +73,7 @@ fn mock_mint<T: Config>() -> Result<(), DispatchError>
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
-        Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
@@ -87,8 +88,7 @@ fn mock_mint_2<T: Config>() -> Result<(), DispatchError>
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
-        Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
@@ -103,8 +103,7 @@ fn mock_call<T: Config>() -> Result<PostDispatchInfo, DispatchErrorWithPostInfo<
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
-        Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
@@ -121,8 +120,7 @@ fn mock_vote<T: Config>() -> Result<PostDispatchInfo, DispatchErrorWithPostInfo<
 where
     Result<DaoOrigin<T>, <T as frame_system::Config>::RuntimeOrigin>:
         From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance:
-        Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 {
@@ -146,7 +144,7 @@ benchmarks! {
                 DaoOrigin<T>,
             <T as frame_system::Config>::RuntimeOrigin,
             >: From<<T as frame_system::Config>::RuntimeOrigin>,
-    <<T as pallet::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance: Sum,
+    <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance: Sum,
     <T as frame_system::Config>::RuntimeOrigin: From<DaoOrigin<T>>,
     T::AccountId: From<[u8; 32]>,
 }
@@ -160,7 +158,7 @@ benchmarks! {
         let required_approval = perbill_one();
         let creation_fee_asset = FeeAsset::Native;
 
-        T::Currency::make_free_balance_be(&caller, T::DaoCreationFee::get() + T::DaoCreationFee::get());
+        <<T as pallet::Config>::Currency as Mutate<<T as frame_system::Config>::AccountId>>::set_balance(&caller, T::DaoCreationFee::get() + T::DaoCreationFee::get());
     }: _(SystemOrigin::Signed(caller.clone()), metadata.clone(), minimum_support, required_approval, creation_fee_asset)
         verify {
             assert_last_event::<T>(Event::DaoCreated {

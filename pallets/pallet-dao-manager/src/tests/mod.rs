@@ -112,7 +112,7 @@ fn create_dao_fails() {
                 Perbill::from_percent(1),
                 FeeAsset::Native
             ),
-            pallet_balances::Error::<Test>::InsufficientBalance
+            TokenError::FundsUnavailable
         );
 
         assert_eq!(INV4::next_dao_id(), 0u32);

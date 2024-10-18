@@ -55,9 +55,12 @@ use frame_support::{
     ensure,
     pallet_prelude::*,
     traits::{
-        Currency, ExistenceRequirement, Get, HandleMessage, Imbalance, LockIdentifier,
-        LockableCurrency, OnUnbalanced, ProcessMessage, QueuePausedQuery, ReservableCurrency,
-        WithdrawReasons,
+        fungible::{
+            Balanced, Credit, Inspect, InspectFreeze, InspectHold, Mutate, MutateFreeze, MutateHold,
+        },
+        tokens::{Fortitude, Precision, Preservation},
+        Get, HandleMessage, Imbalance, InspectLockableCurrency, LockIdentifier, LockableCurrency,
+        OnUnbalanced, ProcessMessage, QueuePausedQuery, ReservableCurrency,
     },
     weights::{Weight, WeightToFee},
     BoundedSlice, PalletId,
@@ -90,6 +93,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+
     use pallet_dao_manager::{
         origin::{ensure_multisig, DaoOrigin},
         DaoAccountDerivation,
@@ -100,16 +104,15 @@ pub mod pallet {
     use super::*;
 
     /// The balance type of this pallet.
-    pub type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type BalanceOf<T> =
+        <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+
+    /// The opaque token type for an imbalance. This is returned by unbalanced operations and must be dealt with.
+    type NegativeImbalanceOf<T> =
+        Credit<<T as frame_system::Config>::AccountId, <T as Config>::Currency>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
-
-    /// The opaque token type for an imbalance. This is returned by unbalanced operations and must be dealt with.
-    type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::NegativeImbalance;
 
     /// The dao metadata type of this pallet.
     pub type DaoMetadataOf<T> = DaoMetadata<
@@ -131,9 +134,23 @@ pub mod pallet {
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+        /// The old trait for staking balance. Deprecated and only used for migrating old ledgers.
+        type OldCurrency: InspectLockableCurrency<
+                Self::AccountId,
+                Moment = BlockNumberFor<Self>,
+                Balance = BalanceOf<Self>,
+            > + ReservableCurrency<Self::AccountId>;
+
         /// The currency used in staking.
-        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>
-            + ReservableCurrency<Self::AccountId>;
+        type Currency: Balanced<Self::AccountId>
+            + Mutate<Self::AccountId>
+            + MutateHold<Self::AccountId, Reason = <Self as pallet::Config>::RuntimeHoldReason>
+            + InspectHold<Self::AccountId>
+            + MutateFreeze<Self::AccountId>
+            + InspectFreeze<Self::AccountId, Id = LockIdentifier>;
+
+        /// Overarching hold reason.
+        type RuntimeHoldReason: From<HoldReason>;
 
         // type DaoId: Parameter
         //     + Member
@@ -377,6 +394,11 @@ pub mod pallet {
         },
         /// Sharded execution of the dao unregistration process finished.
         DaoUnregistrationQueueFinished { dao: T::DaoId },
+        /// Bookeeping in case something unpredictable happens to a user mid unregistration.
+        ErroredOnMessageQueue {
+            err: scale_info::prelude::string::String,
+            account: Option<T::AccountId>,
+        },
     }
 
     #[pallet::error]
@@ -429,6 +451,12 @@ pub mod pallet {
         NoHaltChange,
         /// Attempted to move stake to the same dao.
         MoveStakeToSameDao,
+    }
+
+    /// A reason for the pallet contracts placing a hold on funds.
+    #[pallet::composite_enum]
+    pub enum HoldReason {
+        DaoStaking,
     }
 
     #[pallet::hooks]
@@ -510,7 +538,11 @@ pub mod pallet {
                 image,
             };
 
-            <T as pallet::Config>::Currency::reserve(&dao_account, T::RegisterDeposit::get())?;
+            <T as pallet::Config>::Currency::hold(
+                &HoldReason::DaoStaking.into(),
+                &dao_account,
+                T::RegisterDeposit::get(),
+            )?;
 
             RegisteredCore::<T>::insert(
                 dao_id,
@@ -576,13 +608,27 @@ pub mod pallet {
             CoreEraStake::<T>::insert(dao_id, current_era, dao_stake_info.clone());
 
             let reserve_deposit = T::RegisterDeposit::get();
-            <T as Config>::Currency::unreserve(&dao_account, reserve_deposit);
+
+            let amnt = {
+                if let Ok(a) = <T as Config>::Currency::release(
+                    &HoldReason::DaoStaking.into(),
+                    &dao_account,
+                    reserve_deposit,
+                    Precision::Exact,
+                ) {
+                    a
+                } else {
+                    <T as Config>::OldCurrency::unreserve(&dao_account, reserve_deposit);
+                    reserve_deposit
+                }
+            };
 
             T::OnUnbalanced::on_unbalanced(<T as Config>::Currency::withdraw(
                 &dao_account,
-                reserve_deposit.min(all_fee),
-                WithdrawReasons::TRANSACTION_PAYMENT,
-                ExistenceRequirement::KeepAlive,
+                amnt.min(all_fee),
+                Precision::Exact,
+                Preservation::Expendable,
+                Fortitude::Force,
             )?);
 
             RegisteredCore::<T>::remove(dao_id);
@@ -712,7 +758,7 @@ pub mod pallet {
                 }
             });
 
-            Self::update_ledger(&staker, ledger);
+            Self::update_ledger(&staker, ledger)?;
             Self::update_staker_info(&staker, dao_id, staker_info);
             CoreEraStake::<T>::insert(dao_id, current_era, staking_info);
 
@@ -766,7 +812,7 @@ pub mod pallet {
                 Error::<T>::TooManyUnlockingChunks
             );
 
-            Self::update_ledger(&staker, ledger);
+            Self::update_ledger(&staker, ledger)?;
 
             GeneralEraInfo::<T>::mutate(current_era, |value| {
                 if let Some(x) = value {
@@ -809,7 +855,7 @@ pub mod pallet {
             ledger.locked = ledger.locked.saturating_sub(withdraw_amount);
             ledger.unbonding_info = future_chunks;
 
-            Self::update_ledger(&staker, ledger);
+            Self::update_ledger(&staker, ledger)?;
             GeneralEraInfo::<T>::mutate(current_era, |value| {
                 if let Some(x) = value {
                     x.locked = x.locked.saturating_sub(withdraw_amount)
@@ -864,11 +910,13 @@ pub mod pallet {
                 let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
                     &Self::account_id(),
                     staker_reward,
-                    WithdrawReasons::TRANSFER,
-                    ExistenceRequirement::AllowDeath,
+                    Precision::Exact,
+                    Preservation::Expendable,
+                    Fortitude::Force,
                 )?;
 
-                <T as pallet::Config>::Currency::resolve_creating(&staker, reward_imbalance);
+                <T as pallet::Config>::Currency::resolve(&staker, reward_imbalance)
+                    .map_err(|_| Error::<T>::NothingToWithdraw)?;
                 Self::update_staker_info(&staker, dao_id, staker_info);
             }
 
@@ -920,8 +968,9 @@ pub mod pallet {
             let reward_imbalance = <T as pallet::Config>::Currency::withdraw(
                 &Self::account_id(),
                 reward,
-                WithdrawReasons::TRANSFER,
-                ExistenceRequirement::AllowDeath,
+                Precision::Exact,
+                Preservation::Expendable,
+                Fortitude::Force,
             )?;
 
             let dao_account =
@@ -929,7 +978,8 @@ pub mod pallet {
                     dao_id,
                 );
 
-            <T as pallet::Config>::Currency::resolve_creating(&dao_account, reward_imbalance);
+            <T as pallet::Config>::Currency::resolve(&dao_account, reward_imbalance)
+                .map_err(|_| Error::<T>::NothingToWithdraw)?;
             Self::deposit_event(Event::<T>::DaoClaimed {
                 dao: dao_id,
                 destination_account: dao_account,
@@ -1107,19 +1157,19 @@ pub mod pallet {
 
         /// Update the ledger for a staker. This will also update the stash lock.
         /// This lock will lock the entire funds except paying for further transactions.
-        fn update_ledger(staker: &T::AccountId, ledger: AccountLedger<BalanceOf<T>>) {
+        fn update_ledger(
+            staker: &T::AccountId,
+            ledger: AccountLedger<BalanceOf<T>>,
+        ) -> DispatchResult {
             if ledger.is_empty() {
                 Ledger::<T>::remove(staker);
-                <T as pallet::Config>::Currency::remove_lock(LOCK_ID, staker);
+                <T as pallet::Config>::OldCurrency::remove_lock(LOCK_ID, staker);
+                let _ = <T as pallet::Config>::Currency::thaw(&LOCK_ID, staker);
             } else {
-                <T as pallet::Config>::Currency::set_lock(
-                    LOCK_ID,
-                    staker,
-                    ledger.locked,
-                    WithdrawReasons::all(),
-                );
+                <T as pallet::Config>::Currency::extend_freeze(&LOCK_ID, staker, ledger.locked)?;
                 Ledger::<T>::insert(staker, ledger);
             }
+            Ok(())
         }
 
         /// The block rewards are accumulated on the pallet's account during an era.
@@ -1164,10 +1214,8 @@ pub mod pallet {
                     accumulated_reward.stakers.saturating_add(stakers.peek());
             });
 
-            <T as pallet::Config>::Currency::resolve_creating(
-                &Self::account_id(),
-                stakers.merge(dao),
-            );
+            let _ =
+                <T as pallet::Config>::Currency::resolve(&Self::account_id(), stakers.merge(dao));
         }
 
         /// Updates staker info for a dao.
@@ -1188,8 +1236,11 @@ pub mod pallet {
             staker: &T::AccountId,
             ledger: &AccountLedger<BalanceOf<T>>,
         ) -> BalanceOf<T> {
-            let free_balance = <T as pallet::Config>::Currency::free_balance(staker)
-                .saturating_sub(<T as pallet::Config>::ExistentialDeposit::get());
+            let free_balance = <T as pallet::Config>::Currency::reducible_balance(
+                staker,
+                Preservation::Preserve,
+                Fortitude::Force,
+            );
 
             free_balance.saturating_sub(ledger.locked)
         }
@@ -1280,7 +1331,7 @@ pub mod pallet {
             dao_id: T::DaoId,
             start_era: Era,
             chunk_size: u64,
-        ) -> DispatchResultWithPostInfo {
+        ) -> PostDispatchInfo {
             let mut staker_info_prefix =
                 Self::dao_unregistering_staker_list(dao_id).unwrap_or_default();
 
@@ -1308,12 +1359,20 @@ pub mod pallet {
                         unlock_era: start_era + T::UnbondingPeriod::get(),
                     });
 
-                    ensure!(
-                        ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
-                        Error::<T>::TooManyUnlockingChunks
-                    );
+                    // this is a forced unstake so we can't have it to fail.
+                    // ensure!(
+                    //     ledger.unbonding_info.len() <= T::MaxUnlocking::get(),
+                    //     Error::<T>::TooManyUnlockingChunks
+                    // );
 
-                    Self::update_ledger(&staker, ledger);
+                    // here in case a user has reached pallet-balances::MaxFreezes there's no way to
+                    // go around this so it will error and will require manual intervention.
+                    if let Err(e) = Self::update_ledger(&staker, ledger) {
+                        Self::deposit_event(Event::<T>::ErroredOnMessageQueue {
+                            err: sp_runtime::format!("Error: {:?}", e),
+                            account: Some(staker.clone()),
+                        });
+                    };
 
                     Self::update_staker_info(&staker, dao_id, staker_info);
 
@@ -1351,7 +1410,7 @@ pub mod pallet {
                     UnregisteredCoreStakeInfo::<T>::insert(dao_id, dao_stake_info.clone());
                     UnregisteredCoreStakers::<T>::insert(dao_id, staker_info_prefix);
 
-                    return Ok(Some(corrected_staker_length_fee).into());
+                    return Some(corrected_staker_length_fee).into();
                 }
             }
 
@@ -1359,7 +1418,7 @@ pub mod pallet {
             UnregisteredCoreStakers::<T>::remove(dao_id);
             UnregisteredCoreStakeInfo::<T>::remove(dao_id);
 
-            Ok(Some(corrected_staker_length_fee).into())
+            Some(corrected_staker_length_fee).into()
         }
     }
 }

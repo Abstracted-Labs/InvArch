@@ -8,6 +8,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use frame_support::{
+    derive_impl,
     dispatch::DispatchClass,
     parameter_types,
     traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth},
@@ -38,7 +39,7 @@ use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-mod assets;
+pub mod assets;
 pub mod balances;
 mod common_types;
 mod dao_manager;
@@ -59,6 +60,9 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// The amount type, should be signed version of Balance.
+pub type Amount = i128;
 
 /// Nonce of a transaction in the chain.
 pub type Nonce = u32;
@@ -113,8 +117,27 @@ pub type Executive = frame_executive::Executive<
     AllPalletsWithSystem,
 >;
 
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included into the
+/// relay chain.
+pub const UNINCLUDED_SEGMENT_CAPACITY: u32 = 1;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the number of
+/// blocks authored per slot.
+pub const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+pub const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
+
+/// Aura consensus hook
+type ConsensusHook = cumulus_pallet_aura_ext::FixedVelocityConsensusHook<
+    Runtime,
+    RELAY_CHAIN_SLOT_DURATION_MILLIS,
+    BLOCK_PROCESSING_VELOCITY,
+    UNINCLUDED_SEGMENT_CAPACITY,
+>;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
-/// the specifics of the runtime. They can then be made to be agnostic over specific formats
+/// the specifics of the runtime.
+///
+/// They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
 /// to even the dao data structures.
 pub mod opaque {
@@ -149,6 +172,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 /// This determines the average expected block time that we are targeting.
+///
 /// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
 /// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
 /// up by `pallet_aura` to implement `fn slot_duration()`.
@@ -237,6 +261,7 @@ parameter_types! {
 
 // Configure FRAME pallets to include in runtime.
 
+#[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
     /// The identifier used to distinguish between accounts.
     type AccountId = AccountId;
@@ -317,6 +342,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type ReservedXcmpWeight = ReservedXcmpWeight;
     type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
     type WeightInfo = cumulus_pallet_parachain_system::weights::SubstrateWeight<Runtime>;
+    type ConsensusHook = ConsensusHook;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -348,6 +374,7 @@ impl pallet_aura::Config for Runtime {
     type DisabledValidators = ();
     type MaxAuthorities = ConstU32<100_000>;
     type AllowMultipleBlocksPerSlot = AllowMultipleBlocksPerSlot;
+    type SlotDuration = ConstU64<SLOT_DURATION>;
 }
 
 parameter_types! {
@@ -474,6 +501,11 @@ construct_runtime_modified!(
         TransactionPayment: pallet_transaction_payment = 11,
         Treasury: pallet_treasury = 12,
         Vesting: orml_vesting = 13,
+        AssetRegistry: orml_asset_registry = 14,
+        Currencies: orml_currencies = 15,
+        Tokens: orml_tokens2 = 16,
+        XTokens: orml_xtokens = 17,
+
 
         // Collator support. The order of these 4 are important and shall not change.
         Authorship: pallet_authorship = 20,
@@ -486,7 +518,7 @@ construct_runtime_modified!(
         XcmpQueue: cumulus_pallet_xcmp_queue = 30,
         PolkadotXcm: pallet_xcm = 31,
         CumulusXcm: cumulus_pallet_xcm = 32,
-        DmpQueue: cumulus_pallet_dmp_queue = 33,
+        // DmpQueue: cumulus_pallet_dmp_queue = 33,
         OrmlXcm: orml_xcm = 34,
         MessageQueue: pallet_message_queue = 35,
 
@@ -497,8 +529,7 @@ construct_runtime_modified!(
         OcifStaking: pallet_dao_staking = 51,
 
         INV4: pallet_dao_manager = 71,
-        CoreAssets: orml_tokens = 72,
-        // 73 reserved for pallet-rings
+        CoreAssets: orml_tokens = 72, // Asset used for DAO Management
 
     }
 );
@@ -516,6 +547,9 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
+        [pallet_dao_manager, INV4]
+        [pallet_dao_staking, OcifStaking]
+        [pallet_checked_inflation, CheckedInflation]
     );
 }
 
@@ -526,7 +560,16 @@ impl_runtime_apis! {
         }
 
         fn authorities() -> Vec<AuraId> {
-            Aura::authorities().into_inner()
+            pallet_aura::Authorities::<Runtime>::get().into_inner()
+        }
+    }
+
+    impl cumulus_primitives_aura::AuraUnincludedSegmentApi<Block> for Runtime {
+        fn can_build_upon(
+            included_hash: <Block as BlockT>::Hash,
+            slot: cumulus_primitives_aura::Slot,
+        ) -> bool {
+            ConsensusHook::can_build_upon(included_hash, slot)
         }
     }
 
@@ -539,7 +582,7 @@ impl_runtime_apis! {
             Executive::execute_block(block)
         }
 
-        fn initialize_block(header: &<Block as BlockT>::Header) {
+        fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode{
             Executive::initialize_block(header)
         }
     }
@@ -705,7 +748,8 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
+            use frame_benchmarking::{Benchmarking, BenchmarkBatch};
+            use frame_support::traits::TrackedStorageKey;
 
             use frame_system_benchmarking::Pallet as SystemBench;
             impl frame_system_benchmarking::Config for Runtime {}
@@ -730,46 +774,24 @@ impl_runtime_apis! {
             let params = (&config, &whitelist);
             add_benchmarks!(params, batches);
 
-            if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+            // if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
         }
     }
     impl sp_genesis_builder::GenesisBuilder<Block> for Runtime {
-        fn create_default_config() -> Vec<u8> {
-            frame_support::genesis_builder_helper::create_default_config::<RuntimeGenesisConfig>()
+        fn get_preset(id: &Option<sp_genesis_builder::PresetId>) -> Option<Vec<u8>> {
+            frame_support::genesis_builder_helper::get_preset::<RuntimeGenesisConfig>(id, |_| None)
         }
-
-        fn build_config(config: Vec<u8>) -> sp_genesis_builder::Result {
-            frame_support::genesis_builder_helper::build_config::<RuntimeGenesisConfig>(config)
+        fn preset_names() -> Vec<sp_genesis_builder::PresetId> {
+            vec![]
         }
-    }
-}
-
-struct CheckInherents;
-
-impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
-    fn check_inherents(
-        block: &Block,
-        relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
-    ) -> sp_inherents::CheckInherentsResult {
-        let relay_chain_slot = relay_state_proof
-            .read_slot()
-            .expect("Could not read the relay chain slot from the proof");
-
-        let inherent_data =
-            cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-                relay_chain_slot,
-                sp_std::time::Duration::from_secs(6),
-            )
-            .create_inherent_data()
-            .expect("Could not create the timestamp inherent data");
-
-        inherent_data.check_extrinsics(block)
+        fn build_state(config: Vec<u8>) -> sp_genesis_builder::Result {
+            frame_support::genesis_builder_helper::build_state::<RuntimeGenesisConfig>(config)
+        }
     }
 }
 
 cumulus_pallet_parachain_system::register_validate_block! {
     Runtime = Runtime,
     BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
-    CheckInherents = CheckInherents,
 }

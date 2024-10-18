@@ -22,7 +22,7 @@ derive_more = { workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 # RPC related Dependencies
 
