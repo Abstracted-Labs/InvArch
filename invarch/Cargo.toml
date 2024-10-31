@@ -62,6 +62,7 @@ pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk.git", bran
 pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 pallet-contracts = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 pallet-conviction-voting = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
+pallet-elections-phragmen = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 pallet-message-queue = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
@@ -92,6 +93,7 @@ sp-keystore = { git = "https://github.com/paritytech/polkadot-sdk.git", branch =
 sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 sp-session = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
+sp-staking = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
 sp-timestamp = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407" }
 sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "stable2407", default-features = false }
