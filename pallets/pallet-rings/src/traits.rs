@@ -14,7 +14,7 @@
 
 use codec::MaxEncodedLen;
 use frame_support::Parameter;
-use xcm::opaque::v3::MultiLocation;
+use xcm::opaque::v4::Location;
 
 /// A chain [`MultiLocation`] abstraction trait.
 ///

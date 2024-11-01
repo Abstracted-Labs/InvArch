@@ -14,7 +14,7 @@ use crate::{Config, Pallet};
 use codec::{Compact, Encode};
 use frame_support::traits::Get;
 use sp_io::hashing::blake2_256;
-use xcm::v3::{BodyId, BodyPart, Junction, Junctions};
+use xcm::v4::{BodyId, BodyPart, Junction, Junctions};
 /// Trait providing the XCM location and the derived account of a dao.
 pub trait DaoAccountDerivation<T: Config> {
     /// Derives the dao's AccountId.
@@ -44,11 +44,14 @@ where
     /// DAO location is defined as a plurality within the parachain.
     fn dao_location(dao_id: T::DaoId) -> Junctions {
         Junctions::X2(
-            Junction::Parachain(T::ParaId::get()),
-            Junction::Plurality {
-                id: BodyId::Index(dao_id.into()),
-                part: BodyPart::Voice,
-            },
+            [
+                Junction::Parachain(T::ParaId::get()),
+                Junction::Plurality {
+                    id: BodyId::Index(dao_id.into()),
+                    part: BodyPart::Voice,
+                },
+            ]
+            .into(),
         )
     }
 }

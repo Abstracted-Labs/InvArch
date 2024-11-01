@@ -17,9 +17,9 @@ use crate::{
 use frame_support::{
     pallet_prelude::*,
     traits::{
-        fungibles::{Balanced, Mutate},
+        fungible::Balanced,
+        fungibles::{Balanced as Balanceds, Mutate as Mutates},
         tokens::{Fortitude, Precision, Preservation},
-        Currency, ExistenceRequirement, WithdrawReasons,
     },
 };
 use frame_system::{ensure_signed, pallet_prelude::*};
@@ -74,16 +74,21 @@ where
             // Charge creation fee from the caller
             T::FeeCharger::handle_creation_fee(match creation_fee_asset {
                 FeeAsset::Native => {
-                    FeeAssetNegativeImbalance::Native(<T as Config>::Currency::withdraw(
+                    FeeAssetNegativeImbalance::Native(<<T as Config>::Currency as Balanced<
+                        T::AccountId,
+                    >>::withdraw(
                         &creator,
                         T::DaoCreationFee::get(),
-                        WithdrawReasons::TRANSACTION_PAYMENT,
-                        ExistenceRequirement::KeepAlive,
+                        Precision::Exact,
+                        Preservation::Preserve,
+                        Fortitude::Polite,
                     )?)
                 }
 
                 FeeAsset::Relay => {
-                    FeeAssetNegativeImbalance::Relay(<T as Config>::Tokens::withdraw(
+                    FeeAssetNegativeImbalance::Relay(<<T as Config>::Tokens as Balanceds<
+                        T::AccountId,
+                    >>::withdraw(
                         T::RelayAssetId::get(),
                         &creator,
                         T::RelayDaoCreationFee::get(),

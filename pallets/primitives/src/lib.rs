@@ -79,3 +79,5 @@ pub struct CallInfo<Data> {
     pub pallet: Data,
     pub function: Data,
 }
+
+pub type Balance = u128;

@@ -1,6 +1,6 @@
 use crate::{
-    Balance, Balances, BlockNumber, ExistentialDeposit, MessageQueue, Runtime, RuntimeEvent, DAYS,
-    UNIT,
+    Balance, Balances, BlockNumber, ExistentialDeposit, MessageQueue, Runtime, RuntimeEvent,
+    RuntimeHoldReason, DAYS, UNIT,
 };
 use cumulus_primitives_core::AggregateMessageOrigin;
 use frame_support::{parameter_types, PalletId};
@@ -24,6 +24,7 @@ parameter_types! {
 }
 
 impl pallet_dao_staking::Config for Runtime {
+    type OldCurrency = Balances;
     type Currency = Balances;
     type BlocksPerEra = BlocksPerEra;
     type RegisterDeposit = RegisterDeposit;
@@ -44,4 +45,5 @@ impl pallet_dao_staking::Config for Runtime {
     type StakingMessage = frame_support::traits::EnqueueWithOrigin<MessageQueue, UnregisterOrigin>;
     type WeightToFee = crate::WeightToFee;
     type OnUnbalanced = crate::DealWithFees;
+    type RuntimeHoldReason = RuntimeHoldReason;
 }

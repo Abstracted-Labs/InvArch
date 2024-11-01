@@ -19,7 +19,7 @@ codec = { workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true }
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"]}
 smallvec = { workspace = true }
 getrandom = { workspace = true }
 
@@ -215,6 +215,7 @@ std = [
     "pallet-rings/std",
     "pallet-asset-tx-payment/std",
     "new-modified-construct-runtime/std",
+    "pallet-message-queue/std"
 ]
 
 runtime-benchmarks = [

@@ -20,7 +20,7 @@
 //! - `AccountLedger` - A struct that holds information about an account's locked balance and unbonding information.
 
 use codec::{Decode, Encode, FullCodec, HasCompact, MaxEncodedLen};
-use cumulus_primitives_core::{AggregateMessageOrigin, MultiLocation, ParaId};
+use cumulus_primitives_core::{AggregateMessageOrigin, Location, ParaId};
 use frame_support::{
     pallet_prelude::Weight,
     traits::{Currency, ProcessMessage, QueueFootprint, QueuePausedQuery},
@@ -389,7 +389,7 @@ where
         + TypeInfo
         + Debug,
     XcmOrigin:
-        Into<MultiLocation> + FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + TypeInfo + Debug,
+        Into<Location> + FullCodec + MaxEncodedLen + Clone + Eq + PartialEq + TypeInfo + Debug,
     XcmProcessor: ProcessMessage<Origin = XcmOrigin>,
     T: Config,
 {
@@ -445,29 +445,16 @@ where
                     call.era,
                     max_calls,
                 );
-
-                match chunk_result {
-                    Ok(weight) => {
-                        if let Some(actual_weight) = weight.actual_weight {
-                            meter.try_consume(actual_weight).map_err(|_| {
-                                frame_support::traits::ProcessMessageError::Overweight(
-                                    actual_weight,
-                                )
-                            })?;
-                        } else {
-                            meter.try_consume(max_weight).map_err(|_| {
-                                frame_support::traits::ProcessMessageError::Overweight(max_weight)
-                            })?;
-                        }
-                        Ok(true)
-                    }
-                    Err(_) => {
-                        meter.try_consume(max_weight).map_err(|_| {
-                            frame_support::traits::ProcessMessageError::Overweight(max_weight)
-                        })?;
-                        Ok(false)
-                    }
+                if let Some(actual_weight) = chunk_result.actual_weight {
+                    meter.try_consume(actual_weight).map_err(|_| {
+                        frame_support::traits::ProcessMessageError::Overweight(actual_weight)
+                    })?;
+                } else {
+                    meter.try_consume(max_weight).map_err(|_| {
+                        frame_support::traits::ProcessMessageError::Overweight(max_weight)
+                    })?;
                 }
+                Ok(true)
             }
         }
     }

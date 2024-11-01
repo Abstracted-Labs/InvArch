@@ -37,7 +37,6 @@ pub use inflation::*;
 pub use pallet::*;
 
 pub mod weights;
-
 pub use weights::WeightInfo;
 
 #[frame_support::pallet]
@@ -45,7 +44,10 @@ pub mod pallet {
     use super::*;
     use frame_support::{
         pallet_prelude::*,
-        traits::{Currency, LockableCurrency, OnUnbalanced, ReservableCurrency},
+        traits::{
+            fungible::{Balanced, Credit, Inspect},
+            OnUnbalanced,
+        },
     };
     use frame_system::{
         ensure_root,
@@ -55,12 +57,11 @@ pub mod pallet {
 
     /// The balance type of this pallet.
     pub(crate) type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::Currency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
     /// The opaque token type for an imbalance. This is returned by unbalanced operations and must be dealt with.
-    type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::NegativeImbalance;
+    type NegativeImbalanceOf<T> =
+        Credit<<T as frame_system::Config>::AccountId, <T as Config>::Currency>;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -70,10 +71,7 @@ pub mod pallet {
         /// The overarching event type.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// The currency (token) used in this pallet.
-        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>
-            + ReservableCurrency<Self::AccountId>
-            + Currency<Self::AccountId>;
-
+        type Currency: Balanced<Self::AccountId>;
         /// Number of blocks per era.
         #[pallet::constant]
         type BlocksPerEra: Get<BlockNumberFor<Self>>;
@@ -180,8 +178,9 @@ pub mod pallet {
 
                 NextEraStartingBlock::<T>::put(now + blocks_per_era);
 
-                let current_issuance =
-                    <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
+                let current_issuance = <<T as Config>::Currency as Inspect<
+                    <T as frame_system::Config>::AccountId,
+                >>::total_issuance();
 
                 YearStartIssuance::<T>::put(current_issuance);
 
@@ -228,8 +227,9 @@ pub mod pallet {
                         let start_issuance = Self::year_start_issuance();
 
                         // Get actual current total token issuance
-                        let current_issuance =
-                            <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance();
+                        let current_issuance = <<T as Config>::Currency as Inspect<
+                            <T as frame_system::Config>::AccountId,
+                        >>::total_issuance();
 
                         // Calculate the expected current total token issuance
                         let expected_current_issuance =
@@ -298,9 +298,9 @@ pub mod pallet {
         pub fn set_first_year_supply(root: OriginFor<T>) -> DispatchResult {
             ensure_root(root)?;
 
-            YearStartIssuance::<T>::put(
-                <<T as Config>::Currency as Currency<T::AccountId>>::total_issuance(),
-            );
+            YearStartIssuance::<T>::put(<<T as Config>::Currency as Inspect<
+                <T as frame_system::Config>::AccountId,
+            >>::total_issuance());
 
             Ok(())
         }
