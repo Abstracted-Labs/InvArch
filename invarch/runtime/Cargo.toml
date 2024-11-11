@@ -1,12 +1,12 @@
 [package]
-name = "invarch-runtime"
-version.workspace = true
 authors.workspace = true
-license.workspace = true
+edition.workspace = true
 homepage.workspace = true
+license.workspace = true
+name = "invarch-runtime"
 publish = false
 repository.workspace = true
-edition.workspace = true
+version.workspace = true
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -22,12 +22,11 @@ log = { workspace = true }
 scale-info = { workspace = true }
 smallvec = { workspace = true }
 
-new-modified-construct-runtime = { workspace = true }
-
-# InvArch
+# InvArch/local
+pallet-checked-inflation = { workspace = true }
 pallet-dao-manager = { workspace = true }
 pallet-dao-staking = { workspace = true }
-pallet-checked-inflation = { workspace = true }
+new-modified-construct-runtime = { workspace = true }
 
 # Substrate
 frame-benchmarking = { workspace = true, optional = true }
@@ -41,7 +40,9 @@ frame-try-runtime = { workspace = true, optional = true }
 pallet-aura = { workspace = true }
 pallet-authorship = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-contracts = { workspace = true }
 pallet-identity = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
 pallet-message-queue = { workspace = true }
 pallet-session = { workspace = true }
 pallet-sudo = { workspace = true }
@@ -49,6 +50,7 @@ pallet-timestamp = { workspace = true }
 pallet-transaction-payment = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-treasury = { workspace = true }
+pallet-tx-pause = { workspace = true }
 pallet-utility = { workspace = true }
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
@@ -62,9 +64,6 @@ sp-session = { workspace = true }
 sp-std = { workspace = true }
 sp-transaction-pool = { workspace = true }
 sp-version = { workspace = true }
-
-## Local tx-pause pallet as it wasn't available at the time of v0.9.43
-pallet-tx-pause = { workspace = true }
 
 # ORML
 orml-asset-registry = { workspace = true }
@@ -102,42 +101,55 @@ parachain-info = { workspace = true }
 
 [features]
 
-metadata-hash = [
-    "substrate-wasm-builder/metadata-hash",
-]
+metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 
-default = [
-	"std",
-]
+default = ["std"]
 
 on-chain-release-build = ["metadata-hash"]
 
 std = [
 	"codec/std",
 	"cumulus-pallet-aura-ext/std",
-	"cumulus-primitives-aura/std",
 	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcm/std",
 	"cumulus-pallet-xcmp-queue/std",
+	"cumulus-primitives-aura/std",
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
 	"frame-executive/std",
-    "frame-metadata-hash-extension/std",
+	"frame-metadata-hash-extension/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"log/std",
+	"new-modified-construct-runtime/std",
+	"orml-asset-registry/std",
+	"orml-currencies/std",
+	"orml-tokens/std",
+	"orml-tokens2/std",
+	"orml-vesting/std",
+	"orml-xcm/std",
+	"orml-xtokens/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
+	"pallet-checked-inflation/std",
 	"pallet-collator-selection/std",
+	"pallet-contracts/std",
+	"pallet-dao-manager/std",
+	"pallet-dao-staking/std",
+	"pallet-identity/std",
+	"pallet-insecure-randomness-collective-flip/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-treasury/std",
+	"pallet-tx-pause/std",
+	"pallet-utility/std",
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"polkadot-parachain/std",
@@ -157,23 +169,6 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
-	"orml-asset-registry/std",
-	"orml-currencies/std",
-  	"orml-vesting/std",
-	"orml-tokens/std",
-	"orml-tokens2/std",
-  	"orml-xcm/std",
-	"orml-xtokens/std",
-  	"pallet-identity/std",
-  	"pallet-treasury/std",
-  	"pallet-tx-pause/std",
-  	"pallet-utility/std",
-
-	"new-modified-construct-runtime/std",
-
-	"pallet-checked-inflation/std",
-	"pallet-dao-manager/std",
-	"pallet-dao-staking/std"
 ]
 
 runtime-benchmarks = [
@@ -184,14 +179,14 @@ runtime-benchmarks = [
 	"frame-system-benchmarking/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
+	"pallet-checked-inflation/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
+	"pallet-dao-manager/runtime-benchmarks",
+	"pallet-dao-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
-	"pallet-checked-inflation/runtime-benchmarks",
-	"pallet-dao-manager/runtime-benchmarks",
-	"pallet-dao-staking/runtime-benchmarks",
 ]
 
 try-runtime = [
