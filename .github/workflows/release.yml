@@ -101,7 +101,7 @@ jobs:
           cat ${{ github.event.inputs.chain }}-subwam-info.txt
 
       - name: Archive Artifacts for ${{ github.event.inputs.chain }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.inputs.chain }}-runtime
           path: |
