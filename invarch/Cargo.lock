@@ -4793,7 +4793,7 @@ dependencies = [
 
 [[package]]
 name = "invarch-node"
-version = "1.2.0"
+version = "1.2.2"
 dependencies = [
  "array-bytes",
  "async-trait",
@@ -4871,7 +4871,7 @@ dependencies = [
 
 [[package]]
 name = "invarch-runtime"
-version = "1.2.0"
+version = "1.2.2"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
