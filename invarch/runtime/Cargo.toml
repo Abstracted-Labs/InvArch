@@ -108,6 +108,8 @@ parachain-info = { workspace = true }
 
 [features]
 
+fast-net = []
+
 metadata-hash = ["substrate-wasm-builder/metadata-hash"]
 
 default = ["std"]

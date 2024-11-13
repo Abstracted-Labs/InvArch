@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub type TinkerCouncil = pallet_collective::Instance1;
+pub type Council = pallet_collective::Instance1;
 
 parameter_types! {
     pub MaxProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
@@ -12,7 +12,7 @@ parameter_types! {
 
 }
 
-impl pallet_collective::Config<TinkerCouncil> for Runtime {
+impl pallet_collective::Config<Council> for Runtime {
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeEvent = RuntimeEvent;
     type Proposal = RuntimeCall;
@@ -25,6 +25,6 @@ impl pallet_collective::Config<TinkerCouncil> for Runtime {
     type MaxMembers = MaxMembers;
     type DefaultVote = pallet_collective::MoreThanMajorityThenPrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-    type SetMembersOrigin = EitherOf<CouncilApproveOrigin, CouncilAdmin>;
+    type SetMembersOrigin = CouncilApproveOrigin;
     type MaxProposalWeight = MaxProposalWeight;
 }

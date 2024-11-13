@@ -16,8 +16,6 @@ pub mod pallet_custom_origins {
     #[derive(PartialEq, Eq, Clone, MaxEncodedLen, Encode, Decode, TypeInfo, RuntimeDebug)]
     #[pallet::origin]
     pub enum Origin {
-        /// Origin for managing the composition of the council.
-        CouncilAdmin,
         /// Origin able to cancel a referenda.
         ReferendumCanceller,
         /// Origin able to kill referenda.
@@ -26,9 +24,9 @@ pub mod pallet_custom_origins {
         WhitelistedCaller,
         /// Origin for general management that does not require a runtime upgrade.
         GeneralManagement,
-        /// Origin able to spend around $??? from the treasury at once.
+        /// Origin able to spend around 10K from the treasury at once.
         SmallSpender,
-        /// Origin able to spend up to $??? from the treasury at once.
+        /// Origin able to spend up to 1MIL from the treasury at once.
         BigSpender,
     }
 
@@ -63,7 +61,6 @@ pub mod pallet_custom_origins {
 		() => {}
 	}
     decl_unit_ensures!(
-        CouncilAdmin,
         ReferendumCanceller,
         ReferendumKiller,
         WhitelistedCaller,

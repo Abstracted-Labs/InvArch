@@ -24,9 +24,9 @@ use frame_system::{
 };
 mod governance;
 pub use governance::{
-    pallet_custom_origins, CouncilAdmin, CouncilApproveOrigin, CouncilRejectOrigin,
-    GeneralManagement, ReferendumCanceller, ReferendumKiller, RootOrGeneralManagement,
-    TreasurySpender, WhitelistedCaller,
+    pallet_custom_origins, CouncilApproveOrigin, CouncilRejectOrigin, GeneralManagement,
+    ReferendumCanceller, ReferendumKiller, RootOrGeneralManagement, TreasurySpender,
+    WhitelistedCaller,
 };
 use pallet_identity::legacy::IdentityInfo;
 use polkadot_runtime_common::BlockHashCount;

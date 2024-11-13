@@ -1,4 +1,4 @@
-use self::councils::TinkerCouncil;
+use self::councils::Council;
 
 use super::*;
 // use crate::xcm_config::CollectivesLocation;
@@ -8,8 +8,8 @@ use frame_system::EnsureRootWithSuccess;
 
 mod origins;
 pub use origins::{
-    pallet_custom_origins, CouncilAdmin, GeneralManagement, ReferendumCanceller, ReferendumKiller,
-    Spender, WhitelistedCaller,
+    pallet_custom_origins, GeneralManagement, ReferendumCanceller, ReferendumKiller, Spender,
+    WhitelistedCaller,
 };
 mod tracks;
 pub use tracks::TracksInfo;
@@ -41,12 +41,11 @@ parameter_types! {
     pub const MaxBalance: Balance = Balance::max_value();
 }
 
-pub type AllCouncil = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 1>;
+pub type AllCouncil = pallet_collective::EnsureProportionAtLeast<AccountId, Council, 1, 1>;
 pub type CouncilMoreThanApprove =
-    pallet_collective::EnsureProportionMoreThan<AccountId, TinkerCouncil, 3, 5>;
-pub type ConcilHalf = pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 1, 2>;
-pub type CouncilThreeFifths =
-    pallet_collective::EnsureProportionAtLeast<AccountId, TinkerCouncil, 3, 5>;
+    pallet_collective::EnsureProportionMoreThan<AccountId, Council, 3, 5>;
+pub type ConcilHalf = pallet_collective::EnsureProportionAtLeast<AccountId, Council, 1, 2>;
+pub type CouncilThreeFifths = pallet_collective::EnsureProportionAtLeast<AccountId, Council, 3, 5>;
 
 pub type TreasurySpender = EitherOf<EnsureRootWithSuccess<AccountId, MaxBalance>, Spender>;
 pub type RootOrGeneralManagement = EitherOf<EnsureRoot<AccountId>, GeneralManagement>;
