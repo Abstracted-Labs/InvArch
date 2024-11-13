@@ -1,7 +1,7 @@
 use crate::{
-    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent,
-    RuntimeFreezeReason, RuntimeHoldReason, System, Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT,
-    MILLIUNIT, UNIT,
+    AccountId, Balance, Balances, BlockNumber, CouncilRejectOrigin, ExtrinsicBaseWeight, Runtime,
+    RuntimeEvent, RuntimeFreezeReason, RuntimeHoldReason, System, Treasury, TreasurySpender, DAYS,
+    EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, UNIT,
 };
 use frame_support::{
     pallet_prelude::ConstU32,
@@ -16,7 +16,7 @@ use frame_support::{
     },
     PalletId,
 };
-use frame_system::{EnsureRoot, EnsureSignedBy};
+use frame_system::EnsureSignedBy;
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 use sp_runtime::{
     traits::{AccountIdConversion, IdentityLookup},
@@ -159,22 +159,17 @@ impl pallet_treasury::Config for Runtime {
     type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
-    // type ApproveOrigin = EnsureRoot<AccountId>;
-    type RejectOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = CouncilRejectOrigin;
     type RuntimeEvent = RuntimeEvent;
-    // type OnSlash = ();
     type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
     type PayoutPeriod = PayoutSpendPeriod;
-    // type ProposalBond = ProposalBond;
-    // type ProposalBondMinimum = ProposalBondMinimum;
     type SpendPeriod = SpendPeriod;
     type Burn = ();
     type BurnDestination = ();
     type SpendFunds = ();
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-    // type ProposalBondMaximum = ();
-    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
+    type SpendOrigin = TreasurySpender;
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
 }

@@ -11,13 +11,22 @@ use frame_support::{
     derive_impl,
     dispatch::DispatchClass,
     parameter_types,
-    traits::{ConstU32, ConstU64, Contains, Everything, InsideBoth, Nothing},
+    traits::{
+        fungible::HoldConsideration, ConstU32, ConstU64, Contains, EqualPrivilegeOnly, Everything,
+        InsideBoth, LinearStoragePrice, Nothing,
+    },
     weights::{constants::WEIGHT_REF_TIME_PER_SECOND, Weight},
     PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot, EnsureSigned,
+};
+mod governance;
+pub use governance::{
+    pallet_custom_origins, CouncilApproveOrigin, CouncilRejectOrigin, GeneralManagement,
+    ReferendumCanceller, ReferendumKiller, RootOrGeneralManagement, TreasurySpender,
+    WhitelistedCaller,
 };
 use pallet_identity::legacy::IdentityInfo;
 use polkadot_runtime_common::BlockHashCount;
@@ -164,7 +173,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("invarch"),
     impl_name: create_runtime_str!("invarch"),
     authoring_version: 1,
-    spec_version: 10,
+    spec_version: 11,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -192,6 +201,7 @@ pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
 // Unit = the base number of indivisible units for balances
+pub const GRAND: Balance = UNIT * 1_000;
 pub const UNIT: Balance = 1_000_000_000_000;
 pub const MILLIUNIT: Balance = 1_000_000_000;
 pub const MICROUNIT: Balance = 1_000_000;
@@ -386,7 +396,7 @@ parameter_types! {
 }
 
 // We allow root only to execute privileged collator selection operations.
-pub type CollatorSelectionUpdateOrigin = EnsureRoot<AccountId>;
+pub type CollatorSelectionUpdateOrigin = RootOrGeneralManagement;
 
 impl pallet_collator_selection::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
@@ -432,7 +442,7 @@ impl pallet_identity::Config for Runtime {
     type BasicDeposit = BasicDeposit;
     type ByteDeposit = ByteDeposit;
     type Currency = Balances;
-    type ForceOrigin = EnsureRoot<AccountId>;
+    type ForceOrigin = RootOrGeneralManagement;
     type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
     type MaxRegistrars = MaxRegistrars;
     type MaxSubAccounts = MaxSubAccounts;
@@ -440,7 +450,7 @@ impl pallet_identity::Config for Runtime {
     type MaxUsernameLength = ();
     type OffchainSignature = Signature;
     type PendingUsernameExpiration = ();
-    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type RegistrarOrigin = RootOrGeneralManagement;
     type RuntimeEvent = RuntimeEvent;
     type SigningPublicKey = <Signature as sp_runtime::traits::Verify>::Signer;
     type Slashed = Treasury;
@@ -528,6 +538,46 @@ impl pallet_contracts::Config for Runtime {
     type ApiVersion = ();
 }
 
+parameter_types! {
+    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+        RuntimeBlockWeights::get().max_block;
+    // Retry a scheduled item every 25 blocks (5 minute) until the preimage exists.
+    pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
+    pub const MaxScheduledPerBlock: u32 = 50u32;
+}
+
+impl pallet_scheduler::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeOrigin = RuntimeOrigin;
+    type PalletsOrigin = OriginCaller;
+    type RuntimeCall = RuntimeCall;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type Preimages = Preimage;
+}
+
+parameter_types! {
+    pub const PreimageBaseDeposit: Balance = deposit(2, 64);
+    pub const PreimageByteDeposit: Balance = deposit(0, 1);
+    pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type Consideration = HoldConsideration<
+        AccountId,
+        Balances,
+        PreimageHoldReason,
+        LinearStoragePrice<PreimageBaseDeposit, PreimageByteDeposit, Balance>,
+    >;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime_modified!(
     pub enum Runtime
@@ -541,6 +591,8 @@ construct_runtime_modified!(
         Utility: pallet_utility = 5,
         TxPause: pallet_tx_pause = 6,
         RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip = 7,
+        Scheduler: pallet_scheduler = 8,
+        Preimage: pallet_preimage = 9,
 
         // Monetary stuff.
         Balances: pallet_balances = 10,
@@ -577,6 +629,13 @@ construct_runtime_modified!(
 
         INV4: pallet_dao_manager = 71,
         CoreAssets: orml_tokens = 72, // Asset used for DAO Management
+
+        // Governance
+        Council: pallet_collective::<Instance1> = 80,
+        Referenda: pallet_referenda = 81,
+        ConvictionVoting: pallet_conviction_voting = 82,
+        Origins: governance::pallet_custom_origins = 83,
+        Whitelist: pallet_whitelist = 84,
 
     }
 );
