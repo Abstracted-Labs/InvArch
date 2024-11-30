@@ -1,0 +1,77 @@
+[package]
+name = 'pallet-dao-manager'
+description = ''
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+codec = { workspace = true, default-features = false, features = [
+    "derive",
+    "max-encoded-len",
+] }
+frame-support = { workspace = true }
+log = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true, optional = true }
+smallvec = { workspace = true }
+sp-arithmetic = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+# InvArch dependencies
+primitives = { workspace = true }
+
+frame-benchmarking = { workspace = true, optional = true }
+frame-system = { workspace = true }                        # frame-benchmarking requires system
+pallet-balances = { workspace = true }
+sp-api = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+
+
+orml-tokens2 = { workspace = true }
+xcm = { workspace = true }
+
+[dev-dependencies]
+
+orml-asset-registry = { workspace = true }
+orml-tokens = { workspace = true }
+orml-traits = { workspace = true }
+orml-traits2 = { workspace = true }
+
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-asset-registry/std",
+    "orml-tokens/std",
+    "orml-tokens2/std",
+    "orml-traits/std",
+    "orml-traits2/std",
+    "pallet-balances/std",
+    "primitives/std",
+    "scale-info/std",
+    "serde",
+    "sp-api/std",
+    "sp-arithmetic/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "xcm/std",
+]
+runtime-benchmarks = [
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime", "sp-runtime/try-runtime"]

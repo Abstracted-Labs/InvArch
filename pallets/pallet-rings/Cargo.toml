@@ -1,0 +1,87 @@
+[package]
+name = 'pallet-rings'
+description = ''
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+log = { workspace = true }
+codec = { workspace = true }
+scale-info = { workspace = true }
+serde = { workspace = true, optional = true }
+
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+num-traits = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-session = { workspace = true }
+pallet-timestamp = { workspace = true, optional = true }
+sp-arithmetic = { workspace = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = {workspace = true}
+sp-staking = {workspace = true}
+sp-std = {workspace = true}
+
+pallet-dao-manager = { workspace = true }
+
+pallet-xcm = { workspace = true }
+xcm = { workspace = true }
+xcm-executor = { workspace = true }
+
+frame-benchmarking = { workspace = true, optional = true }
+
+[dev-dependencies]
+orml-traits = { workspace = true }
+orml-traits2 = { workspace = true }
+orml-tokens = { workspace = true }
+orml-tokens2 = { workspace = true }
+orml-asset-registry = { workspace = true }
+xcm-builder = { workspace = true }
+
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"scale-info/std",
+	"num-traits/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-arithmetic/std",
+	"sp-io/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+	"pallet-balances/std",
+	"pallet-session/std",
+	"pallet-timestamp/std",
+	"sp-staking/std",
+  "pallet-dao-manager/std",
+  "pallet-xcm/std",
+  "xcm/std",
+  "orml-traits2/std",
+  "orml-traits/std",
+  "orml-tokens/std",
+  "orml-tokens2/std",
+  "orml-asset-registry/std",
+  "xcm-builder/std",
+  "frame-benchmarking?/std",
+]
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"pallet-dao-manager/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+]
+try-runtime = ["frame-support/try-runtime"]

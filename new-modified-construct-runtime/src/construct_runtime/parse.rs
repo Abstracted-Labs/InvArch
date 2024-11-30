@@ -65,8 +65,6 @@ pub enum RuntimeDeclaration {
 /// Declaration of a runtime with some pallet with implicit declaration of parts.
 #[derive(Debug)]
 pub struct ImplicitRuntimeDeclaration {
-    pub name: Ident,
-    pub where_section: Option<WhereSection>,
     pub pallets: Vec<PalletDeclaration>,
 }
 
@@ -103,8 +101,6 @@ impl Parse for RuntimeDeclaration {
         match convert_pallets(pallets.content.inner.into_iter().collect())? {
             PalletsConversion::Implicit(pallets) => {
                 Ok(RuntimeDeclaration::Implicit(ImplicitRuntimeDeclaration {
-                    name,
-                    where_section,
                     pallets,
                 }))
             }
@@ -131,9 +127,6 @@ impl Parse for RuntimeDeclaration {
 #[derive(Debug)]
 pub struct WhereSection {
     pub span: Span,
-    pub block: syn::TypePath,
-    pub node_block: syn::TypePath,
-    pub unchecked_extrinsic: syn::TypePath,
 }
 
 impl Parse for WhereSection {
@@ -152,10 +145,9 @@ impl Parse for WhereSection {
             }
             input.parse::<Token![,]>()?;
         }
-        let block = remove_kind(input, WhereKind::Block, &mut definitions)?.value;
-        let node_block = remove_kind(input, WhereKind::NodeBlock, &mut definitions)?.value;
-        let unchecked_extrinsic =
-            remove_kind(input, WhereKind::UncheckedExtrinsic, &mut definitions)?.value;
+        remove_kind(input, WhereKind::Block, &mut definitions)?;
+        remove_kind(input, WhereKind::NodeBlock, &mut definitions)?;
+        remove_kind(input, WhereKind::UncheckedExtrinsic, &mut definitions)?;
         if let Some(WhereDefinition {
             ref kind_span,
             ref kind,
@@ -168,12 +160,7 @@ impl Parse for WhereSection {
             );
             return Err(Error::new(*kind_span, msg));
         }
-        Ok(Self {
-            span: input.span(),
-            block,
-            node_block,
-            unchecked_extrinsic,
-        })
+        Ok(Self { span: input.span() })
     }
 }
 
@@ -188,7 +175,6 @@ pub enum WhereKind {
 pub struct WhereDefinition {
     pub kind_span: Span,
     pub kind: WhereKind,
-    pub value: syn::TypePath,
 }
 
 impl Parse for WhereDefinition {
@@ -210,14 +196,10 @@ impl Parse for WhereDefinition {
             return Err(lookahead.error());
         };
 
-        Ok(Self {
-            kind_span,
-            kind,
-            value: {
-                let _: Token![=] = input.parse()?;
-                input.parse()?
-            },
-        })
+        let _: Token![=] = input.parse()?;
+        let _: syn::TypePath = input.parse()?;
+
+        Ok(Self { kind_span, kind })
     }
 }
 
@@ -354,7 +336,7 @@ impl Parse for PalletDeclaration {
 /// A struct representing a path to a pallet. `PalletPath` is almost identical to the standard
 /// Rust path with a few restrictions:
 /// - No leading colons allowed
-/// - Path segments can only consist of identifers separated by colons
+/// - Path segments can only consist of identifiers separated by colons
 #[derive(Debug, Clone)]
 pub struct PalletPath {
     pub inner: Path,
@@ -636,7 +618,7 @@ pub struct Pallet {
     pub is_expanded: bool,
     /// The name of the pallet, e.g.`System` in `System: frame_system`.
     pub name: Ident,
-    /// Either automatically infered, or defined (e.g. `MyPallet ...  = 3,`).
+    /// Either automatically inferred, or defined (e.g. `MyPallet ...  = 3,`).
     pub index: u8,
     /// The path of the pallet, e.g. `frame_system` in `System: frame_system`.
     pub path: PalletPath,
@@ -646,6 +628,8 @@ pub struct Pallet {
     pub pallet_parts: Vec<PalletPart>,
     /// Expressions specified inside of a #[cfg] attribute.
     pub cfg_pattern: Vec<cfg_expr::Expression>,
+    /// The doc literals
+    pub docs: Vec<syn::Expr>,
 }
 
 impl Pallet {
@@ -675,7 +659,7 @@ impl Pallet {
 /// +----------+    +----------+    +------------------+
 /// ```
 enum PalletsConversion {
-    /// Pallets implicitely declare parts.
+    /// Pallets implicitly declare parts.
     ///
     /// `System: frame_system`.
     Implicit(Vec<PalletDeclaration>),
@@ -689,7 +673,7 @@ enum PalletsConversion {
     /// Pallets explicitly declare parts that are fully expanded.
     ///
     /// This is the end state that contains extra parts included by
-    /// default by Subtrate.
+    /// default by Substrate.
     ///
     /// `System: frame_system expanded::{Error} ::{Pallet, Call}`
     ///
@@ -701,7 +685,7 @@ enum PalletsConversion {
 ///
 /// Check if all pallet have explicit declaration of their parts, if so then assign index to each
 /// pallet using same rules as rust for fieldless enum. I.e. implicit are assigned number
-/// incrementedly from last explicit or 0.
+/// incrementally from last explicit or 0.
 fn convert_pallets(pallets: Vec<PalletDeclaration>) -> syn::Result<PalletsConversion> {
     if pallets.iter().any(|pallet| pallet.pallet_parts.is_none()) {
         return Ok(PalletsConversion::Implicit(pallets));
@@ -827,6 +811,7 @@ fn convert_pallets(pallets: Vec<PalletDeclaration>) -> syn::Result<PalletsConver
                 instance: pallet.instance,
                 cfg_pattern,
                 pallet_parts,
+                docs: vec![],
             })
         })
         .collect::<Result<Vec<_>>>()?;

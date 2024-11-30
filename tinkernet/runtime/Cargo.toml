@@ -19,13 +19,13 @@ codec = { workspace = true }
 hex-literal = { workspace = true }
 log = { workspace = true }
 scale-info = { workspace = true }
-serde = { workspace = true, optional = true }
+serde = { workspace = true, optional = true, features = ["derive"]}
 smallvec = { workspace = true }
 getrandom = { workspace = true }
 
 ## InvArch Pallets
-pallet-inv4 = { workspace = true }
-pallet-ocif-staking = { workspace = true }
+pallet-dao-manager = { workspace = true }
+pallet-dao-staking = { workspace = true }
 pallet-checked-inflation = { workspace = true }
 pallet-rings = { workspace = true }
 
@@ -53,6 +53,7 @@ orml-tokens2 = { workspace = true }
 # Substrate FRAME Dependencies
 frame-benchmarking = { workspace = true, optional = true }
 frame-executive = { workspace = true }
+frame-metadata-hash-extension = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-benchmarking = { workspace = true, optional = true }
@@ -95,6 +96,7 @@ sp-version = { workspace = true }
 
 # Polkadot Dependencies
 pallet-xcm = { workspace = true }
+pallet-xcm-benchmarks = { workspace = true, optional = true }
 polkadot-parachain = { workspace = true }
 polkadot-runtime-common = { workspace = true }
 xcm = { workspace = true }
@@ -126,10 +128,14 @@ aura = []
 default = ["std", "aura"]
 manual-seal = []
 
+metadata-hash = [
+    "substrate-wasm-builder/metadata-hash",
+]
+
 # A feature that should be enabled when the runtime should be build for on-chain
 # deployment. This will disable stuff that shouldn't be part of the on-chain wasm
 # to make it smaller like logging for example.
-on-chain-release-build = ["sp-api/disable-logging"]
+on-chain-release-build = ["sp-api/disable-logging", "metadata-hash"]
 
 # By default some types have documentation, `no-metadata-docs` allows to reduce the documentation
 # in the metadata.
@@ -148,7 +154,10 @@ std = [
     "cumulus-primitives-timestamp/std",
     "cumulus-primitives-utility/std",
     "cumulus-pallet-dmp-queue/std",
+    "frame-benchmarking?/std",
+    "frame-system-benchmarking?/std",
     "frame-executive/std",
+    "frame-metadata-hash-extension/std",
     "frame-support/std",
     "frame-system-rpc-runtime-api/std",
     "frame-system/std",
@@ -171,6 +180,7 @@ std = [
     "pallet-treasury/std",
     "pallet-utility/std",
     "pallet-xcm/std",
+    "pallet-xcm-benchmarks?/std",
     "pallet-collator-selection/std",
     "parachain-info/std",
     "polkadot-parachain/std",
@@ -197,14 +207,15 @@ std = [
     "orml-tokens/std",
     "orml-currencies/std",
     "orml-asset-registry/std",
-    "pallet-inv4/std",
+    "pallet-dao-manager/std",
     "pallet-maintenance-mode/std",
     "orml-tokens2/std",
-    "pallet-ocif-staking/std",
+    "pallet-dao-staking/std",
     "pallet-checked-inflation/std",
     "pallet-rings/std",
     "pallet-asset-tx-payment/std",
     "new-modified-construct-runtime/std",
+    "pallet-message-queue/std"
 ]
 
 runtime-benchmarks = [
@@ -216,13 +227,14 @@ runtime-benchmarks = [
     "pallet-collator-selection/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+    "pallet-xcm-benchmarks/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "cumulus-pallet-session-benchmarking/runtime-benchmarks",
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
-    "pallet-inv4/runtime-benchmarks",
+    "pallet-dao-manager/runtime-benchmarks",
     "pallet-rings/runtime-benchmarks",
-    "pallet-ocif-staking/runtime-benchmarks",
+    "pallet-dao-staking/runtime-benchmarks",
     "pallet-checked-inflation/runtime-benchmarks",
 ]
 
@@ -230,7 +242,7 @@ try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
     "frame-system/try-runtime",
-    "pallet-inv4/try-runtime",
+    "pallet-dao-manager/try-runtime",
     "orml-xcm/try-runtime",
     "orml-vesting/try-runtime",
     "pallet-aura/try-runtime",
@@ -263,7 +275,7 @@ try-runtime = [
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
     "orml-tokens2/try-runtime",
-    "pallet-ocif-staking/try-runtime",
+    "pallet-dao-staking/try-runtime",
     "pallet-checked-inflation/try-runtime",
     "pallet-rings/try-runtime",
     "pallet-asset-tx-payment/try-runtime",

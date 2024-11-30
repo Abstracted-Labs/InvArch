@@ -1,4 +1,4 @@
-// Copyright 2021-2022 InvArch Association.
+// Copyright 2021-2024 Abstracted Labs.
 // This file is part of InvArch.
 
 // InvArch is free software: you can redistribute it and/or modify
@@ -53,8 +53,8 @@ use frame_system::{
     limits::{BlockLength, BlockWeights},
     EnsureRoot,
 };
+use pallet_dao_manager::{origin::DaoOrigin, DaoLookup};
 use pallet_identity::legacy::IdentityInfo;
-use pallet_inv4::{origin::INV4Origin, INV4Lookup};
 use pallet_transaction_payment::{FeeDetails, InclusionFee, Multiplier};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
 use smallvec::smallvec;
@@ -102,8 +102,8 @@ use common_types::*;
 mod assets;
 mod fee_handling;
 use fee_handling::TnkrToKsm;
+mod dao_manager;
 mod inflation;
-mod inv4;
 // mod migrations;
 mod nft;
 mod rings;
@@ -157,6 +157,7 @@ pub type SignedExtra = (
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
     pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+    frame_metadata_hash_extension::CheckMetadataHash<Runtime>,
 );
 
 /// Unchecked extrinsic type as expected by this runtime.
@@ -183,7 +184,7 @@ pub type Executive = frame_executive::Executive<
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
-/// to even the core data structures.
+/// to even the dao data structures.
 pub mod opaque {
     use super::*;
     use sp_runtime::{
@@ -213,7 +214,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("tinkernet_node"),
     impl_name: create_runtime_str!("tinkernet_node"),
     authoring_version: 1,
-    spec_version: 23,
+    spec_version: 25,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -309,9 +310,7 @@ impl Contains<RuntimeCall> for MaintenanceFilter {
     fn contains(c: &RuntimeCall) -> bool {
         !matches!(c, |RuntimeCall::XTokens(_)| RuntimeCall::PolkadotXcm(_)
             | RuntimeCall::OrmlXcm(_)
-            | RuntimeCall::OcifStaking(
-                pallet_ocif_staking::Call::stake { .. }
-            ))
+            | RuntimeCall::OcifStaking(pallet_dao_staking::Call::stake { .. }))
     }
 }
 
@@ -383,7 +382,7 @@ impl frame_system::Config for Runtime {
     /// The aggregated dispatch type that is available for extrinsics.
     type RuntimeCall = RuntimeCall;
     /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-    type Lookup = INV4Lookup<Runtime>;
+    type Lookup = DaoLookup<Runtime>;
     /// The index type for storing how many extrinsics an account has signed.
     type Nonce = Nonce;
     /// The type for hashing blocks and tries.
@@ -549,7 +548,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type OnSystemEvent = ();
     type SelfParaId = parachain_info::Pallet<Runtime>;
-    type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayOrigin>;
+    type DmpQueue =
+        frame_support::traits::EnqueueWithOrigin<MessageQueue, xcm_config::RelayAggregate>;
     type ReservedDmpWeight = ReservedDmpWeight;
     type OutboundXcmpMessageSource = XcmpQueue;
     type XcmpMessageHandler = XcmpQueue;
@@ -646,6 +646,23 @@ parameter_types! {
     pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+use pallet_treasury::ArgumentsFactory;
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct BenchmarkHelper;
+
+#[cfg(feature = "runtime-benchmarks")]
+impl ArgumentsFactory<(), AccountId> for BenchmarkHelper {
+    fn create_asset_kind(_seed: u32) -> () {
+        ()
+    }
+
+    fn create_beneficiary(seed: [u8; 32]) -> AccountId {
+        AccountId::from(seed)
+    }
+}
+
 impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
@@ -669,6 +686,8 @@ impl pallet_treasury::Config for Runtime {
     type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
     type BalanceConverter = UnityAssetBalanceConversion;
     type PayoutPeriod = PayoutSpendPeriod;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = BenchmarkHelper;
 }
 
 parameter_types! {
@@ -739,7 +758,7 @@ impl pallet_scheduler::Config for Runtime {
     type MaximumWeight = MaximumSchedulerWeight;
     type ScheduleOrigin = EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
-    type WeightInfo = ();
+    type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
     type OriginPrivilegeCmp = EqualPrivilegeOnly;
     type Preimages = Preimage;
 }
@@ -751,7 +770,7 @@ parameter_types! {
 }
 
 impl pallet_preimage::Config for Runtime {
-    type WeightInfo = ();
+    type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type ManagerOrigin = EnsureRoot<AccountId>;
@@ -781,7 +800,7 @@ impl pallet_identity::Config for Runtime {
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
-    type WeightInfo = ();
+    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
     type BasicDeposit = BasicDeposit;
     type ByteDeposit = ByteDeposit;
     type IdentityInformation = IdentityInfo<MaxAdditionalFields>;
@@ -806,7 +825,7 @@ impl pallet_multisig::Config for Runtime {
     type DepositBase = DepositBase;
     type DepositFactor = DepositFactor;
     type MaxSignatories = MaxSignatories;
-    type WeightInfo = ();
+    type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
 use new_modified_construct_runtime::construct_runtime_modified;
@@ -815,7 +834,7 @@ impl From<RuntimeOrigin> for Result<frame_system::RawOrigin<AccountId>, RuntimeO
     fn from(val: RuntimeOrigin) -> Self {
         match val.caller {
             OriginCaller::system(l) => Ok(l),
-            OriginCaller::INV4(INV4Origin::Multisig(l)) => {
+            OriginCaller::INV4(DaoOrigin::Multisig(l)) => {
                 Ok(frame_system::RawOrigin::Signed(l.to_account_id()))
             }
             _ => Err(val),
@@ -865,9 +884,9 @@ construct_runtime_modified!(
 
         // InvArch stuff
         CheckedInflation: pallet_checked_inflation = 50,
-        OcifStaking: pallet_ocif_staking = 51,
+        OcifStaking: pallet_dao_staking = 51,
 
-        INV4: pallet_inv4 = 71,
+        INV4: pallet_dao_manager = 71,
         CoreAssets: orml_tokens2 = 72,
         Rings: pallet_rings = 73,
 
@@ -892,9 +911,8 @@ mod benches {
         [pallet_timestamp, Timestamp]
         [pallet_collator_selection, CollatorSelection]
         [cumulus_pallet_xcmp_queue, XcmpQueue]
-        [pallet_inv4, INV4]
-        [pallet_ocif_staking, OcifStaking]
-        [pallet_rings, Rings]
+        [pallet_dao_manager, INV4]
+        [pallet_dao_staking, OcifStaking]
         [pallet_checked_inflation, CheckedInflation]
     );
 }

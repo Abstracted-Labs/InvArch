@@ -1,11 +1,16 @@
 use crate::{
-    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent, System,
-    Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT, MILLIUNIT, UNIT,
+    AccountId, Balance, Balances, BlockNumber, ExtrinsicBaseWeight, Runtime, RuntimeEvent,
+    RuntimeFreezeReason, RuntimeHoldReason, System, Treasury, DAYS, EXISTENTIAL_DEPOSIT, MICROUNIT,
+    MILLIUNIT, UNIT,
 };
 use frame_support::{
     pallet_prelude::ConstU32,
     parameter_types,
-    traits::{Currency, Imbalance, OnUnbalanced, SortedMembers},
+    traits::{
+        fungible::{self, Balanced},
+        tokens::{PayFromAccount, UnityAssetBalanceConversion},
+        Currency, Imbalance, OnUnbalanced, SortedMembers,
+    },
     weights::{
         ConstantMultiplier, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
     },
@@ -13,11 +18,16 @@ use frame_support::{
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use polkadot_runtime_common::SlowAdjustingFeeUpdate;
-use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
+use sp_runtime::{
+    traits::{AccountIdConversion, IdentityLookup},
+    Perbill, Permill,
+};
 use sp_std::vec::Vec;
 
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
+    pub const MaxFreezes: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -30,13 +40,12 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-    type MaxReserves = ConstU32<50>;
+    type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-
-    type MaxHolds = ConstU32<1>;
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    type HoldIdentifier = [u8; 8];
+    type FreezeIdentifier = [u8; 8];
+    type MaxFreezes = MaxFreezes;
+    type RuntimeFreezeReason = RuntimeFreezeReason;
+    type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 parameter_types! {
@@ -60,17 +69,17 @@ impl WeightToFeePolynomial for WeightToFee {
     }
 }
 
-pub type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+pub type NegativeImbalance =
+    fungible::Credit<<Runtime as frame_system::Config>::AccountId, Balances>;
 
 pub struct ToCollatorPot;
 impl OnUnbalanced<NegativeImbalance> for ToCollatorPot {
     fn on_nonzero_unbalanced(amount: NegativeImbalance) {
         let collator_pot =
             <Runtime as pallet_collator_selection::Config>::PotId::get().into_account_truncating();
-        Balances::resolve_creating(&collator_pot, amount);
+        let _ = Balances::resolve(&collator_pot, amount);
     }
 }
-
 pub struct DealWithFees;
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
     fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
@@ -82,14 +91,17 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
             let (to_treasury, to_collators) = fees.ration(50, 50);
 
             ToCollatorPot::on_unbalanced(to_collators);
-            Treasury::on_unbalanced(to_treasury)
+            // Treasury is still based on the old Currency trait.
+            Treasury::on_nonzero_unbalanced(
+                <Balances as Currency<AccountId>>::NegativeImbalance::new(to_treasury.peek()),
+            );
         }
     }
 }
 
 impl pallet_transaction_payment::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+    type OnChargeTransaction = pallet_transaction_payment::FungibleAdapter<Balances, DealWithFees>;
     type WeightToFee = WeightToFee;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
@@ -136,23 +148,33 @@ parameter_types! {
     pub const Burn: Permill = Permill::from_percent(1);
     pub const TreasuryPalletId: PalletId = PalletId(*b"ia/trsry");
     pub const MaxApprovals: u32 = 100;
+    pub const PayoutSpendPeriod: BlockNumber = 30 * DAYS;
+    pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 impl pallet_treasury::Config for Runtime {
+    type AssetKind = ();
+    type BalanceConverter = UnityAssetBalanceConversion;
+    type Beneficiary = AccountId;
+    type BeneficiaryLookup = IdentityLookup<Self::Beneficiary>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
-    type ApproveOrigin = EnsureRoot<AccountId>;
+    // type ApproveOrigin = EnsureRoot<AccountId>;
     type RejectOrigin = EnsureRoot<AccountId>;
     type RuntimeEvent = RuntimeEvent;
-    type OnSlash = ();
-    type ProposalBond = ProposalBond;
-    type ProposalBondMinimum = ProposalBondMinimum;
+    // type OnSlash = ();
+    type Paymaster = PayFromAccount<Balances, TreasuryAccount>;
+    type PayoutPeriod = PayoutSpendPeriod;
+    // type ProposalBond = ProposalBond;
+    // type ProposalBondMinimum = ProposalBondMinimum;
     type SpendPeriod = SpendPeriod;
     type Burn = ();
     type BurnDestination = ();
     type SpendFunds = ();
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-    type ProposalBondMaximum = ();
+    // type ProposalBondMaximum = ();
     type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
 }

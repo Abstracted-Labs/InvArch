@@ -1,30 +1,31 @@
-use invarch_runtime::{Block, VERSION};
+use invarch_runtime::Block;
 
+#[cfg(feature = "try-runtime")]
+use crate::service::ParachainExecutor;
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    service::{new_partial, ChainIdentify, ParachainNativeExecutor},
+    service::{new_partial, ChainIdentify},
 };
-use codec::Encode;
-use cumulus_client_cli::generate_genesis_block;
+use cumulus_client_service::storage_proof_size::HostFunctions as ReclaimHostFunctions;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use log::info;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
-    NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+    NetworkParams, Result, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::{AccountIdConversion, Block as BlockT};
-use std::{io::Write, net::SocketAddr};
+use sp_runtime::traits::AccountIdConversion;
+use std::net::SocketAddr;
 
-fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> std::result::Result<Box<dyn ChainSpec>, String> {
     Ok(match id {
         "solo-dev" => Box::new(chain_spec::solo_dev_config()),
         "dev" => Box::new(chain_spec::development_config()),
         "template-rococo" => Box::new(chain_spec::local_testnet_config()),
-        "" | "local" => Box::new(chain_spec::local_testnet_config()),
+        "local" => Box::new(chain_spec::local_testnet_config()),
+        "" | "invarch" => Box::new(chain_spec::invarch_live()),
         path => Box::new(chain_spec::ChainSpec::from_json_file(
             std::path::PathBuf::from(path),
         )?),
@@ -41,11 +42,13 @@ impl SubstrateCli for Cli {
     }
 
     fn description() -> String {
-        "InvArch Node\n\nThe command-line arguments provided first will be \
+        format!(
+            "InvArch Node\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		parachain-collator <parachain-args> -- <relay-chain-args>"
-            .into()
+		{} <parachain-args> -- <relay-chain-args>",
+            Self::executable_name()
+        )
     }
 
     fn author() -> String {
@@ -53,7 +56,7 @@ impl SubstrateCli for Cli {
     }
 
     fn support_url() -> String {
-        "https://github.com/InvArch/InvArch-node/issues/new".into()
+        "https://github.com/Abstracted-Labs/InvArch/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {
@@ -63,15 +66,11 @@ impl SubstrateCli for Cli {
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
         load_spec(id)
     }
-
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &VERSION
-    }
 }
 
 impl SubstrateCli for RelayChainCli {
     fn impl_name() -> String {
-        "InvArch Node".into()
+        "InvArch Collator".into()
     }
 
     fn impl_version() -> String {
@@ -79,11 +78,13 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn description() -> String {
-        "InvArch Node\n\nThe command-line arguments provided first will be \
+        format!(
+            "InvArch Collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relay chain node.\n\n\
-		parachain-collator <parachain-args> -- <relay-chain-args>"
-            .into()
+		{} <parachain-args> -- <relay-chain-args>",
+            Self::executable_name()
+        )
     }
 
     fn author() -> String {
@@ -91,7 +92,7 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn support_url() -> String {
-        "https://github.com/InvArch/InvArch-node/issues/new".into()
+        "https://github.com/Abstracted-Labs/InvArch/issues/new".into()
     }
 
     fn copyright_start_year() -> i32 {
@@ -101,32 +102,13 @@ impl SubstrateCli for RelayChainCli {
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
         polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
     }
-
-    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        polkadot_cli::Cli::native_runtime_version(chain_spec)
-    }
-}
-
-#[allow(clippy::borrowed_box)]
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-    let mut storage = chain_spec.build_storage()?;
-
-    storage
-        .top
-        .remove(sp_core::storage::well_known_keys::CODE)
-        .ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
 		let runner = $cli.create_runner($cmd)?;
 		runner.async_run(|$config| {
-			let $components = new_partial::<
-				_
-			>(
-				&$config,
-				crate::service::parachain_build_import_queue,
-			)?;
+			let $components = new_partial(&$config)?;
 			let task_manager = $components.task_manager;
 			{ $( $code )* }.map(|v| (v, task_manager))
 		})
@@ -138,7 +120,6 @@ pub fn run() -> Result<()> {
     let cli = Cli::from_args();
 
     match &cli.subcommand {
-        Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -163,6 +144,11 @@ pub fn run() -> Result<()> {
                 Ok(cmd.run(components.client, components.import_queue))
             })
         }
+        Some(Subcommand::Revert(cmd)) => {
+            construct_async_run!(|components, cli, cmd, config| {
+                Ok(cmd.run(components.client, components.backend, None))
+            })
+        }
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
@@ -184,55 +170,20 @@ pub fn run() -> Result<()> {
                 cmd.run(config, polkadot_config)
             })
         }
-        Some(Subcommand::Revert(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.backend, None))
+        Some(Subcommand::ExportGenesisHead(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.sync_run(|config| {
+                let partials = new_partial(&config)?;
+
+                cmd.run(partials.client)
             })
         }
-        Some(Subcommand::ExportGenesisState(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
-
-            let spec = load_spec(&params.shared_params.chain.clone().unwrap_or_default())?;
-            let state_version = Cli::native_runtime_version(&spec).state_version();
-            let block: Block = generate_genesis_block(&*spec, state_version)?;
-            let raw_header = block.header().encode();
-            let output_buf = if params.raw {
-                raw_header
-            } else {
-                format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
-        }
-        Some(Subcommand::ExportGenesisWasm(params)) => {
-            let mut builder = sc_cli::LoggerBuilder::new("");
-            builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-            let _ = builder.init();
-
-            let raw_wasm_blob = extract_genesis_wasm(
-                &cli.load_spec(&params.shared_params.chain.clone().unwrap_or_default())?,
-            )?;
-            let output_buf = if params.raw {
-                raw_wasm_blob
-            } else {
-                format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
-            };
-
-            if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
-            } else {
-                std::io::stdout().write_all(&output_buf)?;
-            }
-
-            Ok(())
+        Some(Subcommand::ExportGenesisWasm(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.sync_run(|_config| {
+                let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+                cmd.run(&*spec)
+            })
         }
         Some(Subcommand::Benchmark(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -240,23 +191,26 @@ pub fn run() -> Result<()> {
             match cmd {
                 BenchmarkCmd::Pallet(cmd) => {
                     if cfg!(feature = "runtime-benchmarks") {
-                        runner.sync_run(|config| cmd.run::<Block, ParachainNativeExecutor>(config))
+                        runner.sync_run(|config| cmd.run_with_spec::<sp_runtime::traits::HashingFor<Block>, ReclaimHostFunctions>(Some(config.chain_spec)))
                     } else {
                         Err("Benchmarking wasn't enabled when building the node. \
 					You can enable it with `--features runtime-benchmarks`."
                             .into())
                     }
                 }
+                BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+                    let partials = new_partial(&config)?;
+                    cmd.run(partials.client)
+                }),
                 #[cfg(not(feature = "runtime-benchmarks"))]
                 BenchmarkCmd::Storage(_) => Err(sc_cli::Error::Input(
                     "Compile with --features=runtime-benchmarks \
-						             to enable storage benchmarks."
+						to enable storage benchmarks."
                         .into(),
                 )),
                 #[cfg(feature = "runtime-benchmarks")]
                 BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
-                    let partials =
-                        new_partial::<_>(&config, crate::service::parachain_build_import_queue)?;
+                    let partials = new_partial(&config)?;
                     let db = partials.backend.expose_db();
                     let storage = partials.backend.expose_storage();
                     cmd.run(config, partials.client.clone(), db, storage)
@@ -272,6 +226,7 @@ pub fn run() -> Result<()> {
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
+            #[cfg(feature = "invarch")]
             use invarch_runtime::MILLISECS_PER_BLOCK;
             use try_runtime_cli::block_building_info::timestamp_with_aura_info;
 
@@ -293,13 +248,11 @@ pub fn run() -> Result<()> {
                 sc_service::TaskManager::new(runner.config().tokio_handle.clone(), *registry)
                     .map_err(|e| format!("Error: {:?}", e))?;
 
-            let info_provider = timestamp_with_aura_info(MILLISECS_PER_BLOCK);
+            let info_provider = timestamp_with_aura_info(invarch_runtime::MILLISECS_PER_BLOCK);
 
             runner.async_run(|_| {
                 Ok((
-                    cmd.run::<Block, HostFunctionsOf<ParachainNativeExecutor>, _>(Some(
-                        info_provider,
-                    )),
+                    cmd.run::<Block, HostFunctionsOf<ParachainExecutor>, _>(Some(info_provider)),
                     task_manager,
                 ))
             })
@@ -309,19 +262,35 @@ pub fn run() -> Result<()> {
 			                                       You can enable it with `--features try-runtime`."
             .into()),
         None => {
-            let runner = cli.create_runner(&cli.run.normalize())?;
+            let mut runner = cli.create_runner(&cli.run.normalize())?;
+
+            if runner.config().chain_spec.name() == "InvArch Brainstorm Testnet" {
+                runner.config_mut().impl_name = String::from("InvArch Brainstorm Node");
+            }
 
             let chain_spec = &runner.config().chain_spec;
             let is_solo_dev = chain_spec.is_solo_dev();
             let collator_options = cli.run.collator_options();
 
             runner.run_node_until_exit(|config| async move {
+                let hwbench = (!cli.no_hardware_benchmarks)
+                    .then_some(config.database.path().map(|database_path| {
+                        let _ = std::fs::create_dir_all(database_path);
+                        sc_sysinfo::gather_hwbench(Some(database_path))
+                    }))
+                    .flatten();
+
                 let para_id = chain_spec::Extensions::try_get(&*config.chain_spec)
                     .map(|e| e.para_id)
                     .ok_or("Could not find parachain ID in chain-spec.")?;
 
+                let id = ParaId::from(para_id);
+
                 if is_solo_dev {
-                    return crate::service::start_solo_dev(config).map_err(Into::into);
+                    return crate::service::start_solo_dev(config, id)
+                        .await
+                        .map(|r| r.0)
+                        .map_err(Into::into);
                 }
 
                 let polkadot_cli = RelayChainCli::new(
@@ -331,18 +300,10 @@ pub fn run() -> Result<()> {
                         .chain(cli.relay_chain_args.iter()),
                 );
 
-                let id = ParaId::from(para_id);
-
                 let parachain_account =
                     AccountIdConversion::<polkadot_primitives::AccountId>::into_account_truncating(
                         &id,
                     );
-
-                let state_version =
-                    RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
-                let block: Block = generate_genesis_block(&*config.chain_spec, state_version)
-                    .map_err(|e| format!("{:?}", e))?;
-                let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let tokio_handle = config.tokio_handle.clone();
                 let polkadot_config =
@@ -351,7 +312,6 @@ pub fn run() -> Result<()> {
 
                 info!("Parachain id: {:?}", id);
                 info!("Parachain Account: {}", parachain_account);
-                info!("Parachain genesis state: {}", genesis_state);
                 info!(
                     "Is collating: {}",
                     if config.role.is_authority() {
@@ -361,10 +321,16 @@ pub fn run() -> Result<()> {
                     }
                 );
 
-                crate::service::start_parachain_node(config, polkadot_config, collator_options, id)
-                    .await
-                    .map(|r| r.0)
-                    .map_err(Into::into)
+                crate::service::start_parachain_node(
+                    config,
+                    polkadot_config,
+                    collator_options,
+                    id,
+                    hwbench,
+                )
+                .await
+                .map(|r| r.0)
+                .map_err(Into::into)
             })
         }
     }
@@ -451,6 +417,10 @@ impl CliConfiguration<Self> for RelayChainCli {
 
     fn transaction_pool(&self, is_dev: bool) -> Result<sc_service::config::TransactionPoolOptions> {
         self.base.base.transaction_pool(is_dev)
+    }
+
+    fn trie_cache_maximum_size(&self) -> Result<Option<usize>> {
+        self.base.base.trie_cache_maximum_size()
     }
 
     fn rpc_methods(&self) -> Result<sc_service::config::RpcMethods> {
