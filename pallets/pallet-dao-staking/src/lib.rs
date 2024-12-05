@@ -84,6 +84,8 @@ mod benchmarking;
 mod testing;
 pub mod weights;
 
+pub mod migrations;
+
 pub use weights::WeightInfo;
 
 /// Staking lock identifier.
@@ -111,7 +113,10 @@ pub mod pallet {
     type NegativeImbalanceOf<T> =
         Credit<<T as frame_system::Config>::AccountId, <T as Config>::Currency>;
 
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     /// The dao metadata type of this pallet.
@@ -1163,10 +1168,9 @@ pub mod pallet {
         ) -> DispatchResult {
             if ledger.is_empty() {
                 Ledger::<T>::remove(staker);
-                <T as pallet::Config>::OldCurrency::remove_lock(LOCK_ID, staker);
                 let _ = <T as pallet::Config>::Currency::thaw(&LOCK_ID, staker);
             } else {
-                <T as pallet::Config>::Currency::extend_freeze(&LOCK_ID, staker, ledger.locked)?;
+                <T as pallet::Config>::Currency::set_freeze(&LOCK_ID, staker, ledger.locked)?;
                 Ledger::<T>::insert(staker, ledger);
             }
             Ok(())

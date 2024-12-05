@@ -115,6 +115,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    pallet_dao_staking::migrations::v1::MigrateToV1<Runtime>,
 >;
 
 /// Maximum number of blocks simultaneously accepted by the Runtime, not yet included into the
@@ -164,7 +165,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("invarch"),
     impl_name: create_runtime_str!("invarch"),
     authoring_version: 1,
-    spec_version: 10,
+    spec_version: 11,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
