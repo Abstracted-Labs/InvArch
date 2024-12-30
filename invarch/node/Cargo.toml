@@ -90,4 +90,4 @@ runtime-benchmarks = [
     "polkadot-cli/runtime-benchmarks",
 ]
 
-try-runtime = ["invarch-runtime/try-runtime", "try-runtime-cli"]
+try-runtime = ["invarch-runtime/try-runtime", "try-runtime-cli", "sp-runtime/try-runtime"]
