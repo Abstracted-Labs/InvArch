@@ -46,7 +46,7 @@ Also, please make sure to update tests as appropriate.
 
 ### Non-Technical Contributions
 
-If you haven't already, join the community in InvArch [Discord](https://discord.gg/invarch) and inquire about how you can get involved! Please be aware that any members who send spam, advertisements of topics unrelated to InvArch, or solicitation requests in the server will be removed and banned.
+If you haven't already, join the community in InvArch [Discord](https://discord.gg/VffMw5536N) and inquire about how you can get involved! Please be aware that any members who send spam, advertisements of topics unrelated to InvArch, or solicitation requests in the server will be removed and banned.
 
 ### Additional Resources
 • [InvArch Developer Console](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Finvarch-rpc.dwellir.com#/explorer)<br>
