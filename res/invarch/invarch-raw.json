@@ -6,7 +6,9 @@
     "/dns/invarch-boot.dwellir.com/tcp/443/wss/p2p/12D3KooWHWLn81PF8T29cxeeq12hpJoaPNbJbuvtZ6pJxJ8asnTY",
     "/dns/invarch-boot.dwellir.com/tcp/30363/p2p/12D3KooWHWLn81PF8T29cxeeq12hpJoaPNbJbuvtZ6pJxJ8asnTY",
     "/dns/invarch.boot.stake.plus/tcp/30332/wss/p2p/12D3KooWJ7dgREmmhiA5skqEf1C7N43ex9uawaXuyQumhxg66Zoa",
-    "/dns/invarch.boot.stake.plus/tcp/31332/wss/p2p/12D3KooWLLHBRKvbRgWA5eD2DSFEeEz7i5V9zPVCkCeMdyT966Ui"
+    "/dns/invarch.boot.stake.plus/tcp/31332/wss/p2p/12D3KooWLLHBRKvbRgWA5eD2DSFEeEz7i5V9zPVCkCeMdyT966Ui",
+    "/dns4/boot.helikon.io/tcp/8670/p2p/12D3KooWGHWag5eiV1owztEipuzApf3EYeBzSvajmgxLSc2iPL8m",
+    "/dns4/boot.helikon.io/tcp/8672/wss/p2p/12D3KooWGHWag5eiV1owztEipuzApf3EYeBzSvajmgxLSc2iPL8m"
   ],
   "telemetryEndpoints": [
     [
